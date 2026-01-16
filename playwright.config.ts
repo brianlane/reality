@@ -13,7 +13,9 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: isCI ? "npm run start -- --port 3000" : "npm run dev -- --port 3000",
+    command: isCI
+      ? "npm run start -- --port 3000"
+      : "npm run dev -- --port 3000",
     url: "http://127.0.0.1:3000",
     reuseExistingServer: !isCI,
     timeout: 120_000,
