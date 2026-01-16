@@ -34,5 +34,11 @@ jobs:
       - name: Build
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
 
+      - name: Run Prisma migrations
+        run: npx prisma migrate deploy
+
+      - name: Seed database
+        run: npx prisma db seed
+
       - name: Deploy Production
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
