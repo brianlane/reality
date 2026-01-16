@@ -45,25 +45,25 @@ reality-matchmaking/
    - How you handle webhook signatures
    - How you process payment_intent.succeeded
    - How you handle refunds/failures
-   → **Action:** Look at your Ruby Stripe code, rewrite in TypeScript
+     → **Action:** Look at your Ruby Stripe code, rewrite in TypeScript
 
 2. **Email Flow Patterns:**
    - What triggers you send emails on
    - Email template structure
    - Queueing logic (if you use it)
-   → **Action:** Recreate email templates in React Email (or similar)
+     → **Action:** Recreate email templates in React Email (or similar)
 
 3. **Webhook Security:**
    - How you verify Stripe signatures
    - How you handle idempotency
    - How you handle webhook retries
-   → **Action:** Implement same security patterns in Next.js API routes
+     → **Action:** Implement same security patterns in Next.js API routes
 
 4. **Analytics Events:**
    - What events you track
    - How you structure analytics data
    - What metrics matter
-   → **Action:** Track similar events with PostHog/Mixpanel
+     → **Action:** Track similar events with PostHog/Mixpanel
 
 ### ❌ **What You CANNOT Reuse**
 
@@ -126,6 +126,7 @@ reality-matchmaking/
 ### Week 1: Foundation (No extraction needed!)
 
 **Day 1-2: Project Setup**
+
 ```bash
 # Create Next.js app
 npx create-next-app@latest reality-matchmaking --typescript --tailwind --app
@@ -145,6 +146,7 @@ npx prisma migrate dev --name init
 ```
 
 **Day 3-4: Authentication**
+
 ```bash
 pnpm add @clerk/nextjs
 ```
@@ -157,10 +159,10 @@ Set up Clerk (same as before)
 
 ```typescript
 // lib/stripe.ts (NEW FILE - based on your Ruby patterns)
-import Stripe from 'stripe';
+import Stripe from "stripe";
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+  apiVersion: "2023-10-16",
 });
 
 // Recreate the same checkout logic you have in BizBlasts
@@ -177,7 +179,7 @@ export async function createCheckoutSession({
 }) {
   // Copy the logic from your Ruby Stripe integration
   return await stripe.checkout.sessions.create({
-    mode: 'payment',
+    mode: "payment",
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: successUrl,
     cancel_url: cancelUrl,
@@ -188,17 +190,18 @@ export async function createCheckoutSession({
 // Recreate your webhook handling patterns
 export function verifyStripeWebhook(
   payload: string,
-  signature: string
+  signature: string,
 ): Stripe.Event {
   return stripe.webhooks.constructEvent(
     payload,
     signature,
-    process.env.STRIPE_WEBHOOK_SECRET!
+    process.env.STRIPE_WEBHOOK_SECRET!,
   );
 }
 ```
 
 **Look at your BizBlasts Ruby code:**
+
 - Find how you create checkout sessions
 - Find how you handle webhooks
 - Find how you process successful payments
@@ -213,6 +216,7 @@ export function verifyStripeWebhook(
 Same as original plan, but write everything fresh in TypeScript.
 
 **Reference BizBlasts for:**
+
 - Form validation patterns
 - Payment flow UX
 - Error handling strategies
@@ -225,7 +229,7 @@ Same as original plan, but write everything fresh in TypeScript.
 
 ```typescript
 // lib/email/client.ts
-import { Resend } from 'resend';
+import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -251,6 +255,7 @@ export async function sendEmail({
 ```
 
 **Look at BizBlasts email patterns:**
+
 - When do you send confirmation emails?
 - What triggers reminder emails?
 - How do you queue emails?
@@ -278,24 +283,28 @@ You're not learning "how to integrate Stripe" - you already know that. You're ju
 ## REVISED Timeline: 3-4 Weeks
 
 ### Week 1: Foundation
+
 - Set up Next.js app
 - Database schema (DONE - already provided)
 - Authentication (Clerk)
 - **Reimplement Stripe integration** (reference BizBlasts Ruby code)
 
 ### Week 2: Application System
+
 - Multi-step application form
 - Photo upload
 - Payment integration
 - **Reimplement email triggers** (reference BizBlasts)
 
 ### Week 3: Screening & Admin
+
 - iDenfy + Checkr integration
 - Admin dashboard
 - Application review
 - Compatibility scoring
 
 ### Week 4: Events & Matching
+
 - Event creation
 - Invitee selection
 - Match generation
@@ -308,14 +317,14 @@ You're not learning "how to integrate Stripe" - you already know that. You're ju
 
 ## Quick Reference: BizBlasts → Reality Matchmaking
 
-| Feature | BizBlasts (Ruby) | Reality Matchmaking (TypeScript) |
-|---------|------------------|----------------------------------|
-| Payments | Stripe Ruby gem | Stripe Node.js SDK |
-| Email | ActionMailer? | Resend + React Email |
-| Webhooks | Ruby controller | Next.js API route |
-| Database | Rails + Postgres? | Prisma + PostgreSQL |
-| Auth | Devise? | Clerk |
-| Frontend | Rails views? | Next.js + React |
+| Feature  | BizBlasts (Ruby)  | Reality Matchmaking (TypeScript) |
+| -------- | ----------------- | -------------------------------- |
+| Payments | Stripe Ruby gem   | Stripe Node.js SDK               |
+| Email    | ActionMailer?     | Resend + React Email             |
+| Webhooks | Ruby controller   | Next.js API route                |
+| Database | Rails + Postgres? | Prisma + PostgreSQL              |
+| Auth     | Devise?           | Clerk                            |
+| Frontend | Rails views?      | Next.js + React                  |
 
 **Same business logic, different implementation.**
 
@@ -328,7 +337,7 @@ You're **NOT building from scratch.**
 You're **porting proven patterns** from Ruby to TypeScript.
 
 - Copy your Stripe checkout flow logic → TypeScript
-- Copy your webhook handling logic → TypeScript  
+- Copy your webhook handling logic → TypeScript
 - Copy your email triggers → TypeScript
 - Copy your analytics events → TypeScript
 

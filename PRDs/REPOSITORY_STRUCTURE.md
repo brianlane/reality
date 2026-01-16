@@ -297,14 +297,12 @@ reality-matchmaking-monorepo/
 ## Key Configuration Files
 
 ### Root `package.json`
+
 ```json
 {
   "name": "reality-matchmaking-monorepo",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "dev": "turbo run dev",
     "dev:reality": "turbo run dev --filter=reality-matchmaking",
@@ -326,6 +324,7 @@ reality-matchmaking-monorepo/
 ```
 
 ### `turbo.json`
+
 ```json
 {
   "$schema": "https://turbo.build/schema.json",
@@ -355,13 +354,15 @@ reality-matchmaking-monorepo/
 ```
 
 ### `pnpm-workspace.yaml`
+
 ```yaml
 packages:
-  - 'apps/*'
-  - 'packages/*'
+  - "apps/*"
+  - "packages/*"
 ```
 
 ### Reality Matchmaking `package.json`
+
 ```json
 {
   "name": "reality-matchmaking",
@@ -419,6 +420,7 @@ packages:
 ## Environment Variables Structure
 
 ### `.env.example` for Reality Matchmaking
+
 ```bash
 # Database
 DATABASE_URL="postgresql://user:password@localhost:5432/reality_matchmaking"

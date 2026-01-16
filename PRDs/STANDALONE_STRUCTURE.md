@@ -262,11 +262,12 @@ reality-matchmaking/
 ## Key Files Explained
 
 ### `lib/stripe.ts` (NEW - Port from BizBlasts)
+
 ```typescript
-import Stripe from 'stripe';
+import Stripe from "stripe";
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+  apiVersion: "2023-10-16",
 });
 
 // Port your BizBlasts checkout logic here
@@ -281,8 +282,9 @@ export function verifyWebhook(payload: string, signature: string) {
 ```
 
 ### `lib/email/client.ts` (NEW - Port from BizBlasts)
+
 ```typescript
-import { Resend } from 'resend';
+import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -293,8 +295,9 @@ export async function sendEmail(params: EmailParams) {
 ```
 
 ### `lib/analytics/client.ts` (NEW - Port from BizBlasts)
+
 ```typescript
-import { PostHog } from 'posthog-node';
+import { PostHog } from "posthog-node";
 
 const posthog = new PostHog(process.env.POSTHOG_API_KEY!);
 
@@ -332,18 +335,18 @@ export function trackEvent(userId: string, event: string, properties?: any) {
     "@clerk/nextjs": "^4.29.0",
     "stripe": "^14.0.0",
     "zod": "^3.22.0",
-    
+
     "@supabase/supabase-js": "^2.39.0",
     "resend": "^3.0.0",
     "react-email": "^2.0.0",
     "twilio": "^4.20.0",
-    
+
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-dropdown-menu": "^2.0.6",
     "@radix-ui/react-select": "^2.0.0",
     "@radix-ui/react-slider": "^1.1.2",
     "@radix-ui/react-tabs": "^1.0.4",
-    
+
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "tailwind-merge": "^2.2.0",
@@ -468,14 +471,14 @@ vercel --prod
 
 ## Key Differences from Original Monorepo Approach
 
-| Aspect | Original (Monorepo) | Revised (Standalone) |
-|--------|---------------------|----------------------|
-| Structure | Turborepo with shared packages | Single Next.js app |
-| Code Sharing | Extract modules from BizBlasts | Port patterns from BizBlasts |
-| Complexity | Higher (multiple packages) | Lower (one codebase) |
-| Setup Time | Longer | Faster |
-| Maintenance | More moving parts | Simpler |
-| Best For | When BizBlasts is also TypeScript | When BizBlasts is Ruby |
+| Aspect       | Original (Monorepo)               | Revised (Standalone)         |
+| ------------ | --------------------------------- | ---------------------------- |
+| Structure    | Turborepo with shared packages    | Single Next.js app           |
+| Code Sharing | Extract modules from BizBlasts    | Port patterns from BizBlasts |
+| Complexity   | Higher (multiple packages)        | Lower (one codebase)         |
+| Setup Time   | Longer                            | Faster                       |
+| Maintenance  | More moving parts                 | Simpler                      |
+| Best For     | When BizBlasts is also TypeScript | When BizBlasts is Ruby       |
 
 **Standalone is better for your Ruby + JS setup.**
 

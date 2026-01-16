@@ -17,7 +17,6 @@
     "db:full": "concurrently \"npm run db:dev\" \"npm run db:studio\"",
     "dev:all": "concurrently \"npm run db:dev\" \"npm run db:studio\" \"npm run dev\" --names \"DB,STUDIO,NEXT\" -c \"blue,magenta,green\"",
     "db:reset": "npx prisma migrate reset"
-
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

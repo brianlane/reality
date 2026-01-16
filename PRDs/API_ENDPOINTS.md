@@ -9,6 +9,7 @@
 ### Application Management
 
 #### Create Application
+
 ```
 POST /api/applications/create
 ```
@@ -16,6 +17,7 @@ POST /api/applications/create
 **Description:** Create a new application (saves as DRAFT)
 
 **Body:**
+
 ```json
 {
   "userId": "user_abc123",
@@ -32,13 +34,14 @@ POST /api/applications/create
     "religionImportance": 3,
     "politicalAlignment": "moderate",
     "familyImportance": 5,
-    "careerAmbition": 4,
+    "careerAmbition": 4
     // ... 80+ fields
   }
 }
 ```
 
 **Returns:**
+
 ```json
 {
   "applicationId": "appl_xyz789",
@@ -49,6 +52,7 @@ POST /api/applications/create
 ---
 
 #### Submit Application
+
 ```
 POST /api/applications/submit
 ```
@@ -56,6 +60,7 @@ POST /api/applications/submit
 **Description:** Submit application (triggers payment flow)
 
 **Body:**
+
 ```json
 {
   "applicationId": "appl_xyz789"
@@ -63,6 +68,7 @@ POST /api/applications/submit
 ```
 
 **Returns:**
+
 ```json
 {
   "paymentUrl": "https://checkout.stripe.com/pay/cs_...",
@@ -73,6 +79,7 @@ POST /api/applications/submit
 ---
 
 #### Get Application Status
+
 ```
 GET /api/applications/status/:id
 ```
@@ -80,6 +87,7 @@ GET /api/applications/status/:id
 **Description:** Get current application status
 
 **Returns:**
+
 ```json
 {
   "applicationId": "appl_xyz789",
@@ -95,6 +103,7 @@ GET /api/applications/status/:id
 ---
 
 #### Upload Profile Photo
+
 ```
 POST /api/applications/upload-photo
 ```
@@ -104,11 +113,13 @@ POST /api/applications/upload-photo
 **Body:** `FormData` with image file
 
 **Headers:**
+
 ```
 Content-Type: multipart/form-data
 ```
 
 **Returns:**
+
 ```json
 {
   "photoUrl": "https://supabase.co/storage/v1/object/public/photos/user_abc123_1.jpg",
@@ -121,6 +132,7 @@ Content-Type: multipart/form-data
 ### Payments
 
 #### Create Checkout Session
+
 ```
 POST /api/payments/create-checkout
 ```
@@ -128,6 +140,7 @@ POST /api/payments/create-checkout
 **Description:** Create Stripe checkout session
 
 **Body:**
+
 ```json
 {
   "type": "APPLICATION_FEE" | "EVENT_FEE",
@@ -137,6 +150,7 @@ POST /api/payments/create-checkout
 ```
 
 **Returns:**
+
 ```json
 {
   "sessionUrl": "https://checkout.stripe.com/pay/cs_...",
@@ -147,6 +161,7 @@ POST /api/payments/create-checkout
 ---
 
 #### Stripe Webhook
+
 ```
 POST /api/webhooks/stripe
 ```
@@ -154,11 +169,13 @@ POST /api/webhooks/stripe
 **Description:** Handle Stripe webhooks
 
 **Events Handled:**
+
 - `payment_intent.succeeded`
 - `payment_intent.failed`
 - `checkout.session.completed`
 
 **Headers:**
+
 ```
 Stripe-Signature: t=...,v1=...
 ```
@@ -166,6 +183,7 @@ Stripe-Signature: t=...,v1=...
 **Body:** Stripe event payload
 
 **Internal Actions:**
+
 - Update payment status in database
 - Trigger background check workflows
 - Send confirmation emails
@@ -177,6 +195,7 @@ Stripe-Signature: t=...,v1=...
 ### Dashboard
 
 #### Get Dashboard Data
+
 ```
 GET /api/applicant/dashboard
 ```
@@ -184,6 +203,7 @@ GET /api/applicant/dashboard
 **Description:** Get applicant dashboard overview
 
 **Returns:**
+
 ```json
 {
   "application": {
@@ -222,6 +242,7 @@ GET /api/applicant/dashboard
 ---
 
 #### Get Events
+
 ```
 GET /api/applicant/events
 ```
@@ -229,9 +250,11 @@ GET /api/applicant/events
 **Description:** Get all events applicant is invited to or attended
 
 **Query Params:**
+
 - `status` (optional): `UPCOMING` | `PAST`
 
 **Returns:**
+
 ```json
 {
   "events": [
@@ -254,6 +277,7 @@ GET /api/applicant/events
 ---
 
 #### Get Matches
+
 ```
 GET /api/applicant/matches
 ```
@@ -261,9 +285,11 @@ GET /api/applicant/matches
 **Description:** Get all matches for applicant
 
 **Query Params:**
+
 - `outcome` (optional): Filter by outcome
 
 **Returns:**
+
 ```json
 {
   "matches": [
@@ -291,6 +317,7 @@ GET /api/applicant/matches
 ---
 
 #### Update Match
+
 ```
 POST /api/applicant/matches/:matchId/update
 ```
@@ -298,6 +325,7 @@ POST /api/applicant/matches/:matchId/update
 **Description:** Update match outcome or notes
 
 **Body:**
+
 ```json
 {
   "outcome": "SECOND_DATE",
@@ -306,6 +334,7 @@ POST /api/applicant/matches/:matchId/update
 ```
 
 **Returns:**
+
 ```json
 {
   "match": {
@@ -323,6 +352,7 @@ POST /api/applicant/matches/:matchId/update
 ### Application Review
 
 #### List Applications
+
 ```
 GET /api/admin/applications
 ```
@@ -330,6 +360,7 @@ GET /api/admin/applications
 **Description:** List all applications with filters
 
 **Query Params:**
+
 - `status` (optional): Filter by ApplicationStatus
 - `gender` (optional): Filter by gender
 - `screeningStatus` (optional): Filter by screening status
@@ -339,6 +370,7 @@ GET /api/admin/applications
 - `sortOrder` (optional): `asc` | `desc`
 
 **Returns:**
+
 ```json
 {
   "applications": [
@@ -374,6 +406,7 @@ GET /api/admin/applications
 ---
 
 #### Get Application Details
+
 ```
 GET /api/admin/applications/:id
 ```
@@ -381,6 +414,7 @@ GET /api/admin/applications/:id
 **Description:** Get detailed application with questionnaire
 
 **Returns:**
+
 ```json
 {
   "applicant": {
@@ -409,7 +443,9 @@ GET /api/admin/applications/:id
     // ... all 80+ fields
     "aboutMe": "I'm a software engineer...",
     "idealPartner": "Someone who...",
-    "responses": { /* full JSON */ }
+    "responses": {
+      /* full JSON */
+    }
   },
   "screening": {
     "screeningStatus": "IN_PROGRESS",
@@ -434,6 +470,7 @@ GET /api/admin/applications/:id
 ---
 
 #### Approve Application
+
 ```
 POST /api/admin/applications/:id/approve
 ```
@@ -441,6 +478,7 @@ POST /api/admin/applications/:id/approve
 **Description:** Approve application
 
 **Body:**
+
 ```json
 {
   "compatibilityScore": 85.5,
@@ -449,6 +487,7 @@ POST /api/admin/applications/:id/approve
 ```
 
 **Returns:**
+
 ```json
 {
   "applicant": {
@@ -461,6 +500,7 @@ POST /api/admin/applications/:id/approve
 ```
 
 **Side Effects:**
+
 - Sends approval email to applicant
 - Adds to eligible pool for event invitations
 - Records admin action
@@ -468,6 +508,7 @@ POST /api/admin/applications/:id/approve
 ---
 
 #### Reject Application
+
 ```
 POST /api/admin/applications/:id/reject
 ```
@@ -475,6 +516,7 @@ POST /api/admin/applications/:id/reject
 **Description:** Reject application
 
 **Body:**
+
 ```json
 {
   "reason": "Failed background check - criminal record"
@@ -482,6 +524,7 @@ POST /api/admin/applications/:id/reject
 ```
 
 **Returns:**
+
 ```json
 {
   "applicant": {
@@ -494,12 +537,14 @@ POST /api/admin/applications/:id/reject
 ```
 
 **Side Effects:**
+
 - Sends rejection email (generic message, not specific reason)
 - Records admin action
 
 ---
 
 #### Move to Waitlist
+
 ```
 POST /api/admin/applications/:id/waitlist
 ```
@@ -507,6 +552,7 @@ POST /api/admin/applications/:id/waitlist
 **Description:** Move application to waitlist
 
 **Body:**
+
 ```json
 {
   "reason": "Gender imbalance - too many male applicants this month"
@@ -514,6 +560,7 @@ POST /api/admin/applications/:id/waitlist
 ```
 
 **Returns:**
+
 ```json
 {
   "applicant": {
@@ -529,6 +576,7 @@ POST /api/admin/applications/:id/waitlist
 ### Event Management
 
 #### Create Event
+
 ```
 POST /api/admin/events/create
 ```
@@ -536,6 +584,7 @@ POST /api/admin/events/create
 **Description:** Create new event
 
 **Body:**
+
 ```json
 {
   "name": "Phoenix Dating Experience - February 2026",
@@ -546,10 +595,10 @@ POST /api/admin/events/create
   "venueAddress": "6000 E Camelback Rd, Scottsdale, AZ 85251",
   "capacity": 20,
   "costs": {
-    "venue": 150000,      // $1,500 in cents
-    "catering": 80000,    // $800
-    "materials": 20000,   // $200
-    "total": 250000       // $2,500
+    "venue": 150000, // $1,500 in cents
+    "catering": 80000, // $800
+    "materials": 20000, // $200
+    "total": 250000 // $2,500
   },
   "expectedRevenue": 1498000, // 20 * $749 = $14,980
   "notes": "Valentine's themed event"
@@ -557,6 +606,7 @@ POST /api/admin/events/create
 ```
 
 **Returns:**
+
 ```json
 {
   "event": {
@@ -572,6 +622,7 @@ POST /api/admin/events/create
 ---
 
 #### List Events
+
 ```
 GET /api/admin/events
 ```
@@ -579,11 +630,13 @@ GET /api/admin/events
 **Description:** List all events
 
 **Query Params:**
+
 - `status` (optional): Filter by EventStatus
 - `fromDate` (optional): Filter events after date
 - `toDate` (optional): Filter events before date
 
 **Returns:**
+
 ```json
 {
   "events": [
@@ -607,6 +660,7 @@ GET /api/admin/events
 ---
 
 #### Get Event Details
+
 ```
 GET /api/admin/events/:id
 ```
@@ -614,6 +668,7 @@ GET /api/admin/events/:id
 **Description:** Get event details with invitations and matches
 
 **Returns:**
+
 ```json
 {
   "event": {
@@ -668,6 +723,7 @@ GET /api/admin/events/:id
 ---
 
 #### Invite Applicants to Event
+
 ```
 POST /api/admin/events/:id/invite
 ```
@@ -675,17 +731,19 @@ POST /api/admin/events/:id/invite
 **Description:** Send event invitations to selected applicants
 
 **Body:**
+
 ```json
 {
   "applicantIds": [
     "appl_xyz789",
-    "appl_abc999",
+    "appl_abc999"
     // ... 20 total (10 male, 10 female)
   ]
 }
 ```
 
 **Returns:**
+
 ```json
 {
   "invitations": [
@@ -706,12 +764,14 @@ POST /api/admin/events/:id/invite
 ```
 
 **Side Effects:**
+
 - Sends invitation emails with payment link
 - Updates event status to INVITATIONS_SENT
 
 ---
 
 #### Create Curated Matches
+
 ```
 POST /api/admin/events/:id/matches
 ```
@@ -719,6 +779,7 @@ POST /api/admin/events/:id/matches
 **Description:** Create pre-event curated matches based on compatibility
 
 **Body:**
+
 ```json
 {
   "matches": [
@@ -738,6 +799,7 @@ POST /api/admin/events/:id/matches
 ```
 
 **Returns:**
+
 ```json
 {
   "matches": [
@@ -760,6 +822,7 @@ POST /api/admin/events/:id/matches
 ---
 
 #### Complete Event
+
 ```
 POST /api/admin/events/:id/complete
 ```
@@ -767,6 +830,7 @@ POST /api/admin/events/:id/complete
 **Description:** Mark event as completed and record final details
 
 **Body:**
+
 ```json
 {
   "actualRevenue": 1498000,
@@ -780,6 +844,7 @@ POST /api/admin/events/:id/complete
 ```
 
 **Returns:**
+
 ```json
 {
   "event": {
@@ -793,6 +858,7 @@ POST /api/admin/events/:id/complete
 ```
 
 **Side Effects:**
+
 - Sends post-event survey to all attendees
 - Triggers match reveal emails
 
@@ -801,6 +867,7 @@ POST /api/admin/events/:id/complete
 ### Analytics
 
 #### Get Overview Analytics
+
 ```
 GET /api/admin/analytics/overview
 ```
@@ -808,10 +875,12 @@ GET /api/admin/analytics/overview
 **Description:** Get business metrics overview
 
 **Query Params:**
+
 - `fromDate` (optional): Start date for metrics
 - `toDate` (optional): End date for metrics
 
 **Returns:**
+
 ```json
 {
   "applicants": {
@@ -878,6 +947,7 @@ GET /api/admin/analytics/overview
 ---
 
 #### Get Event Analytics
+
 ```
 GET /api/admin/analytics/events/:id
 ```
@@ -885,6 +955,7 @@ GET /api/admin/analytics/events/:id
 **Description:** Get detailed event analytics
 
 **Returns:**
+
 ```json
 {
   "event": {
@@ -933,8 +1004,8 @@ GET /api/admin/analytics/events/:id
       "36+": 2
     },
     "occupations": [
-      {"occupation": "Software Engineer", "count": 4},
-      {"occupation": "Marketing Manager", "count": 3}
+      { "occupation": "Software Engineer", "count": 4 },
+      { "occupation": "Marketing Manager", "count": 3 }
     ]
   }
 }
@@ -943,6 +1014,7 @@ GET /api/admin/analytics/events/:id
 ---
 
 #### Get Match Analytics
+
 ```
 GET /api/admin/analytics/matches
 ```
@@ -950,10 +1022,12 @@ GET /api/admin/analytics/matches
 **Description:** Get matching performance metrics
 
 **Query Params:**
+
 - `fromDate` (optional)
 - `toDate` (optional)
 
 **Returns:**
+
 ```json
 {
   "overall": {
@@ -1000,10 +1074,10 @@ GET /api/admin/analytics/matches
   },
   "compatibility": {
     "scoreBuckets": {
-      "90-100": {"count": 34, "successRate": 73.5},
-      "80-89": {"count": 67, "successRate": 58.2},
-      "70-79": {"count": 45, "successRate": 42.2},
-      "60-69": {"count": 10, "successRate": 20.0}
+      "90-100": { "count": 34, "successRate": 73.5 },
+      "80-89": { "count": 67, "successRate": 58.2 },
+      "70-79": { "count": 45, "successRate": 42.2 },
+      "60-69": { "count": 10, "successRate": 20.0 }
     },
     "correlation": 0.78 // Score vs. success correlation
   }
@@ -1017,6 +1091,7 @@ GET /api/admin/analytics/matches
 ### Background Checks
 
 #### iDenfy Verification Webhook
+
 ```
 POST /api/webhooks/idenfy
 ```
@@ -1024,11 +1099,13 @@ POST /api/webhooks/idenfy
 **Description:** Receive identity verification results from iDenfy
 
 **Headers:**
+
 ```
 X-Idenfy-Signature: ...
 ```
 
 **Body:**
+
 ```json
 {
   "scanRef": "idenfy_abc123",
@@ -1044,6 +1121,7 @@ X-Idenfy-Signature: ...
 ```
 
 **Internal Actions:**
+
 - Update Applicant.idenfyStatus
 - If both iDenfy and Checkr pass → notify admin for manual review
 - If failed → auto-reject application
@@ -1051,6 +1129,7 @@ X-Idenfy-Signature: ...
 ---
 
 #### Checkr Report Webhook
+
 ```
 POST /api/webhooks/checkr
 ```
@@ -1058,11 +1137,13 @@ POST /api/webhooks/checkr
 **Description:** Receive background check results from Checkr
 
 **Headers:**
+
 ```
 X-Checkr-Signature: ...
 ```
 
 **Body:**
+
 ```json
 {
   "id": "checkr_xyz789",
@@ -1075,6 +1156,7 @@ X-Checkr-Signature: ...
 ```
 
 **Internal Actions:**
+
 - Update Applicant.checkrStatus based on result
 - If both iDenfy and Checkr pass → notify admin
 - Store only pass/fail status, NOT detailed report data
@@ -1101,6 +1183,7 @@ All endpoints return standard error format:
 ```
 
 **Common Error Codes:**
+
 - `VALIDATION_ERROR` (400)
 - `UNAUTHORIZED` (401)
 - `FORBIDDEN` (403)
