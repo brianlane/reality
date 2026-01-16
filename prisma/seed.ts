@@ -9,6 +9,12 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Starting seed...");
 
+  const environment = process.env["NODE_ENV"] ?? "development";
+  if (environment === "production") {
+    console.log("⚠️  Skipping seed in production.");
+    return;
+  }
+
   // Clear existing data (in order due to foreign key constraints)
   await prisma.match.deleteMany();
   await prisma.eventInvitation.deleteMany();

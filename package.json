@@ -11,7 +11,7 @@
     "format:check": "prettier --check . --ignore-path .gitignore",
     "bundle:check": "node scripts/check-bundle-size.mjs",
     "test:e2e": "playwright test",
-    "db:dev": "npx prisma dev",
+    "db:dev": "npx prisma migrate dev",
     "db:studio": "npx prisma studio",
     "db:seed": "npx prisma db seed",
     "db:full": "concurrently \"npm run db:dev\" \"npm run db:studio\"",

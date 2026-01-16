@@ -376,7 +376,6 @@ export function trackEvent(userId: string, event: string, properties?: any) {
 ```bash
 # Database
 DATABASE_URL="postgresql://user:password@localhost:5432/reality_matchmaking"
-DIRECT_URL="postgresql://user:password@localhost:5432/reality_matchmaking"
 
 # Authentication (Clerk)
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
