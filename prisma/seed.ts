@@ -464,19 +464,22 @@ async function main() {
   // ============================================
 
   for (const participant of pastEventParticipants) {
+    const accepted = Math.random() > 0.2;
+    const respondedAt = accepted ? new Date(2026, 0, 21) : null;
+
     await prisma.eventInvitation.create({
       data: {
         eventId: upcomingEvent.id,
         applicantId: participant.id,
-        status: Math.random() > 0.2 ? "ACCEPTED" : "PENDING",
+        status: accepted ? "ACCEPTED" : "PENDING",
         invitedAt: new Date(2026, 0, 20),
-        respondedAt: Math.random() > 0.2 ? new Date(2026, 0, 21) : null,
+        respondedAt,
         interestedIn: [],
       },
     });
 
     // Event fee payment for accepted invitations
-    if (Math.random() > 0.2) {
+    if (accepted) {
       await prisma.payment.create({
         data: {
           applicantId: participant.id,
@@ -585,7 +588,9 @@ async function main() {
     }
   }
 
-  console.log(`✓ Created ${matchCount + 5} matches for past event`);
+  console.log(
+    `✓ Created ${matchCount + mutualMatchCount} matches for past event`,
+  );
 
   // ============================================
   // ADMIN ACTIONS
