@@ -1,14 +1,394 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// schema.prisma
+// Reality Matchmaking Database Schema
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+enum UserRole {
+  APPLICANT
+  ADMIN
+}
+
+model User {
+  id            String   @id @default(cuid())
+  clerkId       String   @unique // Clerk user ID
+  email         String   @unique
+  firstName     String
+  lastName      String
+  phone         String?
+  role          UserRole @default(APPLICANT)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  applicant     Applicant?
+  adminActions  AdminAction[]
+  
+  @@index([email])
+  @@index([clerkId])
+}
+
+// ============================================
+// APPLICATION & SCREENING
+// ============================================
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  PAYMENT_PENDING
+  SCREENING_IN_PROGRESS
+  APPROVED
+  REJECTED
+  WAITLIST
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+  PREFER_NOT_TO_SAY
+}
+
+enum ScreeningStatus {
+  PENDING
+  IN_PROGRESS
+  PASSED
+  FAILED
+}
+
+model Applicant {
+  id                    String            @id @default(cuid())
+  userId                String            @unique
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Demographics
+  age                   Int
+  gender                Gender
+  location              String
+  occupation            String
+  employer              String?
+  education             String
+  incomeRange           String
+  incomeVerified        Boolean           @default(false)
+  
+  // Application Status
+  applicationStatus     ApplicationStatus @default(DRAFT)
+  submittedAt           DateTime?
+  reviewedAt            DateTime?
+  reviewedBy            String?           // Admin user ID
+  rejectionReason       String?
+  
+  // Screening - CRITICAL: Only store pass/fail status
+  screeningStatus       ScreeningStatus   @default(PENDING)
+  idenfyStatus          ScreeningStatus   @default(PENDING)
+  idenfyVerificationId  String?           @unique
+  checkrStatus          ScreeningStatus   @default(PENDING)
+  checkrReportId        String?           @unique
+  backgroundCheckNotes  String?           // General notes, NOT sensitive data
+  
+  // Compatibility & Matching
+  compatibilityScore    Float?            // 0-100 calculated score
+  
+  // Profile Photos (URLs only)
+  photos                String[]          // Array of Supabase Storage URLs
+  
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  
+  questionnaire         Questionnaire?
+  payments              Payment[]
+  eventInvitations      EventInvitation[]
+  matches               Match[]           @relation("ApplicantMatches")
+  matchesAsPartner      Match[]           @relation("PartnerMatches")
+  
+  @@index([applicationStatus])
+  @@index([gender])
+  @@index([screeningStatus])
+  @@index([compatibilityScore])
+}
+
+model Questionnaire {
+  id            String    @id @default(cuid())
+  applicantId   String    @unique
+  applicant     Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  
+  // Values & Beliefs (scored 1-5)
+  religionImportance      Int
+  politicalAlignment      String
+  familyImportance        Int
+  careerAmbition          Int
+  financialGoals          String
+  
+  // Lifestyle
+  fitnessLevel            String
+  diet                    String
+  drinking                String
+  smoking                 String
+  drugs                   String
+  pets                    String
+  
+  // Relationship Goals
+  relationshipGoal        String    // Marriage, Long-term, etc.
+  wantsChildren           String    // Yes, No, Maybe, Already have
+  childrenTimeline        String?
+  movingWillingness       String
+  
+  // Interests & Hobbies
+  hobbies                 String[]  // Array of interests
+  travelFrequency         String
+  favoriteActivities      String[]
+  
+  // Communication & Personality
+  loveLanguage            String
+  conflictStyle           String
+  introvertExtrovert      Int       // 1-10 scale
+  spontaneityPlanning     Int       // 1-10 scale
+  
+  // Deal-breakers
+  dealBreakers            String[]
+  
+  // Open-ended
+  aboutMe                 String    @db.Text
+  idealPartner            String    @db.Text
+  perfectDate             String    @db.Text
+  
+  // Raw JSON for flexibility
+  responses               Json      // Full questionnaire responses
+  
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+}
+
+// ============================================
+// PAYMENTS
+// ============================================
+
+enum PaymentType {
+  APPLICATION_FEE
+  EVENT_FEE
+  MEMBERSHIP
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  applicantId       String
+  applicant         Applicant     @relation(fields: [applicantId], references: [id])
+  
+  type              PaymentType
+  amount            Int           // Amount in cents
+  status            PaymentStatus @default(PENDING)
+  
+  stripePaymentId   String?       @unique
+  stripeInvoiceId   String?
+  
+  eventId           String?       // If EVENT_FEE
+  event             Event?        @relation(fields: [eventId], references: [id])
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  @@index([applicantId])
+  @@index([type])
+  @@index([status])
+  @@index([stripePaymentId])
+}
+
+// ============================================
+// EVENTS
+// ============================================
+
+enum EventStatus {
+  DRAFT
+  INVITATIONS_SENT
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+model Event {
+  id                String            @id @default(cuid())
+  name              String
+  date              DateTime
+  startTime         DateTime
+  endTime           DateTime
+  
+  venue             String
+  venueAddress      String
+  capacity          Int               @default(20)
+  
+  status            EventStatus       @default(DRAFT)
+  
+  // Costs (in cents)
+  venueCost         Int
+  cateringCost      Int
+  materialsCost     Int
+  totalCost         Int
+  
+  // Revenue (in cents)
+  expectedRevenue   Int
+  actualRevenue     Int               @default(0)
+  
+  // Notes
+  notes             String?           @db.Text
+  
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  createdBy         String            // Admin user ID
+  
+  invitations       EventInvitation[]
+  matches           Match[]
+  payments          Payment[]
+  
+  @@index([date])
+  @@index([status])
+  @@index([createdBy])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  ATTENDED
+  NO_SHOW
+}
+
+model EventInvitation {
+  id              String            @id @default(cuid())
+  eventId         String
+  event           Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  applicantId     String
+  applicant       Applicant         @relation(fields: [applicantId], references: [id])
+  
+  status          InvitationStatus  @default(PENDING)
+  invitedAt       DateTime          @default(now())
+  respondedAt     DateTime?
+  
+  // Speed dating notes (participant private)
+  blindNotes      String?           @db.Text
+  faceToFaceNotes String?           @db.Text
+  
+  // Interests indicated during event
+  interestedIn    String[]          // Array of applicant IDs
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  @@unique([eventId, applicantId])
+  @@index([eventId])
+  @@index([applicantId])
+  @@index([status])
+}
+
+// ============================================
+// MATCHES
+// ============================================
+
+enum MatchType {
+  CURATED         // Your pre-event matching
+  MUTUAL_SPEED    // Both indicated interest during speed dating
+  SOCIAL_HOUR     // Connected during social hour
+}
+
+enum MatchOutcome {
+  PENDING
+  FIRST_DATE_SCHEDULED
+  FIRST_DATE_COMPLETED
+  SECOND_DATE
+  DATING
+  RELATIONSHIP
+  ENGAGED
+  MARRIED
+  NO_CONNECTION
+  GHOSTED
+}
+
+model Match {
+  id              String        @id @default(cuid())
+  eventId         String
+  event           Event         @relation(fields: [eventId], references: [id])
+  
+  applicantId     String
+  applicant       Applicant     @relation(name: "ApplicantMatches", fields: [applicantId], references: [id])
+  
+  partnerId       String
+  partner         Applicant     @relation(name: "PartnerMatches", fields: [partnerId], references: [id])
+  
+  type            MatchType
+  
+  // Compatibility from questionnaire
+  compatibilityScore Float?
+  
+  // Outcome tracking
+  outcome         MatchOutcome  @default(PENDING)
+  
+  // Contact exchange
+  contactExchanged Boolean      @default(false)
+  contactExchangedAt DateTime?
+  
+  // Follow-ups (JSON survey responses)
+  day30FollowUp   Json?
+  day90FollowUp   Json?
+  month6FollowUp  Json?
+  
+  notes           String?       @db.Text
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@unique([eventId, applicantId, partnerId])
+  @@index([eventId])
+  @@index([applicantId])
+  @@index([partnerId])
+  @@index([outcome])
+  @@index([type])
+}
+
+// ============================================
+// ADMIN & ANALYTICS
+// ============================================
+
+enum AdminActionType {
+  APPROVE_APPLICATION
+  REJECT_APPLICATION
+  CREATE_EVENT
+  SEND_INVITATIONS
+  RECORD_MATCH
+  UPDATE_MATCH_OUTCOME
+  MANUAL_ADJUSTMENT
+}
+
+model AdminAction {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  
+  type        AdminActionType
+  targetId    String          // ID of affected entity
+  targetType  String          // "applicant", "event", "match"
+  
+  description String
+  metadata    Json?           // Additional context
+  
+  createdAt   DateTime        @default(now())
+  
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([targetId])
 }
