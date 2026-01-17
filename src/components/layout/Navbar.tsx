@@ -2,7 +2,6 @@ import Link from "next/link";
 
 const navLinks = [
   { href: "/", label: "Home" },
-  { href: "/apply", label: "Apply" },
 ];
 
 export default function Navbar() {
