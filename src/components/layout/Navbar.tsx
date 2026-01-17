@@ -1,9 +1,6 @@
 import Link from "next/link";
 
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/apply", label: "Apply" },
-];
+const navLinks = [{ href: "/", label: "Home" }];
 
 export default function Navbar() {
   return (
