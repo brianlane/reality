@@ -1,0 +1,46 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Card } from "@/components/ui/card";
+
+type DashboardResponse = {
+  application: { id: string; status: string; submittedAt?: string | null };
+  stats: { eventsAttended: number; matchesReceived: number; datesCompleted: number };
+};
+
+export default function ApplicantDashboardSummary() {
+  const [data, setData] = useState<DashboardResponse | null>(null);
+
+  useEffect(() => {
+    fetch("/api/applicant/dashboard")
+      .then((res) => res.json())
+      .then((json) => setData(json));
+  }, []);
+
+  if (!data) {
+    return <Card>Loading dashboard...</Card>;
+  }
+
+  return (
+    <Card>
+      <h2 className="text-lg font-semibold text-slate-900">Overview</h2>
+      <p className="mt-2 text-sm text-slate-600">
+        Application status: {data.application.status}
+      </p>
+      <div className="mt-4 grid gap-4 md:grid-cols-3">
+        <div>
+          <div className="text-2xl font-semibold">{data.stats.eventsAttended}</div>
+          <div className="text-sm text-slate-500">Events attended</div>
+        </div>
+        <div>
+          <div className="text-2xl font-semibold">{data.stats.matchesReceived}</div>
+          <div className="text-sm text-slate-500">Matches received</div>
+        </div>
+        <div>
+          <div className="text-2xl font-semibold">{data.stats.datesCompleted}</div>
+          <div className="text-sm text-slate-500">Dates completed</div>
+        </div>
+      </div>
+    </Card>
+  );
+}
