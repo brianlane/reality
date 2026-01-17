@@ -27,6 +27,10 @@ export async function POST(request: Request) {
     return errorResponse("VALIDATION_ERROR", "Missing applicantId", 400);
   }
 
+  if (!body.result) {
+    return errorResponse("VALIDATION_ERROR", "Missing result", 400);
+  }
+
   const status = mapCheckrResult(body.result);
 
   await db.applicant.update({

@@ -681,7 +681,7 @@ async function main() {
     targetId: string;
     targetType: string;
     description: string;
-    metadata: JsonValue;
+    metadata: JsonValue | undefined;
   }> = [
     {
       type: "APPROVE_APPLICATION",
@@ -714,7 +714,7 @@ async function main() {
         targetId: action.targetId,
         targetType: action.targetType,
         description: action.description,
-        metadata: action.metadata,
+        ...(action.metadata !== null ? { metadata: action.metadata } : {}),
         createdAt: new Date(2025, 10, 15),
       },
     });

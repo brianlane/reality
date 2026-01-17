@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { createApplicationSchema } from "@/lib/validations";
-import type { JsonValue } from "@/lib/json";
+import type { JsonValueNonNull } from "@/lib/json";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
 export async function POST(request: NextRequest) {
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         aboutMe: string;
         idealPartner: string;
         perfectDate: string;
-        responses: JsonValue;
+        responses: JsonValueNonNull;
       } = {
         religionImportance: questionnaire.religionImportance ?? 3,
         politicalAlignment: questionnaire.politicalAlignment ?? "moderate",
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
         aboutMe: questionnaire.aboutMe ?? "TBD",
         idealPartner: questionnaire.idealPartner ?? "TBD",
         perfectDate: questionnaire.perfectDate ?? "TBD",
-        responses: (questionnaire.responses ?? {}) as JsonValue,
+        responses: (questionnaire.responses ?? {}) as JsonValueNonNull,
       };
       await db.questionnaire.upsert({
         where: { applicantId: applicant.id },

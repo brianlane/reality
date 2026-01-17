@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type DraftState = {
   userId: string;
@@ -28,6 +28,21 @@ export function useApplicationDraft() {
       return { userId: "mock-user", photos: [] };
     }
   });
+
+  useEffect(() => {
+    const stored = globalThis.localStorage?.getItem(STORAGE_KEY);
+    if (!stored) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(stored) as DraftState;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate draft from localStorage
+      setDraft(parsed);
+    } catch {
+      globalThis.localStorage?.removeItem(STORAGE_KEY);
+    }
+  }, []);
 
   const updateDraft = useCallback((updates: Partial<DraftState>) => {
     setDraft((prev) => {

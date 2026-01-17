@@ -5,3 +5,5 @@ export type JsonValue =
   | null
   | { [key: string]: JsonValue }
   | JsonValue[];
+
+export type JsonValueNonNull = Exclude<JsonValue, null>;

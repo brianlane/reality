@@ -27,6 +27,10 @@ export async function POST(request: Request) {
     return errorResponse("VALIDATION_ERROR", "Missing applicantId", 400);
   }
 
+  if (!body.status) {
+    return errorResponse("VALIDATION_ERROR", "Missing status", 400);
+  }
+
   const status = mapIdenfyStatus(body.status);
 
   await db.applicant.update({

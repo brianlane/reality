@@ -10,10 +10,18 @@ export async function POST(request: Request) {
   try {
     const parsed = JSON.parse(payload);
     const paymentId = parsed?.data?.object?.metadata?.paymentId;
-    const status =
-      parsed?.type === "payment_intent.succeeded" ? "SUCCEEDED" : "FAILED";
+    const eventType = parsed?.type;
+    let status: "SUCCEEDED" | "FAILED" | null = null;
 
-    if (paymentId) {
+    if (eventType === "payment_intent.succeeded") {
+      status = "SUCCEEDED";
+    } else if (eventType === "payment_intent.payment_failed") {
+      status = "FAILED";
+    } else if (eventType === "checkout.session.completed") {
+      status = "SUCCEEDED";
+    }
+
+    if (paymentId && status) {
       await db.payment.update({
         where: { id: paymentId },
         data: { status },

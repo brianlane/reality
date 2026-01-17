@@ -27,6 +27,11 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
   const adminUser = await getOrCreateAdminUser(auth.userId);
 
+  const event = await db.event.findUnique({ where: { id } });
+  if (!event) {
+    return errorResponse("NOT_FOUND", "Event not found", 404);
+  }
+
   const invitations = await Promise.all(
     body.applicantIds.map((applicantId) =>
       db.eventInvitation.upsert({

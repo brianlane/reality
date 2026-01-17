@@ -61,6 +61,28 @@ export async function GET() {
     _sum: { amount: true },
   });
 
+  const outcomeMap = matchOutcomeCounts.reduce<Record<string, number>>(
+    (acc, row) => {
+      acc[row.outcome] = row._count;
+      return acc;
+    },
+    {},
+  );
+
+  const successOutcomes = [
+    "FIRST_DATE_SCHEDULED",
+    "FIRST_DATE_COMPLETED",
+    "SECOND_DATE",
+    "DATING",
+    "RELATIONSHIP",
+    "ENGAGED",
+    "MARRIED",
+  ];
+  const successCount = successOutcomes.reduce(
+    (sum, outcome) => sum + (outcomeMap[outcome] ?? 0),
+    0,
+  );
+
   return successResponse({
     applicants: {
       total: applicantTotal,
@@ -95,14 +117,8 @@ export async function GET() {
         acc[row.type] = row._count;
         return acc;
       }, {}),
-      outcomes: matchOutcomeCounts.reduce<Record<string, number>>(
-        (acc, row) => {
-          acc[row.outcome] = row._count;
-          return acc;
-        },
-        {},
-      ),
-      successRate: matchTotal > 0 ? 0 : 0,
+      outcomes: outcomeMap,
+      successRate: matchTotal > 0 ? (successCount / matchTotal) * 100 : 0,
     },
     revenue: {
       total: revenue._sum.amount ?? 0,
