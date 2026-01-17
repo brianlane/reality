@@ -38,7 +38,7 @@ export const questionnaireSchema = z
     aboutMe: z.string().min(1),
     idealPartner: z.string().min(1),
     perfectDate: z.string().min(1),
-    responses: z.record(z.any()).default({}),
+    responses: z.record(z.string(), z.any()).default({}),
   })
   .partial()
   .default({});
@@ -56,4 +56,20 @@ export const submitApplicationSchema = z.object({
 export const updateMatchSchema = z.object({
   outcome: z.string().min(1),
   notes: z.string().optional().nullable(),
+});
+
+export const inviteApplicantsSchema = z.object({
+  applicantIds: z.array(z.string().min(1)).min(1),
+});
+
+export const createMatchesSchema = z.object({
+  matches: z
+    .array(
+      z.object({
+        applicantId: z.string().min(1),
+        partnerId: z.string().min(1),
+        compatibilityScore: z.number().min(0).max(100).optional(),
+      }),
+    )
+    .min(1),
 });

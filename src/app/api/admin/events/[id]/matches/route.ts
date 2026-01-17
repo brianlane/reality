@@ -2,19 +2,10 @@ import { getMockAuth, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
+import { createMatchesSchema } from "@/lib/validations";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
-};
-
-type MatchInput = {
-  applicantId: string;
-  partnerId: string;
-  compatibilityScore?: number;
-};
-
-type MatchesBody = {
-  matches: MatchInput[];
 };
 
 export async function POST(request: Request, { params }: RouteContext) {
@@ -26,7 +17,20 @@ export async function POST(request: Request, { params }: RouteContext) {
     return errorResponse("FORBIDDEN", (error as Error).message, 403);
   }
 
-  const body = (await request.json()) as MatchesBody;
+  let body: {
+    matches: Array<{
+      applicantId: string;
+      partnerId: string;
+      compatibilityScore?: number;
+    }>;
+  };
+  try {
+    body = createMatchesSchema.parse(await request.json());
+  } catch (error) {
+    return errorResponse("VALIDATION_ERROR", "Invalid request body", 400, [
+      { message: (error as Error).message },
+    ]);
+  }
   const adminUser = await getOrCreateAdminUser(auth.userId);
 
   const created = await Promise.all(

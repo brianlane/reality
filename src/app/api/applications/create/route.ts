@@ -34,13 +34,43 @@ export async function POST(request: NextRequest) {
     });
 
     if (questionnaire) {
+      const questionnaireData = {
+        religionImportance: questionnaire.religionImportance ?? 3,
+        politicalAlignment: questionnaire.politicalAlignment ?? "moderate",
+        familyImportance: questionnaire.familyImportance ?? 3,
+        careerAmbition: questionnaire.careerAmbition ?? 3,
+        financialGoals: questionnaire.financialGoals ?? "To be determined",
+        fitnessLevel: questionnaire.fitnessLevel ?? "Moderately active",
+        diet: questionnaire.diet ?? "Omnivore",
+        drinking: questionnaire.drinking ?? "Socially",
+        smoking: questionnaire.smoking ?? "No",
+        drugs: questionnaire.drugs ?? "No",
+        pets: questionnaire.pets ?? "No preference",
+        relationshipGoal: questionnaire.relationshipGoal ?? "Long-term",
+        wantsChildren: questionnaire.wantsChildren ?? "Maybe",
+        childrenTimeline: questionnaire.childrenTimeline ?? null,
+        movingWillingness:
+          questionnaire.movingWillingness ?? "Open to relocating",
+        hobbies: questionnaire.hobbies ?? [],
+        travelFrequency:
+          questionnaire.travelFrequency ?? "Once or twice a year",
+        favoriteActivities: questionnaire.favoriteActivities ?? [],
+        loveLanguage: questionnaire.loveLanguage ?? "Quality Time",
+        conflictStyle: questionnaire.conflictStyle ?? "Discuss calmly",
+        introvertExtrovert: questionnaire.introvertExtrovert ?? 5,
+        spontaneityPlanning: questionnaire.spontaneityPlanning ?? 5,
+        dealBreakers: questionnaire.dealBreakers ?? [],
+        aboutMe: questionnaire.aboutMe ?? "TBD",
+        idealPartner: questionnaire.idealPartner ?? "TBD",
+        perfectDate: questionnaire.perfectDate ?? "TBD",
+        responses: (questionnaire.responses ?? {}) as any,
+      };
       await db.questionnaire.upsert({
         where: { applicantId: applicant.id },
-        update: { ...questionnaire, responses: questionnaire.responses ?? {} },
+        update: questionnaireData,
         create: {
           applicantId: applicant.id,
-          ...questionnaire,
-          responses: questionnaire.responses ?? {},
+          ...questionnaireData,
         },
       });
     }

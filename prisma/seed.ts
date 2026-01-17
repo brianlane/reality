@@ -597,7 +597,7 @@ async function main() {
 
       createdMatches.add(matchKey);
 
-      const day30FollowUp: Record<string, unknown> | undefined =
+      const day30FollowUp =
         compatScore > 85
           ? {
               firstDateHappened: true,
@@ -618,7 +618,7 @@ async function main() {
           contactExchanged: compatScore > 85 ? true : Math.random() > 0.5,
           contactExchangedAt:
             compatScore > 85 ? new Date(2025, 11, 15, 22, 0) : null,
-          ...(day30FollowUp ? { day30FollowUp } : {}),
+          ...(day30FollowUp ? { day30FollowUp: day30FollowUp as any } : {}),
           createdAt: new Date(2025, 11, 14), // Day before event
         },
       });
@@ -642,11 +642,9 @@ async function main() {
             partnerId: pastEventFemales[j].id,
             type: "MUTUAL_SPEED",
             compatibilityScore: null,
-            outcome: ([
-              "FIRST_DATE_SCHEDULED",
-              "DATING",
-              "NO_CONNECTION",
-            ] as const)[Math.floor(Math.random() * 3)] as MatchOutcome,
+            outcome: (
+              ["FIRST_DATE_SCHEDULED", "DATING", "NO_CONNECTION"] as const
+            )[Math.floor(Math.random() * 3)] as MatchOutcome,
             contactExchanged: true,
             contactExchangedAt: new Date(2025, 11, 15, 21, 0),
             createdAt: new Date(2025, 11, 15, 20, 30), // During event
@@ -702,11 +700,11 @@ async function main() {
     await prisma.adminAction.create({
       data: {
         userId: adminUser.id,
-        type: action.type,
+        type: action.type as any,
         targetId: action.targetId,
         targetType: action.targetType,
         description: action.description,
-        metadata: action.metadata,
+        metadata: action.metadata as any,
         createdAt: new Date(2025, 10, 15),
       },
     });
