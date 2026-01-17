@@ -15,7 +15,7 @@ export default function ApplicantEventsList() {
   const [events, setEvents] = useState<EventItem[]>([]);
 
   useEffect(() => {
-    fetch("/api/applicant/events")
+    fetch("/api/applicant/events?status=UPCOMING")
       .then((res) => res.json())
       .then((json) => setEvents(json.events ?? []));
   }, []);
