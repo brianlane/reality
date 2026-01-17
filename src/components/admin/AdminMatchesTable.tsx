@@ -13,7 +13,9 @@ export default function AdminMatchesTable() {
   const [data, setData] = useState<MatchAnalytics | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/analytics/matches", { headers: { "x-mock-user-role": "ADMIN" } })
+    fetch("/api/admin/analytics/matches", {
+      headers: { "x-mock-user-role": "ADMIN" },
+    })
       .then((res) => res.json())
       .then((json) => setData(json));
   }, []);

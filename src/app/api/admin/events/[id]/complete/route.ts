@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 
-type Params = {
-  params: { id: string };
+type RouteContext = {
+  params: Promise<{ id: string }>;
 };
 
 type CompleteBody = {
@@ -14,7 +14,8 @@ type CompleteBody = {
   notes?: string;
 };
 
-export async function POST(request: Request, { params }: Params) {
+export async function POST(request: Request, { params }: RouteContext) {
+  const { id } = await params;
   const auth = await getMockAuth();
   try {
     requireAdmin(auth.role);
@@ -26,7 +27,7 @@ export async function POST(request: Request, { params }: Params) {
   const adminUser = await getOrCreateAdminUser(auth.userId);
 
   const event = await db.event.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       status: "COMPLETED",
       actualRevenue: body.actualRevenue ?? 0,

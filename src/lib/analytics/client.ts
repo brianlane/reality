@@ -1,4 +1,8 @@
-export function trackEvent(userId: string, event: string, properties?: Record<string, unknown>) {
+export function trackEvent(
+  userId: string,
+  event: string,
+  properties?: Record<string, unknown>,
+) {
   return {
     userId,
     event,

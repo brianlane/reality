@@ -35,7 +35,9 @@ export default function AdminEventsTable() {
           {events.map((event) => (
             <tr key={event.id} className="border-b text-sm text-slate-600">
               <td className="py-2">{event.name}</td>
-              <td className="py-2">{new Date(event.date).toLocaleDateString()}</td>
+              <td className="py-2">
+                {new Date(event.date).toLocaleDateString()}
+              </td>
               <td className="py-2">{event.status}</td>
             </tr>
           ))}

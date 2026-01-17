@@ -42,8 +42,9 @@ export async function GET(request: Request) {
       status: event.status,
       capacity: event.capacity,
       invitationsSent: event.invitations.length,
-      confirmed: event.invitations.filter((invite) => invite.status === "ACCEPTED")
-        .length,
+      confirmed: event.invitations.filter(
+        (invite) => invite.status === "ACCEPTED",
+      ).length,
       expectedRevenue: event.expectedRevenue,
       actualRevenue: event.actualRevenue,
       totalCost: event.totalCost,

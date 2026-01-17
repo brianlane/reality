@@ -15,7 +15,9 @@ export default function AdminApplicationsTable() {
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
 
   useEffect(() => {
-    fetch("/api/admin/applications", { headers: { "x-mock-user-role": "ADMIN" } })
+    fetch("/api/admin/applications", {
+      headers: { "x-mock-user-role": "ADMIN" },
+    })
       .then((res) => res.json())
       .then((json) => setApplications(json.applications ?? []));
   }, []);
@@ -33,7 +35,9 @@ export default function AdminApplicationsTable() {
         <tbody>
           {applications.map((app) => (
             <tr key={app.id} className="border-b text-sm text-slate-600">
-              <td className="py-2">{app.firstName} {app.lastName}</td>
+              <td className="py-2">
+                {app.firstName} {app.lastName}
+              </td>
               <td className="py-2">{app.applicationStatus}</td>
             </tr>
           ))}

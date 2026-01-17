@@ -2,11 +2,12 @@ import { getMockAuth, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
-type Params = {
-  params: { id: string };
+type RouteContext = {
+  params: Promise<{ id: string }>;
 };
 
-export async function GET(_: Request, { params }: Params) {
+export async function GET(_: Request, { params }: RouteContext) {
+  const { id } = await params;
   const auth = await getMockAuth();
   try {
     requireAdmin(auth.role);
@@ -15,7 +16,7 @@ export async function GET(_: Request, { params }: Params) {
   }
 
   const event = await db.event.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       invitations: { include: { applicant: { include: { user: true } } } },
       matches: true,
@@ -68,14 +69,17 @@ export async function GET(_: Request, { params }: Params) {
     })),
     stats: {
       invitationsSent: event.invitations.length,
-      accepted: event.invitations.filter((invite) => invite.status === "ACCEPTED")
-        .length,
-      declined: event.invitations.filter((invite) => invite.status === "DECLINED")
-        .length,
+      accepted: event.invitations.filter(
+        (invite) => invite.status === "ACCEPTED",
+      ).length,
+      declined: event.invitations.filter(
+        (invite) => invite.status === "DECLINED",
+      ).length,
       pending: event.invitations.filter((invite) => invite.status === "PENDING")
         .length,
-      attended: event.invitations.filter((invite) => invite.status === "ATTENDED")
-        .length,
+      attended: event.invitations.filter(
+        (invite) => invite.status === "ATTENDED",
+      ).length,
       noShows: event.invitations.filter((invite) => invite.status === "NO_SHOW")
         .length,
       genderBalance,

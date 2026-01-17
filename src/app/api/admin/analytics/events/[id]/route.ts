@@ -2,11 +2,12 @@ import { getMockAuth, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
-type Params = {
-  params: { id: string };
+type RouteContext = {
+  params: Promise<{ id: string }>;
 };
 
-export async function GET(_: Request, { params }: Params) {
+export async function GET(_: Request, { params }: RouteContext) {
+  const { id } = await params;
   const auth = await getMockAuth();
   try {
     requireAdmin(auth.role);
@@ -15,7 +16,7 @@ export async function GET(_: Request, { params }: Params) {
   }
 
   const event = await db.event.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       invitations: { include: { applicant: true } },
       matches: true,
@@ -77,11 +78,14 @@ export async function GET(_: Request, { params }: Params) {
       firstDatesScheduled: event.matches.filter(
         (match) => match.outcome === "FIRST_DATE_SCHEDULED",
       ).length,
-      relationships: event.matches.filter((match) => match.outcome === "RELATIONSHIP")
+      relationships: event.matches.filter(
+        (match) => match.outcome === "RELATIONSHIP",
+      ).length,
+      noConnection: event.matches.filter(
+        (match) => match.outcome === "NO_CONNECTION",
+      ).length,
+      pending: event.matches.filter((match) => match.outcome === "PENDING")
         .length,
-      noConnection: event.matches.filter((match) => match.outcome === "NO_CONNECTION")
-        .length,
-      pending: event.matches.filter((match) => match.outcome === "PENDING").length,
     },
     financials: {
       expectedRevenue: event.expectedRevenue,
@@ -90,14 +94,17 @@ export async function GET(_: Request, { params }: Params) {
       profit: event.actualRevenue - event.totalCost,
       profitMargin:
         event.actualRevenue > 0
-          ? ((event.actualRevenue - event.totalCost) / event.actualRevenue) * 100
+          ? ((event.actualRevenue - event.totalCost) / event.actualRevenue) *
+            100
           : 0,
     },
     demographics: {
       avgAge:
         event.invitations.length > 0
-          ? event.invitations.reduce((sum, invite) => sum + invite.applicant.age, 0) /
-            event.invitations.length
+          ? event.invitations.reduce(
+              (sum, invite) => sum + invite.applicant.age,
+              0,
+            ) / event.invitations.length
           : 0,
       ageDistribution: {},
       occupations: [],

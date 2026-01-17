@@ -10,13 +10,17 @@ export async function GET() {
     return errorResponse("FORBIDDEN", (error as Error).message, 403);
   }
 
-  const [applicantTotal, applicantStatusCounts, genderCounts, compatibilityAvg] =
-    await Promise.all([
-      db.applicant.count(),
-      db.applicant.groupBy({ by: ["applicationStatus"], _count: true }),
-      db.applicant.groupBy({ by: ["gender"], _count: true }),
-      db.applicant.aggregate({ _avg: { compatibilityScore: true } }),
-    ]);
+  const [
+    applicantTotal,
+    applicantStatusCounts,
+    genderCounts,
+    compatibilityAvg,
+  ] = await Promise.all([
+    db.applicant.count(),
+    db.applicant.groupBy({ by: ["applicationStatus"], _count: true }),
+    db.applicant.groupBy({ by: ["gender"], _count: true }),
+    db.applicant.aggregate({ _avg: { compatibilityScore: true } }),
+  ]);
 
   const statusMap = applicantStatusCounts.reduce<Record<string, number>>(
     (acc, row) => {
@@ -40,7 +44,10 @@ export async function GET() {
   });
 
   const matchTotal = await db.match.count();
-  const matchTypeCounts = await db.match.groupBy({ by: ["type"], _count: true });
+  const matchTypeCounts = await db.match.groupBy({
+    by: ["type"],
+    _count: true,
+  });
   const matchOutcomeCounts = await db.match.groupBy({
     by: ["outcome"],
     _count: true,
@@ -88,10 +95,13 @@ export async function GET() {
         acc[row.type] = row._count;
         return acc;
       }, {}),
-      outcomes: matchOutcomeCounts.reduce<Record<string, number>>((acc, row) => {
-        acc[row.outcome] = row._count;
-        return acc;
-      }, {}),
+      outcomes: matchOutcomeCounts.reduce<Record<string, number>>(
+        (acc, row) => {
+          acc[row.outcome] = row._count;
+          return acc;
+        },
+        {},
+      ),
       successRate: matchTotal > 0 ? 0 : 0,
     },
     revenue: {
@@ -101,7 +111,8 @@ export async function GET() {
         return acc;
       }, {}),
       ytd: revenue._sum.amount ?? 0,
-      avgPerEvent: eventsTotal > 0 ? (revenue._sum.amount ?? 0) / eventsTotal : 0,
+      avgPerEvent:
+        eventsTotal > 0 ? (revenue._sum.amount ?? 0) / eventsTotal : 0,
     },
     trends: {
       applicationsPerWeek: [],

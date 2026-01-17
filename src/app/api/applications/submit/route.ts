@@ -7,7 +7,9 @@ const APPLICATION_FEE_AMOUNT = 19900;
 
 export async function POST(request: NextRequest) {
   try {
-    const { applicationId } = submitApplicationSchema.parse(await request.json());
+    const { applicationId } = submitApplicationSchema.parse(
+      await request.json(),
+    );
     const applicant = await db.applicant.findUnique({
       where: { id: applicationId },
     });

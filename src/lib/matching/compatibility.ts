@@ -29,13 +29,21 @@ export function calculateCompatibility(
 
   if (primary.religionImportance && secondary.religionImportance) {
     scores.push(
-      numericSimilarity(primary.religionImportance, secondary.religionImportance, 4),
+      numericSimilarity(
+        primary.religionImportance,
+        secondary.religionImportance,
+        4,
+      ),
     );
   }
 
   if (primary.familyImportance && secondary.familyImportance) {
     scores.push(
-      numericSimilarity(primary.familyImportance, secondary.familyImportance, 4),
+      numericSimilarity(
+        primary.familyImportance,
+        secondary.familyImportance,
+        4,
+      ),
     );
   }
 
@@ -47,22 +55,34 @@ export function calculateCompatibility(
 
   if (primary.introvertExtrovert && secondary.introvertExtrovert) {
     scores.push(
-      numericSimilarity(primary.introvertExtrovert, secondary.introvertExtrovert, 9),
+      numericSimilarity(
+        primary.introvertExtrovert,
+        secondary.introvertExtrovert,
+        9,
+      ),
     );
   }
 
   if (primary.spontaneityPlanning && secondary.spontaneityPlanning) {
     scores.push(
-      numericSimilarity(primary.spontaneityPlanning, secondary.spontaneityPlanning, 9),
+      numericSimilarity(
+        primary.spontaneityPlanning,
+        secondary.spontaneityPlanning,
+        9,
+      ),
     );
   }
 
   if (primary.politicalAlignment && secondary.politicalAlignment) {
-    scores.push(primary.politicalAlignment === secondary.politicalAlignment ? 1 : 0.6);
+    scores.push(
+      primary.politicalAlignment === secondary.politicalAlignment ? 1 : 0.6,
+    );
   }
 
   if (primary.relationshipGoal && secondary.relationshipGoal) {
-    scores.push(primary.relationshipGoal === secondary.relationshipGoal ? 1 : 0.6);
+    scores.push(
+      primary.relationshipGoal === secondary.relationshipGoal ? 1 : 0.6,
+    );
   }
 
   if (primary.wantsChildren && secondary.wantsChildren) {

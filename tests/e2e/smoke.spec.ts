@@ -18,7 +18,10 @@ test("application flow navigates through steps", async ({ page }) => {
 
   await page.route("**/api/applications/upload-photo", async (route) => {
     await route.fulfill({
-      json: { photoUrl: "https://example.com/photo.jpg", applicantId: "appl_123" },
+      json: {
+        photoUrl: "https://example.com/photo.jpg",
+        applicantId: "appl_123",
+      },
     });
   });
 

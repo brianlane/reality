@@ -12,7 +12,11 @@ export async function GET() {
 
   const [matchTotal, typeCounts, outcomeCounts] = await Promise.all([
     db.match.count(),
-    db.match.groupBy({ by: ["type"], _count: true, _avg: { compatibilityScore: true } }),
+    db.match.groupBy({
+      by: ["type"],
+      _count: true,
+      _avg: { compatibilityScore: true },
+    }),
     db.match.groupBy({ by: ["outcome"], _count: true }),
   ]);
 
@@ -22,16 +26,15 @@ export async function GET() {
       avgMatchesPerEvent: 0,
       avgMatchesPerParticipant: 0,
     },
-    byType: typeCounts.reduce<Record<string, { count: number; avgCompatibilityScore: number | null }>>(
-      (acc, row) => {
-        acc[row.type] = {
-          count: row._count,
-          avgCompatibilityScore: row._avg.compatibilityScore ?? null,
-        };
-        return acc;
-      },
-      {},
-    ),
+    byType: typeCounts.reduce<
+      Record<string, { count: number; avgCompatibilityScore: number | null }>
+    >((acc, row) => {
+      acc[row.type] = {
+        count: row._count,
+        avgCompatibilityScore: row._avg.compatibilityScore ?? null,
+      };
+      return acc;
+    }, {}),
     outcomes: {
       distribution: outcomeCounts.reduce<Record<string, number>>((acc, row) => {
         acc[row.outcome] = row._count;
@@ -39,10 +42,15 @@ export async function GET() {
       }, {}),
       conversionFunnel: {
         matches: matchTotal,
-        firstDateScheduled: outcomeCounts.find((row) => row.outcome === "FIRST_DATE_SCHEDULED")
-          ?._count ?? 0,
-        secondDate: outcomeCounts.find((row) => row.outcome === "SECOND_DATE")?._count ?? 0,
-        relationship: outcomeCounts.find((row) => row.outcome === "RELATIONSHIP")?._count ?? 0,
+        firstDateScheduled:
+          outcomeCounts.find((row) => row.outcome === "FIRST_DATE_SCHEDULED")
+            ?._count ?? 0,
+        secondDate:
+          outcomeCounts.find((row) => row.outcome === "SECOND_DATE")?._count ??
+          0,
+        relationship:
+          outcomeCounts.find((row) => row.outcome === "RELATIONSHIP")?._count ??
+          0,
       },
     },
     timing: {

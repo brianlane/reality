@@ -2,7 +2,9 @@ type AdminEventDetailProps = {
   params: { id: string };
 };
 
-export default function AdminEventDetailPage({ params }: AdminEventDetailProps) {
+export default function AdminEventDetailPage({
+  params,
+}: AdminEventDetailProps) {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold text-slate-900">

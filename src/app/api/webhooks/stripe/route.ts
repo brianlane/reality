@@ -10,7 +10,8 @@ export async function POST(request: Request) {
   try {
     const parsed = JSON.parse(payload);
     const paymentId = parsed?.data?.object?.metadata?.paymentId;
-    const status = parsed?.type === "payment_intent.succeeded" ? "SUCCEEDED" : "FAILED";
+    const status =
+      parsed?.type === "payment_intent.succeeded" ? "SUCCEEDED" : "FAILED";
 
     if (paymentId) {
       await db.payment.update({

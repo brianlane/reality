@@ -54,7 +54,10 @@ export default function QuestionnaireForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="religionImportance" className="text-sm font-medium text-slate-700">
+        <label
+          htmlFor="religionImportance"
+          className="text-sm font-medium text-slate-700"
+        >
           Religion importance (1-5)
         </label>
         <Input
@@ -67,13 +70,19 @@ export default function QuestionnaireForm() {
         />
       </div>
       <div>
-        <label htmlFor="politicalAlignment" className="text-sm font-medium text-slate-700">
+        <label
+          htmlFor="politicalAlignment"
+          className="text-sm font-medium text-slate-700"
+        >
           Political alignment
         </label>
         <Input id="politicalAlignment" name="politicalAlignment" required />
       </div>
       <div>
-        <label htmlFor="familyImportance" className="text-sm font-medium text-slate-700">
+        <label
+          htmlFor="familyImportance"
+          className="text-sm font-medium text-slate-700"
+        >
           Family importance (1-5)
         </label>
         <Input
@@ -86,7 +95,10 @@ export default function QuestionnaireForm() {
         />
       </div>
       <div>
-        <label htmlFor="careerAmbition" className="text-sm font-medium text-slate-700">
+        <label
+          htmlFor="careerAmbition"
+          className="text-sm font-medium text-slate-700"
+        >
           Career ambition (1-5)
         </label>
         <Input
@@ -105,7 +117,10 @@ export default function QuestionnaireForm() {
         <Textarea id="aboutMe" name="aboutMe" required rows={4} />
       </div>
       <div>
-        <label htmlFor="idealPartner" className="text-sm font-medium text-slate-700">
+        <label
+          htmlFor="idealPartner"
+          className="text-sm font-medium text-slate-700"
+        >
           Ideal partner
         </label>
         <Textarea id="idealPartner" name="idealPartner" required rows={4} />

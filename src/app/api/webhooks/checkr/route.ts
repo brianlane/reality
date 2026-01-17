@@ -1,6 +1,9 @@
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
-import { mapCheckrResult, verifyCheckrSignature } from "@/lib/background-checks/checkr";
+import {
+  mapCheckrResult,
+  verifyCheckrSignature,
+} from "@/lib/background-checks/checkr";
 
 export async function POST(request: Request) {
   const signature = request.headers.get("x-checkr-signature") ?? "";

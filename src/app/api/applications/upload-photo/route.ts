@@ -10,7 +10,11 @@ export async function POST(request: Request) {
   const applicantId = formData.get("applicantId")?.toString();
 
   if (!file || !(file instanceof File) || !applicantId) {
-    return errorResponse("VALIDATION_ERROR", "Missing file or applicantId", 400);
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "Missing file or applicantId",
+      400,
+    );
   }
 
   const applicant = await db.applicant.findUnique({

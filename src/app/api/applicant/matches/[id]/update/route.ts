@@ -4,11 +4,12 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { getApplicantByClerkId } from "@/lib/applicant-helpers";
 import { updateMatchSchema } from "@/lib/validations";
 
-type Params = {
-  params: { id: string };
+type RouteContext = {
+  params: Promise<{ id: string }>;
 };
 
-export async function POST(request: Request, { params }: Params) {
+export async function POST(request: Request, { params }: RouteContext) {
+  const { id } = await params;
   const auth = await getMockAuth();
   const applicant = await getApplicantByClerkId(auth.userId);
 
@@ -19,7 +20,7 @@ export async function POST(request: Request, { params }: Params) {
   const payload = updateMatchSchema.parse(await request.json());
 
   const match = await db.match.findUnique({
-    where: { id: params.id },
+    where: { id },
   });
 
   if (!match || match.applicantId !== applicant.id) {

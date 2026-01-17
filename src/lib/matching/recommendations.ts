@@ -1,7 +1,9 @@
 import { Applicant, Questionnaire } from "@prisma/client";
 import { scoreApplicantMatch } from "./scoring";
 
-type ApplicantWithQuestionnaire = Applicant & { questionnaire?: Questionnaire | null };
+type ApplicantWithQuestionnaire = Applicant & {
+  questionnaire?: Questionnaire | null;
+};
 
 export function getRecommendations(
   applicant: ApplicantWithQuestionnaire,

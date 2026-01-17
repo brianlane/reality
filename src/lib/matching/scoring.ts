@@ -1,7 +1,9 @@
 import { Applicant, Questionnaire } from "@prisma/client";
 import { calculateCompatibility } from "./compatibility";
 
-type ApplicantWithQuestionnaire = Applicant & { questionnaire?: Questionnaire | null };
+type ApplicantWithQuestionnaire = Applicant & {
+  questionnaire?: Questionnaire | null;
+};
 
 export function scoreApplicantMatch(
   applicant: ApplicantWithQuestionnaire,

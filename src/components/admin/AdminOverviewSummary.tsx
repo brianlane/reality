@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 
 type OverviewResponse = {
-  applicants: { total: number; approved: number; rejected: number; waitlist: number };
+  applicants: {
+    total: number;
+    approved: number;
+    rejected: number;
+    waitlist: number;
+  };
   events: { total: number; upcoming: number; completed: number };
   revenue: { total: number };
 };
@@ -26,7 +31,9 @@ export default function AdminOverviewSummary() {
 
   return (
     <Card>
-      <h2 className="text-lg font-semibold text-slate-900">Business Overview</h2>
+      <h2 className="text-lg font-semibold text-slate-900">
+        Business Overview
+      </h2>
       <div className="mt-4 grid gap-4 md:grid-cols-3">
         <div>
           <div className="text-2xl font-semibold">{data.applicants.total}</div>
@@ -37,7 +44,9 @@ export default function AdminOverviewSummary() {
           <div className="text-sm text-slate-500">Events</div>
         </div>
         <div>
-          <div className="text-2xl font-semibold">${(data.revenue.total / 100).toFixed(2)}</div>
+          <div className="text-2xl font-semibold">
+            ${(data.revenue.total / 100).toFixed(2)}
+          </div>
           <div className="text-sm text-slate-500">Revenue</div>
         </div>
       </div>

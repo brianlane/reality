@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 
-type Params = {
-  params: { id: string };
+type RouteContext = {
+  params: Promise<{ id: string }>;
 };
 
 type MatchInput = {
@@ -17,7 +17,8 @@ type MatchesBody = {
   matches: MatchInput[];
 };
 
-export async function POST(request: Request, { params }: Params) {
+export async function POST(request: Request, { params }: RouteContext) {
+  const { id } = await params;
   const auth = await getMockAuth();
   try {
     requireAdmin(auth.role);
@@ -33,14 +34,14 @@ export async function POST(request: Request, { params }: Params) {
       db.match.upsert({
         where: {
           eventId_applicantId_partnerId: {
-            eventId: params.id,
+            eventId: id,
             applicantId: match.applicantId,
             partnerId: match.partnerId,
           },
         },
         update: { compatibilityScore: match.compatibilityScore },
         create: {
-          eventId: params.id,
+          eventId: id,
           applicantId: match.applicantId,
           partnerId: match.partnerId,
           type: "CURATED",
@@ -54,7 +55,7 @@ export async function POST(request: Request, { params }: Params) {
     data: {
       userId: adminUser.id,
       type: "RECORD_MATCH",
-      targetId: params.id,
+      targetId: id,
       targetType: "event",
       description: "Created curated matches",
       metadata: { count: created.length },
@@ -73,7 +74,10 @@ export async function POST(request: Request, { params }: Params) {
     stats: {
       totalMatches: created.length,
       avgMatchesPerParticipant:
-        created.length > 0 ? created.length / (new Set(body.matches.map((m) => m.applicantId)).size || 1) : 0,
+        created.length > 0
+          ? created.length /
+            (new Set(body.matches.map((m) => m.applicantId)).size || 1)
+          : 0,
     },
   });
 }

@@ -15,7 +15,10 @@ export default function FAQPage() {
       <h1 className="text-3xl font-semibold text-slate-900">FAQ</h1>
       <div className="mt-6 space-y-4">
         {faqs.map((faq) => (
-          <div key={faq.q} className="rounded-xl border border-slate-200 bg-white p-6">
+          <div
+            key={faq.q}
+            className="rounded-xl border border-slate-200 bg-white p-6"
+          >
             <h2 className="text-lg font-semibold text-slate-900">{faq.q}</h2>
             <p className="mt-2 text-slate-600">{faq.a}</p>
           </div>

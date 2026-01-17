@@ -2,15 +2,16 @@ import { getMockAuth, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
-type Params = {
-  params: { id: string };
+type RouteContext = {
+  params: Promise<{ id: string }>;
 };
 
 type WaitlistBody = {
   reason?: string;
 };
 
-export async function POST(request: Request, { params }: Params) {
+export async function POST(request: Request, { params }: RouteContext) {
+  const { id } = await params;
   const auth = await getMockAuth();
   try {
     requireAdmin(auth.role);
@@ -33,7 +34,7 @@ export async function POST(request: Request, { params }: Params) {
     }));
 
   const applicant = await db.applicant.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       applicationStatus: "WAITLIST",
       reviewedAt: new Date(),

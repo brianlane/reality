@@ -1,6 +1,9 @@
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
-import { mapIdenfyStatus, verifyIdenfySignature } from "@/lib/background-checks/idenfy";
+import {
+  mapIdenfyStatus,
+  verifyIdenfySignature,
+} from "@/lib/background-checks/idenfy";
 
 export async function POST(request: Request) {
   const signature = request.headers.get("x-idenfy-signature") ?? "";

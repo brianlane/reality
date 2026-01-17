@@ -3,15 +3,16 @@ import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 
-type Params = {
-  params: { id: string };
+type RouteContext = {
+  params: Promise<{ id: string }>;
 };
 
 type InviteBody = {
   applicantIds: string[];
 };
 
-export async function POST(request: Request, { params }: Params) {
+export async function POST(request: Request, { params }: RouteContext) {
+  const { id } = await params;
   const auth = await getMockAuth();
   try {
     requireAdmin(auth.role);
@@ -25,15 +26,15 @@ export async function POST(request: Request, { params }: Params) {
   const invitations = await Promise.all(
     body.applicantIds.map((applicantId) =>
       db.eventInvitation.upsert({
-        where: { eventId_applicantId: { eventId: params.id, applicantId } },
+        where: { eventId_applicantId: { eventId: id, applicantId } },
         update: {},
-        create: { eventId: params.id, applicantId },
+        create: { eventId: id, applicantId },
       }),
     ),
   );
 
   await db.event.update({
-    where: { id: params.id },
+    where: { id },
     data: { status: "INVITATIONS_SENT" },
   });
 
@@ -41,7 +42,7 @@ export async function POST(request: Request, { params }: Params) {
     data: {
       userId: adminUser.id,
       type: "SEND_INVITATIONS",
-      targetId: params.id,
+      targetId: id,
       targetType: "event",
       description: "Sent event invitations",
       metadata: { count: invitations.length },

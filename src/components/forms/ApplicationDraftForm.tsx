@@ -66,31 +66,46 @@ export default function ApplicationDraftForm() {
         </Select>
       </div>
       <div>
-        <label htmlFor="location" className="text-sm font-medium text-slate-700">
+        <label
+          htmlFor="location"
+          className="text-sm font-medium text-slate-700"
+        >
           Location
         </label>
         <Input id="location" name="location" required />
       </div>
       <div>
-        <label htmlFor="occupation" className="text-sm font-medium text-slate-700">
+        <label
+          htmlFor="occupation"
+          className="text-sm font-medium text-slate-700"
+        >
           Occupation
         </label>
         <Input id="occupation" name="occupation" required />
       </div>
       <div>
-        <label htmlFor="employer" className="text-sm font-medium text-slate-700">
+        <label
+          htmlFor="employer"
+          className="text-sm font-medium text-slate-700"
+        >
           Employer
         </label>
         <Input id="employer" name="employer" />
       </div>
       <div>
-        <label htmlFor="education" className="text-sm font-medium text-slate-700">
+        <label
+          htmlFor="education"
+          className="text-sm font-medium text-slate-700"
+        >
           Education
         </label>
         <Input id="education" name="education" required />
       </div>
       <div>
-        <label htmlFor="incomeRange" className="text-sm font-medium text-slate-700">
+        <label
+          htmlFor="incomeRange"
+          className="text-sm font-medium text-slate-700"
+        >
           Income Range
         </label>
         <Input id="incomeRange" name="incomeRange" required />
