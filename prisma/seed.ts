@@ -572,7 +572,7 @@ async function main() {
   // ============================================
 
   // Create curated matches for past event
-  const matchOutcomes: string[] = [
+  const matchOutcomes = [
     "FIRST_DATE_SCHEDULED",
     "FIRST_DATE_COMPLETED",
     "SECOND_DATE",
@@ -580,7 +580,8 @@ async function main() {
     "RELATIONSHIP",
     "NO_CONNECTION",
     "PENDING",
-  ];
+  ] as const;
+  type MatchOutcome = (typeof matchOutcomes)[number];
 
   let matchCount = 0;
 
@@ -641,9 +642,11 @@ async function main() {
             partnerId: pastEventFemales[j].id,
             type: "MUTUAL_SPEED",
             compatibilityScore: null,
-            outcome: ["FIRST_DATE_SCHEDULED", "DATING", "NO_CONNECTION"][
-              Math.floor(Math.random() * 3)
-            ],
+            outcome: ([
+              "FIRST_DATE_SCHEDULED",
+              "DATING",
+              "NO_CONNECTION",
+            ] as const)[Math.floor(Math.random() * 3)] as MatchOutcome,
             contactExchanged: true,
             contactExchangedAt: new Date(2025, 11, 15, 21, 0),
             createdAt: new Date(2025, 11, 15, 20, 30), // During event
