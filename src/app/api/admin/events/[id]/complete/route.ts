@@ -26,6 +26,11 @@ export async function POST(request: Request, { params }: RouteContext) {
   const body = (await request.json()) as CompleteBody;
   const adminUser = await getOrCreateAdminUser(auth.userId);
 
+  const existing = await db.event.findUnique({ where: { id } });
+  if (!existing) {
+    return errorResponse("NOT_FOUND", "Event not found", 404);
+  }
+
   const event = await db.event.update({
     where: { id },
     data: {

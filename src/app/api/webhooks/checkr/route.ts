@@ -13,7 +13,14 @@ export async function POST(request: Request) {
     return errorResponse("FORBIDDEN", "Invalid signature", 403);
   }
 
-  const body = JSON.parse(payload);
+  let body: { candidate_id?: string; result?: string };
+  try {
+    body = JSON.parse(payload);
+  } catch (error) {
+    return errorResponse("VALIDATION_ERROR", "Invalid JSON payload", 400, [
+      { message: (error as Error).message },
+    ]);
+  }
   const applicantId = body.candidate_id;
 
   if (!applicantId) {

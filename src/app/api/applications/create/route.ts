@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { createApplicationSchema } from "@/lib/validations";
+import type { JsonValue } from "@/lib/json";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
 export async function POST(request: NextRequest) {
@@ -34,7 +35,35 @@ export async function POST(request: NextRequest) {
     });
 
     if (questionnaire) {
-      const questionnaireData = {
+      const questionnaireData: {
+        religionImportance: number;
+        politicalAlignment: string;
+        familyImportance: number;
+        careerAmbition: number;
+        financialGoals: string;
+        fitnessLevel: string;
+        diet: string;
+        drinking: string;
+        smoking: string;
+        drugs: string;
+        pets: string;
+        relationshipGoal: string;
+        wantsChildren: string;
+        childrenTimeline: string | null;
+        movingWillingness: string;
+        hobbies: string[];
+        travelFrequency: string;
+        favoriteActivities: string[];
+        loveLanguage: string;
+        conflictStyle: string;
+        introvertExtrovert: number;
+        spontaneityPlanning: number;
+        dealBreakers: string[];
+        aboutMe: string;
+        idealPartner: string;
+        perfectDate: string;
+        responses: JsonValue;
+      } = {
         religionImportance: questionnaire.religionImportance ?? 3,
         politicalAlignment: questionnaire.politicalAlignment ?? "moderate",
         familyImportance: questionnaire.familyImportance ?? 3,
@@ -63,7 +92,7 @@ export async function POST(request: NextRequest) {
         aboutMe: questionnaire.aboutMe ?? "TBD",
         idealPartner: questionnaire.idealPartner ?? "TBD",
         perfectDate: questionnaire.perfectDate ?? "TBD",
-        responses: (questionnaire.responses ?? {}) as any,
+        responses: (questionnaire.responses ?? {}) as JsonValue,
       };
       await db.questionnaire.upsert({
         where: { applicantId: applicant.id },

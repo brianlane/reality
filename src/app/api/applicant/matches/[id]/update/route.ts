@@ -17,7 +17,14 @@ export async function POST(request: Request, { params }: RouteContext) {
     return errorResponse("UNAUTHORIZED", "Applicant not found", 401);
   }
 
-  const payload = updateMatchSchema.parse(await request.json());
+  let payload: { outcome: string; notes?: string | null };
+  try {
+    payload = updateMatchSchema.parse(await request.json());
+  } catch (error) {
+    return errorResponse("VALIDATION_ERROR", "Invalid match update", 400, [
+      { message: (error as Error).message },
+    ]);
+  }
 
   const match = await db.match.findUnique({
     where: { id },

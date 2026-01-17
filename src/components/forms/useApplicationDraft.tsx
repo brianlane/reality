@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 type DraftState = {
   userId: string;
@@ -11,17 +11,23 @@ type DraftState = {
 const STORAGE_KEY = "reality-application-draft";
 
 export function useApplicationDraft() {
-  const [draft, setDraft] = useState<DraftState>({
-    userId: "mock-user",
-    photos: [],
-  });
-
-  useEffect(() => {
-    const stored = globalThis.localStorage?.getItem(STORAGE_KEY);
-    if (stored) {
-      setDraft(JSON.parse(stored));
+  const [draft, setDraft] = useState<DraftState>(() => {
+    if (typeof window === "undefined") {
+      return { userId: "mock-user", photos: [] };
     }
-  }, []);
+
+    const stored = globalThis.localStorage?.getItem(STORAGE_KEY);
+    if (!stored) {
+      return { userId: "mock-user", photos: [] };
+    }
+
+    try {
+      return JSON.parse(stored) as DraftState;
+    } catch {
+      globalThis.localStorage?.removeItem(STORAGE_KEY);
+      return { userId: "mock-user", photos: [] };
+    }
+  });
 
   const updateDraft = useCallback((updates: Partial<DraftState>) => {
     setDraft((prev) => {

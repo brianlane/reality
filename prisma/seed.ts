@@ -2,6 +2,7 @@
 // Seed script for Reality Matchmaking development environment
 
 import { PrismaClient } from "@prisma/client";
+import type { JsonValue } from "../src/lib/json";
 
 const prisma = new PrismaClient();
 
@@ -597,7 +598,7 @@ async function main() {
 
       createdMatches.add(matchKey);
 
-      const day30FollowUp =
+      const day30FollowUp: JsonValue | undefined =
         compatScore > 85
           ? {
               firstDateHappened: true,
@@ -618,7 +619,7 @@ async function main() {
           contactExchanged: compatScore > 85 ? true : Math.random() > 0.5,
           contactExchangedAt:
             compatScore > 85 ? new Date(2025, 11, 15, 22, 0) : null,
-          ...(day30FollowUp ? { day30FollowUp: day30FollowUp as any } : {}),
+          ...(day30FollowUp ? { day30FollowUp } : {}),
           createdAt: new Date(2025, 11, 14), // Day before event
         },
       });
@@ -666,12 +667,21 @@ async function main() {
   // ============================================
 
   // Log some admin actions
+  type AdminActionType =
+    | "APPROVE_APPLICATION"
+    | "REJECT_APPLICATION"
+    | "CREATE_EVENT"
+    | "SEND_INVITATIONS"
+    | "RECORD_MATCH"
+    | "UPDATE_MATCH_OUTCOME"
+    | "MANUAL_ADJUSTMENT";
+
   const adminActions: Array<{
-    type: string;
+    type: AdminActionType;
     targetId: string;
     targetType: string;
     description: string;
-    metadata: Record<string, unknown>;
+    metadata: JsonValue;
   }> = [
     {
       type: "APPROVE_APPLICATION",
@@ -700,11 +710,11 @@ async function main() {
     await prisma.adminAction.create({
       data: {
         userId: adminUser.id,
-        type: action.type as any,
+        type: action.type,
         targetId: action.targetId,
         targetType: action.targetType,
         description: action.description,
-        metadata: action.metadata as any,
+        metadata: action.metadata,
         createdAt: new Date(2025, 10, 15),
       },
     });

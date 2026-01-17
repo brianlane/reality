@@ -33,6 +33,11 @@ export async function POST(request: Request, { params }: RouteContext) {
       },
     }));
 
+  const existing = await db.applicant.findUnique({ where: { id } });
+  if (!existing) {
+    return errorResponse("NOT_FOUND", "Applicant not found", 404);
+  }
+
   const applicant = await db.applicant.update({
     where: { id },
     data: {

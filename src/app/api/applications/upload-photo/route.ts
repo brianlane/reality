@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
-import { supabase } from "@/lib/storage/client";
+import { getSupabaseClient } from "@/lib/storage/client";
 
 const PHOTO_BUCKET = "photos";
 
@@ -27,6 +27,15 @@ export async function POST(request: Request) {
 
   const path = `${applicantId}/${Date.now()}-${file.name}`;
   const buffer = new Uint8Array(await file.arrayBuffer());
+
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    return errorResponse(
+      "INTERNAL_SERVER_ERROR",
+      "Storage is not configured",
+      500,
+    );
+  }
 
   const { error } = await supabase.storage
     .from(PHOTO_BUCKET)
