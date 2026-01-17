@@ -1,8 +1,8 @@
 // prisma/seed.ts
 // Seed script for Reality Matchmaking development environment
 
-import type { AdminActionType, Applicant, User } from "@prisma/client";
-import { MatchOutcome, Prisma, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import type { JsonValue } from "../src/lib/json";
 
 const prisma = new PrismaClient();
 
@@ -44,6 +44,72 @@ async function main() {
   });
 
   console.log("✓ Created admin user");
+
+  const mockApplicantUser = await prisma.user.create({
+    data: {
+      clerkId: "mock-user",
+      email: "mock-user@realitymatchmaking.com",
+      firstName: "Mock",
+      lastName: "Applicant",
+      phone: "+14805559999",
+      role: "APPLICANT",
+    },
+  });
+
+  const mockApplicant = await prisma.applicant.create({
+    data: {
+      userId: mockApplicantUser.id,
+      age: 28,
+      gender: "FEMALE",
+      location: "Phoenix, AZ",
+      occupation: "Marketing Manager",
+      employer: "Reality Matchmaking",
+      education: "Bachelor's Degree",
+      incomeRange: "$100,000-$150,000",
+      incomeVerified: true,
+      applicationStatus: "SUBMITTED",
+      submittedAt: new Date(2026, 0, 12),
+      screeningStatus: "IN_PROGRESS",
+      idenfyStatus: "PENDING",
+      checkrStatus: "PENDING",
+      photos: ["https://i.pravatar.cc/300?img=64"],
+    },
+  });
+
+  await prisma.questionnaire.create({
+    data: {
+      applicantId: mockApplicant.id,
+      religionImportance: 3,
+      politicalAlignment: "moderate",
+      familyImportance: 4,
+      careerAmbition: 4,
+      financialGoals: "Build wealth",
+      fitnessLevel: "Moderately active",
+      diet: "Omnivore",
+      drinking: "Socially",
+      smoking: "No",
+      drugs: "No",
+      pets: "Dog lover",
+      relationshipGoal: "Long-term",
+      wantsChildren: "Maybe",
+      childrenTimeline: "2-5 years",
+      movingWillingness: "Open to relocating",
+      hobbies: ["Hiking", "Cooking"],
+      travelFrequency: "Once or twice a year",
+      favoriteActivities: ["Foodie experiences"],
+      loveLanguage: "Quality Time",
+      conflictStyle: "Discuss calmly",
+      introvertExtrovert: 6,
+      spontaneityPlanning: 5,
+      dealBreakers: ["Dishonesty"],
+      aboutMe: "I love meaningful connections and great conversations.",
+      idealPartner: "Someone kind, ambitious, and adventurous.",
+      perfectDate: "Sunset hike and a cozy dinner downtown.",
+      responses: {},
+    },
+  });
+
+  console.log("✓ Created mock applicant");
 
   // Create 30 applicant users (15 male, 15 female)
   const maleFirstNames = [
@@ -116,8 +182,13 @@ async function main() {
     "Entrepreneur",
   ];
 
-  const users: User[] = [];
-  const applicants: Applicant[] = [];
+  const users: Array<{ id: string }> = [];
+  const applicants: Array<{
+    id: string;
+    gender: string;
+    occupation: string;
+    compatibilityScore: number | null;
+  }> = [];
 
   // Create male applicants
   for (let i = 0; i < 15; i++) {
@@ -502,7 +573,7 @@ async function main() {
   // ============================================
 
   // Create curated matches for past event
-  const matchOutcomes: MatchOutcome[] = [
+  const matchOutcomes = [
     "FIRST_DATE_SCHEDULED",
     "FIRST_DATE_COMPLETED",
     "SECOND_DATE",
@@ -510,7 +581,8 @@ async function main() {
     "RELATIONSHIP",
     "NO_CONNECTION",
     "PENDING",
-  ];
+  ] as const;
+  type MatchOutcome = (typeof matchOutcomes)[number];
 
   let matchCount = 0;
 
@@ -526,7 +598,7 @@ async function main() {
 
       createdMatches.add(matchKey);
 
-      const day30FollowUp: Prisma.JsonObject | undefined =
+      const day30FollowUp: JsonValue | undefined =
         compatScore > 85
           ? {
               firstDateHappened: true,
@@ -571,11 +643,9 @@ async function main() {
             partnerId: pastEventFemales[j].id,
             type: "MUTUAL_SPEED",
             compatibilityScore: null,
-            outcome: [
-              MatchOutcome.FIRST_DATE_SCHEDULED,
-              MatchOutcome.DATING,
-              MatchOutcome.NO_CONNECTION,
-            ][Math.floor(Math.random() * 3)],
+            outcome: (
+              ["FIRST_DATE_SCHEDULED", "DATING", "NO_CONNECTION"] as const
+            )[Math.floor(Math.random() * 3)] as MatchOutcome,
             contactExchanged: true,
             contactExchangedAt: new Date(2025, 11, 15, 21, 0),
             createdAt: new Date(2025, 11, 15, 20, 30), // During event
@@ -597,12 +667,21 @@ async function main() {
   // ============================================
 
   // Log some admin actions
+  type AdminActionType =
+    | "APPROVE_APPLICATION"
+    | "REJECT_APPLICATION"
+    | "CREATE_EVENT"
+    | "SEND_INVITATIONS"
+    | "RECORD_MATCH"
+    | "UPDATE_MATCH_OUTCOME"
+    | "MANUAL_ADJUSTMENT";
+
   const adminActions: Array<{
     type: AdminActionType;
     targetId: string;
     targetType: string;
     description: string;
-    metadata: Prisma.JsonObject;
+    metadata: JsonValue | undefined;
   }> = [
     {
       type: "APPROVE_APPLICATION",
@@ -635,7 +714,7 @@ async function main() {
         targetId: action.targetId,
         targetType: action.targetType,
         description: action.description,
-        metadata: action.metadata,
+        ...(action.metadata !== null ? { metadata: action.metadata } : {}),
         createdAt: new Date(2025, 10, 15),
       },
     });
