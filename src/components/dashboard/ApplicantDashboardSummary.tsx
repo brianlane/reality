@@ -14,12 +14,24 @@ type DashboardResponse = {
 
 export default function ApplicantDashboardSummary() {
   const [data, setData] = useState<DashboardResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/applicant/dashboard")
-      .then((res) => res.json())
-      .then((json) => setData(json));
+      .then(async (res) => {
+        const json = await res.json();
+        if (!res.ok || json?.error) {
+          setError("Failed to load dashboard.");
+          return;
+        }
+        setData(json);
+      })
+      .catch(() => setError("Failed to load dashboard."));
   }, []);
+
+  if (error) {
+    return <Card>{error}</Card>;
+  }
 
   if (!data) {
     return <Card>Loading dashboard...</Card>;

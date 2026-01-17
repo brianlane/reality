@@ -22,10 +22,22 @@ export async function POST(request: Request) {
     }
 
     if (paymentId && status) {
-      await db.payment.update({
+      const payment = await db.payment.update({
         where: { id: paymentId },
         data: { status },
+        select: { applicantId: true, type: true },
       });
+
+      if (status === "SUCCEEDED" && payment.type === "APPLICATION_FEE") {
+        await db.applicant.update({
+          where: { id: payment.applicantId },
+          data: {
+            applicationStatus: "SUBMITTED",
+            submittedAt: new Date(),
+            screeningStatus: "IN_PROGRESS",
+          },
+        });
+      }
     }
   } catch {
     return errorResponse("VALIDATION_ERROR", "Invalid payload", 400);

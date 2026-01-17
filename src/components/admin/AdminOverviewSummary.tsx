@@ -16,14 +16,26 @@ type OverviewResponse = {
 
 export default function AdminOverviewSummary() {
   const [data, setData] = useState<OverviewResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/analytics/overview", {
       headers: { "x-mock-user-role": "ADMIN" },
     })
-      .then((res) => res.json())
-      .then((json) => setData(json));
+      .then(async (res) => {
+        const json = await res.json();
+        if (!res.ok || json?.error) {
+          setError("Failed to load overview.");
+          return;
+        }
+        setData(json);
+      })
+      .catch(() => setError("Failed to load overview."));
   }, []);
+
+  if (error) {
+    return <Card>{error}</Card>;
+  }
 
   if (!data) {
     return <Card>Loading overview...</Card>;

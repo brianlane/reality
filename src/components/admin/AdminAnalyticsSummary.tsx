@@ -11,14 +11,26 @@ type AnalyticsOverview = {
 
 export default function AdminAnalyticsSummary() {
   const [data, setData] = useState<AnalyticsOverview | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/analytics/overview", {
       headers: { "x-mock-user-role": "ADMIN" },
     })
-      .then((res) => res.json())
-      .then((json) => setData(json));
+      .then(async (res) => {
+        const json = await res.json();
+        if (!res.ok || json?.error) {
+          setError("Failed to load analytics.");
+          return;
+        }
+        setData(json);
+      })
+      .catch(() => setError("Failed to load analytics."));
   }, []);
+
+  if (error) {
+    return <Card>{error}</Card>;
+  }
 
   if (!data) {
     return <Card>Loading analytics...</Card>;

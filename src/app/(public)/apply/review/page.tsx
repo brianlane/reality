@@ -1,3 +1,4 @@
+import Link from "next/link";
 import ReviewSummary from "@/components/forms/ReviewSummary";
 
 export default function ReviewPage() {
@@ -9,12 +10,12 @@ export default function ReviewPage() {
       </p>
       <div className="mt-6 space-y-4">
         <ReviewSummary />
-        <a
+        <Link
           href="/apply/payment"
           className="inline-flex rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white"
         >
           Continue to payment
-        </a>
+        </Link>
       </div>
     </section>
   );
