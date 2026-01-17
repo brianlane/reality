@@ -181,11 +181,7 @@ reality-matchmaking/
 │   │   └── Sidebar.tsx
 │   └── marketing/                      # Marketing page components
 │       ├── Hero.tsx
-│       ├── Features.tsx
-│       ├── HowItWorks.tsx
-│       ├── Testimonials.tsx
-│       ├── Pricing.tsx
-│       └── FAQ.tsx
+│       └── Features.tsx
 │
 ├── lib/                                # Business logic & utilities
 │   ├── db.ts                           # Prisma client singleton
@@ -380,7 +376,6 @@ DATABASE_URL="postgresql://user:password@localhost:5432/reality_matchmaking"
 # Authentication (Clerk)
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
 CLERK_SECRET_KEY="sk_test_..."
-NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in"
 NEXT_PUBLIC_CLERK_SIGN_UP_URL="/sign-up"
 NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL="/dashboard"
 NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL="/apply"

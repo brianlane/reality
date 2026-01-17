@@ -2,9 +2,9 @@ import Link from "next/link";
 
 export default function HomePage() {
   return (
-    <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-16">
-      <div className="rounded-2xl bg-white p-10 shadow-sm">
-        <h1 className="text-3xl font-semibold text-slate-900">
+    <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-12 sm:px-6 sm:py-16">
+      <div className="rounded-2xl bg-white p-6 shadow-sm sm:p-10">
+        <h1 className="text-3xl font-semibold text-slate-900 sm:text-4xl">
           Premium matchmaking experiences designed for real connections.
         </h1>
         <p className="mt-4 max-w-2xl text-slate-600">
@@ -17,12 +17,6 @@ export default function HomePage() {
             className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white"
           >
             Start application
-          </Link>
-          <Link
-            href="/how-it-works"
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
-          >
-            How it works
           </Link>
         </div>
       </div>
