@@ -11,14 +11,26 @@ type MatchAnalytics = {
 
 export default function AdminMatchesTable() {
   const [data, setData] = useState<MatchAnalytics | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/analytics/matches", {
       headers: { "x-mock-user-role": "ADMIN" },
     })
-      .then((res) => res.json())
-      .then((json) => setData(json));
+      .then(async (res) => {
+        const json = await res.json();
+        if (!res.ok || json?.error) {
+          setError("Failed to load match analytics.");
+          return;
+        }
+        setData(json);
+      })
+      .catch(() => setError("Failed to load match analytics."));
   }, []);
+
+  if (error) {
+    return <Card>{error}</Card>;
+  }
 
   if (!data) {
     return <Card>Loading match analytics...</Card>;

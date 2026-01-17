@@ -32,6 +32,13 @@ export async function POST(request: Request) {
   }
 
   const status = mapCheckrResult(body.result);
+  const applicant = await db.applicant.findUnique({
+    where: { id: applicantId },
+  });
+
+  if (!applicant) {
+    return errorResponse("NOT_FOUND", "Applicant not found", 404);
+  }
 
   await db.applicant.update({
     where: { id: applicantId },
