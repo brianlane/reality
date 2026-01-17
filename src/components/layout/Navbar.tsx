@@ -2,9 +2,6 @@ import Link from "next/link";
 
 const navLinks = [
   { href: "/", label: "Home" },
-  { href: "/how-it-works", label: "How It Works" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/faq", label: "FAQ" },
   { href: "/apply", label: "Apply" },
 ];
 
@@ -25,12 +22,6 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/sign-in"
-            className="rounded-md border border-slate-300 px-3 py-1 text-slate-700 hover:border-slate-400"
-          >
-            Sign In
-          </Link>
         </nav>
       </div>
     </header>

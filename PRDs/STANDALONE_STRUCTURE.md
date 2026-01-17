@@ -181,11 +181,7 @@ reality-matchmaking/
 │   │   └── Sidebar.tsx
 │   └── marketing/                      # Marketing page components
 │       ├── Hero.tsx
-│       ├── Features.tsx
-│       ├── HowItWorks.tsx
-│       ├── Testimonials.tsx
-│       ├── Pricing.tsx
-│       └── FAQ.tsx
+│       └── Features.tsx
 │
 ├── lib/                                # Business logic & utilities
 │   ├── db.ts                           # Prisma client singleton

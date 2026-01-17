@@ -172,9 +172,7 @@ reality-matchmaking-monorepo/
 │   │   │   │   └── Sidebar.tsx
 │   │   │   └── marketing/
 │   │   │       ├── Hero.tsx
-│   │   │       ├── Features.tsx
-│   │   │       ├── Testimonials.tsx
-│   │   │       └── Pricing.tsx
+│   │   │       └── Features.tsx
 │   │   │
 │   │   ├── lib/
 │   │   │   ├── db.ts                     # Prisma client

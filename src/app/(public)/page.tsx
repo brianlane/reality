@@ -18,12 +18,6 @@ export default function HomePage() {
           >
             Start application
           </Link>
-          <Link
-            href="/how-it-works"
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
-          >
-            How it works
-          </Link>
         </div>
       </div>
     </section>
