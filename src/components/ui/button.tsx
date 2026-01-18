@@ -6,9 +6,9 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variantClasses: Record<string, string> = {
-  primary: "bg-slate-900 text-white hover:bg-slate-800",
-  secondary: "bg-slate-100 text-slate-900 hover:bg-slate-200",
-  outline: "border border-slate-300 text-slate-700 hover:bg-slate-50",
+  primary: "bg-navy text-white hover:bg-copper transition-colors",
+  secondary: "bg-slate-100 text-navy hover:bg-slate-200 transition-colors",
+  outline: "border border-slate-300 text-navy hover:bg-copper hover:text-white transition-colors",
 };
 
 export function Button({

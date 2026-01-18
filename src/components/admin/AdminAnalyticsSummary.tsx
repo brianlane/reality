@@ -38,10 +38,10 @@ export default function AdminAnalyticsSummary() {
 
   return (
     <Card>
-      <h2 className="text-lg font-semibold text-slate-900">
+      <h2 className="text-lg font-semibold text-navy">
         Analytics Snapshot
       </h2>
-      <div className="mt-4 grid gap-4 md:grid-cols-3 text-sm text-slate-600">
+      <div className="mt-4 grid gap-4 md:grid-cols-3 text-sm text-navy-soft">
         <div>
           <div className="text-xl font-semibold">{data.applicants.total}</div>
           <div>Applicants</div>

@@ -10,6 +10,18 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Navy color scale */
+  --color-navy: #1a1a2e;
+  --color-navy-light: #252538;
+  --color-navy-muted: #3a3a52;
+  --color-navy-soft: #4f4f66;
+
+  /* Copper accent scale */
+  --color-copper: #c9a880;
+  --color-copper-light: #d4b894;
+  --color-copper-dark: #b39366;
+  --color-copper-darker: #9d7d52;
 }
 
 @media (prefers-color-scheme: dark) {

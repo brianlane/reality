@@ -56,7 +56,7 @@ export default function QuestionnaireForm() {
       <div>
         <label
           htmlFor="religionImportance"
-          className="text-sm font-medium text-slate-700"
+          className="text-sm font-medium text-navy-muted"
         >
           Religion importance (1-5)
         </label>
@@ -72,7 +72,7 @@ export default function QuestionnaireForm() {
       <div>
         <label
           htmlFor="politicalAlignment"
-          className="text-sm font-medium text-slate-700"
+          className="text-sm font-medium text-navy-muted"
         >
           Political alignment
         </label>
@@ -81,7 +81,7 @@ export default function QuestionnaireForm() {
       <div>
         <label
           htmlFor="familyImportance"
-          className="text-sm font-medium text-slate-700"
+          className="text-sm font-medium text-navy-muted"
         >
           Family importance (1-5)
         </label>
@@ -97,7 +97,7 @@ export default function QuestionnaireForm() {
       <div>
         <label
           htmlFor="careerAmbition"
-          className="text-sm font-medium text-slate-700"
+          className="text-sm font-medium text-navy-muted"
         >
           Career ambition (1-5)
         </label>
@@ -111,7 +111,7 @@ export default function QuestionnaireForm() {
         />
       </div>
       <div>
-        <label htmlFor="aboutMe" className="text-sm font-medium text-slate-700">
+        <label htmlFor="aboutMe" className="text-sm font-medium text-navy-muted">
           About me
         </label>
         <Textarea id="aboutMe" name="aboutMe" required rows={4} />
@@ -119,7 +119,7 @@ export default function QuestionnaireForm() {
       <div>
         <label
           htmlFor="idealPartner"
-          className="text-sm font-medium text-slate-700"
+          className="text-sm font-medium text-navy-muted"
         >
           Ideal partner
         </label>

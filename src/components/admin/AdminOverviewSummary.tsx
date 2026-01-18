@@ -43,23 +43,23 @@ export default function AdminOverviewSummary() {
 
   return (
     <Card>
-      <h2 className="text-lg font-semibold text-slate-900">
+      <h2 className="text-lg font-semibold text-navy">
         Business Overview
       </h2>
       <div className="mt-4 grid gap-4 md:grid-cols-3">
         <div>
           <div className="text-2xl font-semibold">{data.applicants.total}</div>
-          <div className="text-sm text-slate-500">Applicants</div>
+          <div className="text-sm text-navy-soft">Applicants</div>
         </div>
         <div>
           <div className="text-2xl font-semibold">{data.events.total}</div>
-          <div className="text-sm text-slate-500">Events</div>
+          <div className="text-sm text-navy-soft">Events</div>
         </div>
         <div>
           <div className="text-2xl font-semibold">
             ${(data.revenue.total / 100).toFixed(2)}
           </div>
-          <div className="text-sm text-slate-500">Revenue</div>
+          <div className="text-sm text-navy-soft">Revenue</div>
         </div>
       </div>
     </Card>

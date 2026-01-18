@@ -24,7 +24,7 @@ export default function AdminApplicationsTable() {
 
   return (
     <Card>
-      <h2 className="text-lg font-semibold text-slate-900">Applications</h2>
+      <h2 className="text-lg font-semibold text-navy">Applications</h2>
       <Table className="mt-4">
         <thead>
           <tr className="border-b text-xs uppercase text-slate-400">
@@ -34,7 +34,7 @@ export default function AdminApplicationsTable() {
         </thead>
         <tbody>
           {applications.map((app) => (
-            <tr key={app.id} className="border-b text-sm text-slate-600">
+            <tr key={app.id} className="border-b text-sm text-navy-soft">
               <td className="py-2">
                 {app.firstName} {app.lastName}
               </td>

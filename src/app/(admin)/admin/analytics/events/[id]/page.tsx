@@ -8,10 +8,10 @@ export default async function AdminEventAnalyticsPage({
   const { id } = await params;
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-slate-900">
+      <h1 className="text-2xl font-semibold text-navy">
         Event Analytics {id}
       </h1>
-      <p className="text-slate-600">Detailed event metrics.</p>
+      <p className="text-navy-soft">Detailed event metrics.</p>
     </div>
   );
 }

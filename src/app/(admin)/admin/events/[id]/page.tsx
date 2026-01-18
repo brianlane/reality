@@ -8,8 +8,8 @@ export default async function AdminEventDetailPage({
   const { id } = await params;
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-slate-900">Event {id}</h1>
-      <p className="text-slate-600">Event dashboard overview.</p>
+      <h1 className="text-2xl font-semibold text-navy">Event {id}</h1>
+      <p className="text-navy-soft">Event dashboard overview.</p>
     </div>
   );
 }

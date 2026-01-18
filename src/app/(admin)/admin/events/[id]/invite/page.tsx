@@ -6,10 +6,10 @@ export default async function AdminInvitePage({ params }: AdminInviteProps) {
   const { id } = await params;
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-slate-900">
+      <h1 className="text-2xl font-semibold text-navy">
         Invitees for {id}
       </h1>
-      <p className="text-slate-600">Select applicants to invite.</p>
+      <p className="text-navy-soft">Select applicants to invite.</p>
     </div>
   );
 }

@@ -21,17 +21,17 @@ export default function ApplicantMatchesList() {
 
   return (
     <Card>
-      <h2 className="text-lg font-semibold text-slate-900">Recent Matches</h2>
+      <h2 className="text-lg font-semibold text-navy">Recent Matches</h2>
       {matches.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-500">No matches yet.</p>
+        <p className="mt-2 text-sm text-navy-soft">No matches yet.</p>
       ) : (
-        <ul className="mt-4 space-y-2 text-sm text-slate-600">
+        <ul className="mt-4 space-y-2 text-sm text-navy-soft">
           {matches.map((match) => (
             <li key={match.id} className="flex items-center justify-between">
               <span>
                 {match.partner.firstName} · {match.eventName}
               </span>
-              <span className="text-slate-500">{match.outcome}</span>
+              <span className="text-navy-soft">{match.outcome}</span>
             </li>
           ))}
         </ul>
