@@ -132,14 +132,14 @@ export default function Logo({ size = "small" }: LogoProps) {
         timeRef.current += 0.03;
       }
 
-      // Only continue animation if hovering
-      if (isHovering) {
+      // Only continue animation if hovering AND motion is allowed
+      if (isHovering && !prefersReducedMotion) {
         animationFrameIdRef.current = requestAnimationFrame(animate);
       }
     };
 
-    if (isHovering) {
-      // Start animation loop
+    if (isHovering && !prefersReducedMotion) {
+      // Start animation loop only if motion is allowed
       animate();
     } else {
       // Draw static image
@@ -156,7 +156,7 @@ export default function Logo({ size = "small" }: LogoProps) {
 
   return (
     <div
-      className={`flex items-center ${config.gap}`}
+      className={`flex items-center ${config.gap} cursor-pointer`}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
