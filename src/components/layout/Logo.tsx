@@ -13,10 +13,18 @@ export default function Logo({ size = "small" }: LogoProps) {
   const animationFrameIdRef = useRef<number | null>(null);
   const timeRef = useRef(0);
   const isAnimatingRef = useRef(false);
+  const finishCycleRef = useRef(false);
+  const startAnimationRef = useRef<(() => void) | null>(null);
 
-  // Update ref when hover state changes
+  // Update refs when hover state changes
   useEffect(() => {
     isHoveringRef.current = isHovering;
+    if (isHovering) {
+      finishCycleRef.current = false;
+      startAnimationRef.current?.();
+    } else if (isAnimatingRef.current) {
+      finishCycleRef.current = true;
+    }
   }, [isHovering]);
 
   // Size configurations
@@ -95,7 +103,7 @@ export default function Logo({ size = "small" }: LogoProps) {
     };
   }, [config.baseDistance, config.radius, size]); // Removed isHovering from dependencies
 
-  // Separate effect to trigger animation start when hovering
+  // Prepare animation function and cleanup on size changes
   useEffect(() => {
     if (!canvasRef.current) return;
 
@@ -107,86 +115,92 @@ export default function Logo({ size = "small" }: LogoProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    if (isHovering && !prefersReducedMotion && !isAnimatingRef.current) {
-      // Start new animation when hovering
+    const animate = () => {
+      if (!ctx || !canvas) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const offset = Math.sin(timeRef.current) * (config.radius * 0.67);
+
+      const circle1X = centerX - config.baseDistance - offset;
+      const circle2X = centerX + config.baseDistance + offset;
+      const circleY = centerY;
+      const copperColor = "#c9a880";
+
+      // Draw gradient line
+      const gradient = ctx.createLinearGradient(
+        circle1X,
+        circleY,
+        circle2X,
+        circleY,
+      );
+      gradient.addColorStop(0, copperColor);
+      gradient.addColorStop(0.5, "rgba(201, 168, 128, 0.3)");
+      gradient.addColorStop(1, copperColor);
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = size === "large" ? 2 : 1;
+      ctx.beginPath();
+      ctx.moveTo(circle1X + config.radius, circleY);
+      ctx.lineTo(circle2X - config.radius, circleY);
+      ctx.stroke();
+
+      // Draw circles
+      ctx.fillStyle = copperColor;
+      ctx.beginPath();
+      ctx.arc(circle1X, circleY, config.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(circle2X, circleY, config.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      timeRef.current += 0.03;
+
+      // Continue until we reach the true rest position after hover ends
+      const restThreshold = Math.max(0.15, config.radius * 0.05);
+      const atRestPosition = Math.abs(offset) < restThreshold;
+
+      if (!finishCycleRef.current || !atRestPosition) {
+        animationFrameIdRef.current = requestAnimationFrame(animate);
+        return;
+      }
+
+      // Stop and draw static
+      finishCycleRef.current = false;
+      isAnimatingRef.current = false;
+      animationFrameIdRef.current = null;
+
+      // Draw static version
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const staticCircle1X = centerX - config.baseDistance;
+      const staticCircle2X = centerX + config.baseDistance;
+
+      ctx.strokeStyle = copperColor;
+      ctx.lineWidth = size === "large" ? 2 : 1;
+      ctx.beginPath();
+      ctx.moveTo(staticCircle1X + config.radius, circleY);
+      ctx.lineTo(staticCircle2X - config.radius, circleY);
+      ctx.stroke();
+
+      ctx.fillStyle = copperColor;
+      ctx.beginPath();
+      ctx.arc(staticCircle1X, circleY, config.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(staticCircle2X, circleY, config.radius, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    const startAnimation = () => {
+      if (prefersReducedMotion || isAnimatingRef.current) return;
       isAnimatingRef.current = true;
+      animationFrameIdRef.current = requestAnimationFrame(animate);
+    };
 
-      const animate = () => {
-        if (!ctx || !canvas) return;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const offset = Math.sin(timeRef.current) * (config.radius * 0.67);
-
-        const circle1X = centerX - config.baseDistance - offset;
-        const circle2X = centerX + config.baseDistance + offset;
-        const circleY = centerY;
-        const copperColor = "#c9a880";
-
-        // Draw gradient line
-        const gradient = ctx.createLinearGradient(
-          circle1X,
-          circleY,
-          circle2X,
-          circleY,
-        );
-        gradient.addColorStop(0, copperColor);
-        gradient.addColorStop(0.5, "rgba(201, 168, 128, 0.3)");
-        gradient.addColorStop(1, copperColor);
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = size === "large" ? 2 : 1;
-        ctx.beginPath();
-        ctx.moveTo(circle1X + config.radius, circleY);
-        ctx.lineTo(circle2X - config.radius, circleY);
-        ctx.stroke();
-
-        // Draw circles
-        ctx.fillStyle = copperColor;
-        ctx.beginPath();
-        ctx.arc(circle1X, circleY, config.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(circle2X, circleY, config.radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        timeRef.current += 0.03;
-
-        // Check if at rest position
-        const atRestPosition = Math.abs(offset) < 0.5;
-
-        // Continue if hovering OR still completing cycle
-        if (isHoveringRef.current || !atRestPosition) {
-          animationFrameIdRef.current = requestAnimationFrame(animate);
-        } else {
-          // Stop and draw static
-          isAnimatingRef.current = false;
-          animationFrameIdRef.current = null;
-
-          // Draw static version
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          const staticCircle1X = centerX - config.baseDistance;
-          const staticCircle2X = centerX + config.baseDistance;
-
-          ctx.strokeStyle = copperColor;
-          ctx.lineWidth = size === "large" ? 2 : 1;
-          ctx.beginPath();
-          ctx.moveTo(staticCircle1X + config.radius, circleY);
-          ctx.lineTo(staticCircle2X - config.radius, circleY);
-          ctx.stroke();
-
-          ctx.fillStyle = copperColor;
-          ctx.beginPath();
-          ctx.arc(staticCircle1X, circleY, config.radius, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.beginPath();
-          ctx.arc(staticCircle2X, circleY, config.radius, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      };
-
-      animate();
+    startAnimationRef.current = startAnimation;
+    if (isHoveringRef.current) {
+      startAnimationRef.current();
     }
 
     // Cleanup: cancel animation if component unmounts or dependencies change
@@ -194,10 +208,12 @@ export default function Logo({ size = "small" }: LogoProps) {
       if (animationFrameIdRef.current) {
         cancelAnimationFrame(animationFrameIdRef.current);
         animationFrameIdRef.current = null;
-        isAnimatingRef.current = false;
       }
+      startAnimationRef.current = null;
+      isAnimatingRef.current = false;
+      finishCycleRef.current = false;
     };
-  }, [isHovering, config.baseDistance, config.radius, size]);
+  }, [config.baseDistance, config.radius, size]);
 
   return (
     <div
