@@ -9,9 +9,15 @@ type LogoProps = {
 export default function Logo({ size = "small" }: LogoProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isHovering, setIsHovering] = useState(false);
+  const isHoveringRef = useRef(false);
   const animationFrameIdRef = useRef<number | null>(null);
   const timeRef = useRef(0);
   const isAnimatingRef = useRef(false);
+
+  // Update ref when hover state changes
+  useEffect(() => {
+    isHoveringRef.current = isHovering;
+  }, [isHovering]);
 
   // Size configurations
   const config =
@@ -145,10 +151,10 @@ export default function Logo({ size = "small" }: LogoProps) {
       const atRestPosition = Math.abs(offset) < 0.5;
 
       // Continue animation if:
-      // 1. Currently hovering, OR
+      // 1. Currently hovering (use ref to get latest value), OR
       // 2. Not hovering BUT not yet at rest position (completing the cycle)
       const shouldContinue =
-        !prefersReducedMotion && (isHovering || !atRestPosition);
+        !prefersReducedMotion && (isHoveringRef.current || !atRestPosition);
 
       if (shouldContinue) {
         animationFrameIdRef.current = requestAnimationFrame(animate);
@@ -156,23 +162,37 @@ export default function Logo({ size = "small" }: LogoProps) {
       } else {
         // Stop and draw static
         isAnimatingRef.current = false;
+        animationFrameIdRef.current = null;
         drawStatic();
       }
     };
 
-    if (isHovering && !prefersReducedMotion && !isAnimatingRef.current) {
-      // Start animation loop only if motion is allowed and not already animating
-      isAnimatingRef.current = true;
-      animate();
-    } else if (!isHovering && !isAnimatingRef.current) {
-      // Draw static image only if not animating
+    // Start animation when hovering (or let existing animation continue if already running)
+    if (isHovering && !prefersReducedMotion) {
+      if (!isAnimatingRef.current) {
+        // Only start new animation if not already animating
+        isAnimatingRef.current = true;
+        animate();
+      }
+      // If already animating, let it continue (it will check isHovering state)
+    } else if (!isAnimatingRef.current) {
+      // Draw static image when not animating and not hovering
       drawStatic();
     }
+    // If isAnimatingRef.current is true but we're not hovering,
+    // the animation is completing - let it finish naturally
 
     return () => {
-      if (animationFrameIdRef.current) {
+      // Check if we're in the middle of completing an animation
+      // (user stopped hovering but animation is still running to reach rest position)
+      const isCompleting = !isHoveringRef.current && isAnimatingRef.current;
+
+      if (animationFrameIdRef.current && !isCompleting) {
+        // Only cancel if we're NOT completing an animation
+        // This allows the animation to finish naturally when user stops hovering
         cancelAnimationFrame(animationFrameIdRef.current);
         animationFrameIdRef.current = null;
+        isAnimatingRef.current = false;
       }
     };
   }, [isHovering, config.baseDistance, config.radius, size]);
