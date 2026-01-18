@@ -43,9 +43,7 @@ export default function AdminOverviewSummary() {
 
   return (
     <Card>
-      <h2 className="text-lg font-semibold text-navy">
-        Business Overview
-      </h2>
+      <h2 className="text-lg font-semibold text-navy">Business Overview</h2>
       <div className="mt-4 grid gap-4 md:grid-cols-3">
         <div>
           <div className="text-2xl font-semibold">{data.applicants.total}</div>

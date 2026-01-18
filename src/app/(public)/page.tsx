@@ -1,9 +1,13 @@
 import Link from "next/link";
+import Logo from "@/components/layout/Logo";
 
 export default function HomePage() {
   return (
     <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-12 sm:px-6 sm:py-16">
       <div className="rounded-2xl bg-white p-6 shadow-sm sm:p-10">
+        <div className="mb-8">
+          <Logo />
+        </div>
         <h1 className="text-3xl font-semibold text-navy sm:text-4xl">
           Premium matchmaking experiences designed for real connections.
         </h1>

@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 
 export default function Logo() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -9,11 +9,13 @@ export default function Logo() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     // Check for reduced motion preference
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
 
     let animationFrameId: number;
     let time = 0;
@@ -40,13 +42,18 @@ export default function Logo() {
       const radius = 6;
 
       // Copper color
-      const copperColor = '#c9a880';
+      const copperColor = "#c9a880";
 
       // Draw connecting field line
       if (!prefersReducedMotion) {
-        const gradient = ctx.createLinearGradient(circle1X, circleY, circle2X, circleY);
+        const gradient = ctx.createLinearGradient(
+          circle1X,
+          circleY,
+          circle2X,
+          circleY,
+        );
         gradient.addColorStop(0, copperColor);
-        gradient.addColorStop(0.5, 'rgba(201, 168, 128, 0.3)');
+        gradient.addColorStop(0.5, "rgba(201, 168, 128, 0.3)");
         gradient.addColorStop(1, copperColor);
 
         ctx.strokeStyle = gradient;
@@ -89,13 +96,6 @@ export default function Logo() {
 
   return (
     <div className="flex items-center gap-3">
-      <canvas
-        ref={canvasRef}
-        width={48}
-        height={40}
-        className="block"
-        aria-label="Reality Matchmaking Logo"
-      />
       <div className="flex flex-col leading-none">
         <span className="text-2xl font-bold text-copper tracking-tight">
           REALITY
@@ -104,6 +104,13 @@ export default function Logo() {
           Matchmaking
         </span>
       </div>
+      <canvas
+        ref={canvasRef}
+        width={48}
+        height={40}
+        className="block"
+        aria-label="Reality Matchmaking Logo"
+      />
     </div>
   );
 }

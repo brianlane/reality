@@ -111,7 +111,10 @@ export default function QuestionnaireForm() {
         />
       </div>
       <div>
-        <label htmlFor="aboutMe" className="text-sm font-medium text-navy-muted">
+        <label
+          htmlFor="aboutMe"
+          className="text-sm font-medium text-navy-muted"
+        >
           About me
         </label>
         <Textarea id="aboutMe" name="aboutMe" required rows={4} />
