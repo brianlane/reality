@@ -60,6 +60,14 @@ export default function Logo({ size = "small" }: LogoProps) {
       const circle2X = centerX + config.baseDistance;
       const circleY = centerY;
 
+      // Draw connecting line (static)
+      ctx.strokeStyle = copperColor;
+      ctx.lineWidth = size === "large" ? 2 : 1;
+      ctx.beginPath();
+      ctx.moveTo(circle1X + config.radius, circleY);
+      ctx.lineTo(circle2X - config.radius, circleY);
+      ctx.stroke();
+
       // Draw circles in static position
       ctx.fillStyle = copperColor;
 
