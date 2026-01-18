@@ -48,11 +48,6 @@ export default function Logo({ size = "small" }: LogoProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Check for reduced motion preference
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-
     const drawStatic = () => {
       if (!ctx || !canvas) return;
 
@@ -87,30 +82,50 @@ export default function Logo({ size = "small" }: LogoProps) {
       ctx.fill();
     };
 
-    const animate = () => {
-      if (!ctx || !canvas) return;
+    // Draw initial static image
+    drawStatic();
 
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-
-      // Calculate circle positions with gravitational pull animation
-      let offset = 0;
-      if (!prefersReducedMotion) {
-        offset = Math.sin(timeRef.current) * (config.radius * 0.67); // Oscillate proportionally
+    return () => {
+      // Cleanup on unmount or size change
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+        animationFrameIdRef.current = null;
       }
+      isAnimatingRef.current = false;
+    };
+  }, [config.baseDistance, config.radius, size]); // Removed isHovering from dependencies
 
-      const circle1X = centerX - config.baseDistance - offset;
-      const circle2X = centerX + config.baseDistance + offset;
-      const circleY = centerY;
+  // Separate effect to trigger animation start when hovering
+  useEffect(() => {
+    if (!canvasRef.current) return;
 
-      // Copper color
-      const copperColor = "#c9a880";
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
 
-      // Draw connecting field line
-      if (!prefersReducedMotion) {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    if (isHovering && !prefersReducedMotion && !isAnimatingRef.current) {
+      // Start new animation when hovering
+      isAnimatingRef.current = true;
+
+      const animate = () => {
+        if (!ctx || !canvas) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const offset = Math.sin(timeRef.current) * (config.radius * 0.67);
+
+        const circle1X = centerX - config.baseDistance - offset;
+        const circle2X = centerX + config.baseDistance + offset;
+        const circleY = centerY;
+        const copperColor = "#c9a880";
+
+        // Draw gradient line
         const gradient = ctx.createLinearGradient(
           circle1X,
           circleY,
@@ -120,76 +135,63 @@ export default function Logo({ size = "small" }: LogoProps) {
         gradient.addColorStop(0, copperColor);
         gradient.addColorStop(0.5, "rgba(201, 168, 128, 0.3)");
         gradient.addColorStop(1, copperColor);
-
         ctx.strokeStyle = gradient;
         ctx.lineWidth = size === "large" ? 2 : 1;
         ctx.beginPath();
         ctx.moveTo(circle1X + config.radius, circleY);
         ctx.lineTo(circle2X - config.radius, circleY);
         ctx.stroke();
-      }
 
-      // Draw circles
-      ctx.fillStyle = copperColor;
+        // Draw circles
+        ctx.fillStyle = copperColor;
+        ctx.beginPath();
+        ctx.arc(circle1X, circleY, config.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(circle2X, circleY, config.radius, 0, Math.PI * 2);
+        ctx.fill();
 
-      // Circle 1
-      ctx.beginPath();
-      ctx.arc(circle1X, circleY, config.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Circle 2
-      ctx.beginPath();
-      ctx.arc(circle2X, circleY, config.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Update time for animation
-      if (!prefersReducedMotion) {
         timeRef.current += 0.03;
-      }
 
-      // Check if we're at rest position (offset near zero)
-      const atRestPosition = Math.abs(offset) < 0.5;
+        // Check if at rest position
+        const atRestPosition = Math.abs(offset) < 0.5;
 
-      // Continue animation if:
-      // 1. Currently hovering (use ref to get latest value), OR
-      // 2. Not hovering BUT not yet at rest position (completing the cycle)
-      const shouldContinue =
-        !prefersReducedMotion && (isHoveringRef.current || !atRestPosition);
+        // Continue if hovering OR still completing cycle
+        if (isHoveringRef.current || !atRestPosition) {
+          animationFrameIdRef.current = requestAnimationFrame(animate);
+        } else {
+          // Stop and draw static
+          isAnimatingRef.current = false;
+          animationFrameIdRef.current = null;
 
-      if (shouldContinue) {
-        animationFrameIdRef.current = requestAnimationFrame(animate);
-        isAnimatingRef.current = true;
-      } else {
-        // Stop and draw static
-        isAnimatingRef.current = false;
-        animationFrameIdRef.current = null;
-        drawStatic();
-      }
-    };
+          // Draw static version
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          const staticCircle1X = centerX - config.baseDistance;
+          const staticCircle2X = centerX + config.baseDistance;
 
-    // Start animation when hovering (or let existing animation continue if already running)
-    if (isHovering && !prefersReducedMotion) {
-      if (!isAnimatingRef.current) {
-        // Only start new animation if not already animating
-        isAnimatingRef.current = true;
-        animate();
-      }
-      // If already animating, let it continue (it will check isHovering state)
-    } else if (!isAnimatingRef.current) {
-      // Draw static image when not animating and not hovering
-      drawStatic();
+          ctx.strokeStyle = copperColor;
+          ctx.lineWidth = size === "large" ? 2 : 1;
+          ctx.beginPath();
+          ctx.moveTo(staticCircle1X + config.radius, circleY);
+          ctx.lineTo(staticCircle2X - config.radius, circleY);
+          ctx.stroke();
+
+          ctx.fillStyle = copperColor;
+          ctx.beginPath();
+          ctx.arc(staticCircle1X, circleY, config.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(staticCircle2X, circleY, config.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      };
+
+      animate();
     }
-    // If isAnimatingRef.current is true but we're not hovering,
-    // the animation is completing - let it finish naturally
 
+    // Cleanup: cancel animation if component unmounts or dependencies change
     return () => {
-      // Check if we're in the middle of completing an animation
-      // (user stopped hovering but animation is still running to reach rest position)
-      const isCompleting = !isHoveringRef.current && isAnimatingRef.current;
-
-      if (animationFrameIdRef.current && !isCompleting) {
-        // Only cancel if we're NOT completing an animation
-        // This allows the animation to finish naturally when user stops hovering
+      if (animationFrameIdRef.current) {
         cancelAnimationFrame(animationFrameIdRef.current);
         animationFrameIdRef.current = null;
         isAnimatingRef.current = false;
