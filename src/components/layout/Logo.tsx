@@ -1,9 +1,38 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
-export default function Logo() {
+type LogoProps = {
+  size?: "small" | "large";
+};
+
+export default function Logo({ size = "small" }: LogoProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isHovering, setIsHovering] = useState(false);
+  const animationFrameIdRef = useRef<number | null>(null);
+  const timeRef = useRef(0);
+
+  // Size configurations
+  const config =
+    size === "large"
+      ? {
+          canvasWidth: 96,
+          canvasHeight: 80,
+          baseDistance: 24,
+          radius: 12,
+          textSize: "text-5xl",
+          subtextSize: "text-sm",
+          gap: "gap-6",
+        }
+      : {
+          canvasWidth: 48,
+          canvasHeight: 40,
+          baseDistance: 12,
+          radius: 6,
+          textSize: "text-2xl",
+          subtextSize: "text-[10px]",
+          gap: "gap-3",
+        };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -17,8 +46,31 @@ export default function Logo() {
       "(prefers-reduced-motion: reduce)",
     ).matches;
 
-    let animationFrameId: number;
-    let time = 0;
+    const drawStatic = () => {
+      if (!ctx || !canvas) return;
+
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const copperColor = "#c9a880";
+
+      const circle1X = centerX - config.baseDistance;
+      const circle2X = centerX + config.baseDistance;
+      const circleY = centerY;
+
+      // Draw circles in static position
+      ctx.fillStyle = copperColor;
+
+      ctx.beginPath();
+      ctx.arc(circle1X, circleY, config.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(circle2X, circleY, config.radius, 0, Math.PI * 2);
+      ctx.fill();
+    };
 
     const animate = () => {
       if (!ctx || !canvas) return;
@@ -28,18 +80,16 @@ export default function Logo() {
 
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
-      const baseDistance = 12;
 
       // Calculate circle positions with gravitational pull animation
       let offset = 0;
       if (!prefersReducedMotion) {
-        offset = Math.sin(time) * 4; // Oscillate +/- 4px
+        offset = Math.sin(timeRef.current) * (config.radius * 0.67); // Oscillate proportionally
       }
 
-      const circle1X = centerX - baseDistance - offset;
-      const circle2X = centerX + baseDistance + offset;
+      const circle1X = centerX - config.baseDistance - offset;
+      const circle2X = centerX + config.baseDistance + offset;
       const circleY = centerY;
-      const radius = 6;
 
       // Copper color
       const copperColor = "#c9a880";
@@ -57,10 +107,10 @@ export default function Logo() {
         gradient.addColorStop(1, copperColor);
 
         ctx.strokeStyle = gradient;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = size === "large" ? 2 : 1;
         ctx.beginPath();
-        ctx.moveTo(circle1X + radius, circleY);
-        ctx.lineTo(circle2X - radius, circleY);
+        ctx.moveTo(circle1X + config.radius, circleY);
+        ctx.lineTo(circle2X - config.radius, circleY);
         ctx.stroke();
       }
 
@@ -69,45 +119,63 @@ export default function Logo() {
 
       // Circle 1
       ctx.beginPath();
-      ctx.arc(circle1X, circleY, radius, 0, Math.PI * 2);
+      ctx.arc(circle1X, circleY, config.radius, 0, Math.PI * 2);
       ctx.fill();
 
       // Circle 2
       ctx.beginPath();
-      ctx.arc(circle2X, circleY, radius, 0, Math.PI * 2);
+      ctx.arc(circle2X, circleY, config.radius, 0, Math.PI * 2);
       ctx.fill();
 
       // Update time for animation
       if (!prefersReducedMotion) {
-        time += 0.03;
+        timeRef.current += 0.03;
       }
 
-      animationFrameId = requestAnimationFrame(animate);
+      // Only continue animation if hovering
+      if (isHovering) {
+        animationFrameIdRef.current = requestAnimationFrame(animate);
+      }
     };
 
-    animate();
+    if (isHovering) {
+      // Start animation loop
+      animate();
+    } else {
+      // Draw static image
+      drawStatic();
+    }
 
     return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+        animationFrameIdRef.current = null;
       }
     };
-  }, []);
+  }, [isHovering, config.baseDistance, config.radius, size]);
 
   return (
-    <div className="flex items-center gap-3">
+    <div
+      className={`flex items-center ${config.gap}`}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+    >
       <div className="flex flex-col leading-none">
-        <span className="text-2xl font-bold text-copper tracking-tight">
+        <span
+          className={`${config.textSize} font-bold text-copper tracking-tight`}
+        >
           REALITY
         </span>
-        <span className="text-[10px] uppercase tracking-wider text-navy-soft font-medium">
+        <span
+          className={`${config.subtextSize} uppercase tracking-wider text-navy-soft font-medium`}
+        >
           Matchmaking
         </span>
       </div>
       <canvas
         ref={canvasRef}
-        width={48}
-        height={40}
+        width={config.canvasWidth}
+        height={config.canvasHeight}
         className="block"
         aria-label="Reality Matchmaking Logo"
       />
