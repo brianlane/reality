@@ -11,6 +11,7 @@ export default function Logo({ size = "small" }: LogoProps) {
   const [isHovering, setIsHovering] = useState(false);
   const animationFrameIdRef = useRef<number | null>(null);
   const timeRef = useRef(0);
+  const isAnimatingRef = useRef(false);
 
   // Size configurations
   const config =
@@ -140,17 +141,31 @@ export default function Logo({ size = "small" }: LogoProps) {
         timeRef.current += 0.03;
       }
 
-      // Only continue animation if hovering AND motion is allowed
-      if (isHovering && !prefersReducedMotion) {
+      // Check if we're at rest position (offset near zero)
+      const atRestPosition = Math.abs(offset) < 0.5;
+
+      // Continue animation if:
+      // 1. Currently hovering, OR
+      // 2. Not hovering BUT not yet at rest position (completing the cycle)
+      const shouldContinue =
+        !prefersReducedMotion && (isHovering || !atRestPosition);
+
+      if (shouldContinue) {
         animationFrameIdRef.current = requestAnimationFrame(animate);
+        isAnimatingRef.current = true;
+      } else {
+        // Stop and draw static
+        isAnimatingRef.current = false;
+        drawStatic();
       }
     };
 
-    if (isHovering && !prefersReducedMotion) {
-      // Start animation loop only if motion is allowed
+    if (isHovering && !prefersReducedMotion && !isAnimatingRef.current) {
+      // Start animation loop only if motion is allowed and not already animating
+      isAnimatingRef.current = true;
       animate();
-    } else {
-      // Draw static image
+    } else if (!isHovering && !isAnimatingRef.current) {
+      // Draw static image only if not animating
       drawStatic();
     }
 
