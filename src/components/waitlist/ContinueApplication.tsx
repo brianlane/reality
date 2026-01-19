@@ -72,7 +72,9 @@ export default function ContinueApplication({
           <div className="h-8 w-64 mx-auto bg-gray-200 rounded" />
           <div className="h-4 w-48 mx-auto bg-gray-200 rounded" />
         </div>
-        <p className="mt-4 text-sm text-gray-500">Validating your invitation...</p>
+        <p className="mt-4 text-sm text-gray-500">
+          Validating your invitation...
+        </p>
       </div>
     );
   }
@@ -144,7 +146,8 @@ export default function ContinueApplication({
             <div>
               <h3 className="font-semibold text-navy">Complete Your Profile</h3>
               <p className="text-sm text-navy-soft">
-                Fill in your full demographic information and professional details.
+                Fill in your full demographic information and professional
+                details.
               </p>
             </div>
           </li>
@@ -153,9 +156,12 @@ export default function ContinueApplication({
               2
             </div>
             <div>
-              <h3 className="font-semibold text-navy">Application Fee ($199)</h3>
+              <h3 className="font-semibold text-navy">
+                Application Fee ($199)
+              </h3>
               <p className="text-sm text-navy-soft">
-                Submit your application fee to proceed with the screening process.
+                Submit your application fee to proceed with the screening
+                process.
               </p>
             </div>
           </li>
@@ -166,7 +172,8 @@ export default function ContinueApplication({
             <div>
               <h3 className="font-semibold text-navy">Full Assessment</h3>
               <p className="text-sm text-navy-soft">
-                Complete our comprehensive 80-question compatibility questionnaire.
+                Complete our comprehensive 80-question compatibility
+                questionnaire.
               </p>
             </div>
           </li>
@@ -184,9 +191,7 @@ export default function ContinueApplication({
 
       {/* CTA */}
       <div className="text-center">
-        <Button onClick={handleContinue} size="lg">
-          Continue Application
-        </Button>
+        <Button onClick={handleContinue}>Continue Application</Button>
       </div>
 
       {/* Additional Info */}

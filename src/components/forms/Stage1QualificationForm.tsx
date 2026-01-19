@@ -27,7 +27,6 @@ export default function Stage1QualificationForm() {
       age: Number(formData.get("age")),
       gender: formData.get("gender"),
       location: String(formData.get("location") ?? "").trim(),
-      relationshipGoal: String(formData.get("relationshipGoal") ?? "").trim(),
       aboutYourself: String(formData.get("aboutYourself") ?? "").trim(),
     };
 
@@ -119,10 +118,20 @@ export default function Stage1QualificationForm() {
         <h3 className="text-lg font-semibold text-navy">About You</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label htmlFor="age" className="text-sm font-medium text-navy-muted">
+            <label
+              htmlFor="age"
+              className="text-sm font-medium text-navy-muted"
+            >
               Age
             </label>
-            <Input id="age" name="age" type="number" min={18} max={100} required />
+            <Input
+              id="age"
+              name="age"
+              type="number"
+              min={18}
+              max={100}
+              required
+            />
           </div>
           <div>
             <label
@@ -150,24 +159,9 @@ export default function Stage1QualificationForm() {
           <Input
             id="location"
             name="location"
-            placeholder="e.g., San Francisco, CA"
+            placeholder="e.g., Phoenix, AZ"
             required
           />
-        </div>
-        <div>
-          <label
-            htmlFor="relationshipGoal"
-            className="text-sm font-medium text-navy-muted"
-          >
-            What are you looking for?
-          </label>
-          <Select id="relationshipGoal" name="relationshipGoal" required>
-            <option value="">Select your goal</option>
-            <option value="Marriage">Marriage</option>
-            <option value="Long-term">Long-term relationship</option>
-            <option value="Serious dating">Serious dating</option>
-            <option value="Exploring">Exploring options</option>
-          </Select>
         </div>
       </div>
 
@@ -201,16 +195,8 @@ export default function Stage1QualificationForm() {
         <Button type="submit" disabled={isSubmitting} className="w-full">
           {isSubmitting ? "Submitting..." : "Join the Waitlist"}
         </Button>
-        {status && (
-          <p className="text-sm text-red-500 text-center">{status}</p>
-        )}
+        {status && <p className="text-sm text-red-500 text-center">{status}</p>}
       </div>
-
-      {/* Info Note */}
-      <p className="text-xs text-gray-500 text-center">
-        By submitting, you agree to our terms of service and privacy policy.
-        This is just a quick qualification - no payment required yet.
-      </p>
     </form>
   );
 }

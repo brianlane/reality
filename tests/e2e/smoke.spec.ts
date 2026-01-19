@@ -38,17 +38,17 @@ test("application flow navigates through steps", async ({ page }) => {
     });
   });
 
-  await page.goto("/apply");
+  await page.goto("/apply/demographics");
   await page.waitForLoadState("networkidle");
   await fillStableById("firstName", "Alex");
   await fillStableById("lastName", "Smith");
   await fillStableById("email", "alex@example.com");
   await fillStableById("age", "28");
   await page.getByLabel("Gender").selectOption("FEMALE");
-  await page.getByLabel("Location").fill("Phoenix, AZ");
-  await page.getByLabel("Occupation").fill("Marketing Manager");
-  await page.getByLabel("Education").fill("Bachelor's Degree");
-  await page.getByLabel("Income Range").fill("$100,000-$150,000");
+  await fillStableById("location", "Phoenix, AZ");
+  await fillStableById("occupation", "Marketing Manager");
+  await fillStableById("education", "Bachelor's Degree");
+  await fillStableById("incomeRange", "$100,000-$150,000");
   await page.getByRole("button", { name: "Save and continue" }).click();
   await expect(page).toHaveURL(/apply\/questionnaire/);
 

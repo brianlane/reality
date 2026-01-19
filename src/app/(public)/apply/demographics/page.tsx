@@ -7,7 +7,8 @@ export default function DemographicsPage() {
         Complete Your Profile
       </h1>
       <p className="mt-2 text-navy-soft">
-        Step 1 of 4: Demographics. Complete the form to continue your application.
+        Step 1 of 4: Demographics. Complete the form to continue your
+        application.
       </p>
       <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <ApplicationDraftForm />

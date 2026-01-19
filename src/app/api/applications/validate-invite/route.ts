@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
+const INVITE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -37,6 +39,24 @@ export async function GET(request: NextRequest) {
         "ALREADY_USED",
         "This invitation has already been used",
         400,
+      );
+    }
+
+    const inviteIssuedAt = applicant.invitedOffWaitlistAt;
+    if (!inviteIssuedAt) {
+      return errorResponse(
+        "INVALID_TOKEN",
+        "Invalid or expired invitation link",
+        404,
+      );
+    }
+
+    const expiresAt = new Date(inviteIssuedAt.getTime() + INVITE_EXPIRATION_MS);
+    if (Date.now() > expiresAt.getTime()) {
+      return errorResponse(
+        "INVITE_EXPIRED",
+        "This invitation link has expired",
+        410,
       );
     }
 

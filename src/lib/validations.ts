@@ -8,7 +8,6 @@ export const stage1QualificationSchema = z.object({
   age: z.number().int().min(18, "Must be 18 or older").max(100),
   gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
   location: z.string().min(1, "Location is required"),
-  relationshipGoal: z.string().min(1, "Relationship goal is required"),
   aboutYourself: z
     .string()
     .min(50, "Please write at least 50 characters")

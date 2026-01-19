@@ -16,7 +16,6 @@ export async function POST(request: NextRequest) {
       age,
       gender,
       location,
-      relationshipGoal,
       aboutYourself,
     } = payload;
 
@@ -71,7 +70,6 @@ export async function POST(request: NextRequest) {
       age,
       gender,
       location,
-      relationshipGoal,
       aboutYourself,
       submittedAt: new Date().toISOString(),
     };

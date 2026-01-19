@@ -32,11 +32,7 @@ export async function POST(request: Request) {
   const { applicantIds } = body;
 
   if (!Array.isArray(applicantIds)) {
-    return errorResponse(
-      "INVALID_INPUT",
-      "applicantIds must be an array",
-      400,
-    );
+    return errorResponse("INVALID_INPUT", "applicantIds must be an array", 400);
   }
 
   if (applicantIds.length === 0) {
@@ -81,6 +77,12 @@ export async function POST(request: Request) {
 
       if (applicant.applicationStatus !== "WAITLIST") {
         failed.push({ id: applicantId, reason: "Not on waitlist" });
+        continue;
+      }
+
+      // Skip if already invited
+      if (applicant.invitedOffWaitlistAt) {
+        failed.push({ id: applicantId, reason: "Already invited" });
         continue;
       }
 

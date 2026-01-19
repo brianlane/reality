@@ -2,7 +2,7 @@ import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
-export async function GET(request: Request) {
+export async function GET() {
   const auth = await getAuthUser();
   if (!auth) {
     return errorResponse("UNAUTHORIZED", "User not authenticated", 401);
@@ -56,11 +56,8 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Error fetching waitlist:", error);
-    return errorResponse(
-      "SERVER_ERROR",
-      "Failed to fetch waitlist",
-      500,
-      [{ message: (error as Error).message }],
-    );
+    return errorResponse("SERVER_ERROR", "Failed to fetch waitlist", 500, [
+      { message: (error as Error).message },
+    ]);
   }
 }

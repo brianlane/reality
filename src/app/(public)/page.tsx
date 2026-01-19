@@ -27,11 +27,8 @@ export default function HomePage() {
               href="/apply"
               className="w-full rounded-md bg-navy px-8 py-4 text-center text-base font-medium text-white hover:bg-copper transition-colors"
             >
-              Join the Waitlist
+              Join Now
             </Link>
-            <p className="text-sm text-navy-soft text-center">
-              Quick 2-3 minute qualification. No payment required.
-            </p>
           </div>
           <Link
             href="/sign-in"

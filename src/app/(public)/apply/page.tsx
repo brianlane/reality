@@ -6,9 +6,6 @@ export default function ApplyPage() {
       <h1 className="text-3xl font-semibold text-navy sm:text-4xl">
         Join the Waitlist
       </h1>
-      <p className="mt-2 text-navy-soft">
-        Step 1: Quick qualification (2-3 minutes, free)
-      </p>
       <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <Stage1QualificationForm />
       </div>

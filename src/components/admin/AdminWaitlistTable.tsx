@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -16,23 +16,28 @@ type WaitlistApplicant = {
   age: number;
   gender: string;
   location: string;
-  stage1Responses: any;
-  waitlistedAt: string;
+  stage1Responses: unknown | null;
+  waitlistedAt: string | null;
   invitedOffWaitlistAt: string | null;
 };
 
-export default function AdminWaitlistTable() {
-  const [applicants, setApplicants] = useState<WaitlistApplicant[]>([]);
+type AdminWaitlistTableProps = {
+  initialApplicants: WaitlistApplicant[];
+  initialError?: string | null;
+};
+
+export default function AdminWaitlistTable({
+  initialApplicants,
+  initialError = null,
+}: AdminWaitlistTableProps) {
+  const [applicants, setApplicants] =
+    useState<WaitlistApplicant[]>(initialApplicants);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    loadWaitlist();
-  }, []);
-
-  async function loadWaitlist() {
+  const loadWaitlist = useCallback(async () => {
     try {
       const headers = await getAuthHeaders();
       if (!headers) {
@@ -48,15 +53,34 @@ export default function AdminWaitlistTable() {
         return;
       }
 
-      setApplicants(json.applicants ?? []);
+      const waitlistApplicants = (json.applicants ?? []) as WaitlistApplicant[];
+      setApplicants(waitlistApplicants);
+      setSelectedIds((prev) => {
+        if (prev.size === 0) {
+          return prev;
+        }
+        const uninvitedIds = new Set(
+          waitlistApplicants
+            .filter((applicant) => !applicant.invitedOffWaitlistAt)
+            .map((applicant) => applicant.id),
+        );
+        const next = new Set(
+          Array.from(prev).filter((id) => uninvitedIds.has(id)),
+        );
+        return next.size === prev.size ? prev : next;
+      });
       setError(null);
     } catch (err) {
       console.error("Error loading waitlist:", err);
       setError("Failed to load waitlist.");
     }
-  }
+  }, []);
 
   function toggleSelection(id: string) {
+    const applicant = applicants.find((candidate) => candidate.id === id);
+    if (!applicant || applicant.invitedOffWaitlistAt) {
+      return;
+    }
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -69,10 +93,21 @@ export default function AdminWaitlistTable() {
   }
 
   function toggleSelectAll() {
-    if (selectedIds.size === applicants.length) {
+    // Only include applicants who haven't been invited yet
+    const uninvitedApplicants = applicants.filter(
+      (a) => !a.invitedOffWaitlistAt,
+    );
+    const uninvitedIds = uninvitedApplicants.map((a) => a.id);
+
+    // If all uninvited applicants are selected, deselect all
+    const allUninvitedSelected = uninvitedIds.every((id) =>
+      selectedIds.has(id),
+    );
+
+    if (allUninvitedSelected && selectedIds.size > 0) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(applicants.map((a) => a.id)));
+      setSelectedIds(new Set(uninvitedIds));
     }
   }
 
@@ -118,7 +153,13 @@ export default function AdminWaitlistTable() {
   }
 
   async function inviteBatch() {
-    if (selectedIds.size === 0) {
+    const eligibleIds = Array.from(selectedIds).filter((id) =>
+      applicants.some(
+        (applicant) => applicant.id === id && !applicant.invitedOffWaitlistAt,
+      ),
+    );
+
+    if (eligibleIds.length === 0) {
       setError("Please select at least one applicant.");
       return;
     }
@@ -142,7 +183,7 @@ export default function AdminWaitlistTable() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          applicantIds: Array.from(selectedIds),
+          applicantIds: eligibleIds,
         }),
       });
 
@@ -154,8 +195,10 @@ export default function AdminWaitlistTable() {
       }
 
       const data = await response.json();
+      const failedSummary =
+        data.summary.failed > 0 ? `Failed: ${data.summary.failed}` : "";
       setSuccess(
-        `Successfully invited ${data.summary.succeeded} applicant(s). ${data.summary.failed > 0 ? `Failed: ${data.summary.failed}` : ""}`,
+        `Successfully invited ${data.summary.succeeded} applicant(s). ${failedSummary}`,
       );
       setSelectedIds(new Set());
       await loadWaitlist();
@@ -167,17 +210,19 @@ export default function AdminWaitlistTable() {
     }
   }
 
-  function formatDate(dateString: string) {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  function formatDate(dateString: string | null) {
+    if (!dateString) {
+      return "N/A";
+    }
+    const parsed = new Date(dateString);
+    if (Number.isNaN(parsed.getTime())) {
+      return "N/A";
+    }
+    return parsed.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
     });
-  }
-
-  function getRelationshipGoal(stage1Responses: any) {
-    if (!stage1Responses) return "N/A";
-    return stage1Responses.relationshipGoal || "N/A";
   }
 
   return (
@@ -192,9 +237,7 @@ export default function AdminWaitlistTable() {
             disabled={isLoading}
             className="bg-copper hover:bg-copper/90"
           >
-            {isLoading
-              ? "Sending..."
-              : `Invite ${selectedIds.size} Selected`}
+            {isLoading ? "Sending..." : `Invite ${selectedIds.size} Selected`}
           </Button>
         )}
       </div>
@@ -223,7 +266,13 @@ export default function AdminWaitlistTable() {
                 <th className="py-2 text-left">
                   <input
                     type="checkbox"
-                    checked={selectedIds.size === applicants.length}
+                    checked={
+                      applicants.filter((a) => !a.invitedOffWaitlistAt).length >
+                        0 &&
+                      applicants
+                        .filter((a) => !a.invitedOffWaitlistAt)
+                        .every((a) => selectedIds.has(a.id))
+                    }
                     onChange={toggleSelectAll}
                     className="cursor-pointer"
                   />
@@ -232,7 +281,6 @@ export default function AdminWaitlistTable() {
                 <th className="py-2 text-left">Location</th>
                 <th className="py-2 text-left">Age</th>
                 <th className="py-2 text-left">Waitlisted</th>
-                <th className="py-2 text-left">Goal</th>
                 <th className="py-2 text-left">Status</th>
                 <th className="py-2 text-left">Actions</th>
               </tr>
@@ -258,9 +306,6 @@ export default function AdminWaitlistTable() {
                   <td className="py-2">{applicant.location}</td>
                   <td className="py-2">{applicant.age}</td>
                   <td className="py-2">{formatDate(applicant.waitlistedAt)}</td>
-                  <td className="py-2">
-                    {getRelationshipGoal(applicant.stage1Responses)}
-                  </td>
                   <td className="py-2">
                     {applicant.invitedOffWaitlistAt ? (
                       <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700">

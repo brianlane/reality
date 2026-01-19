@@ -95,7 +95,8 @@ export async function sendWaitlistInviteEmail({
   firstName,
   inviteToken,
 }: WaitlistInviteParams) {
-  const subject = "🎉 You're Invited to Continue Your Reality Matchmaking Application!";
+  const subject =
+    "🎉 You're Invited to Continue Your Reality Matchmaking Application!";
   const inviteUrl = `${APP_URL}/apply/continue?token=${inviteToken}`;
 
   const html = `

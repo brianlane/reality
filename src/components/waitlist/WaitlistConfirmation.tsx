@@ -36,7 +36,7 @@ export default function WaitlistConfirmation({
       {/* Heading */}
       <div className="space-y-2 text-center">
         <h1 className="text-3xl font-bold text-navy">
-          You're on the Waitlist!
+          You&apos;re on the Waitlist
         </h1>
         {firstName && (
           <p className="text-lg text-navy-soft">
@@ -56,10 +56,12 @@ export default function WaitlistConfirmation({
               1
             </div>
             <div>
-              <h3 className="font-semibold text-navy">We review your qualification</h3>
+              <h3 className="font-semibold text-navy">
+                We review your qualification
+              </h3>
               <p className="text-sm text-navy-soft">
-                Our team will carefully review your information to ensure you're a
-                great fit for Reality Matchmaking.
+                Our team will carefully review your information to ensure
+                you&apos;re a great fit for Reality Matchmaking.
               </p>
             </div>
           </li>
@@ -68,10 +70,12 @@ export default function WaitlistConfirmation({
               2
             </div>
             <div>
-              <h3 className="font-semibold text-navy">You'll receive an invitation email</h3>
+              <h3 className="font-semibold text-navy">
+                You&apos;ll receive an invitation email
+              </h3>
               <p className="text-sm text-navy-soft">
-                When a spot opens up, we'll send you an email invitation to continue
-                your application.
+                When a spot opens up, we&apos;ll send you an email invitation to
+                continue your application.
               </p>
             </div>
           </li>
@@ -80,10 +84,12 @@ export default function WaitlistConfirmation({
               3
             </div>
             <div>
-              <h3 className="font-semibold text-navy">Complete your full application</h3>
+              <h3 className="font-semibold text-navy">
+                Complete your full application
+              </h3>
               <p className="text-sm text-navy-soft">
-                Finish your profile, submit the application fee, and complete our
-                comprehensive assessment.
+                Finish your profile, submit the application fee, and complete
+                our comprehensive assessment.
               </p>
             </div>
           </li>
@@ -94,7 +100,7 @@ export default function WaitlistConfirmation({
       <div className="rounded-lg border-l-4 border-copper bg-copper/5 p-4">
         <p className="text-sm text-navy">
           <span className="font-semibold">Timeline:</span> We typically review
-          applications within 2-4 weeks. We'll notify you as soon as a spot
+          applications within 2-4 weeks. We&apos;ll notify you as soon as a spot
           opens up.
         </p>
       </div>
@@ -118,8 +124,8 @@ export default function WaitlistConfirmation({
 
       {/* Additional Info */}
       <p className="text-center text-sm text-gray-500">
-        Check your email (including spam folder) for updates on your
-        application status.
+        Check your email (including spam folder) for updates on your application
+        status.
       </p>
     </div>
   );

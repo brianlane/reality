@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   const where = {
     ...(status
       ? { applicationStatus: status as never }
-      : { applicationStatus: { not: "WAITLIST" } }),
+      : { applicationStatus: { not: "WAITLIST" as const } }),
     ...(gender ? { gender: gender as never } : {}),
     ...(screeningStatus ? { screeningStatus: screeningStatus as never } : {}),
   };
