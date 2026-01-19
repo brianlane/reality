@@ -69,7 +69,7 @@ model Applicant {
   id                    String            @id @default(cuid())
   userId                String            @unique
   user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   // Demographics
   age                   Int
   gender                Gender
@@ -79,7 +79,19 @@ model Applicant {
   education             String
   incomeRange           String
   incomeVerified        Boolean           @default(false)
-  
+
+  // Stage 1 Qualification
+  stage1CompletedAt     DateTime?
+  stage1Responses       Json?             // Store minimal qualification data
+
+  // Waitlist Management
+  waitlistedAt          DateTime?
+  waitlistReason        String?           // Admin's reason for keeping on waitlist
+  waitlistPosition      Int?              // Optional: queue position
+  invitedOffWaitlistAt  DateTime?
+  invitedOffWaitlistBy  String?           // Admin user ID
+  waitlistInviteToken   String?   @unique // Unique token for invite link
+
   // Application Status
   applicationStatus     ApplicationStatus @default(DRAFT)
   submittedAt           DateTime?
@@ -371,6 +383,8 @@ enum AdminActionType {
   RECORD_MATCH
   UPDATE_MATCH_OUTCOME
   MANUAL_ADJUSTMENT
+  INVITE_OFF_WAITLIST
+  BATCH_INVITE_WAITLIST
 }
 
 model AdminAction {

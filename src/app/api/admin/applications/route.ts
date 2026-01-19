@@ -23,7 +23,9 @@ export async function GET(request: Request) {
   const sortOrder = url.searchParams.get("sortOrder") ?? "desc";
 
   const where = {
-    ...(status ? { applicationStatus: status as never } : {}),
+    ...(status
+      ? { applicationStatus: status as never }
+      : { applicationStatus: { not: "WAITLIST" } }),
     ...(gender ? { gender: gender as never } : {}),
     ...(screeningStatus ? { screeningStatus: screeningStatus as never } : {}),
   };

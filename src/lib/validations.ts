@@ -1,5 +1,20 @@
 import { z } from "zod";
 
+export const stage1QualificationSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Valid email is required"),
+  phone: z.string().optional().nullable(),
+  age: z.number().int().min(18, "Must be 18 or older").max(100),
+  gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
+  location: z.string().min(1, "Location is required"),
+  relationshipGoal: z.string().min(1, "Relationship goal is required"),
+  aboutYourself: z
+    .string()
+    .min(50, "Please write at least 50 characters")
+    .max(500, "Please keep it under 500 characters"),
+});
+
 export const demographicsSchema = z.object({
   age: z.number().int().min(18).max(100),
   gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
@@ -51,6 +66,7 @@ export const createApplicationSchema = z.object({
     phone: z.string().optional().nullable(),
   }),
   applicationId: z.string().min(1).optional(),
+  inviteToken: z.string().optional(), // For waitlist validation
   demographics: demographicsSchema,
   questionnaire: questionnaireSchema.optional(),
 });

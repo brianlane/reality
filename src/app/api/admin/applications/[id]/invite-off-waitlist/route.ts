@@ -1,0 +1,104 @@
+import { getAuthUser, requireAdmin } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { getOrCreateAdminUser } from "@/lib/admin-helpers";
+import { errorResponse, successResponse } from "@/lib/api-response";
+import { sendWaitlistInviteEmail } from "@/lib/email/waitlist";
+import { randomBytes } from "crypto";
+
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+export async function POST(request: Request, { params }: RouteContext) {
+  const { id } = await params;
+  const auth = await getAuthUser();
+  if (!auth) {
+    return errorResponse("UNAUTHORIZED", "User not authenticated", 401);
+  }
+  if (!auth.email) {
+    return errorResponse("UNAUTHORIZED", "Email not available", 401);
+  }
+  try {
+    requireAdmin(auth.email);
+  } catch (error) {
+    return errorResponse("FORBIDDEN", (error as Error).message, 403);
+  }
+
+  const adminUser = await getOrCreateAdminUser({
+    userId: auth.userId,
+    email: auth.email,
+  });
+
+  // Verify applicant exists and has WAITLIST status
+  const existing = await db.applicant.findUnique({
+    where: { id },
+    include: {
+      user: {
+        select: {
+          email: true,
+          firstName: true,
+        },
+      },
+    },
+  });
+
+  if (!existing) {
+    return errorResponse("NOT_FOUND", "Applicant not found", 404);
+  }
+
+  if (existing.applicationStatus !== "WAITLIST") {
+    return errorResponse(
+      "INVALID_STATUS",
+      "Applicant is not on the waitlist",
+      400,
+    );
+  }
+
+  // Generate unique invite token (32-byte hex = 64 characters)
+  const inviteToken = randomBytes(32).toString("hex");
+
+  // Update applicant with invite details
+  const applicant = await db.applicant.update({
+    where: { id },
+    data: {
+      invitedOffWaitlistAt: new Date(),
+      invitedOffWaitlistBy: adminUser.id,
+      waitlistInviteToken: inviteToken,
+    },
+  });
+
+  // Create AdminAction record
+  await db.adminAction.create({
+    data: {
+      userId: adminUser.id,
+      type: "INVITE_OFF_WAITLIST",
+      targetId: applicant.id,
+      targetType: "applicant",
+      description: `Invited ${existing.user.firstName} off waitlist`,
+      metadata: { inviteToken },
+    },
+  });
+
+  // Send invitation email
+  try {
+    await sendWaitlistInviteEmail({
+      to: existing.user.email,
+      firstName: existing.user.firstName,
+      inviteToken,
+    });
+  } catch (emailError) {
+    console.error("Failed to send waitlist invite email:", emailError);
+    // Continue even if email fails - admin can resend manually
+  }
+
+  const inviteUrl = `${APP_URL}/apply/continue?token=${inviteToken}`;
+
+  return successResponse({
+    success: true,
+    applicantId: applicant.id,
+    inviteUrl,
+    invitedAt: applicant.invitedOffWaitlistAt,
+  });
+}

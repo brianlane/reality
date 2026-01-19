@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
     const {
       applicant: applicantInfo,
       applicationId,
+      inviteToken,
       demographics,
       questionnaire,
     } = payload;
@@ -41,7 +42,26 @@ export async function POST(request: NextRequest) {
           409,
         );
       }
-      if (existingApplicant.applicationStatus !== "DRAFT") {
+
+      // Check if user is on waitlist and needs invite token
+      if (existingApplicant.applicationStatus === "WAITLIST") {
+        if (
+          !inviteToken ||
+          existingApplicant.waitlistInviteToken !== inviteToken
+        ) {
+          return errorResponse(
+            "WAITLIST_LOCKED",
+            "You must be invited off the waitlist to continue.",
+            403,
+          );
+        }
+
+        // Valid token: transition from WAITLIST to DRAFT
+        await db.applicant.update({
+          where: { id: existingApplicant.id },
+          data: { applicationStatus: "DRAFT" },
+        });
+      } else if (existingApplicant.applicationStatus !== "DRAFT") {
         return errorResponse(
           "APPLICATION_LOCKED",
           "Application can no longer be edited.",
