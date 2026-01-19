@@ -19,8 +19,11 @@ export default function AdminOverviewSummary() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     fetch("/api/admin/analytics/overview", {
       headers: { "x-mock-user-role": "ADMIN" },
+      signal: controller.signal,
     })
       .then(async (res) => {
         const json = await res.json();
@@ -30,7 +33,13 @@ export default function AdminOverviewSummary() {
         }
         setData(json);
       })
-      .catch(() => setError("Failed to load overview."));
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          setError("Failed to load overview.");
+        }
+      });
+
+    return () => controller.abort();
   }, []);
 
   if (error) {

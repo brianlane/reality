@@ -14,8 +14,11 @@ export default function AdminMatchesTable() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     fetch("/api/admin/analytics/matches", {
       headers: { "x-mock-user-role": "ADMIN" },
+      signal: controller.signal,
     })
       .then(async (res) => {
         const json = await res.json();
@@ -25,7 +28,13 @@ export default function AdminMatchesTable() {
         }
         setData(json);
       })
-      .catch(() => setError("Failed to load match analytics."));
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          setError("Failed to load match analytics.");
+        }
+      });
+
+    return () => controller.abort();
   }, []);
 
   if (error) {

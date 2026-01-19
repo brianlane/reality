@@ -12,17 +12,29 @@ type MatchItem = {
 
 export default function ApplicantMatchesList() {
   const [matches, setMatches] = useState<MatchItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/applicant/matches")
+    const controller = new AbortController();
+
+    fetch("/api/applicant/matches", { signal: controller.signal })
       .then((res) => res.json())
-      .then((json) => setMatches(json.matches ?? []));
+      .then((json) => setMatches(json.matches ?? []))
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          setError("Failed to load matches.");
+        }
+      });
+
+    return () => controller.abort();
   }, []);
 
   return (
     <Card>
       <h2 className="text-lg font-semibold text-navy">Recent Matches</h2>
-      {matches.length === 0 ? (
+      {error ? (
+        <p className="mt-2 text-sm text-red-600">{error}</p>
+      ) : matches.length === 0 ? (
         <p className="mt-2 text-sm text-navy-soft">No matches yet.</p>
       ) : (
         <ul className="mt-4 space-y-2 text-sm text-navy-soft">

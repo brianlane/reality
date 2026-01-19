@@ -17,7 +17,9 @@ export default function ApplicantDashboardSummary() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/applicant/dashboard")
+    const controller = new AbortController();
+
+    fetch("/api/applicant/dashboard", { signal: controller.signal })
       .then(async (res) => {
         const json = await res.json();
         if (!res.ok || json?.error) {
@@ -26,7 +28,13 @@ export default function ApplicantDashboardSummary() {
         }
         setData(json);
       })
-      .catch(() => setError("Failed to load dashboard."));
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          setError("Failed to load dashboard.");
+        }
+      });
+
+    return () => controller.abort();
   }, []);
 
   if (error) {
