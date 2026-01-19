@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "format:check": "prettier --check . --ignore-path .gitignore",
     "bundle:check": "node scripts/check-bundle-size.mjs",
-    "test:e2e": "playwright test",
+    "test:e2e": "env -u NO_COLOR FORCE_COLOR=0 playwright test",
     "db:dev": "npx prisma migrate dev",
     "db:studio": "npx prisma studio",
     "db:seed": "npx prisma db seed",
@@ -27,6 +27,7 @@
   "dependencies": {
     "@clerk/nextjs": "^6.36.7",
     "@prisma/client": "^6.19.2",
+    "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.90.1",
     "next": "16.1.2",
     "react": "19.2.3",

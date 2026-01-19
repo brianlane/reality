@@ -1,11 +1,14 @@
-import { getMockAuth, requireAdmin } from "@/lib/auth";
+import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
 export async function GET(request: Request) {
-  const auth = await getMockAuth();
+  const auth = await getAuthUser();
+  if (!auth) {
+    return errorResponse("UNAUTHORIZED", "User not authenticated", 401);
+  }
   try {
-    requireAdmin(auth.role);
+    requireAdmin(auth.email);
   } catch (error) {
     return errorResponse("FORBIDDEN", (error as Error).message, 403);
   }

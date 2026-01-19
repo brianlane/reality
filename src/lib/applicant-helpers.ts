@@ -1,7 +1,10 @@
 import { db } from "@/lib/db";
 
-export async function getApplicantByClerkId(clerkId: string) {
-  const user = await db.user.findUnique({ where: { clerkId } });
+export async function getApplicantByEmail(email: string) {
+  const normalizedEmail = email.toLowerCase();
+  const user = await db.user.findFirst({
+    where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+  });
   if (!user) {
     return null;
   }

@@ -12,12 +12,18 @@ export default function HomePage() {
         Premium matchmaking experiences designed for real connections.
       </h1>
 
-      <div className="mt-12">
+      <div className="mt-12 flex flex-wrap items-center gap-3">
         <Link
           href="/apply"
           className="rounded-md bg-navy px-6 py-3 text-base font-medium text-white hover:bg-copper transition-colors cursor-pointer"
         >
           Start application
+        </Link>
+        <Link
+          href="/sign-in"
+          className="rounded-md border border-slate-300 px-6 py-3 text-base font-medium text-navy hover:border-copper hover:text-copper transition-colors"
+        >
+          Sign in
         </Link>
       </div>
     </section>

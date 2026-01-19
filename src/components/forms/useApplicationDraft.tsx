@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 
 type DraftState = {
-  userId: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string | null;
   applicationId?: string;
   demographics?: Record<string, unknown>;
   questionnaire?: Record<string, unknown>;
@@ -13,19 +16,19 @@ const STORAGE_KEY = "reality-application-draft";
 export function useApplicationDraft() {
   const [draft, setDraft] = useState<DraftState>(() => {
     if (typeof window === "undefined") {
-      return { userId: "mock-user", photos: [] };
+      return { photos: [] };
     }
 
     const stored = globalThis.localStorage?.getItem(STORAGE_KEY);
     if (!stored) {
-      return { userId: "mock-user", photos: [] };
+      return { photos: [] };
     }
 
     try {
       return JSON.parse(stored) as DraftState;
     } catch {
       globalThis.localStorage?.removeItem(STORAGE_KEY);
-      return { userId: "mock-user", photos: [] };
+      return { photos: [] };
     }
   });
 

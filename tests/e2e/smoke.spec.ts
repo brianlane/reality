@@ -32,6 +32,9 @@ test("application flow navigates through steps", async ({ page }) => {
   });
 
   await page.goto("/apply");
+  await page.getByLabel("First name").fill("Alex");
+  await page.getByLabel("Last name").fill("Smith");
+  await page.getByLabel("Email").fill("alex@example.com");
   await page.getByLabel("Age").fill("28");
   await page.getByLabel("Gender").selectOption("FEMALE");
   await page.getByLabel("Location").fill("Phoenix, AZ");
@@ -68,6 +71,10 @@ test("application flow navigates through steps", async ({ page }) => {
 });
 
 test("admin overview loads mocked data", async ({ page }) => {
+  await page.setExtraHTTPHeaders({
+    "x-e2e-user-id": "admin-user",
+    "x-e2e-user-email": "admin@example.com",
+  });
   await page.route("**/api/admin/analytics/overview", async (route) => {
     await route.fulfill({
       json: {

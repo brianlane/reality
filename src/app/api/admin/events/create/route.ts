@@ -1,18 +1,27 @@
-import { getMockAuth, requireAdmin } from "@/lib/auth";
+import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 
 export async function POST(request: Request) {
-  const auth = await getMockAuth();
+  const auth = await getAuthUser();
+  if (!auth) {
+    return errorResponse("UNAUTHORIZED", "User not authenticated", 401);
+  }
+  if (!auth.email) {
+    return errorResponse("UNAUTHORIZED", "Email not available", 401);
+  }
   try {
-    requireAdmin(auth.role);
+    requireAdmin(auth.email);
   } catch (error) {
     return errorResponse("FORBIDDEN", (error as Error).message, 403);
   }
 
   const body = await request.json();
-  const adminUser = await getOrCreateAdminUser(auth.userId);
+  const adminUser = await getOrCreateAdminUser({
+    userId: auth.userId,
+    email: auth.email,
+  });
 
   const event = await db.event.create({
     data: {
