@@ -27,7 +27,9 @@ export default function AdminLoginForm({
 
     const signOut = async () => {
       const supabase = createSupabaseBrowserClient();
-      await supabase.auth.signOut();
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
       setError("This account is not authorized for admin access.");
     };
 
@@ -49,6 +51,12 @@ export default function AdminLoginForm({
 
     const normalizedEmail = email.trim().toLowerCase();
     const supabase = createSupabaseBrowserClient();
+    if (!supabase) {
+      setError("Authentication is not configured.");
+      setIsSubmitting(false);
+      return;
+    }
+
     const { error: authError } = await supabase.auth.signInWithPassword({
       email: normalizedEmail,
       password,

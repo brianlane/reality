@@ -10,6 +10,10 @@ export default function NavAuthActions() {
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
+    if (!supabase) {
+      // Supabase not configured, stay signed out
+      return;
+    }
     supabase.auth.getSession().then(({ data }) => {
       setIsSignedIn(Boolean(data.session));
     });

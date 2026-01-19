@@ -20,7 +20,9 @@ export default function SignOutButton({
     if (isSigningOut) return;
     setIsSigningOut(true);
     const supabase = createSupabaseBrowserClient();
-    await supabase.auth.signOut();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     router.replace(redirectTo);
     router.refresh();
   };
