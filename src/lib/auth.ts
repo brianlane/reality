@@ -18,8 +18,6 @@ export async function getAuthUser(): Promise<AuthUser | null> {
         email: email ?? null,
       };
     }
-
-    return null;
   }
 
   const supabase = await createSupabaseServerClient();

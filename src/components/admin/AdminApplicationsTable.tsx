@@ -56,7 +56,8 @@ export default function AdminApplicationsTable() {
                     type="button"
                     className="text-xs font-medium text-copper hover:underline"
                     onClick={async () => {
-                      const enableWaitlist = app.applicationStatus !== "WAITLIST";
+                      const enableWaitlist =
+                        app.applicationStatus !== "WAITLIST";
                       const response = await fetch(
                         `/api/admin/applications/${app.id}/waitlist`,
                         {
@@ -85,9 +86,7 @@ export default function AdminApplicationsTable() {
                       );
                     }}
                   >
-                    {app.applicationStatus === "WAITLIST"
-                      ? "Remove"
-                      : "Add"}
+                    {app.applicationStatus === "WAITLIST" ? "Remove" : "Add"}
                   </button>
                 </td>
               </tr>

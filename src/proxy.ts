@@ -19,7 +19,15 @@ function isApplicantRoute(pathname: string) {
   return applicantPrefixes.some((prefix) => pathname.startsWith(prefix));
 }
 
-export async function middleware(request: NextRequest) {
+function redirectWithCookies(response: NextResponse, url: URL): NextResponse {
+  const redirectResponse = NextResponse.redirect(url);
+  response.cookies.getAll().forEach((cookie) => {
+    redirectResponse.cookies.set(cookie);
+  });
+  return redirectResponse;
+}
+
+export async function proxy(request: NextRequest) {
   const response = NextResponse.next();
   const e2eEnabled = process.env.E2E_AUTH_ENABLED === "true";
   const e2eUserId = request.headers.get("x-e2e-user-id");
@@ -71,7 +79,7 @@ export async function middleware(request: NextRequest) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/admin/login";
       redirectUrl.searchParams.set("next", pathname);
-      return NextResponse.redirect(redirectUrl);
+      return redirectWithCookies(response, redirectUrl);
     }
   }
 
@@ -85,7 +93,7 @@ export async function middleware(request: NextRequest) {
     if (isAdmin) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/admin";
-      return NextResponse.redirect(redirectUrl);
+      return redirectWithCookies(response, redirectUrl);
     }
   }
 
@@ -93,7 +101,7 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/sign-in";
     redirectUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(redirectUrl);
+    return redirectWithCookies(response, redirectUrl);
   }
 
   return response;
