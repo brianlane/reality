@@ -41,7 +41,7 @@ export default function PhotoUploadForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <input type="file" name="file" accept="image/*" required />
       <Button type="submit">Upload photo</Button>
-      {status && <p className="text-sm text-slate-600">{status}</p>}
+      {status && <p className="text-sm text-navy-soft">{status}</p>}
     </form>
   );
 }

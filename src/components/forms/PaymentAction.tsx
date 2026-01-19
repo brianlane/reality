@@ -34,7 +34,7 @@ export default function PaymentAction() {
       <Button type="button" onClick={handlePayment}>
         Start payment
       </Button>
-      {status && <p className="text-sm text-slate-600">{status}</p>}
+      {status && <p className="text-sm text-navy-soft">{status}</p>}
     </div>
   );
 }

@@ -39,8 +39,8 @@ export default function ApplicantDashboardSummary() {
 
   return (
     <Card>
-      <h2 className="text-lg font-semibold text-slate-900">Overview</h2>
-      <p className="mt-2 text-sm text-slate-600">
+      <h2 className="text-lg font-semibold text-navy">Overview</h2>
+      <p className="mt-2 text-sm text-navy-soft">
         Application status: {data.application.status}
       </p>
       <div className="mt-4 grid gap-4 md:grid-cols-3">
@@ -48,19 +48,19 @@ export default function ApplicantDashboardSummary() {
           <div className="text-2xl font-semibold">
             {data.stats.eventsAttended}
           </div>
-          <div className="text-sm text-slate-500">Events attended</div>
+          <div className="text-sm text-navy-soft">Events attended</div>
         </div>
         <div>
           <div className="text-2xl font-semibold">
             {data.stats.matchesReceived}
           </div>
-          <div className="text-sm text-slate-500">Matches received</div>
+          <div className="text-sm text-navy-soft">Matches received</div>
         </div>
         <div>
           <div className="text-2xl font-semibold">
             {data.stats.datesCompleted}
           </div>
-          <div className="text-sm text-slate-500">Dates completed</div>
+          <div className="text-sm text-navy-soft">Dates completed</div>
         </div>
       </div>
     </Card>

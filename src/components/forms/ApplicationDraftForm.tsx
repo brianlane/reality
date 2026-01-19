@@ -49,13 +49,13 @@ export default function ApplicationDraftForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="age" className="text-sm font-medium text-slate-700">
+        <label htmlFor="age" className="text-sm font-medium text-navy-muted">
           Age
         </label>
         <Input id="age" name="age" type="number" min={18} required />
       </div>
       <div>
-        <label htmlFor="gender" className="text-sm font-medium text-slate-700">
+        <label htmlFor="gender" className="text-sm font-medium text-navy-muted">
           Gender
         </label>
         <Select id="gender" name="gender" required>
@@ -68,7 +68,7 @@ export default function ApplicationDraftForm() {
       <div>
         <label
           htmlFor="location"
-          className="text-sm font-medium text-slate-700"
+          className="text-sm font-medium text-navy-muted"
         >
           Location
         </label>
@@ -77,7 +77,7 @@ export default function ApplicationDraftForm() {
       <div>
         <label
           htmlFor="occupation"
-          className="text-sm font-medium text-slate-700"
+          className="text-sm font-medium text-navy-muted"
         >
           Occupation
         </label>
@@ -86,7 +86,7 @@ export default function ApplicationDraftForm() {
       <div>
         <label
           htmlFor="employer"
-          className="text-sm font-medium text-slate-700"
+          className="text-sm font-medium text-navy-muted"
         >
           Employer
         </label>
@@ -95,7 +95,7 @@ export default function ApplicationDraftForm() {
       <div>
         <label
           htmlFor="education"
-          className="text-sm font-medium text-slate-700"
+          className="text-sm font-medium text-navy-muted"
         >
           Education
         </label>
@@ -104,7 +104,7 @@ export default function ApplicationDraftForm() {
       <div>
         <label
           htmlFor="incomeRange"
-          className="text-sm font-medium text-slate-700"
+          className="text-sm font-medium text-navy-muted"
         >
           Income Range
         </label>

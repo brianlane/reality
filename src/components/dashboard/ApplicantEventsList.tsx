@@ -22,17 +22,17 @@ export default function ApplicantEventsList() {
 
   return (
     <Card>
-      <h2 className="text-lg font-semibold text-slate-900">Upcoming Events</h2>
+      <h2 className="text-lg font-semibold text-navy">Upcoming Events</h2>
       {events.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-500">No events yet.</p>
+        <p className="mt-2 text-sm text-navy-soft">No events yet.</p>
       ) : (
-        <ul className="mt-4 space-y-2 text-sm text-slate-600">
+        <ul className="mt-4 space-y-2 text-sm text-navy-soft">
           {events.map((event) => (
             <li key={event.id} className="flex items-center justify-between">
               <span>
                 {event.name} · {new Date(event.date).toLocaleDateString()}
               </span>
-              <span className="text-slate-500">{event.invitationStatus}</span>
+              <span className="text-navy-soft">{event.invitationStatus}</span>
             </li>
           ))}
         </ul>

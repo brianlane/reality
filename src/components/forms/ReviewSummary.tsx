@@ -7,8 +7,8 @@ export default function ReviewSummary() {
 
   return (
     <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-6">
-      <h2 className="text-lg font-semibold text-slate-900">Review Summary</h2>
-      <pre className="whitespace-pre-wrap text-xs text-slate-600">
+      <h2 className="text-lg font-semibold text-navy">Review Summary</h2>
+      <pre className="whitespace-pre-wrap text-xs text-navy-soft">
         {JSON.stringify(
           {
             demographics: draft.demographics,

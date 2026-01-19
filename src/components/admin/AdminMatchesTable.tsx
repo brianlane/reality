@@ -38,8 +38,8 @@ export default function AdminMatchesTable() {
 
   return (
     <Card>
-      <h2 className="text-lg font-semibold text-slate-900">Matches</h2>
-      <p className="mt-2 text-sm text-slate-500">
+      <h2 className="text-lg font-semibold text-navy">Matches</h2>
+      <p className="mt-2 text-sm text-navy-soft">
         Total matches: {data.overall.totalMatches}
       </p>
       <Table className="mt-4">
@@ -51,7 +51,7 @@ export default function AdminMatchesTable() {
         </thead>
         <tbody>
           {Object.entries(data.byType).map(([type, value]) => (
-            <tr key={type} className="border-b text-sm text-slate-600">
+            <tr key={type} className="border-b text-sm text-navy-soft">
               <td className="py-2">{type}</td>
               <td className="py-2">{value.count}</td>
             </tr>
