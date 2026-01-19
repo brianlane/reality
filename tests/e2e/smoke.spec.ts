@@ -10,6 +10,17 @@ test("home page renders", async ({ page }) => {
 });
 
 test("application flow navigates through steps", async ({ page }) => {
+  // Listen for console messages and errors
+  page.on("console", (msg) => {
+    if (msg.type() === "error") {
+      console.log("Browser console error:", msg.text());
+    }
+  });
+
+  page.on("pageerror", (err) => {
+    console.log("Page error:", err.message);
+  });
+
   const fillStableById = async (id: string, value: string) => {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       try {
@@ -48,7 +59,23 @@ test("application flow navigates through steps", async ({ page }) => {
   });
 
   await page.goto("/apply");
-  await page.waitForSelector("#firstName", { state: "visible" });
+
+  // Debug: Check what's on the page
+  await page.screenshot({ path: "test-results/debug-apply-page.png", fullPage: true });
+  const bodyText = await page.locator("body").textContent();
+  console.log("Page body text (first 200 chars):", bodyText?.slice(0, 200));
+
+  // Check if #firstName is in the DOM
+  const firstNameExists = await page.locator("#firstName").count();
+  console.log("Number of #firstName elements found:", firstNameExists);
+
+  // If it exists, check if it's visible
+  if (firstNameExists > 0) {
+    const isVisible = await page.locator("#firstName").isVisible();
+    console.log("Is #firstName visible?:", isVisible);
+  }
+
+  await page.waitForSelector("#firstName", { state: "visible", timeout: 10000 });
   await fillStableById("firstName", "Alex");
   await fillStableById("lastName", "Smith");
   await fillStableById("email", "alex@example.com");
