@@ -10,6 +10,22 @@ test("home page renders", async ({ page }) => {
 });
 
 test("application flow navigates through steps", async ({ page }) => {
+  const fillStable = async (label: string, value: string) => {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      try {
+        const locator = page.getByLabel(label);
+        await expect(locator).toBeVisible();
+        await locator.fill(value);
+        return;
+      } catch (error) {
+        if (attempt === 4) {
+          throw error;
+        }
+        await page.waitForTimeout(100);
+      }
+    }
+  };
+
   await page.route("**/api/applications/create", async (route) => {
     await route.fulfill({
       json: { applicationId: "appl_123", status: "DRAFT" },
@@ -32,10 +48,10 @@ test("application flow navigates through steps", async ({ page }) => {
   });
 
   await page.goto("/apply");
-  await page.getByLabel("First name").fill("Alex");
-  await page.getByLabel("Last name").fill("Smith");
-  await page.getByLabel("Email").fill("alex@example.com");
-  await page.getByLabel("Age").fill("28");
+  await fillStable("First name", "Alex");
+  await fillStable("Last name", "Smith");
+  await fillStable("Email", "alex@example.com");
+  await fillStable("Age", "28");
   await page.getByLabel("Gender").selectOption("FEMALE");
   await page.getByLabel("Location").fill("Phoenix, AZ");
   await page.getByLabel("Occupation").fill("Marketing Manager");
