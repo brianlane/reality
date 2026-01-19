@@ -185,16 +185,16 @@ export default function Logo({ size = "small" }: LogoProps) {
       const staticCircle1X = centerX - config.baseDistance;
       const staticCircle2X = centerX + config.baseDistance;
 
-      const gradient = ctx.createLinearGradient(
+      const staticGradient = ctx.createLinearGradient(
         staticCircle1X,
         circleY,
         staticCircle2X,
         circleY,
       );
-      gradient.addColorStop(0, copperColor);
-      gradient.addColorStop(0.5, "rgba(201, 168, 128, 0.3)");
-      gradient.addColorStop(1, copperColor);
-      ctx.strokeStyle = gradient;
+      staticGradient.addColorStop(0, copperColor);
+      staticGradient.addColorStop(0.5, "rgba(201, 168, 128, 0.3)");
+      staticGradient.addColorStop(1, copperColor);
+      ctx.strokeStyle = staticGradient;
       ctx.lineWidth = size === "large" ? 2 : 1;
       ctx.beginPath();
       ctx.moveTo(staticCircle1X + config.radius, circleY);
