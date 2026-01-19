@@ -1,4 +1,4 @@
-import { getMockAuth, requireAdmin } from "@/lib/auth";
+import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
@@ -8,9 +8,12 @@ type RouteContext = {
 
 export async function GET(_: Request, { params }: RouteContext) {
   const { id } = await params;
-  const auth = await getMockAuth();
+  const auth = await getAuthUser();
+  if (!auth) {
+    return errorResponse("UNAUTHORIZED", "User not authenticated", 401);
+  }
   try {
-    requireAdmin(auth.role);
+    requireAdmin(auth.email);
   } catch (error) {
     return errorResponse("FORBIDDEN", (error as Error).message, 403);
   }

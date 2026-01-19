@@ -1,10 +1,14 @@
-import { getMockAuth } from "@/lib/auth";
+import { getAuthUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { getApplicantByClerkId } from "@/lib/applicant-helpers";
 
 export async function GET() {
-  const auth = await getMockAuth();
+  const auth = await getAuthUser();
+  if (!auth) {
+    return errorResponse("UNAUTHORIZED", "User not authenticated", 401);
+  }
+
   const applicant = await getApplicantByClerkId(auth.userId);
 
   if (!applicant) {

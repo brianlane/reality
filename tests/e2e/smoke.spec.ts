@@ -68,6 +68,10 @@ test("application flow navigates through steps", async ({ page }) => {
 });
 
 test("admin overview loads mocked data", async ({ page }) => {
+  await page.setExtraHTTPHeaders({
+    "x-e2e-user-id": "admin-user",
+    "x-e2e-user-email": "admin@example.com",
+  });
   await page.route("**/api/admin/analytics/overview", async (route) => {
     await route.fulfill({
       json: {

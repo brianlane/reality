@@ -2,27 +2,26 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export default function SignUpPage() {
+export default function SignInForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
     setError("");
-    setNotice("");
 
     const supabase = createSupabaseBrowserClient();
-    const { data, error: authError } = await supabase.auth.signUp({
+    const { error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -33,21 +32,16 @@ export default function SignUpPage() {
       return;
     }
 
-    if (!data.session) {
-      setNotice("Check your email to confirm your account.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    router.replace("/dashboard");
+    const next = searchParams.get("next") ?? "/dashboard";
+    router.replace(next);
     router.refresh();
   };
 
   return (
     <section className="mx-auto w-full max-w-md px-6 py-16">
-      <h1 className="text-3xl font-semibold text-navy">Create an account</h1>
+      <h1 className="text-3xl font-semibold text-navy">Sign in</h1>
       <p className="mt-2 text-sm text-navy-soft">
-        Sign up to access your dashboard and event invitations.
+        Sign in to view your dashboard and events.
       </p>
 
       <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
@@ -71,7 +65,7 @@ export default function SignUpPage() {
           <Input
             id="password"
             type="password"
-            autoComplete="new-password"
+            autoComplete="current-password"
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -84,21 +78,15 @@ export default function SignUpPage() {
           </p>
         ) : null}
 
-        {notice ? (
-          <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-            {notice}
-          </p>
-        ) : null}
-
         <Button className="w-full" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Creating account..." : "Create account"}
+          {isSubmitting ? "Signing in..." : "Sign in"}
         </Button>
       </form>
 
       <p className="mt-6 text-sm text-navy-soft">
-        Already have an account?{" "}
-        <Link className="text-copper hover:underline" href="/sign-in">
-          Sign in
+        New here?{" "}
+        <Link className="text-copper hover:underline" href="/sign-up">
+          Create an account
         </Link>
         .
       </p>
