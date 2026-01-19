@@ -43,7 +43,7 @@ export default function QuestionnaireForm() {
         applicant: {
           firstName: draft.firstName,
           lastName: draft.lastName,
-          email: draft.email,
+          email: draft.email.toLowerCase(),
           phone: draft.phone ?? null,
         },
         applicationId: draft.applicationId,

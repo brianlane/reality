@@ -47,9 +47,10 @@ export default function AdminLoginForm({
     setIsSubmitting(true);
     setError("");
 
+    const normalizedEmail = email.trim().toLowerCase();
     const supabase = createSupabaseBrowserClient();
     const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
+      email: normalizedEmail,
       password,
     });
 

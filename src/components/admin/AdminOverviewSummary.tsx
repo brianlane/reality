@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
+import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 
 type OverviewResponse = {
   applicants: {
@@ -21,20 +22,32 @@ export default function AdminOverviewSummary() {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch("/api/admin/analytics/overview", { signal: controller.signal })
-      .then(async (res) => {
+    const loadOverview = async () => {
+      try {
+        const headers = await getAuthHeaders();
+        if (!headers) {
+          setError("Please sign in again.");
+          return;
+        }
+
+        const res = await fetch("/api/admin/analytics/overview", {
+          headers,
+          signal: controller.signal,
+        });
         const json = await res.json();
         if (!res.ok || json?.error) {
           setError("Failed to load overview.");
           return;
         }
         setData(json);
-      })
-      .catch((err) => {
-        if (err.name !== "AbortError") {
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
           setError("Failed to load overview.");
         }
-      });
+      }
+    };
+
+    loadOverview();
 
     return () => controller.abort();
   }, []);

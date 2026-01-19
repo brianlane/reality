@@ -71,6 +71,14 @@ test("application flow navigates through steps", async ({ page }) => {
 });
 
 test("admin overview loads mocked data", async ({ page }) => {
+  await page.addInitScript(() => {
+    (
+      window as { __E2E_AUTH_HEADERS__?: Record<string, string> }
+    ).__E2E_AUTH_HEADERS__ = {
+      "x-e2e-user-id": "admin-user",
+      "x-e2e-user-email": "admin@example.com",
+    };
+  });
   await page.setExtraHTTPHeaders({
     "x-e2e-user-id": "admin-user",
     "x-e2e-user-email": "admin@example.com",

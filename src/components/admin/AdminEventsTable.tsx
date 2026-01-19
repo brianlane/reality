@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
+import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 
 type EventItem = {
   id: string;
@@ -18,17 +19,32 @@ export default function AdminEventsTable() {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch("/api/admin/events", {
-      headers: { "x-mock-user-role": "ADMIN" },
-      signal: controller.signal,
-    })
-      .then((res) => res.json())
-      .then((json) => setEvents(json.events ?? []))
-      .catch((err) => {
-        if (err.name !== "AbortError") {
+    const loadEvents = async () => {
+      try {
+        const headers = await getAuthHeaders();
+        if (!headers) {
+          setError("Please sign in again.");
+          return;
+        }
+
+        const res = await fetch("/api/admin/events", {
+          headers,
+          signal: controller.signal,
+        });
+        const json = await res.json();
+        if (!res.ok || json?.error) {
+          setError("Failed to load events.");
+          return;
+        }
+        setEvents(json.events ?? []);
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
           setError("Failed to load events.");
         }
-      });
+      }
+    };
+
+    loadEvents();
 
     return () => controller.abort();
   }, []);
