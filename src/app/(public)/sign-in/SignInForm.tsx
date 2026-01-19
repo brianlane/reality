@@ -29,8 +29,14 @@ export default function SignInForm() {
     setError("");
 
     const supabase = createSupabaseBrowserClient();
+    if (!supabase) {
+      setError("Authentication is not configured.");
+      setIsSubmitting(false);
+      return;
+    }
+
     const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim().toLowerCase(),
       password,
     });
 

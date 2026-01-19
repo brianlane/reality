@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "./Logo";
+import NavAuthActions from "./NavAuthActions";
 
 const navLinks = [{ href: "/", label: "Home" }];
 
@@ -20,12 +21,7 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/sign-in"
-            className="rounded-md border border-slate-300 px-3 py-1 text-sm text-navy hover:border-copper hover:text-copper transition-colors"
-          >
-            Sign in
-          </Link>
+          <NavAuthActions />
         </nav>
       </div>
     </header>

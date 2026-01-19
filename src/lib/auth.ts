@@ -7,8 +7,8 @@ export type AuthUser = {
 };
 
 export async function getAuthUser(): Promise<AuthUser | null> {
+  const headerList = await headers();
   if (process.env.E2E_AUTH_ENABLED === "true") {
-    const headerList = await headers();
     const userId = headerList.get("x-e2e-user-id");
     const email = headerList.get("x-e2e-user-email");
 
@@ -23,6 +23,17 @@ export async function getAuthUser(): Promise<AuthUser | null> {
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
     return null;
+  }
+
+  const authHeader = headerList.get("authorization");
+  if (authHeader?.toLowerCase().startsWith("bearer ")) {
+    const token = authHeader.slice(7).trim();
+    if (token) {
+      const { data, error } = await supabase.auth.getUser(token);
+      if (!error && data.user) {
+        return { userId: data.user.id, email: data.user.email ?? null };
+      }
+    }
   }
 
   const { data, error } = await supabase.auth.getUser();

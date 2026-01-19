@@ -15,7 +15,11 @@ export default function ApplicantLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 md:flex-row">
-      <Sidebar title="Applicant" links={applicantLinks} />
+      <Sidebar
+        title="Applicant"
+        links={applicantLinks}
+        signOutRedirect="/sign-in"
+      />
       <main className="flex-1 px-6 py-8">{children}</main>
     </div>
   );

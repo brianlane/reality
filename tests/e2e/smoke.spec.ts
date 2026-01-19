@@ -10,6 +10,22 @@ test("home page renders", async ({ page }) => {
 });
 
 test("application flow navigates through steps", async ({ page }) => {
+  const fillStableById = async (id: string, value: string) => {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      try {
+        const locator = page.locator(`#${id}`);
+        await expect(locator).toBeVisible();
+        await locator.fill(value);
+        return;
+      } catch (error) {
+        if (attempt === 4) {
+          throw error;
+        }
+        await page.waitForTimeout(100);
+      }
+    }
+  };
+
   await page.route("**/api/applications/create", async (route) => {
     await route.fulfill({
       json: { applicationId: "appl_123", status: "DRAFT" },
@@ -32,10 +48,11 @@ test("application flow navigates through steps", async ({ page }) => {
   });
 
   await page.goto("/apply");
-  await page.getByLabel("First name").fill("Alex");
-  await page.getByLabel("Last name").fill("Smith");
-  await page.getByLabel("Email").fill("alex@example.com");
-  await page.getByLabel("Age").fill("28");
+  await page.waitForLoadState("networkidle");
+  await fillStableById("firstName", "Alex");
+  await fillStableById("lastName", "Smith");
+  await fillStableById("email", "alex@example.com");
+  await fillStableById("age", "28");
   await page.getByLabel("Gender").selectOption("FEMALE");
   await page.getByLabel("Location").fill("Phoenix, AZ");
   await page.getByLabel("Occupation").fill("Marketing Manager");
@@ -71,6 +88,14 @@ test("application flow navigates through steps", async ({ page }) => {
 });
 
 test("admin overview loads mocked data", async ({ page }) => {
+  await page.addInitScript(() => {
+    (
+      window as { __E2E_AUTH_HEADERS__?: Record<string, string> }
+    ).__E2E_AUTH_HEADERS__ = {
+      "x-e2e-user-id": "admin-user",
+      "x-e2e-user-email": "admin@example.com",
+    };
+  });
   await page.setExtraHTTPHeaders({
     "x-e2e-user-id": "admin-user",
     "x-e2e-user-email": "admin@example.com",
