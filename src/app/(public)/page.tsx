@@ -12,11 +12,6 @@ export default function HomePage() {
         Premium matchmaking experiences designed for real connections.
       </h1>
 
-      <p className="mt-8 max-w-2xl text-lg leading-relaxed text-navy-soft sm:text-xl">
-        Apply once, complete your profile, and get curated introductions at
-        exclusive events.
-      </p>
-
       <div className="mt-12">
         <Link
           href="/apply"

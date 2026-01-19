@@ -70,8 +70,17 @@ export default function Logo({ size = "small" }: LogoProps) {
       const circle2X = centerX + config.baseDistance;
       const circleY = centerY;
 
-      // Draw connecting line (static)
-      ctx.strokeStyle = copperColor;
+      // Draw gradient line (static)
+      const gradient = ctx.createLinearGradient(
+        circle1X,
+        circleY,
+        circle2X,
+        circleY,
+      );
+      gradient.addColorStop(0, copperColor);
+      gradient.addColorStop(0.5, "rgba(201, 168, 128, 0.3)");
+      gradient.addColorStop(1, copperColor);
+      ctx.strokeStyle = gradient;
       ctx.lineWidth = size === "large" ? 2 : 1;
       ctx.beginPath();
       ctx.moveTo(circle1X + config.radius, circleY);
@@ -176,7 +185,16 @@ export default function Logo({ size = "small" }: LogoProps) {
       const staticCircle1X = centerX - config.baseDistance;
       const staticCircle2X = centerX + config.baseDistance;
 
-      ctx.strokeStyle = copperColor;
+      const gradient = ctx.createLinearGradient(
+        staticCircle1X,
+        circleY,
+        staticCircle2X,
+        circleY,
+      );
+      gradient.addColorStop(0, copperColor);
+      gradient.addColorStop(0.5, "rgba(201, 168, 128, 0.3)");
+      gradient.addColorStop(1, copperColor);
+      ctx.strokeStyle = gradient;
       ctx.lineWidth = size === "large" ? 2 : 1;
       ctx.beginPath();
       ctx.moveTo(staticCircle1X + config.radius, circleY);
