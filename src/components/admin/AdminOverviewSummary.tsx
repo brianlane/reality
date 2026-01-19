@@ -21,10 +21,7 @@ export default function AdminOverviewSummary() {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch("/api/admin/analytics/overview", {
-      headers: { "x-mock-user-role": "ADMIN" },
-      signal: controller.signal,
-    })
+    fetch("/api/admin/analytics/overview", { signal: controller.signal })
       .then(async (res) => {
         const json = await res.json();
         if (!res.ok || json?.error) {

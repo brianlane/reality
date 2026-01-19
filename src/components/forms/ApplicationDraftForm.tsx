@@ -17,6 +17,12 @@ export default function ApplicationDraftForm() {
     setStatus(null);
 
     const formData = new FormData(event.currentTarget);
+    const applicant = {
+      firstName: String(formData.get("firstName") ?? "").trim(),
+      lastName: String(formData.get("lastName") ?? "").trim(),
+      email: String(formData.get("email") ?? "").trim(),
+      phone: String(formData.get("phone") ?? "").trim() || null,
+    };
     const demographics = {
       age: Number(formData.get("age")),
       gender: formData.get("gender"),
@@ -31,7 +37,7 @@ export default function ApplicationDraftForm() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        userId: draft.userId,
+        applicant,
         demographics,
       }),
     });
@@ -42,12 +48,69 @@ export default function ApplicationDraftForm() {
     }
 
     const data = await response.json();
-    updateDraft({ applicationId: data.applicationId, demographics });
+    updateDraft({
+      applicationId: data.applicationId,
+      demographics,
+      ...applicant,
+    });
     router.push("/apply/questionnaire");
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <label
+            htmlFor="firstName"
+            className="text-sm font-medium text-navy-muted"
+          >
+            First name
+          </label>
+          <Input
+            id="firstName"
+            name="firstName"
+            defaultValue={draft.firstName ?? ""}
+            required
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="lastName"
+            className="text-sm font-medium text-navy-muted"
+          >
+            Last name
+          </label>
+          <Input
+            id="lastName"
+            name="lastName"
+            defaultValue={draft.lastName ?? ""}
+            required
+          />
+        </div>
+      </div>
+      <div>
+        <label htmlFor="email" className="text-sm font-medium text-navy-muted">
+          Email
+        </label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          defaultValue={draft.email ?? ""}
+          required
+        />
+      </div>
+      <div>
+        <label htmlFor="phone" className="text-sm font-medium text-navy-muted">
+          Phone (optional)
+        </label>
+        <Input
+          id="phone"
+          name="phone"
+          type="tel"
+          defaultValue={draft.phone ?? ""}
+        />
+      </div>
       <div>
         <label htmlFor="age" className="text-sm font-medium text-navy-muted">
           Age

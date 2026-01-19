@@ -44,7 +44,12 @@ export const questionnaireSchema = z
   .default({});
 
 export const createApplicationSchema = z.object({
-  userId: z.string().min(1),
+  applicant: z.object({
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    email: z.string().email(),
+    phone: z.string().optional().nullable(),
+  }),
   demographics: demographicsSchema,
   questionnaire: questionnaireSchema.optional(),
 });

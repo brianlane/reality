@@ -50,12 +50,12 @@ async function mockApplicantApis(page: import("@playwright/test").Page) {
   });
 }
 
-test("admin to client allows dashboard access", async ({ page }) => {
+test("admin to client redirects to admin", async ({ page }) => {
   await page.setExtraHTTPHeaders(adminHeaders);
   await mockApplicantApis(page);
 
   await page.goto("/dashboard");
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+  await expect(page).toHaveURL(/\/admin/);
 });
 
 test("client to client allows dashboard access", async ({ page }) => {

@@ -20,6 +20,10 @@ export default function QuestionnaireForm() {
       setStatus("Please complete demographics first.");
       return;
     }
+    if (!draft.firstName || !draft.lastName || !draft.email) {
+      setStatus("Please complete contact details first.");
+      return;
+    }
 
     const formData = new FormData(event.currentTarget);
     const questionnaire = {
@@ -36,7 +40,12 @@ export default function QuestionnaireForm() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        userId: draft.userId,
+        applicant: {
+          firstName: draft.firstName,
+          lastName: draft.lastName,
+          email: draft.email,
+          phone: draft.phone ?? null,
+        },
         demographics: draft.demographics,
         questionnaire,
       }),

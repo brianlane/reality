@@ -7,22 +7,30 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 export async function POST(request: NextRequest) {
   try {
     const payload = createApplicationSchema.parse(await request.json());
-    const { userId, demographics, questionnaire } = payload;
+    const { applicant: applicantInfo, demographics, questionnaire } = payload;
 
     const user =
-      (await db.user.findUnique({ where: { clerkId: userId } })) ??
+      (await db.user.findUnique({ where: { email: applicantInfo.email } })) ??
       (await db.user.create({
         data: {
-          clerkId: userId,
-          email: `${userId}@mock.local`,
-          firstName: "Applicant",
-          lastName: "User",
+          clerkId: applicantInfo.email,
+          email: applicantInfo.email,
+          firstName: applicantInfo.firstName,
+          lastName: applicantInfo.lastName,
+          phone: applicantInfo.phone ?? null,
         },
       }));
 
     const applicant = await db.applicant.upsert({
       where: { userId: user.id },
       update: {
+        user: {
+          update: {
+            firstName: applicantInfo.firstName,
+            lastName: applicantInfo.lastName,
+            phone: applicantInfo.phone ?? null,
+          },
+        },
         ...demographics,
         applicationStatus: "DRAFT",
       },

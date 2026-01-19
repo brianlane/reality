@@ -75,6 +75,20 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  if (isApplicantRoute(pathname)) {
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const isAdmin =
+      user?.email && adminEmail
+        ? user.email.toLowerCase() === adminEmail.toLowerCase()
+        : false;
+
+    if (isAdmin) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/admin";
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
+
   if (isApplicantRoute(pathname) && !user) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/sign-in";

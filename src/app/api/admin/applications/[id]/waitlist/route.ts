@@ -1,6 +1,7 @@
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { ensureApplicantAccount } from "@/lib/account-init";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -8,6 +9,7 @@ type RouteContext = {
 
 type WaitlistBody = {
   reason?: string;
+  enabled?: boolean;
 };
 
 export async function POST(request: Request, { params }: RouteContext) {
@@ -36,18 +38,27 @@ export async function POST(request: Request, { params }: RouteContext) {
       },
     }));
 
-  const existing = await db.applicant.findUnique({ where: { id } });
+  const existing = await db.applicant.findUnique({
+    where: { id },
+    include: { user: true },
+  });
   if (!existing) {
     return errorResponse("NOT_FOUND", "Applicant not found", 404);
   }
 
+  const enableWaitlist =
+    typeof body.enabled === "boolean"
+      ? body.enabled
+      : existing.applicationStatus !== "WAITLIST";
+  const nextStatus = enableWaitlist ? "WAITLIST" : "SUBMITTED";
+
   const applicant = await db.applicant.update({
     where: { id },
     data: {
-      applicationStatus: "WAITLIST",
+      applicationStatus: nextStatus,
       reviewedAt: new Date(),
       reviewedBy: adminUser.id,
-      backgroundCheckNotes: body.reason,
+      backgroundCheckNotes: enableWaitlist ? body.reason : null,
     },
   });
 
@@ -57,10 +68,20 @@ export async function POST(request: Request, { params }: RouteContext) {
       type: "MANUAL_ADJUSTMENT",
       targetId: applicant.id,
       targetType: "applicant",
-      description: "Waitlisted applicant",
-      metadata: { reason: body.reason },
+      description: enableWaitlist
+        ? "Waitlisted applicant"
+        : "Removed applicant from waitlist",
+      metadata: enableWaitlist ? { reason: body.reason } : { removed: true },
     },
   });
+
+  if (enableWaitlist && existing.user.email) {
+    await ensureApplicantAccount({
+      email: existing.user.email,
+      firstName: existing.user.firstName,
+      lastName: existing.user.lastName,
+    });
+  }
 
   return successResponse({
     applicant: {

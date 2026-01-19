@@ -84,9 +84,9 @@ export default function SignInForm() {
       </form>
 
       <p className="mt-6 text-sm text-navy-soft">
-        New here?{" "}
-        <Link className="text-copper hover:underline" href="/sign-up">
-          Create an account
+        Ready to apply?{" "}
+        <Link className="text-copper hover:underline" href="/apply">
+          Start an application
         </Link>
         .
       </p>

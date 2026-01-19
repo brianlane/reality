@@ -18,10 +18,7 @@ export default function AdminApplicationsTable() {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch("/api/admin/applications", {
-      headers: { "x-mock-user-role": "ADMIN" },
-      signal: controller.signal,
-    })
+    fetch("/api/admin/applications", { signal: controller.signal })
       .then((res) => res.json())
       .then((json) => setApplications(json.applications ?? []))
       .catch((err) => {
@@ -44,6 +41,7 @@ export default function AdminApplicationsTable() {
             <tr className="border-b text-xs uppercase text-slate-400">
               <th className="py-2 text-left">Applicant</th>
               <th className="py-2 text-left">Status</th>
+              <th className="py-2 text-left">Waitlist</th>
             </tr>
           </thead>
           <tbody>
@@ -53,6 +51,45 @@ export default function AdminApplicationsTable() {
                   {app.firstName} {app.lastName}
                 </td>
                 <td className="py-2">{app.applicationStatus}</td>
+                <td className="py-2">
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-copper hover:underline"
+                    onClick={async () => {
+                      const enableWaitlist = app.applicationStatus !== "WAITLIST";
+                      const response = await fetch(
+                        `/api/admin/applications/${app.id}/waitlist`,
+                        {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ enabled: enableWaitlist }),
+                        },
+                      );
+
+                      if (!response.ok) {
+                        setError("Failed to update waitlist status.");
+                        return;
+                      }
+
+                      setApplications((prev) =>
+                        prev.map((item) =>
+                          item.id === app.id
+                            ? {
+                                ...item,
+                                applicationStatus: enableWaitlist
+                                  ? "WAITLIST"
+                                  : "SUBMITTED",
+                              }
+                            : item,
+                        ),
+                      );
+                    }}
+                  >
+                    {app.applicationStatus === "WAITLIST"
+                      ? "Remove"
+                      : "Add"}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
