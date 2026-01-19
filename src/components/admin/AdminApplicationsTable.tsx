@@ -73,15 +73,17 @@ export default function AdminApplicationsTable() {
                           return;
                         }
 
+                        const data = await response.json();
+                        const nextStatus =
+                          data?.applicant?.applicationStatus ??
+                          (enableWaitlist ? "WAITLIST" : "SUBMITTED");
                         setError(null);
                         setApplications((prev) =>
                           prev.map((item) =>
                             item.id === app.id
                               ? {
                                   ...item,
-                                  applicationStatus: enableWaitlist
-                                    ? "WAITLIST"
-                                    : "SUBMITTED",
+                                  applicationStatus: nextStatus,
                                 }
                               : item,
                           ),

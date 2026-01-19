@@ -1,3 +1,4 @@
+import { ApplicationStatus } from "@prisma/client";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
@@ -50,7 +51,32 @@ export async function POST(request: Request, { params }: RouteContext) {
     typeof body.enabled === "boolean"
       ? body.enabled
       : existing.applicationStatus !== "WAITLIST";
-  const nextStatus = enableWaitlist ? "WAITLIST" : "SUBMITTED";
+  let nextStatus: ApplicationStatus = ApplicationStatus.SUBMITTED;
+
+  if (enableWaitlist) {
+    nextStatus = ApplicationStatus.WAITLIST;
+  } else {
+    const lastWaitlistAction = await db.adminAction.findFirst({
+      where: {
+        targetId: existing.id,
+        targetType: "applicant",
+        description: "Waitlisted applicant",
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const previousStatus =
+      typeof lastWaitlistAction?.metadata === "object" &&
+      lastWaitlistAction?.metadata &&
+      "previousStatus" in lastWaitlistAction.metadata
+        ? String(lastWaitlistAction.metadata.previousStatus)
+        : null;
+
+    const statusValues = Object.values(ApplicationStatus);
+    nextStatus = statusValues.includes(previousStatus as ApplicationStatus)
+      ? (previousStatus as ApplicationStatus)
+      : ApplicationStatus.SUBMITTED;
+  }
 
   if (enableWaitlist && existing.user.email) {
     const accountResult = await ensureApplicantAccount({
@@ -87,7 +113,9 @@ export async function POST(request: Request, { params }: RouteContext) {
       description: enableWaitlist
         ? "Waitlisted applicant"
         : "Removed applicant from waitlist",
-      metadata: enableWaitlist ? { reason: body.reason } : { removed: true },
+      metadata: enableWaitlist
+        ? { reason: body.reason, previousStatus: existing.applicationStatus }
+        : { removed: true },
     },
   });
 
