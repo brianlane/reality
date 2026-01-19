@@ -14,11 +14,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Reality Matchmaking",
-  description: "Premium matchmaking experiences designed for real connections. Apply once, complete your profile, and get curated introductions at exclusive events.",
+  description: "Private matchmaking experiences designed for real connections.",
   metadataBase: new URL("https://www.realitymatchmaking.com"),
   openGraph: {
     title: "Reality Matchmaking",
-    description: "Premium matchmaking experiences designed for real connections.",
+    description:
+      "Private matchmaking experiences designed for real connections.",
     url: "https://www.realitymatchmaking.com",
     siteName: "Reality Matchmaking",
     locale: "en_US",
@@ -27,15 +28,11 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Reality Matchmaking",
-    description: "Premium matchmaking experiences designed for real connections.",
+    description:
+      "Private matchmaking experiences designed for real connections.",
   },
   icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-    ],
-    apple: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-    ],
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
   },
 };
 

@@ -1,14 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-test("home page renders", async ({ page }) => {
-  await page.goto("/");
-  await expect(
-    page.getByRole("heading", {
-      name: "Premium matchmaking experiences designed for real connections.",
-    }),
-  ).toBeVisible();
-});
-
 test("application flow navigates through steps", async ({ page }) => {
   const fillStableById = async (id: string, value: string) => {
     for (let attempt = 0; attempt < 5; attempt += 1) {

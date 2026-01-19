@@ -1,30 +1,40 @@
 import Link from "next/link";
-import Logo from "@/components/layout/Logo";
+import LogoCircles from "@/components/layout/LogoCircles";
 
 export default function HomePage() {
   return (
-    <section className="mx-auto flex min-h-[calc(100vh-200px)] w-full max-w-4xl flex-col items-start justify-center px-6 py-20 sm:px-8 sm:py-32">
-      <div className="mb-16">
-        <Logo size="large" />
-      </div>
+    <section className="mx-auto flex min-h-screen w-full items-center justify-center px-6">
+      <div className="flex flex-col items-center gap-12">
+        {/* Logo circles at top */}
+        <div className="flex flex-col items-center gap-8">
+          <LogoCircles />
 
-      <h1 className="text-4xl font-semibold leading-tight text-navy sm:text-5xl lg:text-6xl">
-        Premium matchmaking experiences designed for real connections.
-      </h1>
+          {/* Text below logo */}
+          <div className="flex flex-col items-center leading-none">
+            <span className="text-6xl font-bold text-copper tracking-tight">
+              REALITY
+            </span>
+            <span className="text-sm uppercase tracking-wider text-navy-soft font-medium mt-2">
+              Matchmaking
+            </span>
+          </div>
+        </div>
 
-      <div className="mt-12 flex flex-wrap items-center gap-3">
-        <Link
-          href="/apply"
-          className="rounded-md bg-navy px-6 py-3 text-base font-medium text-white hover:bg-copper transition-colors cursor-pointer"
-        >
-          Start application
-        </Link>
-        <Link
-          href="/sign-in"
-          className="rounded-md border border-slate-300 px-6 py-3 text-base font-medium text-navy hover:border-copper hover:text-copper transition-colors"
-        >
-          Sign in
-        </Link>
+        {/* Buttons below */}
+        <div className="flex flex-col items-center gap-3 w-full max-w-md">
+          <Link
+            href="/apply"
+            className="w-full rounded-md bg-navy px-8 py-4 text-center text-base font-medium text-white hover:bg-copper transition-colors"
+          >
+            Start application
+          </Link>
+          <Link
+            href="/sign-in"
+            className="w-full rounded-md border border-slate-300 px-8 py-4 text-center text-base font-medium text-navy hover:border-copper hover:text-copper transition-colors"
+          >
+            Sign in
+          </Link>
+        </div>
       </div>
     </section>
   );
