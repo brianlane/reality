@@ -38,11 +38,19 @@ export async function POST(request: NextRequest) {
     });
 
     if (applicant.user.email) {
-      await ensureApplicantAccount({
+      const accountResult = await ensureApplicantAccount({
         email: applicant.user.email,
         firstName: applicant.user.firstName,
         lastName: applicant.user.lastName,
       });
+
+      if (accountResult.status === "error") {
+        return errorResponse(
+          "ACCOUNT_PROVISIONING_FAILED",
+          "We couldn't create your account. Please contact support.",
+          502,
+        );
+      }
     }
 
     return successResponse({

@@ -15,6 +15,14 @@ export default function SignInForm() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const getSafeNext = () => {
+    const next = searchParams.get("next") ?? "/dashboard";
+    if (!next.startsWith("/") || next.startsWith("//")) {
+      return "/dashboard";
+    }
+    return next;
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
@@ -32,17 +40,13 @@ export default function SignInForm() {
       return;
     }
 
-    const next = searchParams.get("next") ?? "/dashboard";
-    router.replace(next);
+    router.replace(getSafeNext());
     router.refresh();
   };
 
   return (
     <section className="mx-auto w-full max-w-md px-6 py-16">
       <h1 className="text-3xl font-semibold text-navy">Sign in</h1>
-      <p className="mt-2 text-sm text-navy-soft">
-        Sign in to view your dashboard and events.
-      </p>
 
       <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
         <div>

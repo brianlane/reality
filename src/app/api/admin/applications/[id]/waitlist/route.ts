@@ -52,6 +52,22 @@ export async function POST(request: Request, { params }: RouteContext) {
       : existing.applicationStatus !== "WAITLIST";
   const nextStatus = enableWaitlist ? "WAITLIST" : "SUBMITTED";
 
+  if (enableWaitlist && existing.user.email) {
+    const accountResult = await ensureApplicantAccount({
+      email: existing.user.email,
+      firstName: existing.user.firstName,
+      lastName: existing.user.lastName,
+    });
+
+    if (accountResult.status === "error") {
+      return errorResponse(
+        "ACCOUNT_PROVISIONING_FAILED",
+        "Unable to create applicant account. Try again later.",
+        502,
+      );
+    }
+  }
+
   const applicant = await db.applicant.update({
     where: { id },
     data: {
@@ -74,14 +90,6 @@ export async function POST(request: Request, { params }: RouteContext) {
       metadata: enableWaitlist ? { reason: body.reason } : { removed: true },
     },
   });
-
-  if (enableWaitlist && existing.user.email) {
-    await ensureApplicantAccount({
-      email: existing.user.email,
-      firstName: existing.user.firstName,
-      lastName: existing.user.lastName,
-    });
-  }
 
   return successResponse({
     applicant: {

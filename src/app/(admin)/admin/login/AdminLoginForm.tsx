@@ -35,6 +35,14 @@ export default function AdminLoginForm({
     signOut();
   }, [forceSignOut]);
 
+  const getSafeNext = () => {
+    const next = searchParams.get("next") ?? "/admin";
+    if (!next.startsWith("/") || next.startsWith("//")) {
+      return "/admin";
+    }
+    return next;
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
@@ -52,8 +60,7 @@ export default function AdminLoginForm({
       return;
     }
 
-    const next = searchParams.get("next") ?? "/admin";
-    router.replace(next);
+    router.replace(getSafeNext());
     router.refresh();
   };
 

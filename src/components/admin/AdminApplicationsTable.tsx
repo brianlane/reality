@@ -56,34 +56,39 @@ export default function AdminApplicationsTable() {
                     type="button"
                     className="text-xs font-medium text-copper hover:underline"
                     onClick={async () => {
-                      const enableWaitlist =
-                        app.applicationStatus !== "WAITLIST";
-                      const response = await fetch(
-                        `/api/admin/applications/${app.id}/waitlist`,
-                        {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ enabled: enableWaitlist }),
-                        },
-                      );
+                      try {
+                        const enableWaitlist =
+                          app.applicationStatus !== "WAITLIST";
+                        const response = await fetch(
+                          `/api/admin/applications/${app.id}/waitlist`,
+                          {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ enabled: enableWaitlist }),
+                          },
+                        );
 
-                      if (!response.ok) {
+                        if (!response.ok) {
+                          setError("Failed to update waitlist status.");
+                          return;
+                        }
+
+                        setError(null);
+                        setApplications((prev) =>
+                          prev.map((item) =>
+                            item.id === app.id
+                              ? {
+                                  ...item,
+                                  applicationStatus: enableWaitlist
+                                    ? "WAITLIST"
+                                    : "SUBMITTED",
+                                }
+                              : item,
+                          ),
+                        );
+                      } catch {
                         setError("Failed to update waitlist status.");
-                        return;
                       }
-
-                      setApplications((prev) =>
-                        prev.map((item) =>
-                          item.id === app.id
-                            ? {
-                                ...item,
-                                applicationStatus: enableWaitlist
-                                  ? "WAITLIST"
-                                  : "SUBMITTED",
-                              }
-                            : item,
-                        ),
-                      );
                     }}
                   >
                     {app.applicationStatus === "WAITLIST" ? "Remove" : "Add"}
