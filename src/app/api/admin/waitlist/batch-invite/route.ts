@@ -126,7 +126,7 @@ export async function POST(request: Request) {
 
       success.push(applicantId);
     } catch (error) {
-      console.error(`Error processing applicant ${applicantId}:`, error);
+      console.error("Error processing applicant %s:", applicantId, error);
       failed.push({
         id: applicantId,
         reason: (error as Error).message || "Unknown error",
