@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -67,9 +66,6 @@ export default function AdminLoginForm({
   return (
     <section className="mx-auto w-full max-w-md px-6 py-16">
       <h1 className="text-3xl font-semibold text-navy">Admin sign in</h1>
-      <p className="mt-2 text-sm text-navy-soft">
-        Use the admin credentials to access the admin dashboard.
-      </p>
 
       {adminEmailMissing ? (
         <p className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
@@ -115,14 +111,6 @@ export default function AdminLoginForm({
           {isSubmitting ? "Signing in..." : "Sign in"}
         </Button>
       </form>
-
-      <p className="mt-6 text-sm text-navy-soft">
-        Looking for the client portal?{" "}
-        <Link className="text-copper hover:underline" href="/sign-in">
-          Sign in here
-        </Link>
-        .
-      </p>
     </section>
   );
 }

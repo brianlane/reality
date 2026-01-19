@@ -38,6 +38,7 @@ export default function ApplicationDraftForm() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         applicant,
+        applicationId: draft.applicationId,
         demographics,
       }),
     });

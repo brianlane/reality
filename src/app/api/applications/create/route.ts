@@ -7,7 +7,12 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 export async function POST(request: NextRequest) {
   try {
     const payload = createApplicationSchema.parse(await request.json());
-    const { applicant: applicantInfo, demographics, questionnaire } = payload;
+    const {
+      applicant: applicantInfo,
+      applicationId,
+      demographics,
+      questionnaire,
+    } = payload;
 
     const user =
       (await db.user.findUnique({ where: { email: applicantInfo.email } })) ??
@@ -21,26 +26,49 @@ export async function POST(request: NextRequest) {
         },
       }));
 
-    const applicant = await db.applicant.upsert({
+    const existingApplicant = await db.applicant.findUnique({
       where: { userId: user.id },
-      update: {
-        user: {
-          update: {
-            firstName: applicantInfo.firstName,
-            lastName: applicantInfo.lastName,
-            phone: applicantInfo.phone ?? null,
-          },
-        },
-        ...demographics,
-        applicationStatus: "DRAFT",
-      },
-      create: {
-        userId: user.id,
-        ...demographics,
-        applicationStatus: "DRAFT",
-        photos: [],
-      },
     });
+
+    if (existingApplicant) {
+      if (!applicationId || applicationId !== existingApplicant.id) {
+        return errorResponse(
+          "APPLICATION_CONFLICT",
+          "Application does not match the current draft.",
+          409,
+        );
+      }
+      if (existingApplicant.applicationStatus !== "DRAFT") {
+        return errorResponse(
+          "APPLICATION_LOCKED",
+          "Application can no longer be edited.",
+          409,
+        );
+      }
+    }
+
+    const applicant = existingApplicant
+      ? await db.applicant.update({
+          where: { id: existingApplicant.id },
+          data: {
+            user: {
+              update: {
+                firstName: applicantInfo.firstName,
+                lastName: applicantInfo.lastName,
+                phone: applicantInfo.phone ?? null,
+              },
+            },
+            ...demographics,
+          },
+        })
+      : await db.applicant.create({
+          data: {
+            userId: user.id,
+            ...demographics,
+            applicationStatus: "DRAFT",
+            photos: [],
+          },
+        });
 
     if (questionnaire) {
       const questionnaireData: {

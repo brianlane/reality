@@ -50,6 +50,7 @@ export const createApplicationSchema = z.object({
     email: z.string().email(),
     phone: z.string().optional().nullable(),
   }),
+  applicationId: z.string().min(1).optional(),
   demographics: demographicsSchema,
   questionnaire: questionnaireSchema.optional(),
 });

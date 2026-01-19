@@ -20,23 +20,6 @@ export async function POST(request: NextRequest) {
       return errorResponse("NOT_FOUND", "Application not found", 404);
     }
 
-    const payment = await db.payment.create({
-      data: {
-        applicantId: applicant.id,
-        type: "APPLICATION_FEE",
-        amount: APPLICATION_FEE_AMOUNT,
-        status: "PENDING",
-      },
-    });
-
-    await db.applicant.update({
-      where: { id: applicant.id },
-      data: {
-        applicationStatus: "PAYMENT_PENDING",
-        submittedAt: new Date(),
-      },
-    });
-
     if (applicant.user.email) {
       const accountResult = await ensureApplicantAccount({
         email: applicant.user.email,
@@ -52,6 +35,24 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+
+    const [payment] = await db.$transaction([
+      db.payment.create({
+        data: {
+          applicantId: applicant.id,
+          type: "APPLICATION_FEE",
+          amount: APPLICATION_FEE_AMOUNT,
+          status: "PENDING",
+        },
+      }),
+      db.applicant.update({
+        where: { id: applicant.id },
+        data: {
+          applicationStatus: "PAYMENT_PENDING",
+          submittedAt: new Date(),
+        },
+      }),
+    ]);
 
     return successResponse({
       paymentUrl: `https://mock.stripe.local/session/${payment.id}`,
