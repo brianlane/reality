@@ -1,0 +1,19 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Two circles connected by a line - matching the canvas logo -->
+  <defs>
+    <linearGradient id="lineGradient" x1="12" y1="24" x2="36" y2="24" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#c9a880"/>
+      <stop offset="0.5" stop-color="#c9a880" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#c9a880"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Connecting line -->
+  <line x1="18" y1="24" x2="30" y2="24" stroke="url(#lineGradient)" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Left circle -->
+  <circle cx="12" cy="24" r="6" fill="#c9a880"/>
+
+  <!-- Right circle -->
+  <circle cx="36" cy="24" r="6" fill="#c9a880"/>
+</svg>
