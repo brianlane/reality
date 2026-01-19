@@ -1,5 +1,9 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import SignOutButton from "./SignOutButton";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type SidebarLink = {
   href: string;
@@ -17,6 +21,28 @@ export default function Sidebar({
   links,
   signOutRedirect,
 }: SidebarProps) {
+  const [isSignedIn, setIsSignedIn] = useState(false);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) {
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      setIsSignedIn(Boolean(data.session));
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsSignedIn(Boolean(session));
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   return (
     <aside className="w-full border-b border-slate-200 bg-white px-6 py-4 md:min-h-screen md:w-64 md:border-b-0 md:border-r">
       <div className="mb-4 text-sm font-semibold text-navy-soft">{title}</div>
@@ -31,7 +57,7 @@ export default function Sidebar({
           </Link>
         ))}
       </nav>
-      {signOutRedirect ? (
+      {signOutRedirect && isSignedIn ? (
         <div className="mt-6">
           <SignOutButton
             redirectTo={signOutRedirect}
