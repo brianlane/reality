@@ -1,7 +1,10 @@
 import { db } from "@/lib/db";
 
 export async function getApplicantByEmail(email: string) {
-  const user = await db.user.findUnique({ where: { email } });
+  const normalizedEmail = email.toLowerCase();
+  const user = await db.user.findFirst({
+    where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+  });
   if (!user) {
     return null;
   }

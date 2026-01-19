@@ -13,13 +13,16 @@ export async function POST(request: NextRequest) {
       demographics,
       questionnaire,
     } = payload;
+    const normalizedEmail = applicantInfo.email.toLowerCase();
 
     const user =
-      (await db.user.findUnique({ where: { email: applicantInfo.email } })) ??
+      (await db.user.findFirst({
+        where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+      })) ??
       (await db.user.create({
         data: {
-          clerkId: applicantInfo.email,
-          email: applicantInfo.email,
+          clerkId: normalizedEmail,
+          email: normalizedEmail,
           firstName: applicantInfo.firstName,
           lastName: applicantInfo.lastName,
           phone: applicantInfo.phone ?? null,
@@ -56,6 +59,7 @@ export async function POST(request: NextRequest) {
                 firstName: applicantInfo.firstName,
                 lastName: applicantInfo.lastName,
                 phone: applicantInfo.phone ?? null,
+                email: normalizedEmail,
               },
             },
             ...demographics,

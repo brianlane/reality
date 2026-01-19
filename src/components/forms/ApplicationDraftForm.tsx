@@ -20,7 +20,9 @@ export default function ApplicationDraftForm() {
     const applicant = {
       firstName: String(formData.get("firstName") ?? "").trim(),
       lastName: String(formData.get("lastName") ?? "").trim(),
-      email: String(formData.get("email") ?? "").trim(),
+      email: String(formData.get("email") ?? "")
+        .trim()
+        .toLowerCase(),
       phone: String(formData.get("phone") ?? "").trim() || null,
     };
     const demographics = {

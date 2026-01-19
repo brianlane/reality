@@ -14,6 +14,9 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!auth) {
     return errorResponse("UNAUTHORIZED", "User not authenticated", 401);
   }
+  if (!auth.email) {
+    return errorResponse("UNAUTHORIZED", "Email not available", 401);
+  }
   try {
     requireAdmin(auth.email);
   } catch (error) {
@@ -28,7 +31,10 @@ export async function POST(request: Request, { params }: RouteContext) {
       { message: (error as Error).message },
     ]);
   }
-  const adminUser = await getOrCreateAdminUser(auth.userId);
+  const adminUser = await getOrCreateAdminUser({
+    userId: auth.userId,
+    email: auth.email,
+  });
 
   const event = await db.event.findUnique({ where: { id } });
   if (!event) {

@@ -1,5 +1,6 @@
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
 type RouteContext = {
@@ -17,6 +18,9 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!auth) {
     return errorResponse("UNAUTHORIZED", "User not authenticated", 401);
   }
+  if (!auth.email) {
+    return errorResponse("UNAUTHORIZED", "Email not available", 401);
+  }
   try {
     requireAdmin(auth.email);
   } catch (error) {
@@ -25,17 +29,10 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   const body = (await request.json()) as ApproveBody;
 
-  const adminUser =
-    (await db.user.findUnique({ where: { clerkId: auth.userId } })) ??
-    (await db.user.create({
-      data: {
-        clerkId: auth.userId,
-        email: `${auth.userId}@mock.local`,
-        firstName: "Admin",
-        lastName: "User",
-        role: "ADMIN",
-      },
-    }));
+  const adminUser = await getOrCreateAdminUser({
+    userId: auth.userId,
+    email: auth.email,
+  });
 
   const existing = await db.applicant.findUnique({ where: { id } });
   if (!existing) {
