@@ -1,6 +1,7 @@
 "use server";
 
 import { QuestionnaireQuestionType } from "@prisma/client";
+import sanitizeHtml from "sanitize-html";
 
 type NumberScaleOptions = {
   min: number;
@@ -108,7 +109,12 @@ type AnswerValidationResult =
   | { ok: false; message: string };
 
 function stripHtml(value: string) {
-  return value.replace(/<[^>]*>/g, "").trim();
+  // Use a robust HTML sanitizer to strip all tags while keeping text content.
+  const sanitized = sanitizeHtml(value, {
+    allowedTags: [],
+    allowedAttributes: {},
+  });
+  return sanitized.trim();
 }
 
 export async function validateAnswerForQuestion(
