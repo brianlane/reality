@@ -1,20 +1,116 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 
+// Strict email regex that requires proper domain with TLD
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+type FieldErrors = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  age?: string;
+  gender?: string;
+  location?: string;
+  aboutYourself?: string;
+};
+
 export default function Stage1QualificationForm() {
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+
+  const validateField = (name: string, value: string | number) => {
+    switch (name) {
+      case "firstName":
+        if (!value || String(value).trim().length === 0) {
+          return "First name is required";
+        }
+        break;
+      case "lastName":
+        if (!value || String(value).trim().length === 0) {
+          return "Last name is required";
+        }
+        break;
+      case "email":
+        if (!value || String(value).trim().length === 0) {
+          return "Email is required";
+        }
+        if (!EMAIL_REGEX.test(String(value).trim())) {
+          return "Please enter a valid email address (e.g., user@example.com)";
+        }
+        break;
+      case "age":
+        const age = Number(value);
+        if (!value || isNaN(age)) {
+          return "Age is required";
+        }
+        if (age < 18) {
+          return "Must be 18 or older";
+        }
+        if (age > 100) {
+          return "Please enter a valid age";
+        }
+        break;
+      case "gender":
+        if (!value) {
+          return "Gender is required";
+        }
+        break;
+      case "location":
+        if (!value || String(value).trim().length === 0) {
+          return "Location is required";
+        }
+        break;
+      case "aboutYourself":
+        if (!value || String(value).trim().length === 0) {
+          return "Please tell us about yourself";
+        }
+        if (String(value).trim().length < 50) {
+          return `Please write at least 50 characters (${String(value).trim().length}/50)`;
+        }
+        if (String(value).trim().length > 500) {
+          return "Please keep it under 500 characters";
+        }
+        break;
+    }
+    return undefined;
+  };
+
+  const handleFieldChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+  ) => {
+    const { name, value } = e.target;
+    if (touched.has(name)) {
+      const error = validateField(name, value);
+      setErrors((prev) => ({
+        ...prev,
+        [name]: error,
+      }));
+    }
+  };
+
+  const handleFieldBlur = (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+  ) => {
+    const { name, value } = e.target;
+    setTouched((prev) => new Set(prev).add(name));
+    const error = validateField(name, value);
+    setErrors((prev) => ({
+      ...prev,
+      [name]: error,
+    }));
+  };
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus(null);
-    setIsSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
     const payload = {
@@ -30,18 +126,30 @@ export default function Stage1QualificationForm() {
       aboutYourself: String(formData.get("aboutYourself") ?? "").trim(),
     };
 
-    // Client-side validation
-    if (payload.aboutYourself.length < 50) {
-      setStatus("Please write at least 50 characters about yourself.");
-      setIsSubmitting(false);
+    // Validate all fields
+    const newErrors: FieldErrors = {};
+    let hasErrors = false;
+
+    Object.entries(payload).forEach(([key, value]) => {
+      if (key !== "phone") {
+        const error = validateField(key, value as string | number);
+        if (error) {
+          newErrors[key as keyof FieldErrors] = error;
+          hasErrors = true;
+        }
+      }
+    });
+
+    if (hasErrors) {
+      setErrors(newErrors);
+      setTouched(
+        new Set(Object.keys(payload).filter((key) => key !== "phone")),
+      );
+      setStatus("Please fix the errors above before submitting.");
       return;
     }
 
-    if (payload.aboutYourself.length > 500) {
-      setStatus("Please keep your description under 500 characters.");
-      setIsSubmitting(false);
-      return;
-    }
+    setIsSubmitting(true);
 
     try {
       const response = await fetch("/api/applications/stage1", {
@@ -81,7 +189,17 @@ export default function Stage1QualificationForm() {
             >
               First name
             </label>
-            <Input id="firstName" name="firstName" required />
+            <Input
+              id="firstName"
+              name="firstName"
+              required
+              onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
+              className={errors.firstName ? "border-red-500" : ""}
+            />
+            {errors.firstName && (
+              <p className="mt-1 text-xs text-red-500">{errors.firstName}</p>
+            )}
           </div>
           <div>
             <label
@@ -90,7 +208,17 @@ export default function Stage1QualificationForm() {
             >
               Last name
             </label>
-            <Input id="lastName" name="lastName" required />
+            <Input
+              id="lastName"
+              name="lastName"
+              required
+              onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
+              className={errors.lastName ? "border-red-500" : ""}
+            />
+            {errors.lastName && (
+              <p className="mt-1 text-xs text-red-500">{errors.lastName}</p>
+            )}
           </div>
         </div>
         <div>
@@ -100,7 +228,18 @@ export default function Stage1QualificationForm() {
           >
             Email
           </label>
-          <Input id="email" name="email" type="email" required />
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            required
+            onChange={handleFieldChange}
+            onBlur={handleFieldBlur}
+            className={errors.email ? "border-red-500" : ""}
+          />
+          {errors.email && (
+            <p className="mt-1 text-xs text-red-500">{errors.email}</p>
+          )}
         </div>
         <div>
           <label
@@ -131,7 +270,13 @@ export default function Stage1QualificationForm() {
               min={18}
               max={100}
               required
+              onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
+              className={errors.age ? "border-red-500" : ""}
             />
+            {errors.age && (
+              <p className="mt-1 text-xs text-red-500">{errors.age}</p>
+            )}
           </div>
           <div>
             <label
@@ -140,13 +285,23 @@ export default function Stage1QualificationForm() {
             >
               Gender
             </label>
-            <Select id="gender" name="gender" required>
+            <Select
+              id="gender"
+              name="gender"
+              required
+              onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
+              className={errors.gender ? "border-red-500" : ""}
+            >
               <option value="">Select gender</option>
               <option value="MALE">Male</option>
               <option value="FEMALE">Female</option>
               <option value="NON_BINARY">Non-binary</option>
               <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
             </Select>
+            {errors.gender && (
+              <p className="mt-1 text-xs text-red-500">{errors.gender}</p>
+            )}
           </div>
         </div>
         <div>
@@ -161,7 +316,13 @@ export default function Stage1QualificationForm() {
             name="location"
             placeholder="e.g., Phoenix, AZ"
             required
+            onChange={handleFieldChange}
+            onBlur={handleFieldBlur}
+            className={errors.location ? "border-red-500" : ""}
           />
+          {errors.location && (
+            <p className="mt-1 text-xs text-red-500">{errors.location}</p>
+          )}
         </div>
       </div>
 
@@ -172,7 +333,7 @@ export default function Stage1QualificationForm() {
             htmlFor="aboutYourself"
             className="text-sm font-medium text-navy-muted"
           >
-            Tell us a bit about yourself (50-500 characters)
+            Tell us about yourself
           </label>
           <textarea
             id="aboutYourself"
@@ -181,12 +342,16 @@ export default function Stage1QualificationForm() {
             minLength={50}
             maxLength={500}
             required
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-copper focus:outline-none focus:ring-1 focus:ring-copper"
+            onChange={handleFieldChange}
+            onBlur={handleFieldBlur}
+            className={`w-full rounded-md border px-3 py-2 text-sm focus:border-copper focus:outline-none focus:ring-1 focus:ring-copper ${
+              errors.aboutYourself ? "border-red-500" : "border-gray-300"
+            }`}
             placeholder="Share what makes you unique, your interests, values, or what you're passionate about..."
           />
-          <p className="mt-1 text-xs text-gray-500">
-            Minimum 50 characters, maximum 500 characters
-          </p>
+          {errors.aboutYourself && (
+            <p className="mt-1 text-xs text-red-500">{errors.aboutYourself}</p>
+          )}
         </div>
       </div>
 

@@ -57,9 +57,14 @@ export async function POST(request: NextRequest) {
         }
 
         // Valid token: transition from WAITLIST to DRAFT
+        // Clear invite token fields to prevent reuse
         await db.applicant.update({
           where: { id: existingApplicant.id },
-          data: { applicationStatus: "DRAFT" },
+          data: {
+            applicationStatus: "DRAFT",
+            waitlistInviteToken: null,
+            invitedOffWaitlistAt: null,
+          },
         });
       } else if (existingApplicant.applicationStatus !== "DRAFT") {
         return errorResponse(

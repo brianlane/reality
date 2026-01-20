@@ -56,6 +56,15 @@ export async function POST(request: Request, { params }: RouteContext) {
     );
   }
 
+  // Check if already invited
+  if (existing.invitedOffWaitlistAt) {
+    return errorResponse(
+      "ALREADY_INVITED",
+      "Applicant has already been invited off the waitlist",
+      400,
+    );
+  }
+
   // Generate unique invite token (32-byte hex = 64 characters)
   const inviteToken = randomBytes(32).toString("hex");
 

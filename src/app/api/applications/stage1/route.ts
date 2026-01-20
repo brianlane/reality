@@ -88,7 +88,10 @@ export async function POST(request: NextRequest) {
             applicationStatus: "WAITLIST",
             stage1CompletedAt: new Date(),
             stage1Responses: stage1Responses,
-            waitlistedAt: new Date(),
+            // Only set waitlistedAt if not already set (preserve queue position)
+            ...(existingUser.applicant.waitlistedAt
+              ? {}
+              : { waitlistedAt: new Date() }),
           },
         })
       : await db.applicant.create({

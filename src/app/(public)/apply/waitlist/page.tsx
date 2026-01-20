@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import WaitlistConfirmation from "@/components/waitlist/WaitlistConfirmation";
+import { db } from "@/lib/db";
 
 type PageProps = {
   searchParams: Promise<{ id?: string }>;
@@ -8,6 +9,24 @@ type PageProps = {
 export default async function WaitlistPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const applicationId = params.id || "";
+
+  // Fetch applicant data to get firstName from user relation
+  let firstName: string | undefined;
+  if (applicationId) {
+    try {
+      const applicant = await db.applicant.findUnique({
+        where: { id: applicationId },
+        select: {
+          user: {
+            select: { firstName: true },
+          },
+        },
+      });
+      firstName = applicant?.user.firstName;
+    } catch (error) {
+      console.error("Error fetching applicant:", error);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -19,7 +38,10 @@ export default async function WaitlistPage({ searchParams }: PageProps) {
             </div>
           }
         >
-          <WaitlistConfirmation applicationId={applicationId} />
+          <WaitlistConfirmation
+            applicationId={applicationId}
+            firstName={firstName}
+          />
         </Suspense>
       </div>
     </div>
