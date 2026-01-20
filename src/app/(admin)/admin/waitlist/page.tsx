@@ -34,6 +34,7 @@ export default async function AdminWaitlistPage() {
               ApplicationStatus.WAITLIST_INVITED,
             ],
           },
+          deletedAt: null,
         },
         include: {
           user: {
