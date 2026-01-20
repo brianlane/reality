@@ -64,6 +64,9 @@ export default function ApplicationDraftForm() {
     }
 
     const data = await response.json();
+    if (typeof window !== "undefined" && inviteToken) {
+      localStorage.removeItem("waitlistInviteToken");
+    }
     updateDraft({
       applicationId: data.applicationId,
       demographics,

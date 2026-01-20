@@ -27,10 +27,9 @@ export async function POST(request: NextRequest) {
       include: { applicant: true },
     });
 
-    // If user has existing application that's not DRAFT or WAITLIST, return error
+    // Only allow Stage 1 for new users or existing WAITLIST applicants
     if (
       existingUser?.applicant &&
-      existingUser.applicant.applicationStatus !== "DRAFT" &&
       existingUser.applicant.applicationStatus !== "WAITLIST"
     ) {
       return errorResponse(
@@ -82,10 +81,6 @@ export async function POST(request: NextRequest) {
             age,
             gender,
             location,
-            occupation: "Pending",
-            education: "Pending",
-            incomeRange: "Pending",
-            applicationStatus: "WAITLIST",
             stage1CompletedAt: new Date(),
             stage1Responses: stage1Responses,
             // Only set waitlistedAt if not already set (preserve queue position)
