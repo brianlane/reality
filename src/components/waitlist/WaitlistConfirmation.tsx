@@ -1,15 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-
 type WaitlistConfirmationProps = {
-  applicationId: string;
   firstName?: string;
 };
 
 export default function WaitlistConfirmation({
-  applicationId,
   firstName,
 }: WaitlistConfirmationProps) {
   return (

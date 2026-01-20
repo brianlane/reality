@@ -4,6 +4,8 @@ import { createApplicationSchema } from "@/lib/validations";
 import type { JsonValueNonNull } from "@/lib/json";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
+const INVITE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
+
 export async function POST(request: NextRequest) {
   try {
     const payload = createApplicationSchema.parse(await request.json());
@@ -15,6 +17,59 @@ export async function POST(request: NextRequest) {
       questionnaire,
     } = payload;
     const normalizedEmail = applicantInfo.email.toLowerCase();
+
+    // If an invite token is provided, validate it FIRST before any other operations
+    if (inviteToken) {
+      const invitedApplicant = await db.applicant.findUnique({
+        where: { waitlistInviteToken: inviteToken },
+        include: {
+          user: {
+            select: {
+              email: true,
+            },
+          },
+        },
+      });
+
+      if (!invitedApplicant) {
+        return errorResponse("INVALID_TOKEN", "Invalid invitation token.", 403);
+      }
+
+      // Verify the email matches the invited applicant
+      if (invitedApplicant.user.email.toLowerCase() !== normalizedEmail) {
+        return errorResponse(
+          "EMAIL_MISMATCH",
+          "The email address does not match the invitation.",
+          403,
+        );
+      }
+
+      // Check if the applicant is still on the waitlist
+      if (invitedApplicant.applicationStatus !== "WAITLIST") {
+        return errorResponse(
+          "ALREADY_USED",
+          "This invitation has already been used.",
+          400,
+        );
+      }
+
+      // Check token expiration
+      const inviteIssuedAt = invitedApplicant.invitedOffWaitlistAt;
+      if (!inviteIssuedAt) {
+        return errorResponse("INVALID_TOKEN", "Invalid invitation token.", 403);
+      }
+
+      const expiresAt = new Date(
+        inviteIssuedAt.getTime() + INVITE_EXPIRATION_MS,
+      );
+      if (Date.now() > expiresAt.getTime()) {
+        return errorResponse(
+          "INVITE_EXPIRED",
+          "This invitation has expired.",
+          410,
+        );
+      }
+    }
 
     const user =
       (await db.user.findFirst({
@@ -71,6 +126,15 @@ export async function POST(request: NextRequest) {
           "APPLICATION_LOCKED",
           "Application can no longer be edited.",
           409,
+        );
+      }
+    } else {
+      // If no existing applicant and no invite token, this is unauthorized access
+      if (!inviteToken) {
+        return errorResponse(
+          "UNAUTHORIZED",
+          "You must have a valid invitation to create an application.",
+          403,
         );
       }
     }

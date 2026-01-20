@@ -1,6 +1,44 @@
+"use client";
+
+import { useState } from "react";
 import ApplicationDraftForm from "@/components/forms/ApplicationDraftForm";
+import Link from "next/link";
 
 export default function DemographicsPage() {
+  // Initialize state with authorization check
+  const [isAuthorized] = useState<boolean>(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    const token = localStorage.getItem("waitlistInviteToken");
+    const applicationId = localStorage.getItem("applicationId");
+    return !!(token || applicationId);
+  });
+
+  if (!isAuthorized) {
+    return (
+      <section className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+          <h1 className="text-2xl font-semibold text-navy">
+            Unauthorized Access
+          </h1>
+          <p className="mt-4 text-navy-soft">
+            You need a valid invitation to access this page. Please check your
+            email for an invitation link or return to the homepage.
+          </p>
+          <div className="mt-6">
+            <Link
+              href="/"
+              className="inline-block rounded-md bg-copper px-6 py-3 text-white hover:bg-copper-dark"
+            >
+              Return to Homepage
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
       <h1 className="text-3xl font-semibold text-navy sm:text-4xl">

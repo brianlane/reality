@@ -38,10 +38,7 @@ export default async function WaitlistPage({ searchParams }: PageProps) {
             </div>
           }
         >
-          <WaitlistConfirmation
-            applicationId={applicationId}
-            firstName={firstName}
-          />
+          <WaitlistConfirmation firstName={firstName} />
         </Suspense>
       </div>
     </div>

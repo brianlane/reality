@@ -1,0 +1,27 @@
+# Project Rules for Reality Matchmaking
+
+## Post-Coding Workflow
+
+After completing any coding changes, always run the following GitHub workflow checks locally (excluding vercel, dependabot, and codeql):
+
+### Required Checks
+1. **Linting**: `npm run lint`
+2. **Type Checking**: `npm run typecheck`
+3. **Format Check**: `npm run format:check`
+4. **Security Audit**: `npm audit --omit=dev --audit-level=high`
+
+### Optional Checks (when applicable)
+- **Bundle Size**: `npm run bundle:check` (for build changes)
+- **E2E Tests**: `npm run test:e2e` (for feature changes)
+
+### Before Committing
+Ensure all required checks pass before committing code. If formatting issues are found, run:
+```bash
+npx prettier --write <file-path>
+```
+
+## Code Quality Standards
+- Fix all linting errors before committing
+- Ensure TypeScript has no type errors
+- Follow Prettier formatting standards
+- Keep production dependencies free of high-severity vulnerabilities
