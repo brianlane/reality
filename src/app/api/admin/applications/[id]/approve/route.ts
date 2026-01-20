@@ -34,7 +34,9 @@ export async function POST(request: Request, { params }: RouteContext) {
     email: auth.email,
   });
 
-  const existing = await db.applicant.findUnique({ where: { id } });
+  const existing = await db.applicant.findFirst({
+    where: { id, deletedAt: null },
+  });
   if (!existing) {
     return errorResponse("NOT_FOUND", "Applicant not found", 404);
   }

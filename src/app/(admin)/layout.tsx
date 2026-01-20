@@ -2,10 +2,13 @@ import Sidebar from "@/components/layout/Sidebar";
 
 const adminLinks = [
   { href: "/admin", label: "Overview" },
+  { href: "/admin/users", label: "Users" },
   { href: "/admin/applications", label: "Applications" },
   { href: "/admin/waitlist", label: "Waitlist" },
   { href: "/admin/events", label: "Events" },
   { href: "/admin/matches", label: "Matches" },
+  { href: "/admin/payments", label: "Payments" },
+  { href: "/admin/questionnaire", label: "Questionnaire" },
   { href: "/admin/analytics", label: "Analytics" },
 ];
 

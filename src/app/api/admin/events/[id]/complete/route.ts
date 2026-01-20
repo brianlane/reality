@@ -35,7 +35,9 @@ export async function POST(request: Request, { params }: RouteContext) {
     email: auth.email,
   });
 
-  const existing = await db.event.findUnique({ where: { id } });
+  const existing = await db.event.findFirst({
+    where: { id, deletedAt: null },
+  });
   if (!existing) {
     return errorResponse("NOT_FOUND", "Event not found", 404);
   }

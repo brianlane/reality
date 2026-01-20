@@ -40,8 +40,10 @@ export async function POST(request: Request, { params }: RouteContext) {
       id,
       applicationStatus: "WAITLIST",
       invitedOffWaitlistAt: null,
+      deletedAt: null,
     },
     data: {
+      applicationStatus: "WAITLIST_INVITED",
       invitedOffWaitlistAt: new Date(),
       invitedOffWaitlistBy: adminUser.id,
       waitlistInviteToken: inviteToken,
@@ -49,8 +51,8 @@ export async function POST(request: Request, { params }: RouteContext) {
   });
 
   if (updateResult.count === 0) {
-    const existing = await db.applicant.findUnique({
-      where: { id },
+    const existing = await db.applicant.findFirst({
+      where: { id, deletedAt: null },
     });
 
     if (!existing) {
@@ -72,8 +74,8 @@ export async function POST(request: Request, { params }: RouteContext) {
     );
   }
 
-  const applicant = await db.applicant.findUnique({
-    where: { id },
+  const applicant = await db.applicant.findFirst({
+    where: { id, deletedAt: null },
     include: {
       user: {
         select: {

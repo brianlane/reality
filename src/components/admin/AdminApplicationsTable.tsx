@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 
 type ApplicationItem = {
@@ -10,11 +12,14 @@ type ApplicationItem = {
   firstName: string;
   lastName: string;
   applicationStatus: string;
+  screeningStatus?: string;
 };
 
 export default function AdminApplicationsTable() {
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -27,7 +32,7 @@ export default function AdminApplicationsTable() {
           return;
         }
 
-        const res = await fetch("/api/admin/applications", {
+        const res = await fetch(`/api/admin/applications?page=${page}`, {
           headers,
           signal: controller.signal,
         });
@@ -37,6 +42,7 @@ export default function AdminApplicationsTable() {
           return;
         }
         setApplications(json.applications ?? []);
+        setPages(json.pagination?.pages ?? 1);
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
           setError("Failed to load applications.");
@@ -47,11 +53,19 @@ export default function AdminApplicationsTable() {
     loadApplications();
 
     return () => controller.abort();
-  }, []);
+  }, [page]);
 
   return (
     <Card>
-      <h2 className="text-lg font-semibold text-navy">Applications</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-navy">Applications</h2>
+        <Link
+          href="/admin/applications/new"
+          className="text-xs font-semibold text-copper hover:underline"
+        >
+          New Application
+        </Link>
+      </div>
       {error ? (
         <p className="mt-2 text-sm text-red-600">{error}</p>
       ) : (
@@ -60,7 +74,9 @@ export default function AdminApplicationsTable() {
             <tr className="border-b text-xs uppercase text-slate-400">
               <th className="py-2 text-left">Applicant</th>
               <th className="py-2 text-left">Status</th>
+              <th className="py-2 text-left">Screening</th>
               <th className="py-2 text-left">Waitlist</th>
+              <th className="py-2 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -70,14 +86,18 @@ export default function AdminApplicationsTable() {
                   {app.firstName} {app.lastName}
                 </td>
                 <td className="py-2">{app.applicationStatus}</td>
+                <td className="py-2">{app.screeningStatus ?? "N/A"}</td>
                 <td className="py-2">
                   <button
                     type="button"
                     className="text-xs font-medium text-copper hover:underline"
                     onClick={async () => {
                       try {
-                        const enableWaitlist =
-                          app.applicationStatus !== "WAITLIST";
+                        const isWaitlisted = [
+                          "WAITLIST",
+                          "WAITLIST_INVITED",
+                        ].includes(app.applicationStatus);
+                        const enableWaitlist = !isWaitlisted;
                         const headers = await getAuthHeaders();
                         if (!headers) {
                           setError("Please sign in again.");
@@ -120,14 +140,49 @@ export default function AdminApplicationsTable() {
                       }
                     }}
                   >
-                    {app.applicationStatus === "WAITLIST" ? "Remove" : "Add"}
+                    {["WAITLIST", "WAITLIST_INVITED"].includes(
+                      app.applicationStatus,
+                    )
+                      ? "Remove"
+                      : "Add"}
                   </button>
+                </td>
+                <td className="py-2">
+                  <Link
+                    href={`/admin/applications/${app.id}`}
+                    className="text-xs font-medium text-copper hover:underline"
+                  >
+                    View
+                  </Link>
                 </td>
               </tr>
             ))}
           </tbody>
         </Table>
       )}
+      <div className="mt-4 flex items-center justify-between text-sm text-navy-soft">
+        <span>
+          Page {page} of {pages}
+        </span>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+            disabled={page <= 1}
+          >
+            Prev
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setPage((prev) => Math.min(pages, prev + 1))}
+            disabled={page >= pages}
+          >
+            Next
+          </Button>
+        </div>
+      </div>
     </Card>
   );
 }

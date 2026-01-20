@@ -103,3 +103,227 @@ export const createMatchesSchema = z.object({
     )
     .min(1),
 });
+
+export const adminUserCreateSchema = z.object({
+  clerkId: z.string().min(1),
+  email: z.string().min(1).regex(EMAIL_REGEX, "Please enter a valid email"),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  role: z.enum(["APPLICANT", "ADMIN"]),
+});
+
+export const adminUserUpdateSchema = adminUserCreateSchema
+  .partial()
+  .extend({ deletedAt: z.string().datetime().optional().nullable() });
+
+export const adminApplicantCreateSchema = z.object({
+  user: adminUserCreateSchema,
+  applicant: z.object({
+    age: z.number().int().min(18).max(100),
+    gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
+    location: z.string().min(1),
+    occupation: z.string().min(1),
+    employer: z.string().optional().nullable(),
+    education: z.string().min(1),
+    incomeRange: z.string().min(1),
+    applicationStatus: z.enum([
+      "DRAFT",
+      "SUBMITTED",
+      "PAYMENT_PENDING",
+      "SCREENING_IN_PROGRESS",
+      "APPROVED",
+      "REJECTED",
+      "WAITLIST",
+      "WAITLIST_INVITED",
+    ]),
+    screeningStatus: z.enum(["PENDING", "IN_PROGRESS", "PASSED", "FAILED"]),
+    photos: z.array(z.string()).default([]),
+  }),
+});
+
+export const adminApplicantUpdateSchema = z.object({
+  applicant: z
+    .object({
+      age: z.number().int().min(18).max(100).optional(),
+      gender: z
+        .enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"])
+        .optional(),
+      location: z.string().min(1).optional(),
+      occupation: z.string().min(1).optional(),
+      employer: z.string().optional().nullable(),
+      education: z.string().min(1).optional(),
+      incomeRange: z.string().min(1).optional(),
+      applicationStatus: z
+        .enum([
+          "DRAFT",
+          "SUBMITTED",
+          "PAYMENT_PENDING",
+          "SCREENING_IN_PROGRESS",
+          "APPROVED",
+          "REJECTED",
+          "WAITLIST",
+          "WAITLIST_INVITED",
+        ])
+        .optional(),
+      screeningStatus: z
+        .enum(["PENDING", "IN_PROGRESS", "PASSED", "FAILED"])
+        .optional(),
+      backgroundCheckNotes: z.string().optional().nullable(),
+      compatibilityScore: z.number().min(0).max(100).optional().nullable(),
+      photos: z.array(z.string()).optional(),
+    })
+    .partial(),
+});
+
+export const adminEventCreateSchema = z.object({
+  name: z.string().min(1),
+  date: z.string().datetime(),
+  startTime: z.string().datetime(),
+  endTime: z.string().datetime(),
+  venue: z.string().min(1),
+  venueAddress: z.string().min(1),
+  capacity: z.number().int().min(1),
+  costs: z.object({
+    venue: z.number().int().min(0),
+    catering: z.number().int().min(0),
+    materials: z.number().int().min(0),
+    total: z.number().int().min(0),
+  }),
+  expectedRevenue: z.number().int().min(0),
+  notes: z.string().optional().nullable(),
+  status: z
+    .enum(["DRAFT", "INVITATIONS_SENT", "CONFIRMED", "COMPLETED", "CANCELLED"])
+    .optional(),
+});
+
+export const adminEventUpdateSchema = adminEventCreateSchema.partial().extend({
+  status: z
+    .enum(["DRAFT", "INVITATIONS_SENT", "CONFIRMED", "COMPLETED", "CANCELLED"])
+    .optional(),
+});
+
+export const adminMatchCreateSchema = z.object({
+  eventId: z.string().min(1),
+  applicantId: z.string().min(1),
+  partnerId: z.string().min(1),
+  type: z.enum(["CURATED", "MUTUAL_SPEED", "SOCIAL_HOUR"]),
+  compatibilityScore: z.number().min(0).max(100).optional(),
+});
+
+export const adminMatchUpdateSchema = z.object({
+  outcome: z
+    .enum([
+      "PENDING",
+      "FIRST_DATE_SCHEDULED",
+      "FIRST_DATE_COMPLETED",
+      "SECOND_DATE",
+      "DATING",
+      "RELATIONSHIP",
+      "ENGAGED",
+      "MARRIED",
+      "NO_CONNECTION",
+      "GHOSTED",
+    ])
+    .optional(),
+  notes: z.string().optional().nullable(),
+  contactExchanged: z.boolean().optional(),
+  compatibilityScore: z.number().min(0).max(100).optional().nullable(),
+});
+
+export const adminPaymentCreateSchema = z.object({
+  applicantId: z.string().min(1),
+  eventId: z.string().optional().nullable(),
+  type: z.enum(["APPLICATION_FEE", "EVENT_FEE", "MEMBERSHIP"]),
+  amount: z.number().int().min(0),
+  status: z.enum(["PENDING", "SUCCEEDED", "FAILED", "REFUNDED"]),
+  stripePaymentId: z.string().optional().nullable(),
+  stripeInvoiceId: z.string().optional().nullable(),
+});
+
+export const adminPaymentUpdateSchema = adminPaymentCreateSchema.partial();
+
+export const adminWaitlistUpdateSchema = z.object({
+  waitlistReason: z.string().optional().nullable(),
+  waitlistPosition: z.number().int().min(1).optional().nullable(),
+});
+
+export const adminQuestionnaireSectionCreateSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().optional().nullable(),
+  order: z.number().int().min(0).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const adminQuestionnaireSectionUpdateSchema =
+  adminQuestionnaireSectionCreateSchema.partial();
+
+export const questionnaireQuestionTypeSchema = z.enum([
+  "TEXT",
+  "TEXTAREA",
+  "RICH_TEXT",
+  "DROPDOWN",
+  "RADIO_7",
+  "CHECKBOXES",
+  "NUMBER_SCALE",
+]);
+
+export const adminQuestionnaireQuestionCreateSchema = z
+  .object({
+    sectionId: z.string().min(1),
+    prompt: z.string().min(1),
+    helperText: z.string().optional().nullable(),
+    type: questionnaireQuestionTypeSchema,
+    options: z.any().optional().nullable(),
+    isRequired: z.boolean().optional(),
+    order: z.number().int().min(0).optional(),
+    isActive: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.type === "RADIO_7" && Array.isArray(data.options)) {
+      const options = data.options.filter((item) => String(item).trim());
+      if (options.length !== 7) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Radio 7 questions must have exactly 7 options.",
+          path: ["options"],
+        });
+      }
+    }
+  });
+
+export const adminQuestionnaireQuestionUpdateSchema = z
+  .object({
+    sectionId: z.string().min(1).optional(),
+    prompt: z.string().min(1).optional(),
+    helperText: z.string().optional().nullable(),
+    type: questionnaireQuestionTypeSchema.optional(),
+    options: z.any().optional().nullable(),
+    isRequired: z.boolean().optional(),
+    order: z.number().int().min(0).optional(),
+    isActive: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.type === "RADIO_7" && Array.isArray(data.options)) {
+      const options = data.options.filter((item) => String(item).trim());
+      if (options.length !== 7) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Radio 7 questions must have exactly 7 options.",
+          path: ["options"],
+        });
+      }
+    }
+  });
+
+export const applicantQuestionnaireSubmitSchema = z.object({
+  applicationId: z.string().min(1),
+  answers: z
+    .array(
+      z.object({
+        questionId: z.string().min(1),
+        value: z.any().optional().nullable(),
+        richText: z.string().optional().nullable(),
+      }),
+    )
+    .min(1),
+});

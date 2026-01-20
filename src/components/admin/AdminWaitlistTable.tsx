@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
@@ -332,6 +333,14 @@ export default function AdminWaitlistTable({
                         {formatDate(applicant.invitedOffWaitlistAt)}
                       </span>
                     )}
+                    <div>
+                      <Link
+                        href={`/admin/waitlist/${applicant.id}`}
+                        className="text-xs text-copper hover:underline"
+                      >
+                        Details
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

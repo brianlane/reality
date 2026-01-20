@@ -1,6 +1,9 @@
+import { ApplicationStatus } from "@prisma/client";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { adminApplicantCreateSchema } from "@/lib/validations";
+import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 
 export async function GET(request: Request) {
   const auth = await getAuthUser();
@@ -19,15 +22,25 @@ export async function GET(request: Request) {
   const screeningStatus = url.searchParams.get("screeningStatus") ?? undefined;
   const page = Number(url.searchParams.get("page") ?? "1");
   const limit = Number(url.searchParams.get("limit") ?? "20");
+  const includeDeleted = url.searchParams.get("includeDeleted") === "true";
   const sortBy = url.searchParams.get("sortBy") ?? "submittedAt";
   const sortOrder = url.searchParams.get("sortOrder") ?? "desc";
 
+  const waitlistStatuses: ApplicationStatus[] = [
+    "WAITLIST",
+    "WAITLIST_INVITED",
+  ];
   const where = {
     ...(status
       ? { applicationStatus: status as never }
-      : { applicationStatus: { not: "WAITLIST" as const } }),
+      : {
+          applicationStatus: {
+            notIn: waitlistStatuses,
+          },
+        }),
     ...(gender ? { gender: gender as never } : {}),
     ...(screeningStatus ? { screeningStatus: screeningStatus as never } : {}),
+    ...(includeDeleted ? {} : { deletedAt: null }),
   };
 
   const [applications, total] = await Promise.all([
@@ -44,6 +57,7 @@ export async function GET(request: Request) {
   const stats = await db.applicant.groupBy({
     by: ["applicationStatus"],
     _count: true,
+    where: { deletedAt: null },
   });
 
   const statusCounts = stats.reduce<Record<string, number>>((acc, item) => {
@@ -75,7 +89,107 @@ export async function GET(request: Request) {
       pending: statusCounts.SCREENING_IN_PROGRESS ?? 0,
       approved: statusCounts.APPROVED ?? 0,
       rejected: statusCounts.REJECTED ?? 0,
-      waitlist: statusCounts.WAITLIST ?? 0,
+      waitlist:
+        (statusCounts.WAITLIST ?? 0) + (statusCounts.WAITLIST_INVITED ?? 0),
+    },
+  });
+}
+
+export async function POST(request: Request) {
+  const auth = await getAuthUser();
+  if (!auth) {
+    return errorResponse("UNAUTHORIZED", "User not authenticated", 401);
+  }
+  if (!auth.email) {
+    return errorResponse("UNAUTHORIZED", "Email not available", 401);
+  }
+  try {
+    requireAdmin(auth.email);
+  } catch (error) {
+    return errorResponse("FORBIDDEN", (error as Error).message, 403);
+  }
+
+  let body: ReturnType<typeof adminApplicantCreateSchema.parse>;
+  try {
+    body = adminApplicantCreateSchema.parse(await request.json());
+  } catch (error) {
+    return errorResponse("VALIDATION_ERROR", "Invalid request body", 400, [
+      { message: (error as Error).message },
+    ]);
+  }
+
+  const existingUser = await db.user.findFirst({
+    where: {
+      OR: [
+        {
+          email: { equals: body.user.email.toLowerCase(), mode: "insensitive" },
+        },
+        { clerkId: body.user.clerkId },
+      ],
+    },
+  });
+
+  if (existingUser) {
+    return errorResponse(
+      "CONFLICT",
+      "A user with that email or clerk ID already exists.",
+      409,
+    );
+  }
+
+  const adminUser = await getOrCreateAdminUser({
+    userId: auth.userId,
+    email: auth.email,
+  });
+
+  const result = await db.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        clerkId: body.user.clerkId,
+        email: body.user.email.toLowerCase(),
+        firstName: body.user.firstName,
+        lastName: body.user.lastName,
+        role: body.user.role,
+      },
+    });
+
+    const applicant = await tx.applicant.create({
+      data: {
+        userId: user.id,
+        age: body.applicant.age,
+        gender: body.applicant.gender,
+        location: body.applicant.location,
+        occupation: body.applicant.occupation,
+        employer: body.applicant.employer ?? null,
+        education: body.applicant.education,
+        incomeRange: body.applicant.incomeRange,
+        applicationStatus: body.applicant.applicationStatus,
+        screeningStatus: body.applicant.screeningStatus,
+        photos: body.applicant.photos ?? [],
+      },
+      include: { user: true },
+    });
+
+    await tx.adminAction.create({
+      data: {
+        userId: adminUser.id,
+        type: "MANUAL_ADJUSTMENT",
+        targetId: applicant.id,
+        targetType: "applicant",
+        description: "Created applicant",
+      },
+    });
+
+    return { user, applicant };
+  });
+
+  return successResponse({
+    applicant: {
+      id: result.applicant.id,
+      firstName: result.applicant.user.firstName,
+      lastName: result.applicant.user.lastName,
+      applicationStatus: result.applicant.applicationStatus,
+      screeningStatus: result.applicant.screeningStatus,
     },
   });
 }

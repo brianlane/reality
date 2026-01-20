@@ -1,3 +1,5 @@
+import AdminEventForm from "@/components/admin/AdminEventForm";
+
 type AdminEventDetailProps = {
   params: Promise<{ id: string }>;
 };
@@ -8,8 +10,8 @@ export default async function AdminEventDetailPage({
   const { id } = await params;
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-navy">Event {id}</h1>
-      <p className="text-navy-soft">Event dashboard overview.</p>
+      <h1 className="text-2xl font-semibold text-navy">Event Detail</h1>
+      <AdminEventForm mode="edit" eventId={id} />
     </div>
   );
 }

@@ -18,8 +18,8 @@ export async function GET(_: Request, { params }: RouteContext) {
     return errorResponse("FORBIDDEN", (error as Error).message, 403);
   }
 
-  const event = await db.event.findUnique({
-    where: { id },
+  const event = await db.event.findFirst({
+    where: { id, deletedAt: null },
     include: {
       invitations: { include: { applicant: true } },
       matches: true,
