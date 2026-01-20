@@ -38,6 +38,11 @@ test("application flow navigates through steps", async ({ page }) => {
     });
   });
 
+  // Set up localStorage to pass authorization check
+  await page.addInitScript(() => {
+    localStorage.setItem("applicationId", "appl_123");
+  });
+
   await page.goto("/apply/demographics");
   await page.waitForLoadState("networkidle");
   await fillStableById("firstName", "Alex");

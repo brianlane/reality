@@ -1,19 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useSyncExternalStore } from "react";
 import ApplicationDraftForm from "@/components/forms/ApplicationDraftForm";
 import Link from "next/link";
 
 export default function DemographicsPage() {
-  // Initialize state with authorization check
-  const [isAuthorized] = useState<boolean>(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-    const token = localStorage.getItem("waitlistInviteToken");
-    const applicationId = localStorage.getItem("applicationId");
-    return !!(token || applicationId);
-  });
+  const isAuthorized = useSyncExternalStore(
+    (callback) => {
+      if (typeof window === "undefined") {
+        return () => undefined;
+      }
+      window.addEventListener("storage", callback);
+      return () => window.removeEventListener("storage", callback);
+    },
+    () => {
+      if (typeof window === "undefined") {
+        return null;
+      }
+      const token = localStorage.getItem("waitlistInviteToken");
+      const applicationId = localStorage.getItem("applicationId");
+      return !!(token || applicationId);
+    },
+    () => null,
+  );
+
+  if (isAuthorized === null) {
+    return (
+      <section className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+          <p className="text-navy-soft">Loading...</p>
+        </div>
+      </section>
+    );
+  }
 
   if (!isAuthorized) {
     return (

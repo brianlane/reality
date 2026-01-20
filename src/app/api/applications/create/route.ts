@@ -119,6 +119,7 @@ export async function POST(request: NextRequest) {
             applicationStatus: "DRAFT",
             waitlistInviteToken: null,
             invitedOffWaitlistAt: null,
+            invitedOffWaitlistBy: null,
           },
         });
       } else if (existingApplicant.applicationStatus !== "DRAFT") {

@@ -31,8 +31,48 @@ export async function POST(request: Request, { params }: RouteContext) {
     email: auth.email,
   });
 
-  // Verify applicant exists and has WAITLIST status
-  const existing = await db.applicant.findUnique({
+  // Generate unique invite token (32-byte hex = 64 characters)
+  const inviteToken = randomBytes(32).toString("hex");
+
+  // Update applicant with invite details atomically
+  const updateResult = await db.applicant.updateMany({
+    where: {
+      id,
+      applicationStatus: "WAITLIST",
+      invitedOffWaitlistAt: null,
+    },
+    data: {
+      invitedOffWaitlistAt: new Date(),
+      invitedOffWaitlistBy: adminUser.id,
+      waitlistInviteToken: inviteToken,
+    },
+  });
+
+  if (updateResult.count === 0) {
+    const existing = await db.applicant.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      return errorResponse("NOT_FOUND", "Applicant not found", 404);
+    }
+
+    if (existing.applicationStatus !== "WAITLIST") {
+      return errorResponse(
+        "INVALID_STATUS",
+        "Applicant is not on the waitlist",
+        400,
+      );
+    }
+
+    return errorResponse(
+      "ALREADY_INVITED",
+      "Applicant has already been invited off the waitlist",
+      400,
+    );
+  }
+
+  const applicant = await db.applicant.findUnique({
     where: { id },
     include: {
       user: {
@@ -44,39 +84,9 @@ export async function POST(request: Request, { params }: RouteContext) {
     },
   });
 
-  if (!existing) {
+  if (!applicant || !applicant.user) {
     return errorResponse("NOT_FOUND", "Applicant not found", 404);
   }
-
-  if (existing.applicationStatus !== "WAITLIST") {
-    return errorResponse(
-      "INVALID_STATUS",
-      "Applicant is not on the waitlist",
-      400,
-    );
-  }
-
-  // Check if already invited
-  if (existing.invitedOffWaitlistAt) {
-    return errorResponse(
-      "ALREADY_INVITED",
-      "Applicant has already been invited off the waitlist",
-      400,
-    );
-  }
-
-  // Generate unique invite token (32-byte hex = 64 characters)
-  const inviteToken = randomBytes(32).toString("hex");
-
-  // Update applicant with invite details
-  const applicant = await db.applicant.update({
-    where: { id },
-    data: {
-      invitedOffWaitlistAt: new Date(),
-      invitedOffWaitlistBy: adminUser.id,
-      waitlistInviteToken: inviteToken,
-    },
-  });
 
   // Create AdminAction record
   await db.adminAction.create({
@@ -85,7 +95,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       type: "INVITE_OFF_WAITLIST",
       targetId: applicant.id,
       targetType: "applicant",
-      description: `Invited ${existing.user.firstName} off waitlist`,
+      description: `Invited ${applicant.user.firstName} off waitlist`,
       metadata: { inviteToken },
     },
   });
@@ -93,8 +103,8 @@ export async function POST(request: Request, { params }: RouteContext) {
   // Send invitation email
   try {
     await sendWaitlistInviteEmail({
-      to: existing.user.email,
-      firstName: existing.user.firstName,
+      to: applicant.user.email,
+      firstName: applicant.user.firstName,
       inviteToken,
     });
   } catch (emailError) {

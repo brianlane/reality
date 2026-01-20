@@ -57,7 +57,42 @@ export async function POST(request: Request) {
   // Process each applicant
   for (const applicantId of applicantIds) {
     try {
-      // Fetch applicant with user info
+      // Generate unique invite token
+      const inviteToken = randomBytes(32).toString("hex");
+
+      // Update applicant atomically
+      const updateResult = await db.applicant.updateMany({
+        where: {
+          id: applicantId,
+          applicationStatus: "WAITLIST",
+          invitedOffWaitlistAt: null,
+        },
+        data: {
+          invitedOffWaitlistAt: new Date(),
+          invitedOffWaitlistBy: adminUser.id,
+          waitlistInviteToken: inviteToken,
+        },
+      });
+
+      if (updateResult.count === 0) {
+        const existing = await db.applicant.findUnique({
+          where: { id: applicantId },
+        });
+
+        if (!existing) {
+          failed.push({ id: applicantId, reason: "Applicant not found" });
+          continue;
+        }
+
+        if (existing.applicationStatus !== "WAITLIST") {
+          failed.push({ id: applicantId, reason: "Not on waitlist" });
+          continue;
+        }
+
+        failed.push({ id: applicantId, reason: "Already invited" });
+        continue;
+      }
+
       const applicant = await db.applicant.findUnique({
         where: { id: applicantId },
         include: {
@@ -70,34 +105,10 @@ export async function POST(request: Request) {
         },
       });
 
-      if (!applicant) {
+      if (!applicant || !applicant.user) {
         failed.push({ id: applicantId, reason: "Applicant not found" });
         continue;
       }
-
-      if (applicant.applicationStatus !== "WAITLIST") {
-        failed.push({ id: applicantId, reason: "Not on waitlist" });
-        continue;
-      }
-
-      // Skip if already invited
-      if (applicant.invitedOffWaitlistAt) {
-        failed.push({ id: applicantId, reason: "Already invited" });
-        continue;
-      }
-
-      // Generate unique invite token
-      const inviteToken = randomBytes(32).toString("hex");
-
-      // Update applicant
-      await db.applicant.update({
-        where: { id: applicantId },
-        data: {
-          invitedOffWaitlistAt: new Date(),
-          invitedOffWaitlistBy: adminUser.id,
-          waitlistInviteToken: inviteToken,
-        },
-      });
 
       // Create AdminAction record
       await db.adminAction.create({
