@@ -35,13 +35,26 @@ export default function ApplicationDraftForm() {
       incomeRange: formData.get("incomeRange"),
     };
 
+    // Retrieve waitlist invite token and application id if present
+    const inviteToken =
+      typeof window !== "undefined"
+        ? localStorage.getItem("waitlistInviteToken")
+        : null;
+    const storedApplicationId =
+      typeof window !== "undefined"
+        ? localStorage.getItem("applicationId")
+        : null;
+    const applicationId =
+      draft.applicationId ?? storedApplicationId ?? undefined;
+
     const response = await fetch("/api/applications/create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         applicant,
-        applicationId: draft.applicationId,
+        applicationId,
         demographics,
+        ...(inviteToken ? { inviteToken } : {}),
       }),
     });
 
@@ -51,6 +64,9 @@ export default function ApplicationDraftForm() {
     }
 
     const data = await response.json();
+    if (typeof window !== "undefined" && inviteToken) {
+      localStorage.removeItem("waitlistInviteToken");
+    }
     updateDraft({
       applicationId: data.applicationId,
       demographics,

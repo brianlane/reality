@@ -1,5 +1,25 @@
 import { z } from "zod";
 
+// Strict email regex that requires proper domain with TLD
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+export const stage1QualificationSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .regex(EMAIL_REGEX, "Please enter a valid email address"),
+  phone: z.string().optional().nullable(),
+  age: z.number().int().min(18, "Must be 18 or older").max(100),
+  gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
+  location: z.string().min(1, "Location is required"),
+  aboutYourself: z
+    .string()
+    .min(50, "Please write at least 50 characters")
+    .max(500, "Please keep it under 500 characters"),
+});
+
 export const demographicsSchema = z.object({
   age: z.number().int().min(18).max(100),
   gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
@@ -47,10 +67,14 @@ export const createApplicationSchema = z.object({
   applicant: z.object({
     firstName: z.string().min(1),
     lastName: z.string().min(1),
-    email: z.string().email(),
+    email: z
+      .string()
+      .min(1)
+      .regex(EMAIL_REGEX, "Please enter a valid email address"),
     phone: z.string().optional().nullable(),
   }),
   applicationId: z.string().min(1).optional(),
+  inviteToken: z.string().optional(), // For waitlist validation
   demographics: demographicsSchema,
   questionnaire: questionnaireSchema.optional(),
 });

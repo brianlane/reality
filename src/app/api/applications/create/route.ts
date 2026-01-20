@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { createApplicationSchema } from "@/lib/validations";
 import type { JsonValueNonNull } from "@/lib/json";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { Prisma } from "@prisma/client";
+
+const INVITE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,10 +13,64 @@ export async function POST(request: NextRequest) {
     const {
       applicant: applicantInfo,
       applicationId,
+      inviteToken,
       demographics,
       questionnaire,
     } = payload;
     const normalizedEmail = applicantInfo.email.toLowerCase();
+
+    // If an invite token is provided, validate it FIRST before any other operations
+    if (inviteToken) {
+      const invitedApplicant = await db.applicant.findUnique({
+        where: { waitlistInviteToken: inviteToken },
+        include: {
+          user: {
+            select: {
+              email: true,
+            },
+          },
+        },
+      });
+
+      if (!invitedApplicant) {
+        return errorResponse("INVALID_TOKEN", "Invalid invitation token.", 403);
+      }
+
+      // Verify the email matches the invited applicant
+      if (invitedApplicant.user.email.toLowerCase() !== normalizedEmail) {
+        return errorResponse(
+          "EMAIL_MISMATCH",
+          "The email address does not match the invitation.",
+          403,
+        );
+      }
+
+      // Check if the applicant is still on the waitlist
+      if (invitedApplicant.applicationStatus !== "WAITLIST") {
+        return errorResponse(
+          "ALREADY_USED",
+          "This invitation has already been used.",
+          400,
+        );
+      }
+
+      // Check token expiration
+      const inviteIssuedAt = invitedApplicant.invitedOffWaitlistAt;
+      if (!inviteIssuedAt) {
+        return errorResponse("INVALID_TOKEN", "Invalid invitation token.", 403);
+      }
+
+      const expiresAt = new Date(
+        inviteIssuedAt.getTime() + INVITE_EXPIRATION_MS,
+      );
+      if (Date.now() > expiresAt.getTime()) {
+        return errorResponse(
+          "INVITE_EXPIRED",
+          "This invitation has expired.",
+          410,
+        );
+      }
+    }
 
     const user =
       (await db.user.findFirst({
@@ -41,29 +98,69 @@ export async function POST(request: NextRequest) {
           409,
         );
       }
-      if (existingApplicant.applicationStatus !== "DRAFT") {
+
+      // Check if user is on waitlist and needs invite token
+      const isTransitioningFromWaitlist =
+        existingApplicant.applicationStatus === "WAITLIST";
+
+      if (isTransitioningFromWaitlist) {
+        if (
+          !inviteToken ||
+          existingApplicant.waitlistInviteToken !== inviteToken
+        ) {
+          return errorResponse(
+            "WAITLIST_LOCKED",
+            "You must be invited off the waitlist to continue.",
+            403,
+          );
+        }
+      } else if (existingApplicant.applicationStatus !== "DRAFT") {
         return errorResponse(
           "APPLICATION_LOCKED",
           "Application can no longer be edited.",
           409,
         );
       }
+    } else {
+      // If no existing applicant and no invite token, this is unauthorized access
+      if (!inviteToken) {
+        return errorResponse(
+          "UNAUTHORIZED",
+          "You must have a valid invitation to create an application.",
+          403,
+        );
+      }
+    }
+
+    // Prepare update data - combine status transition and demographics update
+    const updateData: Prisma.ApplicantUpdateInput = {
+      user: {
+        update: {
+          firstName: applicantInfo.firstName,
+          lastName: applicantInfo.lastName,
+          phone: applicantInfo.phone ?? null,
+          email: normalizedEmail,
+        },
+      },
+      ...demographics,
+    };
+
+    // If transitioning from waitlist, also clear token fields and update status
+    if (existingApplicant) {
+      const isTransitioningFromWaitlist =
+        existingApplicant.applicationStatus === "WAITLIST";
+      if (isTransitioningFromWaitlist) {
+        updateData.applicationStatus = "DRAFT";
+        updateData.waitlistInviteToken = null;
+        updateData.invitedOffWaitlistAt = null;
+        updateData.invitedOffWaitlistBy = null;
+      }
     }
 
     const applicant = existingApplicant
       ? await db.applicant.update({
           where: { id: existingApplicant.id },
-          data: {
-            user: {
-              update: {
-                firstName: applicantInfo.firstName,
-                lastName: applicantInfo.lastName,
-                phone: applicantInfo.phone ?? null,
-                email: normalizedEmail,
-              },
-            },
-            ...demographics,
-          },
+          data: updateData,
         })
       : await db.applicant.create({
           data: {

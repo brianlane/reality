@@ -22,12 +22,14 @@ export default function HomePage() {
 
         {/* Buttons below */}
         <div className="flex flex-col items-center gap-3 w-full max-w-md">
-          <Link
-            href="/apply"
-            className="w-full rounded-md bg-navy px-8 py-4 text-center text-base font-medium text-white hover:bg-copper transition-colors"
-          >
-            Start application
-          </Link>
+          <div className="w-full flex flex-col items-center gap-2">
+            <Link
+              href="/apply"
+              className="w-full rounded-md bg-navy px-8 py-4 text-center text-base font-medium text-white hover:bg-copper transition-colors"
+            >
+              Join Now
+            </Link>
+          </div>
           <Link
             href="/sign-in"
             className="w-full rounded-md border border-slate-300 px-8 py-4 text-center text-base font-medium text-navy hover:border-copper hover:text-copper transition-colors"
