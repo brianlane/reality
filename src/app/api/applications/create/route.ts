@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { createApplicationSchema } from "@/lib/validations";
 import type { JsonValueNonNull } from "@/lib/json";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { Prisma } from "@prisma/client";
 
 const INVITE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -132,7 +133,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare update data - combine status transition and demographics update
-    const updateData: any = {
+    const updateData: Prisma.ApplicantUpdateInput = {
       user: {
         update: {
           firstName: applicantInfo.firstName,
