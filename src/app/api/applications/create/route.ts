@@ -99,7 +99,10 @@ export async function POST(request: NextRequest) {
       }
 
       // Check if user is on waitlist and needs invite token
-      if (existingApplicant.applicationStatus === "WAITLIST") {
+      const isTransitioningFromWaitlist =
+        existingApplicant.applicationStatus === "WAITLIST";
+
+      if (isTransitioningFromWaitlist) {
         if (
           !inviteToken ||
           existingApplicant.waitlistInviteToken !== inviteToken
@@ -110,18 +113,6 @@ export async function POST(request: NextRequest) {
             403,
           );
         }
-
-        // Valid token: transition from WAITLIST to DRAFT
-        // Clear invite token fields to prevent reuse
-        await db.applicant.update({
-          where: { id: existingApplicant.id },
-          data: {
-            applicationStatus: "DRAFT",
-            waitlistInviteToken: null,
-            invitedOffWaitlistAt: null,
-            invitedOffWaitlistBy: null,
-          },
-        });
       } else if (existingApplicant.applicationStatus !== "DRAFT") {
         return errorResponse(
           "APPLICATION_LOCKED",
@@ -140,20 +131,35 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Prepare update data - combine status transition and demographics update
+    const updateData: any = {
+      user: {
+        update: {
+          firstName: applicantInfo.firstName,
+          lastName: applicantInfo.lastName,
+          phone: applicantInfo.phone ?? null,
+          email: normalizedEmail,
+        },
+      },
+      ...demographics,
+    };
+
+    // If transitioning from waitlist, also clear token fields and update status
+    if (existingApplicant) {
+      const isTransitioningFromWaitlist =
+        existingApplicant.applicationStatus === "WAITLIST";
+      if (isTransitioningFromWaitlist) {
+        updateData.applicationStatus = "DRAFT";
+        updateData.waitlistInviteToken = null;
+        updateData.invitedOffWaitlistAt = null;
+        updateData.invitedOffWaitlistBy = null;
+      }
+    }
+
     const applicant = existingApplicant
       ? await db.applicant.update({
           where: { id: existingApplicant.id },
-          data: {
-            user: {
-              update: {
-                firstName: applicantInfo.firstName,
-                lastName: applicantInfo.lastName,
-                phone: applicantInfo.phone ?? null,
-                email: normalizedEmail,
-              },
-            },
-            ...demographics,
-          },
+          data: updateData,
         })
       : await db.applicant.create({
           data: {
