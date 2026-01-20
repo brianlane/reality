@@ -24,6 +24,9 @@ export default defineConfig({
       ...process.env,
       E2E_AUTH_ENABLED: "true",
       ADMIN_EMAIL: "admin@example.com",
+      DATABASE_URL:
+        process.env.DATABASE_URL ||
+        "postgresql://user:pass@localhost:5432/testdb",
     },
   },
 });

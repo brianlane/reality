@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     db.questionnaireSection.findMany({
       where,
       include: {
-        _count: { select: { questions: true } },
+        _count: { select: { questions: { where: { deletedAt: null } } } },
       },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       skip: (page - 1) * limit,
