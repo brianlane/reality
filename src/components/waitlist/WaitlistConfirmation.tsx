@@ -33,7 +33,7 @@ export default function WaitlistConfirmation({
             You&apos;re on the Waitlist
           </h1>
           <p className="text-lg text-navy-soft">
-            Thank you for your interest, {firstName}.
+            Thank you for your interest{firstName ? `, ${firstName}` : ""}.
           </p>
         </div>
       </div>
