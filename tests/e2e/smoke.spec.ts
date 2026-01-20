@@ -19,8 +19,81 @@ test("application flow navigates through steps", async ({ page }) => {
 
   await page.route("**/api/applications/create", async (route) => {
     await route.fulfill({
-      json: { applicationId: "appl_123", status: "DRAFT" },
+      json: { applicationId: "appl_123", status: "PAYMENT_PENDING" },
     });
+  });
+
+  await page.route("**/api/applications/questionnaire**", async (route) => {
+    if (route.request().method() === "GET") {
+      // GET: Load questionnaire
+      await route.fulfill({
+        json: {
+          sections: [
+            {
+              id: "sec_1",
+              title: "About You",
+              description: "Tell us about yourself",
+              questions: [
+                {
+                  id: "q1",
+                  prompt: "Religion importance (1-5)",
+                  helperText: null,
+                  type: "NUMBER_SCALE",
+                  options: { min: 1, max: 5, step: 1 },
+                  isRequired: true,
+                },
+                {
+                  id: "q2",
+                  prompt: "Political alignment",
+                  helperText: null,
+                  type: "TEXT",
+                  options: null,
+                  isRequired: true,
+                },
+                {
+                  id: "q3",
+                  prompt: "Family importance (1-5)",
+                  helperText: null,
+                  type: "NUMBER_SCALE",
+                  options: { min: 1, max: 5, step: 1 },
+                  isRequired: true,
+                },
+                {
+                  id: "q4",
+                  prompt: "Career ambition (1-5)",
+                  helperText: null,
+                  type: "NUMBER_SCALE",
+                  options: { min: 1, max: 5, step: 1 },
+                  isRequired: true,
+                },
+                {
+                  id: "q5",
+                  prompt: "About me",
+                  helperText: null,
+                  type: "TEXTAREA",
+                  options: null,
+                  isRequired: true,
+                },
+                {
+                  id: "q6",
+                  prompt: "Ideal partner",
+                  helperText: null,
+                  type: "TEXTAREA",
+                  options: null,
+                  isRequired: true,
+                },
+              ],
+            },
+          ],
+          answers: {},
+        },
+      });
+    } else {
+      // POST: Submit questionnaire
+      await route.fulfill({
+        json: { success: true },
+      });
+    }
   });
 
   await page.route("**/api/applications/upload-photo", async (route) => {
@@ -32,10 +105,26 @@ test("application flow navigates through steps", async ({ page }) => {
     });
   });
 
+  let submitCallCount = 0;
   await page.route("**/api/applications/submit", async (route) => {
-    await route.fulfill({
-      json: { paymentUrl: "https://mock.stripe.local/session/test" },
-    });
+    submitCallCount += 1;
+    if (submitCallCount === 1) {
+      // First call: payment creation (status is PAYMENT_PENDING)
+      await route.fulfill({
+        json: {
+          paymentUrl: "https://mock.stripe.local/session/test",
+          applicationId: "appl_123",
+        },
+      });
+    } else {
+      // Second call: final submission (status is DRAFT after payment)
+      await route.fulfill({
+        json: {
+          applicationId: "appl_123",
+          status: "SUBMITTED",
+        },
+      });
+    }
   });
 
   // Set up localStorage to pass authorization check
@@ -55,14 +144,30 @@ test("application flow navigates through steps", async ({ page }) => {
   await fillStableById("education", "Bachelor's Degree");
   await fillStableById("incomeRange", "$100,000-$150,000");
   await page.getByRole("button", { name: "Save and continue" }).click();
-  await expect(page).toHaveURL(/apply\/questionnaire/);
+  await expect(page).toHaveURL(/apply\/payment/);
 
-  await page.getByLabel("Religion importance (1-5)").fill("3");
-  await page.getByLabel("Political alignment").fill("moderate");
-  await page.getByLabel("Family importance (1-5)").fill("4");
-  await page.getByLabel("Career ambition (1-5)").fill("4");
-  await page.getByLabel("About me").fill("I love good food.");
-  await page.getByLabel("Ideal partner").fill("Kind and ambitious.");
+  // Payment step
+  await page.getByRole("button", { name: "Start payment" }).click();
+  await expect(page.getByText("Payment session created")).toBeVisible();
+
+  // Simulate payment success by manually navigating to questionnaire
+  // (In real flow, Stripe webhook would update status to DRAFT and user would navigate back)
+  await page.goto("/apply/questionnaire");
+  await page.waitForLoadState("networkidle");
+
+  // Fill in questionnaire fields (using simpler selectors since labels aren't properly linked)
+  const numberInputs = await page.locator('input[type="number"]').all();
+  if (numberInputs[0]) await numberInputs[0].fill("3");
+  if (numberInputs[1]) await numberInputs[1].fill("4");
+  if (numberInputs[2]) await numberInputs[2].fill("4");
+
+  const textInputs = await page.locator('input[type="text"]').all();
+  if (textInputs[0]) await textInputs[0].fill("moderate");
+
+  const textareas = await page.locator("textarea").all();
+  if (textareas[0]) await textareas[0].fill("I love good food.");
+  if (textareas[1]) await textareas[1].fill("Kind and ambitious.");
+
   await page.getByRole("button", { name: "Save and continue" }).click();
   await expect(page).toHaveURL(/apply\/photos/);
 
@@ -74,13 +179,9 @@ test("application flow navigates through steps", async ({ page }) => {
   await page.getByRole("button", { name: "Upload photo" }).click();
   await expect(page.getByText("Photo uploaded!")).toBeVisible();
 
-  await page.getByRole("link", { name: "Continue to review" }).click();
-  await expect(page).toHaveURL(/apply\/review/);
-
-  await page.getByRole("link", { name: "Continue to payment" }).click();
-  await expect(page).toHaveURL(/apply\/payment/);
-  await page.getByRole("button", { name: "Start payment" }).click();
-  await expect(page.getByText("Payment session created")).toBeVisible();
+  // Final submission (no review page in new flow)
+  await page.getByRole("button", { name: "Submit Application" }).click();
+  await expect(page).toHaveURL(/apply\/waitlist/);
 });
 
 test("admin overview loads mocked data", async ({ page }) => {

@@ -100,7 +100,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       applicationStatus: nextStatus,
       reviewedAt: new Date(),
       reviewedBy: adminUser.id,
-      backgroundCheckNotes: enableWaitlist ? body.reason : null,
+      waitlistReason: enableWaitlist ? body.reason : null,
     },
   });
 

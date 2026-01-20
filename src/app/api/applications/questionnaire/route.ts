@@ -8,7 +8,11 @@ import {
   validateAnswerForQuestion,
 } from "@/lib/questionnaire";
 
-const ALLOWED_STATUSES: ApplicationStatus[] = ["WAITLIST_INVITED", "DRAFT"];
+const ALLOWED_STATUSES: ApplicationStatus[] = [
+  "WAITLIST_INVITED",
+  "PAYMENT_PENDING",
+  "DRAFT",
+];
 
 type InvitedApplicantResult = { applicant: Applicant } | { error: string };
 
