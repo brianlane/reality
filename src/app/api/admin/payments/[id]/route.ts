@@ -78,12 +78,14 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     where: { id },
     data: {
       applicantId: body.applicantId,
-      eventId: body.eventId ?? undefined,
+      eventId: body.eventId === undefined ? undefined : body.eventId,
       type: body.type,
       amount: body.amount,
       status: body.status,
-      stripePaymentId: body.stripePaymentId ?? undefined,
-      stripeInvoiceId: body.stripeInvoiceId ?? undefined,
+      stripePaymentId:
+        body.stripePaymentId === undefined ? undefined : body.stripePaymentId,
+      stripeInvoiceId:
+        body.stripeInvoiceId === undefined ? undefined : body.stripeInvoiceId,
     },
   });
 

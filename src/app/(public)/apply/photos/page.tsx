@@ -35,6 +35,14 @@ export default function PhotosPage() {
         return;
       }
 
+      const data = await response.json();
+      if (data?.paymentUrl) {
+        if (typeof window !== "undefined") {
+          window.location.href = data.paymentUrl;
+        }
+        return;
+      }
+
       // Clear invite token from localStorage
       if (typeof window !== "undefined") {
         localStorage.removeItem("waitlistInviteToken");

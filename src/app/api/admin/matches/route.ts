@@ -100,6 +100,28 @@ export async function POST(request: Request) {
     ]);
   }
 
+  const [event, applicants] = await Promise.all([
+    db.event.findFirst({
+      where: { id: body.eventId, deletedAt: null },
+      select: { id: true },
+    }),
+    db.applicant.findMany({
+      where: {
+        id: { in: [body.applicantId, body.partnerId] },
+        deletedAt: null,
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  if (!event) {
+    return errorResponse("NOT_FOUND", "Event not found", 404);
+  }
+
+  if (applicants.length !== 2) {
+    return errorResponse("NOT_FOUND", "Applicant not found", 404);
+  }
+
   const adminUser = await getOrCreateAdminUser({
     userId: auth.userId,
     email: auth.email,
