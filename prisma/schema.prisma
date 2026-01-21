@@ -335,7 +335,8 @@ model Event {
   // Revenue (in cents)
   expectedRevenue   Int
   actualRevenue     Int               @default(0)
-  
+  actualCost        Int               @default(0)
+
   // Notes
   notes             String?           @db.Text
   

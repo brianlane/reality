@@ -47,6 +47,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     data: {
       status: "COMPLETED",
       actualRevenue: body.actualRevenue ?? 0,
+      actualCost: body.actualCost ?? existing.totalCost,
       notes: body.notes,
     },
   });
@@ -62,9 +63,8 @@ export async function POST(request: Request, { params }: RouteContext) {
     },
   });
 
-  // Calculate actual profit using actualCost from body or budgeted cost
-  const actualCost = body.actualCost ?? event.totalCost;
-  const actualProfit = event.actualRevenue - actualCost;
+  // Calculate actual profit
+  const actualProfit = event.actualRevenue - event.actualCost;
 
   return successResponse({
     event: {
@@ -72,7 +72,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       status: event.status,
       actualRevenue: event.actualRevenue,
       budgetedCost: event.totalCost,
-      actualCost,
+      actualCost: event.actualCost,
       actualProfit,
       updatedAt: event.updatedAt,
     },
