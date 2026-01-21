@@ -14,12 +14,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Reality Matchmaking",
-  description: "Private matchmaking experiences designed for real connections.",
+  description:
+    "Private experiences designed for real connections to feel like matchmaking in reality.",
   metadataBase: new URL("https://www.realitymatchmaking.com"),
   openGraph: {
     title: "Reality Matchmaking",
     description:
-      "Private matchmaking experiences designed for real connections.",
+      "Private experiences designed for real connections to feel like matchmaking in reality.",
     url: "https://www.realitymatchmaking.com",
     siteName: "Reality Matchmaking",
     locale: "en_US",
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Reality Matchmaking",
     description:
-      "Private matchmaking experiences designed for real connections.",
+      "Private experiences designed for real connections to feel like matchmaking in reality.",
   },
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],

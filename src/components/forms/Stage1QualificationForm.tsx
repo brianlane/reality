@@ -19,12 +19,29 @@ type FieldErrors = {
   aboutYourself?: string;
 };
 
+const CITIES = [
+  "New York City, NY",
+  "Los Angeles, CA",
+  "Chicago, IL",
+  "Dallas, TX",
+  "Phoenix, AZ",
+  "San Francisco, CA",
+  "Miami, FL",
+  "Denver, CO",
+  "Atlanta, GA",
+  "Las Vegas, NV",
+  "Seattle, WA",
+  "Portland, OR",
+  "Other",
+] as const;
+
 export default function Stage1QualificationForm() {
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [locationSelection, setLocationSelection] = useState<string>("");
 
   const validateField = (name: string, value: string | number) => {
     switch (name) {
@@ -87,6 +104,27 @@ export default function Stage1QualificationForm() {
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
+
+    // Handle location dropdown selection
+    if (name === "locationSelect") {
+      setLocationSelection(value);
+      // Validate or clear error based on selection
+      if (value !== "Other") {
+        const error = validateField("location", value);
+        setErrors((prev) => ({
+          ...prev,
+          location: error,
+        }));
+      } else {
+        // Clear error when switching to "Other" - user will enter custom location
+        setErrors((prev) => ({
+          ...prev,
+          location: undefined,
+        }));
+      }
+      return;
+    }
+
     if (touched.has(name)) {
       const error = validateField(name, value);
       setErrors((prev) => ({
@@ -100,6 +138,21 @@ export default function Stage1QualificationForm() {
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
+
+    // Handle location dropdown blur specially
+    if (name === "locationSelect") {
+      setTouched((prev) => new Set(prev).add("location"));
+      // Don't validate if "Other" is selected - wait for custom input
+      if (value !== "Other") {
+        const error = validateField("location", value);
+        setErrors((prev) => ({
+          ...prev,
+          location: error,
+        }));
+      }
+      return;
+    }
+
     setTouched((prev) => new Set(prev).add(name));
     const error = validateField(name, value);
     setErrors((prev) => ({
@@ -113,6 +166,11 @@ export default function Stage1QualificationForm() {
     setStatus(null);
 
     const formData = new FormData(event.currentTarget);
+    const locationSelect = String(formData.get("locationSelect") ?? "").trim();
+    const customLocation = String(formData.get("location") ?? "").trim();
+    const finalLocation =
+      locationSelect === "Other" ? customLocation : locationSelect;
+
     const payload = {
       firstName: String(formData.get("firstName") ?? "").trim(),
       lastName: String(formData.get("lastName") ?? "").trim(),
@@ -122,7 +180,7 @@ export default function Stage1QualificationForm() {
       phone: String(formData.get("phone") ?? "").trim() || null,
       age: Number(formData.get("age")),
       gender: formData.get("gender"),
-      location: String(formData.get("location") ?? "").trim(),
+      location: finalLocation,
       aboutYourself: String(formData.get("aboutYourself") ?? "").trim(),
     };
 
@@ -306,20 +364,40 @@ export default function Stage1QualificationForm() {
         </div>
         <div>
           <label
-            htmlFor="location"
+            htmlFor="locationSelect"
             className="text-sm font-medium text-navy-muted"
           >
             Location (City, State)
           </label>
-          <Input
-            id="location"
-            name="location"
-            placeholder="e.g., Phoenix, AZ"
-            required
+          <Select
+            id="locationSelect"
+            name="locationSelect"
+            required={locationSelection !== "Other"}
+            value={locationSelection}
             onChange={handleFieldChange}
             onBlur={handleFieldBlur}
             className={errors.location ? "border-red-500" : ""}
-          />
+          >
+            <option value="">Select a city</option>
+            {CITIES.map((city) => (
+              <option key={city} value={city}>
+                {city}
+              </option>
+            ))}
+          </Select>
+          {locationSelection === "Other" && (
+            <div className="mt-2">
+              <Input
+                id="location"
+                name="location"
+                placeholder="e.g., Phoenix, AZ"
+                required
+                onChange={handleFieldChange}
+                onBlur={handleFieldBlur}
+                className={errors.location ? "border-red-500" : ""}
+              />
+            </div>
+          )}
           {errors.location && (
             <p className="mt-1 text-xs text-red-500">{errors.location}</p>
           )}
