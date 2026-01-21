@@ -108,12 +108,18 @@ export default function Stage1QualificationForm() {
     // Handle location dropdown selection
     if (name === "locationSelect") {
       setLocationSelection(value);
-      // Clear custom location when switching away from "Other"
+      // Validate or clear error based on selection
       if (value !== "Other") {
         const error = validateField("location", value);
         setErrors((prev) => ({
           ...prev,
           location: error,
+        }));
+      } else {
+        // Clear error when switching to "Other" - user will enter custom location
+        setErrors((prev) => ({
+          ...prev,
+          location: undefined,
         }));
       }
       return;

@@ -14,7 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Reality Matchmaking",
-  description: "Private experiences designed for real connections to feel like matchmaking in reality.",
+  description:
+    "Private experiences designed for real connections to feel like matchmaking in reality.",
   metadataBase: new URL("https://www.realitymatchmaking.com"),
   openGraph: {
     title: "Reality Matchmaking",
