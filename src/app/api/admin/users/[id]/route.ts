@@ -84,13 +84,13 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   });
 
   // Validate that email and clerkId are unique (excluding current user)
+  // Check against ALL users including soft-deleted to prevent conflicts
   if (body.email !== undefined) {
     const normalizedEmail = body.email.toLowerCase();
     const emailExists = await db.user.findFirst({
       where: {
         email: normalizedEmail,
         id: { not: id },
-        deletedAt: null,
       },
     });
 
@@ -108,7 +108,6 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       where: {
         clerkId: body.clerkId,
         id: { not: id },
-        deletedAt: null,
       },
     });
 

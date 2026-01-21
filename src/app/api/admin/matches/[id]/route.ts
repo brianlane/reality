@@ -96,7 +96,12 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       outcome: body.outcome,
       notes: body.notes,
       contactExchanged: body.contactExchanged,
-      contactExchangedAt: body.contactExchanged ? new Date() : undefined,
+      contactExchangedAt:
+        body.contactExchanged !== undefined
+          ? body.contactExchanged
+            ? new Date()
+            : null
+          : undefined,
       compatibilityScore: body.compatibilityScore,
     },
   });

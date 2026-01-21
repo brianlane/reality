@@ -116,6 +116,15 @@ export async function POST(request: Request) {
     ]);
   }
 
+  // Validate that applicant and partner are different
+  if (body.applicantId === body.partnerId) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "Applicant and partner must be different users",
+      400,
+    );
+  }
+
   const [event, applicants] = await Promise.all([
     db.event.findFirst({
       where: { id: body.eventId, deletedAt: null },
