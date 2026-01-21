@@ -83,6 +83,44 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     email: auth.email,
   });
 
+  // Validate that email and clerkId are unique (excluding current user)
+  if (body.email !== undefined) {
+    const normalizedEmail = body.email.toLowerCase();
+    const emailExists = await db.user.findFirst({
+      where: {
+        email: normalizedEmail,
+        id: { not: id },
+        deletedAt: null,
+      },
+    });
+
+    if (emailExists) {
+      return errorResponse(
+        "CONFLICT",
+        `Email ${body.email} is already in use by another user`,
+        409,
+      );
+    }
+  }
+
+  if (body.clerkId !== undefined) {
+    const clerkIdExists = await db.user.findFirst({
+      where: {
+        clerkId: body.clerkId,
+        id: { not: id },
+        deletedAt: null,
+      },
+    });
+
+    if (clerkIdExists) {
+      return errorResponse(
+        "CONFLICT",
+        `ClerkId ${body.clerkId} is already in use by another user`,
+        409,
+      );
+    }
+  }
+
   const user = await db.user.update({
     where: { id },
     data: {

@@ -4,6 +4,7 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { adminQuestionnaireQuestionUpdateSchema } from "@/lib/validations";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 import { normalizeQuestionOptions } from "@/lib/questionnaire";
+import { Prisma } from "@prisma/client";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -107,7 +108,12 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       prompt: body.prompt,
       helperText: body.helperText ?? undefined,
       type: body.type,
-      options: optionsResult.value ?? undefined,
+      options:
+        body.options !== undefined
+          ? optionsResult.value === null
+            ? Prisma.JsonNull
+            : optionsResult.value
+          : undefined,
       isRequired: body.isRequired,
       order: body.order,
       isActive: body.isActive,
