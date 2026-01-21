@@ -98,6 +98,39 @@ export async function POST(request: Request) {
     email: auth.email,
   });
 
+  // Validate foreign key references before creating payment
+  const applicant = await db.applicant.findFirst({
+    where: {
+      id: body.applicantId,
+      deletedAt: null,
+    },
+  });
+
+  if (!applicant) {
+    return errorResponse(
+      "NOT_FOUND",
+      `Applicant with ID ${body.applicantId} not found`,
+      404,
+    );
+  }
+
+  if (body.eventId) {
+    const event = await db.event.findFirst({
+      where: {
+        id: body.eventId,
+        deletedAt: null,
+      },
+    });
+
+    if (!event) {
+      return errorResponse(
+        "NOT_FOUND",
+        `Event with ID ${body.eventId} not found`,
+        404,
+      );
+    }
+  }
+
   const payment = await db.payment.create({
     data: {
       applicantId: body.applicantId,
