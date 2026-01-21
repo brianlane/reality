@@ -24,6 +24,22 @@ export async function GET(request: Request) {
   const applicantId = url.searchParams.get("applicantId") ?? undefined;
   const includeDeleted = url.searchParams.get("includeDeleted") === "true";
 
+  // Validate pagination parameters
+  if (!Number.isInteger(page) || page < 1) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "Page must be a positive integer",
+      400,
+    );
+  }
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "Limit must be a positive integer between 1 and 100",
+      400,
+    );
+  }
+
   const where = {
     ...(type ? { type: type as never } : {}),
     ...(status ? { status: status as never } : {}),
