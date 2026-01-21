@@ -27,7 +27,15 @@ ALTER TABLE "User"
 
 ALTER TABLE "Applicant"
   ADD COLUMN "deletedAt" TIMESTAMP(3),
-  ADD COLUMN "deletedBy" TEXT;
+  ADD COLUMN "deletedBy" TEXT,
+  ADD COLUMN "stage1CompletedAt" TIMESTAMP(3),
+  ADD COLUMN "stage1Responses" JSONB,
+  ADD COLUMN "waitlistedAt" TIMESTAMP(3),
+  ADD COLUMN "waitlistReason" TEXT,
+  ADD COLUMN "waitlistPosition" INTEGER,
+  ADD COLUMN "invitedOffWaitlistAt" TIMESTAMP(3),
+  ADD COLUMN "invitedOffWaitlistBy" TEXT,
+  ADD COLUMN "waitlistInviteToken" TEXT;
 
 ALTER TABLE "Payment"
   ADD COLUMN "deletedAt" TIMESTAMP(3),
@@ -44,6 +52,7 @@ ALTER TABLE "Match"
 -- Soft delete indexes
 CREATE INDEX "User_deletedAt_idx" ON "User"("deletedAt");
 CREATE INDEX "Applicant_deletedAt_idx" ON "Applicant"("deletedAt");
+CREATE UNIQUE INDEX "Applicant_waitlistInviteToken_key" ON "Applicant"("waitlistInviteToken");
 CREATE INDEX "Payment_deletedAt_idx" ON "Payment"("deletedAt");
 CREATE INDEX "Event_deletedAt_idx" ON "Event"("deletedAt");
 CREATE INDEX "Match_deletedAt_idx" ON "Match"("deletedAt");
