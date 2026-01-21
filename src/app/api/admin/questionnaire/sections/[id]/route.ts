@@ -94,7 +94,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     where: { id },
     data: {
       title: body.title,
-      description: body.description ?? undefined,
+      description:
+        body.description === undefined ? undefined : body.description,
       order: body.order,
       isActive: body.isActive,
     },

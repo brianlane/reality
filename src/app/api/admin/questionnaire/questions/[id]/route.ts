@@ -106,7 +106,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     data: {
       sectionId: body.sectionId,
       prompt: body.prompt,
-      helperText: body.helperText ?? undefined,
+      helperText: body.helperText === undefined ? undefined : body.helperText,
       type: body.type,
       options:
         body.options !== undefined
