@@ -1,8 +1,9 @@
+import { ApplicationStatus } from "@prisma/client";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
-export async function GET() {
+export async function GET(request: Request) {
   const auth = await getAuthUser();
   if (!auth) {
     return errorResponse("UNAUTHORIZED", "User not authenticated", 401);
@@ -17,25 +18,40 @@ export async function GET() {
   }
 
   try {
-    const waitlistApplicants = await db.applicant.findMany({
-      where: {
-        applicationStatus: "WAITLIST",
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get("page") ?? "1");
+    const limit = Number(url.searchParams.get("limit") ?? "50");
+    const includeDeleted = url.searchParams.get("includeDeleted") === "true";
+
+    const where = {
+      applicationStatus: {
+        in: [ApplicationStatus.WAITLIST, ApplicationStatus.WAITLIST_INVITED],
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
+      ...(includeDeleted ? {} : { deletedAt: null }),
+    };
+
+    const [waitlistApplicants, total] = await Promise.all([
+      db.applicant.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+            },
           },
         },
-      },
-      orderBy: {
-        waitlistedAt: "asc", // FIFO - oldest first
-      },
-    });
+        orderBy: {
+          waitlistedAt: "asc", // FIFO - oldest first
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      db.applicant.count({ where }),
+    ]);
 
     const formattedApplicants = waitlistApplicants.map((applicant) => ({
       id: applicant.id,
@@ -53,6 +69,12 @@ export async function GET() {
     return successResponse({
       applicants: formattedApplicants,
       count: formattedApplicants.length,
+      pagination: {
+        total,
+        pages: Math.ceil(total / limit),
+        currentPage: page,
+        perPage: limit,
+      },
     });
   } catch (error) {
     console.error("Error fetching waitlist:", error);

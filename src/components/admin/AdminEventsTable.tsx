@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 
 type EventItem = {
@@ -10,11 +12,14 @@ type EventItem = {
   name: string;
   date: string;
   status: string;
+  capacity?: number;
 };
 
 export default function AdminEventsTable() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -27,7 +32,7 @@ export default function AdminEventsTable() {
           return;
         }
 
-        const res = await fetch("/api/admin/events", {
+        const res = await fetch(`/api/admin/events?page=${page}`, {
           headers,
           signal: controller.signal,
         });
@@ -37,6 +42,7 @@ export default function AdminEventsTable() {
           return;
         }
         setEvents(json.events ?? []);
+        setPages(json.pagination?.pages ?? 1);
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
           setError("Failed to load events.");
@@ -47,11 +53,19 @@ export default function AdminEventsTable() {
     loadEvents();
 
     return () => controller.abort();
-  }, []);
+  }, [page]);
 
   return (
     <Card>
-      <h2 className="text-lg font-semibold text-navy">Events</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-navy">Events</h2>
+        <Link
+          href="/admin/events/new"
+          className="text-xs font-semibold text-copper hover:underline"
+        >
+          New Event
+        </Link>
+      </div>
       {error ? (
         <p className="mt-2 text-sm text-red-600">{error}</p>
       ) : (
@@ -61,6 +75,7 @@ export default function AdminEventsTable() {
               <th className="py-2 text-left">Event</th>
               <th className="py-2 text-left">Date</th>
               <th className="py-2 text-left">Status</th>
+              <th className="py-2 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -71,11 +86,42 @@ export default function AdminEventsTable() {
                   {new Date(event.date).toLocaleDateString()}
                 </td>
                 <td className="py-2">{event.status}</td>
+                <td className="py-2">
+                  <Link
+                    href={`/admin/events/${event.id}`}
+                    className="text-xs font-medium text-copper hover:underline"
+                  >
+                    View
+                  </Link>
+                </td>
               </tr>
             ))}
           </tbody>
         </Table>
       )}
+      <div className="mt-4 flex items-center justify-between text-sm text-navy-soft">
+        <span>
+          Page {page} of {pages}
+        </span>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+            disabled={page <= 1}
+          >
+            Prev
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setPage((prev) => Math.min(pages, prev + 1))}
+            disabled={page >= pages}
+          >
+            Next
+          </Button>
+        </div>
+      </div>
     </Card>
   );
 }

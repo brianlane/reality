@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check if the applicant is still on the waitlist
-      if (invitedApplicant.applicationStatus !== "WAITLIST") {
+      if (invitedApplicant.applicationStatus !== "WAITLIST_INVITED") {
         return errorResponse(
           "ALREADY_USED",
           "This invitation has already been used.",
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
 
       // Check if user is on waitlist and needs invite token
       const isTransitioningFromWaitlist =
-        existingApplicant.applicationStatus === "WAITLIST";
+        existingApplicant.applicationStatus === "WAITLIST_INVITED";
 
       if (isTransitioningFromWaitlist) {
         if (
@@ -145,15 +145,12 @@ export async function POST(request: NextRequest) {
       ...demographics,
     };
 
-    // If transitioning from waitlist, also clear token fields and update status
+    // If transitioning from waitlist, update status to PAYMENT_PENDING (token kept until SUBMITTED)
     if (existingApplicant) {
       const isTransitioningFromWaitlist =
-        existingApplicant.applicationStatus === "WAITLIST";
+        existingApplicant.applicationStatus === "WAITLIST_INVITED";
       if (isTransitioningFromWaitlist) {
-        updateData.applicationStatus = "DRAFT";
-        updateData.waitlistInviteToken = null;
-        updateData.invitedOffWaitlistAt = null;
-        updateData.invitedOffWaitlistBy = null;
+        updateData.applicationStatus = "PAYMENT_PENDING";
       }
     }
 
@@ -166,7 +163,7 @@ export async function POST(request: NextRequest) {
           data: {
             userId: user.id,
             ...demographics,
-            applicationStatus: "DRAFT",
+            applicationStatus: "PAYMENT_PENDING",
             photos: [],
           },
         });

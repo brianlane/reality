@@ -5,7 +5,7 @@ export default function PaymentPage() {
     <section className="mx-auto w-full max-w-3xl px-6 py-16">
       <h1 className="text-3xl font-semibold text-navy">Payment</h1>
       <p className="mt-2 text-navy-soft">
-        Step 5 of 5: Application fee checkout (mocked in MVP).
+        Step 2 of 4: Application fee checkout (mocked in MVP).
       </p>
       <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 text-sm text-navy-soft">
         <p>Payment integration is stubbed for MVP testing.</p>

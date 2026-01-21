@@ -32,9 +32,7 @@ export async function POST(request: Request) {
         await db.applicant.update({
           where: { id: payment.applicantId },
           data: {
-            applicationStatus: "SUBMITTED",
-            submittedAt: new Date(),
-            screeningStatus: "IN_PROGRESS",
+            applicationStatus: "DRAFT",
           },
         });
       }

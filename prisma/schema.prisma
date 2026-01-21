@@ -29,12 +29,15 @@ model User {
   role          UserRole @default(APPLICANT)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+  deletedBy     String?
   
   applicant     Applicant?
   adminActions  AdminAction[]
   
   @@index([email])
   @@index([clerkId])
+  @@index([deletedAt])
 }
 
 // ============================================
@@ -49,6 +52,7 @@ enum ApplicationStatus {
   APPROVED
   REJECTED
   WAITLIST
+  WAITLIST_INVITED
 }
 
 enum Gender {
@@ -115,8 +119,11 @@ model Applicant {
   
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
+  deletedAt             DateTime?
+  deletedBy             String?
   
   questionnaire         Questionnaire?
+  questionnaireAnswers  QuestionnaireAnswer[]
   payments              Payment[]
   eventInvitations      EventInvitation[]
   matches               Match[]           @relation("ApplicantMatches")
@@ -126,6 +133,76 @@ model Applicant {
   @@index([gender])
   @@index([screeningStatus])
   @@index([compatibilityScore])
+  @@index([deletedAt])
+}
+
+enum QuestionnaireQuestionType {
+  TEXT
+  TEXTAREA
+  RICH_TEXT
+  DROPDOWN
+  RADIO_7
+  CHECKBOXES
+  NUMBER_SCALE
+}
+
+model QuestionnaireSection {
+  id          String                  @id @default(cuid())
+  title       String
+  description String?                 @db.Text
+  order       Int                     @default(0)
+  isActive    Boolean                 @default(true)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  deletedAt   DateTime?
+  deletedBy   String?
+
+  questions   QuestionnaireQuestion[]
+
+  @@index([order])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model QuestionnaireQuestion {
+  id         String                    @id @default(cuid())
+  sectionId  String
+  section    QuestionnaireSection      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  prompt     String
+  helperText String?
+  type       QuestionnaireQuestionType
+  options    Json?
+  isRequired Boolean                   @default(false)
+  order      Int                       @default(0)
+  isActive   Boolean                   @default(true)
+  createdAt  DateTime                  @default(now())
+  updatedAt  DateTime                  @updatedAt
+  deletedAt  DateTime?
+  deletedBy  String?
+
+  answers    QuestionnaireAnswer[]
+
+  @@index([sectionId])
+  @@index([type])
+  @@index([order])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model QuestionnaireAnswer {
+  id          String                @id @default(cuid())
+  applicantId String
+  applicant   Applicant             @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  questionId  String
+  question    QuestionnaireQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  value       Json?
+  richText    String?               @db.Text
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@unique([applicantId, questionId])
+  @@index([applicantId])
+  @@index([questionId])
 }
 
 model Questionnaire {
@@ -214,11 +291,14 @@ model Payment {
   
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
+  deletedAt         DateTime?
+  deletedBy         String?
   
   @@index([applicantId])
   @@index([type])
   @@index([status])
   @@index([stripePaymentId])
+  @@index([deletedAt])
 }
 
 // ============================================
@@ -255,13 +335,16 @@ model Event {
   // Revenue (in cents)
   expectedRevenue   Int
   actualRevenue     Int               @default(0)
-  
+  actualCost        Int               @default(0)
+
   // Notes
   notes             String?           @db.Text
   
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   createdBy         String            // Admin user ID
+  deletedAt         DateTime?
+  deletedBy         String?
   
   invitations       EventInvitation[]
   matches           Match[]
@@ -270,6 +353,7 @@ model Event {
   @@index([date])
   @@index([status])
   @@index([createdBy])
+  @@index([deletedAt])
 }
 
 enum InvitationStatus {
@@ -362,6 +446,8 @@ model Match {
   
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?
+  deletedBy       String?
   
   @@unique([eventId, applicantId, partnerId])
   @@index([eventId])
@@ -369,6 +455,7 @@ model Match {
   @@index([partnerId])
   @@index([outcome])
   @@index([type])
+  @@index([deletedAt])
 }
 
 // ============================================

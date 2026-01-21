@@ -33,8 +33,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if status is WAITLIST
-    if (applicant.applicationStatus !== "WAITLIST") {
+    // Check if status is WAITLIST_INVITED
+    if (applicant.applicationStatus !== "WAITLIST_INVITED") {
       return errorResponse(
         "ALREADY_USED",
         "This invitation has already been used",

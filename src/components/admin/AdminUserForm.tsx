@@ -1,0 +1,272 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+
+type AdminUserFormProps = {
+  userId?: string;
+  mode: "create" | "edit";
+};
+
+type UserDetail = {
+  id: string;
+  clerkId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  deletedAt: string | null;
+};
+
+export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
+  const [user, setUser] = useState<UserDetail | null>(null);
+  const [form, setForm] = useState({
+    clerkId: "",
+    email: "",
+    firstName: "",
+    lastName: "",
+    role: "APPLICANT",
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (mode !== "edit" || !userId) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadUser = async () => {
+      try {
+        const headers = await getAuthHeaders();
+        if (!headers) {
+          setError("Please sign in again.");
+          return;
+        }
+        const res = await fetch(
+          `/api/admin/users/${userId}?includeDeleted=true`,
+          {
+            headers,
+            signal: controller.signal,
+          },
+        );
+        const json = await res.json();
+        if (!res.ok || json?.error) {
+          setError("Failed to load user.");
+          return;
+        }
+        setUser(json.user);
+        setForm({
+          clerkId: json.user.clerkId ?? "",
+          email: json.user.email ?? "",
+          firstName: json.user.firstName ?? "",
+          lastName: json.user.lastName ?? "",
+          role: json.user.role ?? "APPLICANT",
+        });
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          setError("Failed to load user.");
+        }
+      }
+    };
+
+    loadUser();
+
+    return () => controller.abort();
+  }, [mode, userId]);
+
+  function updateField(name: string, value: string) {
+    setForm((prev) => ({ ...prev, [name]: value }));
+  }
+
+  async function handleSave() {
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError("Please sign in again.");
+        setIsLoading(false);
+        return;
+      }
+      const res = await fetch(
+        mode === "create" ? "/api/admin/users" : `/api/admin/users/${userId}`,
+        {
+          method: mode === "create" ? "POST" : "PATCH",
+          headers: {
+            ...headers,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(form),
+        },
+      );
+      const json = await res.json();
+      if (!res.ok || json?.error) {
+        setError("Failed to save user.");
+        setIsLoading(false);
+        return;
+      }
+      setSuccess("User saved.");
+      if (mode === "create") {
+        setForm({
+          clerkId: "",
+          email: "",
+          firstName: "",
+          lastName: "",
+          role: "APPLICANT",
+        });
+      }
+      setIsLoading(false);
+    } catch {
+      setError("Failed to save user.");
+      setIsLoading(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!userId) return;
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError("Please sign in again.");
+        setIsLoading(false);
+        return;
+      }
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+        headers,
+      });
+      const json = await res.json();
+      if (!res.ok || json?.error) {
+        setError("Failed to delete user.");
+        setIsLoading(false);
+        return;
+      }
+      setSuccess("User deleted.");
+      setUser((prev) =>
+        prev ? { ...prev, deletedAt: new Date().toISOString() } : prev,
+      );
+      setIsLoading(false);
+    } catch {
+      setError("Failed to delete user.");
+      setIsLoading(false);
+    }
+  }
+
+  async function handleRestore() {
+    if (!userId) return;
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError("Please sign in again.");
+        setIsLoading(false);
+        return;
+      }
+      const res = await fetch(`/api/admin/users/${userId}/restore`, {
+        method: "POST",
+        headers,
+      });
+      const json = await res.json();
+      if (!res.ok || json?.error) {
+        setError("Failed to restore user.");
+        setIsLoading(false);
+        return;
+      }
+      setSuccess("User restored.");
+      setUser((prev) => (prev ? { ...prev, deletedAt: null } : prev));
+      setIsLoading(false);
+    } catch {
+      setError("Failed to restore user.");
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <Card className="space-y-4">
+      {error ? (
+        <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+          {error}
+        </div>
+      ) : null}
+      {success ? (
+        <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">
+          {success}
+        </div>
+      ) : null}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Input
+          placeholder="Clerk ID"
+          value={form.clerkId}
+          onChange={(event) => updateField("clerkId", event.target.value)}
+        />
+        <Input
+          placeholder="Email"
+          value={form.email}
+          onChange={(event) => updateField("email", event.target.value)}
+        />
+        <Input
+          placeholder="First name"
+          value={form.firstName}
+          onChange={(event) => updateField("firstName", event.target.value)}
+        />
+        <Input
+          placeholder="Last name"
+          value={form.lastName}
+          onChange={(event) => updateField("lastName", event.target.value)}
+        />
+        <Select
+          value={form.role}
+          onChange={(event) => updateField("role", event.target.value)}
+        >
+          <option value="APPLICANT">Applicant</option>
+          <option value="ADMIN">Admin</option>
+        </Select>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          onClick={handleSave}
+          disabled={isLoading}
+          className="bg-copper hover:bg-copper/90"
+        >
+          {isLoading ? "Saving..." : "Save"}
+        </Button>
+        {mode === "edit" ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDelete}
+              disabled={isLoading}
+            >
+              Soft Delete
+            </Button>
+            {user?.deletedAt ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleRestore}
+                disabled={isLoading}
+              >
+                Restore
+              </Button>
+            ) : null}
+          </>
+        ) : null}
+      </div>
+    </Card>
+  );
+}

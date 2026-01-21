@@ -36,18 +36,21 @@ export async function POST(request: Request, { params }: RouteContext) {
     email: auth.email,
   });
 
-  const existing = await db.applicant.findUnique({
-    where: { id },
+  const existing = await db.applicant.findFirst({
+    where: { id, deletedAt: null },
     include: { user: true },
   });
   if (!existing) {
     return errorResponse("NOT_FOUND", "Applicant not found", 404);
   }
 
+  const waitlistStatuses = new Set<ApplicationStatus>([
+    ApplicationStatus.WAITLIST,
+    ApplicationStatus.WAITLIST_INVITED,
+  ]);
+  const isWaitlisted = waitlistStatuses.has(existing.applicationStatus);
   const enableWaitlist =
-    typeof body.enabled === "boolean"
-      ? body.enabled
-      : existing.applicationStatus !== "WAITLIST";
+    typeof body.enabled === "boolean" ? body.enabled : !isWaitlisted;
   let nextStatus: ApplicationStatus = ApplicationStatus.SUBMITTED;
 
   if (enableWaitlist) {
@@ -97,7 +100,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       applicationStatus: nextStatus,
       reviewedAt: new Date(),
       reviewedBy: adminUser.id,
-      backgroundCheckNotes: enableWaitlist ? body.reason : null,
+      waitlistReason: enableWaitlist ? body.reason : null,
     },
   });
 

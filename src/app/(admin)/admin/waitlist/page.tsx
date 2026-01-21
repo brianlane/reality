@@ -1,3 +1,4 @@
+import { ApplicationStatus } from "@prisma/client";
 import AdminWaitlistTable from "@/components/admin/AdminWaitlistTable";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -27,7 +28,13 @@ export default async function AdminWaitlistPage() {
       requireAdmin(auth.email);
       const waitlistApplicants = await db.applicant.findMany({
         where: {
-          applicationStatus: "WAITLIST",
+          applicationStatus: {
+            in: [
+              ApplicationStatus.WAITLIST,
+              ApplicationStatus.WAITLIST_INVITED,
+            ],
+          },
+          deletedAt: null,
         },
         include: {
           user: {

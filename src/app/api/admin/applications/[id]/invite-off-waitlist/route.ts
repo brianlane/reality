@@ -40,8 +40,10 @@ export async function POST(request: Request, { params }: RouteContext) {
       id,
       applicationStatus: "WAITLIST",
       invitedOffWaitlistAt: null,
+      deletedAt: null,
     },
     data: {
+      applicationStatus: "WAITLIST_INVITED",
       invitedOffWaitlistAt: new Date(),
       invitedOffWaitlistBy: adminUser.id,
       waitlistInviteToken: inviteToken,
@@ -49,12 +51,20 @@ export async function POST(request: Request, { params }: RouteContext) {
   });
 
   if (updateResult.count === 0) {
-    const existing = await db.applicant.findUnique({
-      where: { id },
+    const existing = await db.applicant.findFirst({
+      where: { id, deletedAt: null },
     });
 
     if (!existing) {
       return errorResponse("NOT_FOUND", "Applicant not found", 404);
+    }
+
+    if (existing.invitedOffWaitlistAt) {
+      return errorResponse(
+        "ALREADY_INVITED",
+        "Applicant has already been invited off the waitlist",
+        400,
+      );
     }
 
     if (existing.applicationStatus !== "WAITLIST") {
@@ -65,15 +75,12 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    return errorResponse(
-      "ALREADY_INVITED",
-      "Applicant has already been invited off the waitlist",
-      400,
-    );
+    // Should not reach here - updateMany failed for unknown reason
+    return errorResponse("UNKNOWN_ERROR", "Failed to invite applicant", 500);
   }
 
-  const applicant = await db.applicant.findUnique({
-    where: { id },
+  const applicant = await db.applicant.findFirst({
+    where: { id, deletedAt: null },
     include: {
       user: {
         select: {

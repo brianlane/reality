@@ -64,15 +64,12 @@ export default function ApplicationDraftForm() {
     }
 
     const data = await response.json();
-    if (typeof window !== "undefined" && inviteToken) {
-      localStorage.removeItem("waitlistInviteToken");
-    }
     updateDraft({
       applicationId: data.applicationId,
       demographics,
       ...applicant,
     });
-    router.push("/apply/questionnaire");
+    router.push("/apply/payment");
   }
 
   return (

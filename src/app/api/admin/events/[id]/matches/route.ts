@@ -42,7 +42,21 @@ export async function POST(request: Request, { params }: RouteContext) {
     email: auth.email,
   });
 
-  const event = await db.event.findUnique({ where: { id } });
+  // Validate that no match has the same applicant and partner
+  const selfMatch = body.matches.find(
+    (match) => match.applicantId === match.partnerId,
+  );
+  if (selfMatch) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "Applicant and partner must be different users in all matches",
+      400,
+    );
+  }
+
+  const event = await db.event.findFirst({
+    where: { id, deletedAt: null },
+  });
   if (!event) {
     return errorResponse("NOT_FOUND", "Event not found", 404);
   }

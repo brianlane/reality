@@ -35,7 +35,9 @@ export async function POST(request: Request, { params }: RouteContext) {
     email: auth.email,
   });
 
-  const existing = await db.event.findUnique({ where: { id } });
+  const existing = await db.event.findFirst({
+    where: { id, deletedAt: null },
+  });
   if (!existing) {
     return errorResponse("NOT_FOUND", "Event not found", 404);
   }
@@ -45,7 +47,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     data: {
       status: "COMPLETED",
       actualRevenue: body.actualRevenue ?? 0,
-      totalCost: body.actualCost ?? 0,
+      actualCost: body.actualCost ?? existing.totalCost,
       notes: body.notes,
     },
   });
@@ -61,12 +63,17 @@ export async function POST(request: Request, { params }: RouteContext) {
     },
   });
 
+  // Calculate actual profit
+  const actualProfit = event.actualRevenue - event.actualCost;
+
   return successResponse({
     event: {
       id: event.id,
       status: event.status,
       actualRevenue: event.actualRevenue,
-      actualProfit: event.actualRevenue - event.totalCost,
+      budgetedCost: event.totalCost,
+      actualCost: event.actualCost,
+      actualProfit,
       updatedAt: event.updatedAt,
     },
   });
