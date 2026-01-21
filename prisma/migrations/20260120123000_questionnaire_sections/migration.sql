@@ -98,8 +98,10 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1
-    FROM pg_constraint
-    WHERE conname = 'QuestionnaireQuestion_sectionId_fkey'
+    FROM pg_constraint c
+    JOIN pg_class t ON c.conrelid = t.oid
+    WHERE c.conname = 'QuestionnaireQuestion_sectionId_fkey'
+      AND t.relname = 'QuestionnaireQuestion'
   ) THEN
     ALTER TABLE "QuestionnaireQuestion"
       ADD CONSTRAINT "QuestionnaireQuestion_sectionId_fkey"
@@ -111,8 +113,10 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1
-    FROM pg_constraint
-    WHERE conname = 'QuestionnaireAnswer_applicantId_fkey'
+    FROM pg_constraint c
+    JOIN pg_class t ON c.conrelid = t.oid
+    WHERE c.conname = 'QuestionnaireAnswer_applicantId_fkey'
+      AND t.relname = 'QuestionnaireAnswer'
   ) THEN
     ALTER TABLE "QuestionnaireAnswer"
       ADD CONSTRAINT "QuestionnaireAnswer_applicantId_fkey"
@@ -124,8 +128,10 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1
-    FROM pg_constraint
-    WHERE conname = 'QuestionnaireAnswer_questionId_fkey'
+    FROM pg_constraint c
+    JOIN pg_class t ON c.conrelid = t.oid
+    WHERE c.conname = 'QuestionnaireAnswer_questionId_fkey'
+      AND t.relname = 'QuestionnaireAnswer'
   ) THEN
     ALTER TABLE "QuestionnaireAnswer"
       ADD CONSTRAINT "QuestionnaireAnswer_questionId_fkey"
