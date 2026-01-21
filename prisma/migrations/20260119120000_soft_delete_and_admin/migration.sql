@@ -20,39 +20,39 @@ BEGIN
   END IF;
 END $$;
 
--- Soft delete columns
+-- Soft delete columns (using IF NOT EXISTS to handle already existing columns)
 ALTER TABLE "User"
-  ADD COLUMN "deletedAt" TIMESTAMP(3),
-  ADD COLUMN "deletedBy" TEXT;
+  ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "deletedBy" TEXT;
 
 ALTER TABLE "Applicant"
-  ADD COLUMN "deletedAt" TIMESTAMP(3),
-  ADD COLUMN "deletedBy" TEXT,
-  ADD COLUMN "stage1CompletedAt" TIMESTAMP(3),
-  ADD COLUMN "stage1Responses" JSONB,
-  ADD COLUMN "waitlistedAt" TIMESTAMP(3),
-  ADD COLUMN "waitlistReason" TEXT,
-  ADD COLUMN "waitlistPosition" INTEGER,
-  ADD COLUMN "invitedOffWaitlistAt" TIMESTAMP(3),
-  ADD COLUMN "invitedOffWaitlistBy" TEXT,
-  ADD COLUMN "waitlistInviteToken" TEXT;
+  ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "deletedBy" TEXT,
+  ADD COLUMN IF NOT EXISTS "stage1CompletedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "stage1Responses" JSONB,
+  ADD COLUMN IF NOT EXISTS "waitlistedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "waitlistReason" TEXT,
+  ADD COLUMN IF NOT EXISTS "waitlistPosition" INTEGER,
+  ADD COLUMN IF NOT EXISTS "invitedOffWaitlistAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "invitedOffWaitlistBy" TEXT,
+  ADD COLUMN IF NOT EXISTS "waitlistInviteToken" TEXT;
 
 ALTER TABLE "Payment"
-  ADD COLUMN "deletedAt" TIMESTAMP(3),
-  ADD COLUMN "deletedBy" TEXT;
+  ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "deletedBy" TEXT;
 
 ALTER TABLE "Event"
-  ADD COLUMN "deletedAt" TIMESTAMP(3),
-  ADD COLUMN "deletedBy" TEXT;
+  ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "deletedBy" TEXT;
 
 ALTER TABLE "Match"
-  ADD COLUMN "deletedAt" TIMESTAMP(3),
-  ADD COLUMN "deletedBy" TEXT;
+  ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "deletedBy" TEXT;
 
--- Soft delete indexes
-CREATE INDEX "User_deletedAt_idx" ON "User"("deletedAt");
-CREATE INDEX "Applicant_deletedAt_idx" ON "Applicant"("deletedAt");
-CREATE UNIQUE INDEX "Applicant_waitlistInviteToken_key" ON "Applicant"("waitlistInviteToken");
-CREATE INDEX "Payment_deletedAt_idx" ON "Payment"("deletedAt");
-CREATE INDEX "Event_deletedAt_idx" ON "Event"("deletedAt");
-CREATE INDEX "Match_deletedAt_idx" ON "Match"("deletedAt");
+-- Soft delete indexes (using IF NOT EXISTS to handle already existing indexes)
+CREATE INDEX IF NOT EXISTS "User_deletedAt_idx" ON "User"("deletedAt");
+CREATE INDEX IF NOT EXISTS "Applicant_deletedAt_idx" ON "Applicant"("deletedAt");
+CREATE UNIQUE INDEX IF NOT EXISTS "Applicant_waitlistInviteToken_key" ON "Applicant"("waitlistInviteToken");
+CREATE INDEX IF NOT EXISTS "Payment_deletedAt_idx" ON "Payment"("deletedAt");
+CREATE INDEX IF NOT EXISTS "Event_deletedAt_idx" ON "Event"("deletedAt");
+CREATE INDEX IF NOT EXISTS "Match_deletedAt_idx" ON "Match"("deletedAt");

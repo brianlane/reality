@@ -32,7 +32,7 @@ BEGIN
 END $$;
 
 -- Create questionnaire sections table
-CREATE TABLE "QuestionnaireSection" (
+CREATE TABLE IF NOT EXISTS "QuestionnaireSection" (
   "id" TEXT NOT NULL,
   "title" TEXT NOT NULL,
   "description" TEXT,
@@ -47,7 +47,7 @@ CREATE TABLE "QuestionnaireSection" (
 );
 
 -- Create questionnaire questions table
-CREATE TABLE "QuestionnaireQuestion" (
+CREATE TABLE IF NOT EXISTS "QuestionnaireQuestion" (
   "id" TEXT NOT NULL,
   "sectionId" TEXT NOT NULL,
   "prompt" TEXT NOT NULL,
@@ -66,7 +66,7 @@ CREATE TABLE "QuestionnaireQuestion" (
 );
 
 -- Create questionnaire answers table
-CREATE TABLE "QuestionnaireAnswer" (
+CREATE TABLE IF NOT EXISTS "QuestionnaireAnswer" (
   "id" TEXT NOT NULL,
   "applicantId" TEXT NOT NULL,
   "questionId" TEXT NOT NULL,
@@ -79,29 +79,56 @@ CREATE TABLE "QuestionnaireAnswer" (
 );
 
 -- Indexes
-CREATE INDEX "QuestionnaireSection_order_idx" ON "QuestionnaireSection"("order");
-CREATE INDEX "QuestionnaireSection_isActive_idx" ON "QuestionnaireSection"("isActive");
-CREATE INDEX "QuestionnaireSection_deletedAt_idx" ON "QuestionnaireSection"("deletedAt");
+CREATE INDEX IF NOT EXISTS "QuestionnaireSection_order_idx" ON "QuestionnaireSection"("order");
+CREATE INDEX IF NOT EXISTS "QuestionnaireSection_isActive_idx" ON "QuestionnaireSection"("isActive");
+CREATE INDEX IF NOT EXISTS "QuestionnaireSection_deletedAt_idx" ON "QuestionnaireSection"("deletedAt");
 
-CREATE INDEX "QuestionnaireQuestion_sectionId_idx" ON "QuestionnaireQuestion"("sectionId");
-CREATE INDEX "QuestionnaireQuestion_type_idx" ON "QuestionnaireQuestion"("type");
-CREATE INDEX "QuestionnaireQuestion_order_idx" ON "QuestionnaireQuestion"("order");
-CREATE INDEX "QuestionnaireQuestion_isActive_idx" ON "QuestionnaireQuestion"("isActive");
-CREATE INDEX "QuestionnaireQuestion_deletedAt_idx" ON "QuestionnaireQuestion"("deletedAt");
+CREATE INDEX IF NOT EXISTS "QuestionnaireQuestion_sectionId_idx" ON "QuestionnaireQuestion"("sectionId");
+CREATE INDEX IF NOT EXISTS "QuestionnaireQuestion_type_idx" ON "QuestionnaireQuestion"("type");
+CREATE INDEX IF NOT EXISTS "QuestionnaireQuestion_order_idx" ON "QuestionnaireQuestion"("order");
+CREATE INDEX IF NOT EXISTS "QuestionnaireQuestion_isActive_idx" ON "QuestionnaireQuestion"("isActive");
+CREATE INDEX IF NOT EXISTS "QuestionnaireQuestion_deletedAt_idx" ON "QuestionnaireQuestion"("deletedAt");
 
-CREATE UNIQUE INDEX "QuestionnaireAnswer_applicantId_questionId_key" ON "QuestionnaireAnswer"("applicantId", "questionId");
-CREATE INDEX "QuestionnaireAnswer_applicantId_idx" ON "QuestionnaireAnswer"("applicantId");
-CREATE INDEX "QuestionnaireAnswer_questionId_idx" ON "QuestionnaireAnswer"("questionId");
+CREATE UNIQUE INDEX IF NOT EXISTS "QuestionnaireAnswer_applicantId_questionId_key" ON "QuestionnaireAnswer"("applicantId", "questionId");
+CREATE INDEX IF NOT EXISTS "QuestionnaireAnswer_applicantId_idx" ON "QuestionnaireAnswer"("applicantId");
+CREATE INDEX IF NOT EXISTS "QuestionnaireAnswer_questionId_idx" ON "QuestionnaireAnswer"("questionId");
 
--- Foreign keys
-ALTER TABLE "QuestionnaireQuestion"
-  ADD CONSTRAINT "QuestionnaireQuestion_sectionId_fkey"
-  FOREIGN KEY ("sectionId") REFERENCES "QuestionnaireSection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- Foreign keys (using DO blocks to add conditionally)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'QuestionnaireQuestion_sectionId_fkey'
+  ) THEN
+    ALTER TABLE "QuestionnaireQuestion"
+      ADD CONSTRAINT "QuestionnaireQuestion_sectionId_fkey"
+      FOREIGN KEY ("sectionId") REFERENCES "QuestionnaireSection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
-ALTER TABLE "QuestionnaireAnswer"
-  ADD CONSTRAINT "QuestionnaireAnswer_applicantId_fkey"
-  FOREIGN KEY ("applicantId") REFERENCES "Applicant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'QuestionnaireAnswer_applicantId_fkey'
+  ) THEN
+    ALTER TABLE "QuestionnaireAnswer"
+      ADD CONSTRAINT "QuestionnaireAnswer_applicantId_fkey"
+      FOREIGN KEY ("applicantId") REFERENCES "Applicant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
-ALTER TABLE "QuestionnaireAnswer"
-  ADD CONSTRAINT "QuestionnaireAnswer_questionId_fkey"
-  FOREIGN KEY ("questionId") REFERENCES "QuestionnaireQuestion"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'QuestionnaireAnswer_questionId_fkey'
+  ) THEN
+    ALTER TABLE "QuestionnaireAnswer"
+      ADD CONSTRAINT "QuestionnaireAnswer_questionId_fkey"
+      FOREIGN KEY ("questionId") REFERENCES "QuestionnaireQuestion"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
