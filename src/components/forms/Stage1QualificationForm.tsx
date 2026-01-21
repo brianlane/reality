@@ -20,18 +20,18 @@ type FieldErrors = {
 };
 
 const CITIES = [
-  "New York City",
-  "Los Angeles",
-  "Chicago",
-  "Dallas",
-  "Phoenix",
-  "San Francisco",
-  "Miami",
-  "Denver",
-  "Atlanta",
-  "Las Vegas",
-  "Seattle",
-  "Portland",
+  "New York City, NY",
+  "Los Angeles, CA",
+  "Chicago, IL",
+  "Dallas, TX",
+  "Phoenix, AZ",
+  "San Francisco, CA",
+  "Miami, FL",
+  "Denver, CO",
+  "Atlanta, GA",
+  "Las Vegas, NV",
+  "Seattle, WA",
+  "Portland, OR",
   "Other",
 ] as const;
 
@@ -132,6 +132,21 @@ export default function Stage1QualificationForm() {
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
+
+    // Handle location dropdown blur specially
+    if (name === "locationSelect") {
+      setTouched((prev) => new Set(prev).add("location"));
+      // Don't validate if "Other" is selected - wait for custom input
+      if (value !== "Other") {
+        const error = validateField("location", value);
+        setErrors((prev) => ({
+          ...prev,
+          location: error,
+        }));
+      }
+      return;
+    }
+
     setTouched((prev) => new Set(prev).add(name));
     const error = validateField(name, value);
     setErrors((prev) => ({
