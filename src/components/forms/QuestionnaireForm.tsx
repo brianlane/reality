@@ -224,6 +224,7 @@ export default function QuestionnaireForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         applicationId,
+        pageId: pages[currentPageIndex]?.id ?? undefined,
         answers: payloadAnswers,
       }),
     });

@@ -327,6 +327,7 @@ export const adminQuestionnaireQuestionUpdateSchema = z
 
 export const applicantQuestionnaireSubmitSchema = z.object({
   applicationId: z.string().min(1),
+  pageId: z.string().min(1).optional(),
   answers: z
     .array(
       z.object({

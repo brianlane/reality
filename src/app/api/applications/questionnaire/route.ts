@@ -151,6 +151,7 @@ export async function POST(request: NextRequest) {
   }
 
   const applicationId = body.applicationId;
+  const pageId = body.pageId;
   const access = await requireInvitedApplicant(applicationId);
   if ("error" in access) {
     return errorResponse("FORBIDDEN", access.error, 403);
@@ -179,7 +180,11 @@ export async function POST(request: NextRequest) {
       isRequired: true,
       deletedAt: null,
       isActive: true,
-      section: { deletedAt: null, isActive: true },
+      section: {
+        deletedAt: null,
+        isActive: true,
+        ...(pageId ? { pageId } : {}),
+      },
     },
     select: { id: true },
   });

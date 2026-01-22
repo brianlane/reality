@@ -44,6 +44,7 @@ export async function GET(request: Request, { params }: RouteContext) {
       description: section.description,
       order: section.order,
       isActive: section.isActive,
+      pageId: section.pageId,
       deletedAt: section.deletedAt,
       questions: section.questions.map((question) => ({
         id: question.id,

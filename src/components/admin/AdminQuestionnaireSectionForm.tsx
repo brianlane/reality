@@ -145,7 +145,7 @@ export default function AdminQuestionnaireSectionForm({
         description: form.description || null,
         order: Number(form.order || 0),
         isActive: form.isActive === "true",
-        pageId: form.pageId || null,
+        pageId: form.pageId || undefined,
       };
 
       const res = await fetch(
