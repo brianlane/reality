@@ -48,9 +48,14 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const access = await requireInvitedApplicant(applicationId);
-  if ("error" in access) {
-    return errorResponse("FORBIDDEN", access.error, 403);
+  // Allow preview mode to bypass applicant validation
+  const isPreviewMode = applicationId === "preview-mock-id";
+
+  if (!isPreviewMode) {
+    const access = await requireInvitedApplicant(applicationId);
+    if ("error" in access) {
+      return errorResponse("FORBIDDEN", access.error, 403);
+    }
   }
 
   const [sections, answers] = await Promise.all([
@@ -64,9 +69,12 @@ export async function GET(request: NextRequest) {
         },
       },
     }),
-    db.questionnaireAnswer.findMany({
-      where: { applicantId: applicationId },
-    }),
+    // For preview mode, skip fetching answers (there are none)
+    isPreviewMode
+      ? Promise.resolve([])
+      : db.questionnaireAnswer.findMany({
+          where: { applicantId: applicationId },
+        }),
   ]);
 
   const answerMap = answers.reduce<

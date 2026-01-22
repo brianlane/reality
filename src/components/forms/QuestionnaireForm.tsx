@@ -47,16 +47,30 @@ type AnswerState = {
   richText?: string | null;
 };
 
-export default function QuestionnaireForm() {
+export default function QuestionnaireForm({
+  previewMode = false,
+  mockSections,
+  mockAnswers,
+}: {
+  previewMode?: boolean;
+  mockSections?: Section[];
+  mockAnswers?: Record<string, AnswerState>;
+}) {
   const router = useRouter();
   const { draft, updateDraft } = useApplicationDraft();
-  const [sections, setSections] = useState<Section[]>([]);
-  const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
+  const [sections, setSections] = useState<Section[]>(mockSections ?? []);
+  const [answers, setAnswers] = useState<Record<string, AnswerState>>(
+    mockAnswers ?? {}
+  );
   const [status, setStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [applicationId, setApplicationId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (previewMode) {
+      // Skip localStorage checks in preview mode
+      return;
+    }
     if (draft.applicationId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- sync stored draft id
       setApplicationId(draft.applicationId);
@@ -69,9 +83,13 @@ export default function QuestionnaireForm() {
         updateDraft({ applicationId: storedId });
       }
     }
-  }, [draft.applicationId, updateDraft]);
+  }, [draft.applicationId, updateDraft, previewMode]);
 
   useEffect(() => {
+    if (previewMode) {
+      // Skip API call in preview mode - use mock data
+      return;
+    }
     if (!applicationId) {
       return;
     }
@@ -107,7 +125,7 @@ export default function QuestionnaireForm() {
     loadQuestions();
 
     return () => controller.abort();
-  }, [applicationId]);
+  }, [applicationId, previewMode]);
 
   const questionsBySection = useMemo(
     () => sections.filter((section) => section.questions.length > 0),
@@ -124,6 +142,11 @@ export default function QuestionnaireForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus(null);
+
+    if (previewMode) {
+      setStatus("Preview mode - form submission is disabled");
+      return;
+    }
 
     if (!applicationId) {
       setStatus("Please continue your application from your invite link.");
@@ -166,7 +189,7 @@ export default function QuestionnaireForm() {
     return <p className="text-sm text-navy-soft">Loading questionnaire...</p>;
   }
 
-  if (!applicationId) {
+  if (!previewMode && !applicationId) {
     return (
       <p className="text-sm text-navy-soft">
         Please use your invite link to continue the application.

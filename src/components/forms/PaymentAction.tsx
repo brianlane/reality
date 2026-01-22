@@ -4,11 +4,20 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useApplicationDraft } from "./useApplicationDraft";
 
-export default function PaymentAction() {
+export default function PaymentAction({
+  previewMode = false,
+}: {
+  previewMode?: boolean;
+}) {
   const { draft } = useApplicationDraft();
   const [status, setStatus] = useState<string | null>(null);
 
   async function handlePayment() {
+    if (previewMode) {
+      setStatus("Preview mode - payment processing is disabled");
+      return;
+    }
+
     if (!draft.applicationId) {
       setStatus("Complete the application first.");
       return;
