@@ -27,6 +27,7 @@ export default function AdminQuestionnairePagesTable() {
 
     const loadPages = async () => {
       try {
+        setError(null);
         const headers = await getAuthHeaders();
         if (!headers) {
           setError("Please sign in again.");

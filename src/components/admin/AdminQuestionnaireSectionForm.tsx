@@ -136,6 +136,11 @@ export default function AdminQuestionnaireSectionForm({
     setError(null);
     setSuccess(null);
     try {
+      if (!form.pageId) {
+        setError("Please select a page before saving the section.");
+        setIsLoading(false);
+        return;
+      }
       const headers = await getAuthHeaders();
       if (!headers) {
         setError("Please sign in again.");
