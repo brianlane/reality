@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Reality Matchmaking",
     description:
-      "",
+      "Private experiences designed for real connections to feel like matchmaking in reality.",
     url: "https://www.realitymatchmaking.com",
     siteName: "Reality Matchmaking",
     locale: "en_US",

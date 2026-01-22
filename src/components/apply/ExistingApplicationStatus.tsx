@@ -94,7 +94,9 @@ export default function ExistingApplicationStatus({ application }: Props) {
         <h1 className="text-3xl font-semibold text-navy">{content.title}</h1>
 
         {/* Description */}
-        <p className="text-lg text-navy-soft max-w-2xl">{content.description}</p>
+        <p className="text-lg text-navy-soft max-w-2xl">
+          {content.description}
+        </p>
 
         {/* Action Button */}
         <div className="pt-4">

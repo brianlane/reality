@@ -12,7 +12,11 @@ export default async function ApplyPage() {
   if (auth?.email) {
     const user = await db.user.findFirst({
       where: { email: { equals: auth.email, mode: "insensitive" } },
-      include: { applicant: true },
+      include: {
+        applicant: {
+          where: { deletedAt: null },
+        },
+      },
     });
 
     if (user?.applicant) {
