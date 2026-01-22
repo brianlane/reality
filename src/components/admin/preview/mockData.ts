@@ -18,6 +18,7 @@ export const mockDemographics = {
   employer: "Tech Corp",
   education: "Bachelor's Degree",
   incomeRange: "100k-200k",
+  seeking: "MALE",
   height: "5'6\"",
   bodyType: "Athletic",
   ethnicity: "Asian",

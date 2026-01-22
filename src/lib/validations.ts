@@ -23,6 +23,7 @@ export const stage1QualificationSchema = z.object({
 export const demographicsSchema = z.object({
   age: z.number().int().min(18).max(100),
   gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
+  seeking: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
   location: z.string().min(1),
   occupation: z.string().min(1),
   employer: z.string().optional().nullable(),

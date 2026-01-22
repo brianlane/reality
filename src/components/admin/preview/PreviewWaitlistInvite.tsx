@@ -31,7 +31,7 @@ export default function PreviewWaitlistInvite() {
             <li>Submit the application fee payment</li>
             <li>Answer the questionnaire</li>
             <li>Upload your photos</li>
-            <li>Review and submit your final application</li>
+            <li>Submit your final application</li>
           </ul>
         </div>
 

@@ -10,6 +10,7 @@ type DraftState = {
   phone?: string | null;
   age?: number;
   gender?: string;
+  seeking?: string;
   location?: string;
   occupation?: string;
   employer?: string | null;

@@ -186,28 +186,16 @@ export default function QuestionnaireForm({
     [sections],
   );
 
-  function updateAnswer(questionId: string, next: AnswerState) {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: next,
-    }));
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setStatus(null);
-
+  async function saveCurrentPageAnswers(): Promise<boolean> {
     if (previewMode) {
       setStatus("Preview mode - form submission is disabled");
-      return;
+      return false;
     }
-
     if (!applicationId) {
       setStatus("Please continue your application from your invite link.");
-      return;
+      return false;
     }
 
-    // Save current page answers
     const payloadAnswers = sections.flatMap((section) =>
       section.questions.map((question) => {
         const answer = answers[question.id] ?? { value: null, richText: null };
@@ -229,15 +217,33 @@ export default function QuestionnaireForm({
       }),
     });
 
-    if (!response.ok) {
-      const data = await response.json();
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data?.error) {
       setStatus(
         data?.error?.message ?? "Failed to save questionnaire answers.",
       );
-      return;
+      return false;
     }
 
     updateDraft({ questionnaire: answers });
+    return true;
+  }
+
+  function updateAnswer(questionId: string, next: AnswerState) {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: next,
+    }));
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus(null);
+
+    const saved = await saveCurrentPageAnswers();
+    if (!saved) {
+      return;
+    }
 
     // Check if this is the last page
     const isLastPage =
@@ -252,9 +258,6 @@ export default function QuestionnaireForm({
       const nextPageId = pages[nextPageIndex]?.id;
 
       if (nextPageId) {
-        setCurrentPageIndex(nextPageIndex);
-        updateDraft({ currentPageId: nextPageId });
-
         // Load next page sections
         setIsLoading(true);
         try {
@@ -262,9 +265,13 @@ export default function QuestionnaireForm({
             `/api/applications/questionnaire?applicationId=${applicationId}&pageId=${nextPageId}`,
           );
           const json = await res.json();
-          if (res.ok && !json?.error) {
-            setSections(json.sections ?? []);
+          if (!res.ok || json?.error) {
+            setStatus("Failed to load next page.");
+            return;
           }
+          setSections(json.sections ?? []);
+          setCurrentPageIndex(nextPageIndex);
+          updateDraft({ currentPageId: nextPageId });
         } catch {
           setStatus("Failed to load next page.");
         } finally {
@@ -284,8 +291,10 @@ export default function QuestionnaireForm({
     const prevPageId = pages[prevPageIndex]?.id;
 
     if (prevPageId) {
-      setCurrentPageIndex(prevPageIndex);
-      updateDraft({ currentPageId: prevPageId });
+      const saved = await saveCurrentPageAnswers();
+      if (!saved) {
+        return;
+      }
 
       // Load previous page sections
       setIsLoading(true);
@@ -294,9 +303,13 @@ export default function QuestionnaireForm({
           `/api/applications/questionnaire?applicationId=${applicationId}&pageId=${prevPageId}`,
         );
         const json = await res.json();
-        if (res.ok && !json?.error) {
-          setSections(json.sections ?? []);
+        if (!res.ok || json?.error) {
+          setStatus("Failed to load previous page.");
+          return;
         }
+        setSections(json.sections ?? []);
+        setCurrentPageIndex(prevPageIndex);
+        updateDraft({ currentPageId: prevPageId });
       } catch {
         setStatus("Failed to load previous page.");
       } finally {

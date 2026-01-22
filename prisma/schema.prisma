@@ -78,6 +78,7 @@ model Applicant {
   // Demographics
   age                   Int
   gender                Gender
+  seeking               Gender?
   location              String
   occupation            String
   employer              String?

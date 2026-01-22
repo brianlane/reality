@@ -37,6 +37,7 @@ export default function ApplicationDraftForm({
     const demographics = {
       age: Number(formData.get("age")),
       gender: formData.get("gender"),
+      seeking: formData.get("seeking"),
       location: formData.get("location"),
       occupation: formData.get("occupation"),
       employer: formData.get("employer") || null,
@@ -112,6 +113,26 @@ export default function ApplicationDraftForm({
             required
           />
         </div>
+      </div>
+      <div>
+        <label
+          htmlFor="seeking"
+          className="text-sm font-medium text-navy-muted"
+        >
+          Seeking
+        </label>
+        <Select
+          id="seeking"
+          name="seeking"
+          defaultValue={draft.seeking ?? ""}
+          required
+        >
+          <option value="">Select seeking preference</option>
+          <option value="MALE">Male</option>
+          <option value="FEMALE">Female</option>
+          <option value="NON_BINARY">Non-binary</option>
+          <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+        </Select>
       </div>
       <div>
         <label htmlFor="email" className="text-sm font-medium text-navy-muted">
