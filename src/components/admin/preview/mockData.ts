@@ -38,7 +38,10 @@ export const mockPhotos = [
 ];
 
 // Mock questionnaire answers for all question types
-export const mockQuestionnaireAnswers: Record<string, any> = {
+export const mockQuestionnaireAnswers: Record<
+  string,
+  { value: unknown; richText?: string }
+> = {
   text_answer: { value: "Sample text response" },
   textarea_answer: {
     value:

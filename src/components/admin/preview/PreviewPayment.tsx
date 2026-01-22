@@ -17,9 +17,7 @@ export default function PreviewPayment() {
 
       <div className="bg-white border rounded-lg p-6 space-y-4">
         <div className="space-y-3">
-          <h2 className="text-2xl font-semibold text-navy">
-            Application Fee
-          </h2>
+          <h2 className="text-2xl font-semibold text-navy">Application Fee</h2>
           <p className="text-navy-soft">
             To proceed with your application, please complete the payment below.
           </p>

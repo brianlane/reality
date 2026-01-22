@@ -9,9 +9,8 @@ type PreviewDraftContextType = {
   clearDraft: () => void;
 };
 
-const PreviewDraftContext = createContext<PreviewDraftContextType | null>(
-  null
-);
+export const PreviewDraftContext =
+  createContext<PreviewDraftContextType | null>(null);
 
 export function PreviewDraftProvider({ children }: { children: ReactNode }) {
   const draft = {
@@ -39,9 +38,7 @@ export function PreviewDraftProvider({ children }: { children: ReactNode }) {
 export function usePreviewDraft() {
   const context = useContext(PreviewDraftContext);
   if (!context) {
-    throw new Error(
-      "usePreviewDraft must be used within PreviewDraftProvider"
-    );
+    throw new Error("usePreviewDraft must be used within PreviewDraftProvider");
   }
   return context;
 }

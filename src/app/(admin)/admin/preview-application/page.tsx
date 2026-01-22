@@ -11,7 +11,7 @@ export default async function AdminPreviewApplicationPage() {
 
   try {
     requireAdmin(authUser.email);
-  } catch (error) {
+  } catch {
     return (
       <div className="text-center py-12">
         <h2 className="text-xl font-semibold text-red-600">Access Denied</h2>

@@ -48,8 +48,8 @@ export default function PreviewPhotos() {
         </div>
 
         <div className="bg-gray-50 rounded p-4 text-sm text-navy-soft">
-          <strong>Note:</strong> In the real application, photos are uploaded
-          to cloud storage and thumbnails are generated. The preview shows
+          <strong>Note:</strong> In the real application, photos are uploaded to
+          cloud storage and thumbnails are generated. The preview shows
           placeholder images.
         </div>
       </div>

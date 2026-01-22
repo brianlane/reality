@@ -7,6 +7,7 @@ import {
   QuestionnaireOptions,
   validateAnswerForQuestion,
 } from "@/lib/questionnaire";
+import { getAuthUser, requireAdmin } from "@/lib/auth";
 
 const ALLOWED_STATUSES: ApplicationStatus[] = [
   "WAITLIST_INVITED",
@@ -48,10 +49,22 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Allow preview mode to bypass applicant validation
+  // Allow preview mode to bypass applicant validation, but require admin auth
   const isPreviewMode = applicationId === "preview-mock-id";
 
-  if (!isPreviewMode) {
+  if (isPreviewMode) {
+    // Preview mode requires admin authentication
+    const auth = await getAuthUser();
+    if (!auth) {
+      return errorResponse("UNAUTHORIZED", "User not authenticated", 401);
+    }
+    try {
+      requireAdmin(auth.email);
+    } catch (error) {
+      return errorResponse("FORBIDDEN", (error as Error).message, 403);
+    }
+  } else {
+    // Regular mode requires invited applicant validation
     const access = await requireInvitedApplicant(applicationId);
     if ("error" in access) {
       return errorResponse("FORBIDDEN", access.error, 403);

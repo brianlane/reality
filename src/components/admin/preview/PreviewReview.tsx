@@ -26,9 +26,7 @@ export default function PreviewReview() {
 
         {/* Basic Information */}
         <div className="border-t pt-4 space-y-3">
-          <h3 className="text-lg font-semibold text-navy">
-            Basic Information
-          </h3>
+          <h3 className="text-lg font-semibold text-navy">Basic Information</h3>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-navy-muted">Name:</span>
@@ -131,7 +129,7 @@ export default function PreviewReview() {
           <Button
             onClick={() =>
               alert(
-                "Preview mode - final submission disabled. In real flow, this would submit the complete application for admin review."
+                "Preview mode - final submission disabled. In real flow, this would submit the complete application for admin review.",
               )
             }
             className="w-full"
@@ -146,8 +144,8 @@ export default function PreviewReview() {
 
         <div className="bg-gray-50 rounded p-4 text-sm text-navy-soft">
           <strong>Note:</strong> After submission, the application status
-          changes to "SUBMITTED" and the admin can review it in the dashboard.
-          The applicant receives a confirmation email.
+          changes to &ldquo;SUBMITTED&rdquo; and the admin can review it in the
+          dashboard. The applicant receives a confirmation email.
         </div>
       </div>
     </div>

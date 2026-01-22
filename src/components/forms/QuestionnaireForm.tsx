@@ -60,7 +60,7 @@ export default function QuestionnaireForm({
   const { draft, updateDraft } = useApplicationDraft();
   const [sections, setSections] = useState<Section[]>(mockSections ?? []);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>(
-    mockAnswers ?? {}
+    mockAnswers ?? {},
   );
   const [status, setStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
