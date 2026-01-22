@@ -23,6 +23,7 @@ export const stage1QualificationSchema = z.object({
 export const demographicsSchema = z.object({
   age: z.number().int().min(18).max(100),
   gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
+  seeking: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
   location: z.string().min(1),
   occupation: z.string().min(1),
   employer: z.string().optional().nullable(),
@@ -247,11 +248,21 @@ export const adminWaitlistUpdateSchema = z.object({
   waitlistPosition: z.number().int().min(1).optional().nullable(),
 });
 
+export const adminQuestionnairePageCreateSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().optional().nullable(),
+  order: z.number().int().min(0).optional(),
+});
+
+export const adminQuestionnairePageUpdateSchema =
+  adminQuestionnairePageCreateSchema.partial();
+
 export const adminQuestionnaireSectionCreateSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional().nullable(),
   order: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
+  pageId: z.string().min(1),
 });
 
 export const adminQuestionnaireSectionUpdateSchema =
@@ -317,6 +328,7 @@ export const adminQuestionnaireQuestionUpdateSchema = z
 
 export const applicantQuestionnaireSubmitSchema = z.object({
   applicationId: z.string().min(1),
+  pageId: z.string().min(1).optional(),
   answers: z
     .array(
       z.object({

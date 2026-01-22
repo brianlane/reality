@@ -7,6 +7,7 @@ import {
   QuestionnaireOptions,
   validateAnswerForQuestion,
 } from "@/lib/questionnaire";
+import { getAuthUser, requireAdmin } from "@/lib/auth";
 
 const ALLOWED_STATUSES: ApplicationStatus[] = [
   "WAITLIST_INVITED",
@@ -40,6 +41,8 @@ async function requireInvitedApplicant(
 
 export async function GET(request: NextRequest) {
   const applicationId = request.nextUrl.searchParams.get("applicationId") ?? "";
+  const pageId = request.nextUrl.searchParams.get("pageId");
+
   if (!applicationId) {
     return errorResponse(
       "MISSING_APPLICATION",
@@ -48,14 +51,40 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const access = await requireInvitedApplicant(applicationId);
-  if ("error" in access) {
-    return errorResponse("FORBIDDEN", access.error, 403);
+  // Allow preview mode to bypass applicant validation, but require admin auth
+  const isPreviewMode = applicationId === "preview-mock-id";
+
+  if (isPreviewMode) {
+    // Preview mode requires admin authentication
+    const auth = await getAuthUser();
+    if (!auth) {
+      return errorResponse("UNAUTHORIZED", "User not authenticated", 401);
+    }
+    try {
+      requireAdmin(auth.email);
+    } catch (error) {
+      return errorResponse("FORBIDDEN", (error as Error).message, 403);
+    }
+  } else {
+    // Regular mode requires invited applicant validation
+    const access = await requireInvitedApplicant(applicationId);
+    if ("error" in access) {
+      return errorResponse("FORBIDDEN", access.error, 403);
+    }
   }
 
-  const [sections, answers] = await Promise.all([
+  const [pages, sections, answers] = await Promise.all([
+    db.questionnairePage.findMany({
+      where: { deletedAt: null },
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      select: { id: true, title: true, order: true },
+    }),
     db.questionnaireSection.findMany({
-      where: { deletedAt: null, isActive: true },
+      where: {
+        deletedAt: null,
+        isActive: true,
+        ...(pageId ? { pageId } : {}),
+      },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       include: {
         questions: {
@@ -64,9 +93,12 @@ export async function GET(request: NextRequest) {
         },
       },
     }),
-    db.questionnaireAnswer.findMany({
-      where: { applicantId: applicationId },
-    }),
+    // For preview mode, skip fetching answers (there are none)
+    isPreviewMode
+      ? Promise.resolve([])
+      : db.questionnaireAnswer.findMany({
+          where: { applicantId: applicationId },
+        }),
   ]);
 
   const answerMap = answers.reduce<
@@ -96,6 +128,12 @@ export async function GET(request: NextRequest) {
       })),
     })),
     answers: answerMap,
+    pages: pages.map((page) => ({
+      id: page.id,
+      title: page.title,
+      order: page.order,
+    })),
+    currentPageId: pageId ?? undefined,
   });
 }
 
@@ -113,6 +151,7 @@ export async function POST(request: NextRequest) {
   }
 
   const applicationId = body.applicationId;
+  const pageId = body.pageId;
   const access = await requireInvitedApplicant(applicationId);
   if ("error" in access) {
     return errorResponse("FORBIDDEN", access.error, 403);
@@ -141,7 +180,11 @@ export async function POST(request: NextRequest) {
       isRequired: true,
       deletedAt: null,
       isActive: true,
-      section: { deletedAt: null, isActive: true },
+      section: {
+        deletedAt: null,
+        isActive: true,
+        ...(pageId ? { pageId } : {}),
+      },
     },
     select: { id: true },
   });

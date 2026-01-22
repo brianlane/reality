@@ -7,7 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useApplicationDraft } from "./useApplicationDraft";
 
-export default function ApplicationDraftForm() {
+export default function ApplicationDraftForm({
+  previewMode = false,
+}: {
+  previewMode?: boolean;
+}) {
   const router = useRouter();
   const { draft, updateDraft } = useApplicationDraft();
   const [status, setStatus] = useState<string | null>(null);
@@ -15,6 +19,11 @@ export default function ApplicationDraftForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus(null);
+
+    if (previewMode) {
+      setStatus("Preview mode - form submission is disabled");
+      return;
+    }
 
     const formData = new FormData(event.currentTarget);
     const applicant = {
@@ -28,6 +37,7 @@ export default function ApplicationDraftForm() {
     const demographics = {
       age: Number(formData.get("age")),
       gender: formData.get("gender"),
+      seeking: formData.get("seeking"),
       location: formData.get("location"),
       occupation: formData.get("occupation"),
       employer: formData.get("employer") || null,
@@ -105,6 +115,26 @@ export default function ApplicationDraftForm() {
         </div>
       </div>
       <div>
+        <label
+          htmlFor="seeking"
+          className="text-sm font-medium text-navy-muted"
+        >
+          Seeking
+        </label>
+        <Select
+          id="seeking"
+          name="seeking"
+          defaultValue={draft.seeking ?? ""}
+          required
+        >
+          <option value="">Select seeking preference</option>
+          <option value="MALE">Male</option>
+          <option value="FEMALE">Female</option>
+          <option value="NON_BINARY">Non-binary</option>
+          <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+        </Select>
+      </div>
+      <div>
         <label htmlFor="email" className="text-sm font-medium text-navy-muted">
           Email
         </label>
@@ -131,13 +161,26 @@ export default function ApplicationDraftForm() {
         <label htmlFor="age" className="text-sm font-medium text-navy-muted">
           Age
         </label>
-        <Input id="age" name="age" type="number" min={18} required />
+        <Input
+          id="age"
+          name="age"
+          type="number"
+          min={18}
+          defaultValue={draft.age ?? ""}
+          required
+        />
       </div>
       <div>
         <label htmlFor="gender" className="text-sm font-medium text-navy-muted">
           Gender
         </label>
-        <Select id="gender" name="gender" required>
+        <Select
+          id="gender"
+          name="gender"
+          defaultValue={draft.gender ?? ""}
+          required
+        >
+          <option value="">Select gender</option>
           <option value="MALE">Male</option>
           <option value="FEMALE">Female</option>
           <option value="NON_BINARY">Non-binary</option>
@@ -151,7 +194,12 @@ export default function ApplicationDraftForm() {
         >
           Location
         </label>
-        <Input id="location" name="location" required />
+        <Input
+          id="location"
+          name="location"
+          defaultValue={draft.location ?? ""}
+          required
+        />
       </div>
       <div>
         <label
@@ -160,16 +208,25 @@ export default function ApplicationDraftForm() {
         >
           Occupation
         </label>
-        <Input id="occupation" name="occupation" required />
+        <Input
+          id="occupation"
+          name="occupation"
+          defaultValue={draft.occupation ?? ""}
+          required
+        />
       </div>
       <div>
         <label
           htmlFor="employer"
           className="text-sm font-medium text-navy-muted"
         >
-          Employer
+          Career
         </label>
-        <Input id="employer" name="employer" />
+        <Input
+          id="employer"
+          name="employer"
+          defaultValue={draft.employer ?? ""}
+        />
       </div>
       <div>
         <label
@@ -178,16 +235,40 @@ export default function ApplicationDraftForm() {
         >
           Education
         </label>
-        <Input id="education" name="education" required />
+        <Input
+          id="education"
+          name="education"
+          defaultValue={draft.education ?? ""}
+          required
+        />
       </div>
       <div>
         <label
           htmlFor="incomeRange"
           className="text-sm font-medium text-navy-muted"
         >
-          Income Range
+          Select your current income range
         </label>
-        <Input id="incomeRange" name="incomeRange" required />
+        <Select
+          id="incomeRange"
+          name="incomeRange"
+          defaultValue={draft.incomeRange ?? ""}
+          required
+        >
+          <option value="">Select income range</option>
+          <option value="<100k">&lt;100k</option>
+          <option value="100k-200k">100k-200k</option>
+          <option value="200k-250k">200k-250k</option>
+          <option value="250k-300k">250k-300k</option>
+          <option value="300k-400k">300k-400k</option>
+          <option value="400k-500k">400k-500k</option>
+          <option value="500k-750k">500k-750k</option>
+          <option value="750K-1M">750K-1M</option>
+          <option value="1M+">1M+</option>
+          <option value="2M+">2M+</option>
+          <option value="5M+">5M+</option>
+          <option value="20M+">20M+</option>
+        </Select>
       </div>
       <Button type="submit">Save and continue</Button>
       {status && <p className="text-sm text-red-500">{status}</p>}

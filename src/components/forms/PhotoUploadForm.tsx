@@ -4,13 +4,22 @@ import { FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useApplicationDraft } from "./useApplicationDraft";
 
-export default function PhotoUploadForm() {
+export default function PhotoUploadForm({
+  previewMode = false,
+}: {
+  previewMode?: boolean;
+}) {
   const { draft, updateDraft } = useApplicationDraft();
   const [status, setStatus] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus(null);
+
+    if (previewMode) {
+      setStatus("Preview mode - photo upload is disabled");
+      return;
+    }
 
     if (!draft.applicationId) {
       setStatus("Complete previous steps first.");

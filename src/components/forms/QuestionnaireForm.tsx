@@ -47,18 +47,45 @@ type AnswerState = {
   richText?: string | null;
 };
 
-export default function QuestionnaireForm() {
+type PageInfo = {
+  id: string;
+  title: string;
+  order: number;
+};
+
+export default function QuestionnaireForm({
+  previewMode = false,
+  mockSections,
+  mockAnswers,
+}: {
+  previewMode?: boolean;
+  mockSections?: Section[];
+  mockAnswers?: Record<string, AnswerState>;
+}) {
   const router = useRouter();
   const { draft, updateDraft } = useApplicationDraft();
-  const [sections, setSections] = useState<Section[]>([]);
-  const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
+  const [sections, setSections] = useState<Section[]>(mockSections ?? []);
+  const [answers, setAnswers] = useState<Record<string, AnswerState>>(
+    mockAnswers ?? {},
+  );
+  const [pages, setPages] = useState<PageInfo[]>([]);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [status, setStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [applicationId, setApplicationId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!previewMode) return;
+    setSections(mockSections ?? []);
+    setAnswers(mockAnswers ?? {});
+  }, [previewMode, mockSections, mockAnswers]);
+
+  useEffect(() => {
+    if (previewMode) {
+      // Skip localStorage checks in preview mode
+      return;
+    }
     if (draft.applicationId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync stored draft id
       setApplicationId(draft.applicationId);
       return;
     }
@@ -69,17 +96,22 @@ export default function QuestionnaireForm() {
         updateDraft({ applicationId: storedId });
       }
     }
-  }, [draft.applicationId, updateDraft]);
+  }, [draft.applicationId, updateDraft, previewMode]);
 
   useEffect(() => {
+    if (previewMode) {
+      // Skip API call in preview mode - use mock data
+      return;
+    }
     if (!applicationId) {
       return;
     }
     const controller = new AbortController();
 
-    const loadQuestions = async () => {
+    const loadQuestionnaire = async () => {
       try {
         setIsLoading(true);
+        // First, fetch all pages and answers to determine current page
         const res = await fetch(
           `/api/applications/questionnaire?applicationId=${applicationId}`,
           { signal: controller.signal },
@@ -93,41 +125,78 @@ export default function QuestionnaireForm() {
           setIsLoading(false);
           return;
         }
-        setSections(json.sections ?? []);
+
+        const fetchedPages = json.pages ?? [];
+        setPages(fetchedPages);
         setAnswers(json.answers ?? {});
+
+        // Determine current page from draft or start at first page
+        const resumePageId = draft.currentPageId;
+        let pageIndex = 0;
+        let pageId: string | null = null;
+
+        if (resumePageId && fetchedPages.length > 0) {
+          const foundIndex = fetchedPages.findIndex(
+            (p: PageInfo) => p.id === resumePageId,
+          );
+          if (foundIndex !== -1) {
+            pageIndex = foundIndex;
+            pageId = resumePageId;
+          }
+        }
+
+        if (!pageId && fetchedPages.length > 0) {
+          pageIndex = 0;
+          pageId = fetchedPages[0].id;
+        }
+
+        setCurrentPageIndex(pageIndex);
+
+        // Now fetch sections for the current page
+        if (pageId) {
+          const sectionsRes = await fetch(
+            `/api/applications/questionnaire?applicationId=${applicationId}&pageId=${pageId}`,
+            { signal: controller.signal },
+          );
+          const sectionsJson = await sectionsRes.json();
+          if (!sectionsRes.ok || sectionsJson?.error) {
+            setStatus("Failed to load questionnaire sections.");
+            setIsLoading(false);
+            return;
+          }
+          setSections(sectionsJson.sections ?? []);
+        } else {
+          // No pages, fallback to all sections
+          setSections(json.sections ?? []);
+        }
+
         setIsLoading(false);
-      } catch (err) {
-        if ((err as Error).name !== "AbortError") {
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") {
           setStatus("Failed to load questionnaire.");
           setIsLoading(false);
         }
       }
     };
 
-    loadQuestions();
+    loadQuestionnaire();
 
     return () => controller.abort();
-  }, [applicationId]);
+  }, [applicationId, previewMode, draft.currentPageId]);
 
   const questionsBySection = useMemo(
     () => sections.filter((section) => section.questions.length > 0),
     [sections],
   );
 
-  function updateAnswer(questionId: string, next: AnswerState) {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: next,
-    }));
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setStatus(null);
-
+  async function saveCurrentPageAnswers(): Promise<boolean> {
+    if (previewMode) {
+      setStatus("Preview mode - form submission is disabled");
+      return false;
+    }
     if (!applicationId) {
       setStatus("Please continue your application from your invite link.");
-      return;
+      return false;
     }
 
     const payloadAnswers = sections.flatMap((section) =>
@@ -146,27 +215,128 @@ export default function QuestionnaireForm() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         applicationId,
+        pageId: pages[currentPageIndex]?.id ?? undefined,
         answers: payloadAnswers,
       }),
     });
 
-    if (!response.ok) {
-      const data = await response.json();
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data?.error) {
       setStatus(
         data?.error?.message ?? "Failed to save questionnaire answers.",
       );
-      return;
+      return false;
     }
 
     updateDraft({ questionnaire: answers });
-    router.push("/apply/photos");
+    return true;
+  }
+
+  function updateAnswer(questionId: string, next: AnswerState) {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: next,
+    }));
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus(null);
+
+    const saved = await saveCurrentPageAnswers();
+    if (!saved) {
+      return;
+    }
+
+    // Check if this is the last page
+    const isLastPage =
+      pages.length === 0 || currentPageIndex >= pages.length - 1;
+
+    if (isLastPage) {
+      // Navigate to photos page
+      router.push("/apply/photos");
+    } else {
+      // Move to next page
+      const nextPageIndex = currentPageIndex + 1;
+      const nextPageId = pages[nextPageIndex]?.id;
+
+      if (nextPageId) {
+        // Load next page sections
+        setIsLoading(true);
+        let nextLoaded = false;
+        try {
+          const res = await fetch(
+            `/api/applications/questionnaire?applicationId=${applicationId}&pageId=${nextPageId}`,
+          );
+          const json = await res.json();
+          if (!res.ok || json?.error) {
+            setStatus("Failed to load next page.");
+            return;
+          }
+          setSections(json.sections ?? []);
+          setCurrentPageIndex(nextPageIndex);
+          updateDraft({ currentPageId: nextPageId });
+          nextLoaded = true;
+        } catch {
+          setStatus("Failed to load next page.");
+        } finally {
+          setIsLoading(false);
+        }
+
+        if (nextLoaded) {
+          // Scroll to top
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      }
+    }
+  }
+
+  async function handlePrevious() {
+    if (currentPageIndex <= 0 || pages.length === 0) return;
+
+    const prevPageIndex = currentPageIndex - 1;
+    const prevPageId = pages[prevPageIndex]?.id;
+
+    if (prevPageId) {
+      const saved = await saveCurrentPageAnswers();
+      if (!saved) {
+        return;
+      }
+
+      // Load previous page sections
+      setIsLoading(true);
+      let prevLoaded = false;
+      try {
+        const res = await fetch(
+          `/api/applications/questionnaire?applicationId=${applicationId}&pageId=${prevPageId}`,
+        );
+        const json = await res.json();
+        if (!res.ok || json?.error) {
+          setStatus("Failed to load previous page.");
+          return;
+        }
+        setSections(json.sections ?? []);
+        setCurrentPageIndex(prevPageIndex);
+        updateDraft({ currentPageId: prevPageId });
+        prevLoaded = true;
+      } catch {
+        setStatus("Failed to load previous page.");
+      } finally {
+        setIsLoading(false);
+      }
+
+      if (prevLoaded) {
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }
   }
 
   if (isLoading) {
     return <p className="text-sm text-navy-soft">Loading questionnaire...</p>;
   }
 
-  if (!applicationId) {
+  if (!previewMode && !applicationId) {
     return (
       <p className="text-sm text-navy-soft">
         Please use your invite link to continue the application.
@@ -184,6 +354,24 @@ export default function QuestionnaireForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+      {!previewMode && pages.length > 0 && (
+        <div className="rounded-md bg-slate-50 p-4">
+          <div className="text-sm font-medium text-navy">
+            Page {currentPageIndex + 1} of {pages.length}
+          </div>
+          <div className="mt-2 text-xs text-navy-soft">
+            {pages[currentPageIndex]?.title}
+          </div>
+          <div className="mt-3 h-2 w-full rounded-full bg-slate-200">
+            <div
+              className="h-2 rounded-full bg-copper transition-all"
+              style={{
+                width: `${((currentPageIndex + 1) / pages.length) * 100}%`,
+              }}
+            />
+          </div>
+        </div>
+      )}
       {questionsBySection.map((section) => (
         <div key={section.id} className="space-y-4">
           <div>
@@ -416,7 +604,22 @@ export default function QuestionnaireForm() {
           })}
         </div>
       ))}
-      <Button type="submit">Save and continue</Button>
+      {previewMode ? (
+        <Button type="submit">Save and Continue</Button>
+      ) : (
+        <div className="flex items-center justify-between">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handlePrevious}
+            disabled={currentPageIndex === 0 || pages.length === 0}
+          >
+            Previous
+          </Button>
+
+          <Button type="submit">Save and Continue</Button>
+        </div>
+      )}
       {status && <p className="text-sm text-red-500">{status}</p>}
     </form>
   );

@@ -35,7 +35,11 @@ const CITIES = [
   "Other",
 ] as const;
 
-export default function Stage1QualificationForm() {
+export default function Stage1QualificationForm({
+  previewMode = false,
+}: {
+  previewMode?: boolean;
+}) {
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -164,6 +168,11 @@ export default function Stage1QualificationForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus(null);
+
+    if (previewMode) {
+      setStatus("Preview mode - form submission is disabled");
+      return;
+    }
 
     const formData = new FormData(event.currentTarget);
     const locationSelect = String(formData.get("locationSelect") ?? "").trim();

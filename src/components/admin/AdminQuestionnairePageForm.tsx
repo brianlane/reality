@@ -4,90 +4,41 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 
-type AdminQuestionnaireSectionFormProps = {
-  sectionId?: string;
+type AdminQuestionnairePageFormProps = {
+  pageId?: string;
   mode: "create" | "edit";
 };
 
-type SectionDetail = {
+type PageDetail = {
   id: string;
   title: string;
   description: string | null;
   order: number;
-  isActive: boolean;
   deletedAt: string | null;
-  pageId: string | null;
 };
 
-type PageItem = {
-  id: string;
-  title: string;
-};
-
-export default function AdminQuestionnaireSectionForm({
-  sectionId,
+export default function AdminQuestionnairePageForm({
+  pageId,
   mode,
-}: AdminQuestionnaireSectionFormProps) {
-  const [section, setSection] = useState<SectionDetail | null>(null);
-  const [pages, setPages] = useState<PageItem[]>([]);
+}: AdminQuestionnairePageFormProps) {
+  const [page, setPage] = useState<PageDetail | null>(null);
   const [form, setForm] = useState({
     title: "",
     description: "",
     order: "0",
-    isActive: "true",
-    pageId: "",
   });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    if (mode !== "edit" || !pageId) return;
     const controller = new AbortController();
 
-    const loadPages = async () => {
-      try {
-        const headers = await getAuthHeaders();
-        if (!headers) return;
-        const res = await fetch("/api/admin/questionnaire/pages?limit=100", {
-          headers,
-          signal: controller.signal,
-        });
-        const json = await res.json();
-        if (res.ok && !json?.error) {
-          const loadedPages = json.pages ?? [];
-          setPages(loadedPages);
-
-          // For create mode, auto-select the first page
-          if (mode === "create" && loadedPages.length > 0) {
-            setForm((prev) => {
-              if (prev.pageId) {
-                return prev;
-              }
-              return { ...prev, pageId: loadedPages[0].id };
-            });
-          }
-        }
-      } catch (err) {
-        if ((err as Error).name !== "AbortError") {
-          console.error("Failed to load pages:", err);
-        }
-      }
-    };
-
-    loadPages();
-
-    return () => controller.abort();
-  }, [mode]);
-
-  useEffect(() => {
-    if (mode !== "edit" || !sectionId) return;
-    const controller = new AbortController();
-
-    const loadSection = async () => {
+    const loadPage = async () => {
       try {
         const headers = await getAuthHeaders();
         if (!headers) {
@@ -95,7 +46,7 @@ export default function AdminQuestionnaireSectionForm({
           return;
         }
         const res = await fetch(
-          `/api/admin/questionnaire/sections/${sectionId}?includeDeleted=true`,
+          `/api/admin/questionnaire/pages/${pageId}?includeDeleted=true`,
           {
             headers,
             signal: controller.signal,
@@ -103,29 +54,27 @@ export default function AdminQuestionnaireSectionForm({
         );
         const json = await res.json();
         if (!res.ok || json?.error) {
-          setError("Failed to load section.");
+          setError("Failed to load page.");
           return;
         }
-        const loaded = json.section as SectionDetail;
-        setSection(loaded);
+        const loaded = json.page as PageDetail;
+        setPage(loaded);
         setForm({
           title: loaded.title ?? "",
           description: loaded.description ?? "",
           order: String(loaded.order ?? 0),
-          isActive: loaded.isActive ? "true" : "false",
-          pageId: loaded.pageId ?? "",
         });
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
-          setError("Failed to load section.");
+          setError("Failed to load page.");
         }
       }
     };
 
-    loadSection();
+    loadPage();
 
     return () => controller.abort();
-  }, [mode, sectionId]);
+  }, [mode, pageId]);
 
   function updateField(name: string, value: string) {
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -136,11 +85,6 @@ export default function AdminQuestionnaireSectionForm({
     setError(null);
     setSuccess(null);
     try {
-      if (!form.pageId) {
-        setError("Please select a page before saving the section.");
-        setIsLoading(false);
-        return;
-      }
       const headers = await getAuthHeaders();
       if (!headers) {
         setError("Please sign in again.");
@@ -151,14 +95,12 @@ export default function AdminQuestionnaireSectionForm({
         title: form.title,
         description: form.description || null,
         order: Number(form.order || 0),
-        isActive: form.isActive === "true",
-        pageId: form.pageId || undefined,
       };
 
       const res = await fetch(
         mode === "create"
-          ? "/api/admin/questionnaire/sections"
-          : `/api/admin/questionnaire/sections/${sectionId}`,
+          ? "/api/admin/questionnaire/pages"
+          : `/api/admin/questionnaire/pages/${pageId}`,
         {
           method: mode === "create" ? "POST" : "PATCH",
           headers: {
@@ -170,20 +112,20 @@ export default function AdminQuestionnaireSectionForm({
       );
       const json = await res.json();
       if (!res.ok || json?.error) {
-        setError("Failed to save section.");
+        setError("Failed to save page.");
         setIsLoading(false);
         return;
       }
-      setSuccess("Section saved.");
+      setSuccess("Page saved.");
       setIsLoading(false);
     } catch {
-      setError("Failed to save section.");
+      setError("Failed to save page.");
       setIsLoading(false);
     }
   }
 
   async function handleDelete() {
-    if (!sectionId) return;
+    if (!pageId) return;
     setIsLoading(true);
     setError(null);
     setSuccess(null);
@@ -194,26 +136,23 @@ export default function AdminQuestionnaireSectionForm({
         setIsLoading(false);
         return;
       }
-      const res = await fetch(
-        `/api/admin/questionnaire/sections/${sectionId}`,
-        {
-          method: "DELETE",
-          headers,
-        },
-      );
+      const res = await fetch(`/api/admin/questionnaire/pages/${pageId}`, {
+        method: "DELETE",
+        headers,
+      });
       const json = await res.json();
       if (!res.ok || json?.error) {
-        setError("Failed to delete section.");
+        setError("Failed to delete page.");
         setIsLoading(false);
         return;
       }
-      setSuccess("Section deleted.");
-      setSection((prev) =>
+      setSuccess("Page deleted.");
+      setPage((prev) =>
         prev ? { ...prev, deletedAt: new Date().toISOString() } : prev,
       );
       setIsLoading(false);
     } catch {
-      setError("Failed to delete section.");
+      setError("Failed to delete page.");
       setIsLoading(false);
     }
   }
@@ -232,7 +171,7 @@ export default function AdminQuestionnaireSectionForm({
       ) : null}
       <div className="grid gap-4 md:grid-cols-2">
         <Input
-          placeholder="Section title"
+          placeholder="Page title"
           value={form.title}
           onChange={(event) => updateField("title", event.target.value)}
         />
@@ -242,24 +181,6 @@ export default function AdminQuestionnaireSectionForm({
           value={form.order}
           onChange={(event) => updateField("order", event.target.value)}
         />
-        <Select
-          value={form.isActive}
-          onChange={(event) => updateField("isActive", event.target.value)}
-        >
-          <option value="true">Active</option>
-          <option value="false">Inactive</option>
-        </Select>
-        <Select
-          value={form.pageId}
-          onChange={(event) => updateField("pageId", event.target.value)}
-        >
-          <option value="">Select a page</option>
-          {pages.map((page) => (
-            <option key={page.id} value={page.id}>
-              {page.title}
-            </option>
-          ))}
-        </Select>
       </div>
       <div className="space-y-2">
         <label className="text-xs font-semibold text-navy-soft">
@@ -284,7 +205,7 @@ export default function AdminQuestionnaireSectionForm({
             type="button"
             variant="outline"
             onClick={handleDelete}
-            disabled={isLoading || !!section?.deletedAt}
+            disabled={isLoading || !!page?.deletedAt}
           >
             Soft Delete
           </Button>

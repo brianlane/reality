@@ -1,7 +1,7 @@
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
-import { adminQuestionnaireSectionCreateSchema } from "@/lib/validations";
+import { adminQuestionnairePageCreateSchema } from "@/lib/validations";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 
 export async function GET(request: Request) {
@@ -19,35 +19,32 @@ export async function GET(request: Request) {
   const page = Number(url.searchParams.get("page") ?? "1");
   const limit = Number(url.searchParams.get("limit") ?? "50");
   const includeDeleted = url.searchParams.get("includeDeleted") === "true";
-  const pageId = url.searchParams.get("pageId");
 
   const where = {
     ...(includeDeleted ? {} : { deletedAt: null }),
-    ...(pageId ? { pageId } : {}),
   };
 
-  const [sections, total] = await Promise.all([
-    db.questionnaireSection.findMany({
+  const [pages, total] = await Promise.all([
+    db.questionnairePage.findMany({
       where,
       include: {
-        _count: { select: { questions: { where: { deletedAt: null } } } },
+        _count: { select: { sections: { where: { deletedAt: null } } } },
       },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       skip: (page - 1) * limit,
       take: limit,
     }),
-    db.questionnaireSection.count({ where }),
+    db.questionnairePage.count({ where }),
   ]);
 
   return successResponse({
-    sections: sections.map((section) => ({
-      id: section.id,
-      title: section.title,
-      description: section.description,
-      order: section.order,
-      isActive: section.isActive,
-      deletedAt: section.deletedAt,
-      questionCount: section._count.questions,
+    pages: pages.map((page) => ({
+      id: page.id,
+      title: page.title,
+      description: page.description,
+      order: page.order,
+      deletedAt: page.deletedAt,
+      sectionCount: page._count.sections,
     })),
     pagination: {
       total,
@@ -72,9 +69,9 @@ export async function POST(request: Request) {
     return errorResponse("FORBIDDEN", (error as Error).message, 403);
   }
 
-  let body: ReturnType<typeof adminQuestionnaireSectionCreateSchema.parse>;
+  let body: ReturnType<typeof adminQuestionnairePageCreateSchema.parse>;
   try {
-    body = adminQuestionnaireSectionCreateSchema.parse(await request.json());
+    body = adminQuestionnairePageCreateSchema.parse(await request.json());
   } catch (error) {
     return errorResponse("VALIDATION_ERROR", "Invalid request body", 400, [
       { message: (error as Error).message },
@@ -83,15 +80,13 @@ export async function POST(request: Request) {
 
   await getOrCreateAdminUser({ userId: auth.userId, email: auth.email });
 
-  const section = await db.questionnaireSection.create({
+  const page = await db.questionnairePage.create({
     data: {
       title: body.title,
       description: body.description ?? null,
       order: body.order ?? 0,
-      isActive: body.isActive ?? true,
-      pageId: body.pageId ?? null,
     },
   });
 
-  return successResponse({ section });
+  return successResponse({ page });
 }
