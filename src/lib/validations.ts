@@ -247,11 +247,21 @@ export const adminWaitlistUpdateSchema = z.object({
   waitlistPosition: z.number().int().min(1).optional().nullable(),
 });
 
+export const adminQuestionnairePageCreateSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().optional().nullable(),
+  order: z.number().int().min(0).optional(),
+});
+
+export const adminQuestionnairePageUpdateSchema =
+  adminQuestionnairePageCreateSchema.partial();
+
 export const adminQuestionnaireSectionCreateSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional().nullable(),
   order: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
+  pageId: z.string().min(1),
 });
 
 export const adminQuestionnaireSectionUpdateSchema =

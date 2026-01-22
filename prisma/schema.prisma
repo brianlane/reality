@@ -147,6 +147,22 @@ enum QuestionnaireQuestionType {
   NUMBER_SCALE
 }
 
+model QuestionnairePage {
+  id          String                  @id @default(cuid())
+  title       String
+  description String?                 @db.Text
+  order       Int                     @default(0)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  deletedAt   DateTime?
+  deletedBy   String?
+
+  sections    QuestionnaireSection[]
+
+  @@index([order])
+  @@index([deletedAt])
+}
+
 model QuestionnaireSection {
   id          String                  @id @default(cuid())
   title       String
@@ -157,12 +173,15 @@ model QuestionnaireSection {
   updatedAt   DateTime                @updatedAt
   deletedAt   DateTime?
   deletedBy   String?
+  pageId      String?
 
+  page        QuestionnairePage?      @relation(fields: [pageId], references: [id], onDelete: Cascade)
   questions   QuestionnaireQuestion[]
 
   @@index([order])
   @@index([isActive])
   @@index([deletedAt])
+  @@index([pageId])
 }
 
 model QuestionnaireQuestion {

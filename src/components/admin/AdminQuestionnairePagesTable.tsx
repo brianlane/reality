@@ -7,32 +7,25 @@ import { Table } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 
-type SectionItem = {
+type PageItem = {
   id: string;
   title: string;
   description: string | null;
   order: number;
-  isActive: boolean;
   deletedAt: string | null;
-  questionCount: number;
+  sectionCount: number;
 };
 
-type AdminQuestionnaireSectionsTableProps = {
-  pageId?: string;
-};
-
-export default function AdminQuestionnaireSectionsTable({
-  pageId,
-}: AdminQuestionnaireSectionsTableProps = {}) {
-  const [sections, setSections] = useState<SectionItem[]>([]);
+export default function AdminQuestionnairePagesTable() {
+  const [pages, setPages] = useState<PageItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [pages, setPages] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     const controller = new AbortController();
 
-    const loadSections = async () => {
+    const loadPages = async () => {
       try {
         const headers = await getAuthHeaders();
         if (!headers) {
@@ -40,42 +33,38 @@ export default function AdminQuestionnaireSectionsTable({
           return;
         }
 
-        const url = pageId
-          ? `/api/admin/questionnaire/sections?page=${page}&pageId=${pageId}`
-          : `/api/admin/questionnaire/sections?page=${page}`;
-
-        const res = await fetch(url, {
+        const res = await fetch(`/api/admin/questionnaire/pages?page=${page}`, {
           headers,
           signal: controller.signal,
         });
         const json = await res.json();
         if (!res.ok || json?.error) {
-          setError("Failed to load sections.");
+          setError("Failed to load pages.");
           return;
         }
-        setSections(json.sections ?? []);
-        setPages(json.pagination?.pages ?? 1);
+        setPages(json.pages ?? []);
+        setTotalPages(json.pagination?.pages ?? 1);
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
-          setError("Failed to load sections.");
+          setError("Failed to load pages.");
         }
       }
     };
 
-    loadSections();
+    loadPages();
 
     return () => controller.abort();
-  }, [page, pageId]);
+  }, [page]);
 
   return (
     <Card>
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-navy">Sections</h2>
+        <h2 className="text-lg font-semibold text-navy">Pages</h2>
         <Link
-          href="/admin/questionnaire/sections/new"
+          href="/admin/questionnaire/pages/new"
           className="text-xs font-semibold text-copper hover:underline"
         >
-          New Section
+          New Page
         </Link>
       </div>
       {error ? (
@@ -86,23 +75,19 @@ export default function AdminQuestionnaireSectionsTable({
             <tr className="border-b text-xs uppercase text-slate-400">
               <th className="py-2 text-left">Title</th>
               <th className="py-2 text-left">Order</th>
-              <th className="py-2 text-left">Questions</th>
-              <th className="py-2 text-left">Status</th>
+              <th className="py-2 text-left">Sections</th>
               <th className="py-2 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {sections.map((section) => (
-              <tr key={section.id} className="border-b text-sm text-navy-soft">
-                <td className="py-2">{section.title}</td>
-                <td className="py-2">{section.order}</td>
-                <td className="py-2">{section.questionCount}</td>
-                <td className="py-2">
-                  {section.isActive ? "Active" : "Inactive"}
-                </td>
+            {pages.map((pageItem) => (
+              <tr key={pageItem.id} className="border-b text-sm text-navy-soft">
+                <td className="py-2">{pageItem.title}</td>
+                <td className="py-2">{pageItem.order}</td>
+                <td className="py-2">{pageItem.sectionCount}</td>
                 <td className="py-2">
                   <Link
-                    href={`/admin/questionnaire/sections/${section.id}`}
+                    href={`/admin/questionnaire/pages/${pageItem.id}`}
                     className="text-xs font-medium text-copper hover:underline"
                   >
                     View
@@ -115,7 +100,7 @@ export default function AdminQuestionnaireSectionsTable({
       )}
       <div className="mt-4 flex items-center justify-between text-sm text-navy-soft">
         <span>
-          Page {page} of {pages}
+          Page {page} of {totalPages}
         </span>
         <div className="flex gap-2">
           <Button
@@ -129,8 +114,8 @@ export default function AdminQuestionnaireSectionsTable({
           <Button
             type="button"
             variant="outline"
-            onClick={() => setPage((prev) => Math.min(pages, prev + 1))}
-            disabled={page >= pages}
+            onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={page >= totalPages}
           >
             Next
           </Button>

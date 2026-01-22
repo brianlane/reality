@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import QuestionnaireForm from "@/components/forms/QuestionnaireForm";
 import { MOCK_APPLICATION_ID } from "./mockData";
 import { PreviewDraftProvider } from "./PreviewDraftProvider";
@@ -40,36 +40,147 @@ type Section = {
   questions: Question[];
 };
 
+type PageInfo = {
+  id: string;
+  title: string;
+  order: number;
+};
+
 export default function PreviewQuestionnaire() {
-  const [sections, setSections] = useState<Section[]>([]);
+  const [allSections, setAllSections] = useState<Section[]>([]);
+  const [pages, setPages] = useState<PageInfo[]>([]);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const sectionsCache = useRef<Map<string, Section[]>>(new Map());
 
   useEffect(() => {
+    const controller = new AbortController();
+    let isMounted = true;
+
     const loadQuestionnaire = async () => {
       try {
-        setLoading(true);
+        if (isMounted) {
+          setLoading(true);
+        }
         const res = await fetch(
           `/api/applications/questionnaire?applicationId=${MOCK_APPLICATION_ID}`,
+          { signal: controller.signal },
         );
         const json = await res.json();
 
         if (!res.ok || json?.error) {
-          setError("No questionnaire configured yet");
-          setLoading(false);
+          if (isMounted) {
+            setError("No questionnaire configured yet");
+            setLoading(false);
+          }
           return;
         }
 
-        setSections(json.sections ?? []);
-        setLoading(false);
-      } catch {
-        setError("Failed to load questionnaire");
-        setLoading(false);
+        const pagesData = json.pages ?? [];
+        if (isMounted) {
+          setPages(pagesData);
+        }
+
+        if (pagesData.length === 0) {
+          if (isMounted) {
+            setAllSections(json.sections ?? []);
+            setLoading(false);
+          }
+          return;
+        }
+
+        const pageResults = await Promise.all(
+          pagesData.map(async (page: PageInfo) => {
+            const res = await fetch(
+              `/api/applications/questionnaire?applicationId=${MOCK_APPLICATION_ID}&pageId=${page.id}`,
+              { signal: controller.signal },
+            );
+            const pageJson = await res.json();
+            return {
+              pageId: page.id,
+              sections:
+                res.ok && !pageJson?.error ? (pageJson.sections ?? []) : [],
+            };
+          }),
+        );
+
+        if (isMounted) {
+          pageResults.forEach(({ pageId, sections }) => {
+            sectionsCache.current.set(pageId, sections);
+          });
+        }
+
+        const firstPageId = pagesData[0]?.id;
+        if (isMounted) {
+          setAllSections(
+            firstPageId ? (sectionsCache.current.get(firstPageId) ?? []) : [],
+          );
+          setLoading(false);
+        }
+      } catch (error) {
+        if ((error as Error).name === "AbortError") {
+          return;
+        }
+        if (isMounted) {
+          setError("Failed to load questionnaire");
+          setLoading(false);
+        }
       }
     };
 
     loadQuestionnaire();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
   }, []);
+
+  // Load sections when page changes
+  useEffect(() => {
+    if (pages.length === 0 || currentPageIndex >= pages.length) return;
+
+    const controller = new AbortController();
+    let isMounted = true;
+
+    const loadPageSections = async () => {
+      try {
+        const pageId = pages[currentPageIndex].id;
+        const cached = sectionsCache.current.get(pageId);
+        if (cached) {
+          if (isMounted) {
+            setAllSections(cached);
+          }
+          return;
+        }
+        const res = await fetch(
+          `/api/applications/questionnaire?applicationId=${MOCK_APPLICATION_ID}&pageId=${pageId}`,
+          { signal: controller.signal },
+        );
+        const json = await res.json();
+        if (res.ok && !json?.error) {
+          const nextSections = json.sections ?? [];
+          sectionsCache.current.set(pageId, nextSections);
+          if (isMounted) {
+            setAllSections(nextSections);
+          }
+        }
+      } catch (error) {
+        if ((error as Error).name === "AbortError") {
+          return;
+        }
+        console.error("Failed to load page sections:", error);
+      }
+    };
+
+    loadPageSections();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [currentPageIndex, pages]);
 
   if (loading) {
     return (
@@ -84,7 +195,9 @@ export default function PreviewQuestionnaire() {
     );
   }
 
-  if (error || !sections || sections.length === 0) {
+  const sections = allSections;
+
+  if (error || sections.length === 0) {
     return (
       <div className="space-y-4">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -114,6 +227,18 @@ export default function PreviewQuestionnaire() {
     (acc, s) => acc + (s.questions?.length ?? 0),
     0,
   );
+
+  const handleNextPage = () => {
+    if (currentPageIndex < pages.length - 1) {
+      setCurrentPageIndex(currentPageIndex + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPageIndex > 0) {
+      setCurrentPageIndex(currentPageIndex - 1);
+    }
+  };
 
   // Generate mock answers based on actual question IDs and types
   const generatedMockAnswers: Record<
@@ -185,6 +310,45 @@ export default function PreviewQuestionnaire() {
           Showing {sections.length} section(s) with {totalQuestions} question(s)
         </p>
       </div>
+
+      {pages.length > 0 && (
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-navy">
+                Page {currentPageIndex + 1} of {pages.length}
+              </div>
+              <div className="text-xs text-navy-soft mt-1">
+                {pages[currentPageIndex]?.title}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handlePrevPage}
+                disabled={currentPageIndex === 0}
+                className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPageIndex >= pages.length - 1}
+                className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+          <div className="mt-3 h-2 w-full rounded-full bg-slate-200">
+            <div
+              className="h-2 rounded-full bg-copper transition-all"
+              style={{
+                width: `${((currentPageIndex + 1) / pages.length) * 100}%`,
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       <PreviewDraftProvider>
         <QuestionnaireForm

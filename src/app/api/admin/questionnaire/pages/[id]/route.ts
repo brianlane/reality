@@ -1,7 +1,7 @@
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
-import { adminQuestionnaireSectionUpdateSchema } from "@/lib/validations";
+import { adminQuestionnairePageUpdateSchema } from "@/lib/validations";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 
 type RouteContext = {
@@ -23,37 +23,34 @@ export async function GET(request: Request, { params }: RouteContext) {
   const includeDeleted =
     new URL(request.url).searchParams.get("includeDeleted") === "true";
 
-  const section = await db.questionnaireSection.findFirst({
+  const page = await db.questionnairePage.findFirst({
     where: { id, ...(includeDeleted ? {} : { deletedAt: null }) },
     include: {
-      questions: {
+      sections: {
         where: includeDeleted ? {} : { deletedAt: null },
         orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       },
     },
   });
 
-  if (!section) {
-    return errorResponse("NOT_FOUND", "Section not found", 404);
+  if (!page) {
+    return errorResponse("NOT_FOUND", "Page not found", 404);
   }
 
   return successResponse({
-    section: {
-      id: section.id,
-      title: section.title,
-      description: section.description,
-      order: section.order,
-      isActive: section.isActive,
-      deletedAt: section.deletedAt,
-      questions: section.questions.map((question) => ({
-        id: question.id,
-        prompt: question.prompt,
-        helperText: question.helperText,
-        type: question.type,
-        order: question.order,
-        isRequired: question.isRequired,
-        isActive: question.isActive,
-        deletedAt: question.deletedAt,
+    page: {
+      id: page.id,
+      title: page.title,
+      description: page.description,
+      order: page.order,
+      deletedAt: page.deletedAt,
+      sections: page.sections.map((section) => ({
+        id: section.id,
+        title: section.title,
+        description: section.description,
+        order: section.order,
+        isActive: section.isActive,
+        deletedAt: section.deletedAt,
       })),
     },
   });
@@ -74,35 +71,33 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     return errorResponse("FORBIDDEN", (error as Error).message, 403);
   }
 
-  let body: ReturnType<typeof adminQuestionnaireSectionUpdateSchema.parse>;
+  let body: ReturnType<typeof adminQuestionnairePageUpdateSchema.parse>;
   try {
-    body = adminQuestionnaireSectionUpdateSchema.parse(await request.json());
+    body = adminQuestionnairePageUpdateSchema.parse(await request.json());
   } catch (error) {
     return errorResponse("VALIDATION_ERROR", "Invalid request body", 400, [
       { message: (error as Error).message },
     ]);
   }
 
-  const existing = await db.questionnaireSection.findUnique({ where: { id } });
+  const existing = await db.questionnairePage.findUnique({ where: { id } });
   if (!existing) {
-    return errorResponse("NOT_FOUND", "Section not found", 404);
+    return errorResponse("NOT_FOUND", "Page not found", 404);
   }
 
   await getOrCreateAdminUser({ userId: auth.userId, email: auth.email });
 
-  const section = await db.questionnaireSection.update({
+  const page = await db.questionnairePage.update({
     where: { id },
     data: {
       title: body.title,
       description:
         body.description === undefined ? undefined : body.description,
       order: body.order,
-      isActive: body.isActive,
-      pageId: body.pageId === undefined ? undefined : body.pageId,
     },
   });
 
-  return successResponse({ section });
+  return successResponse({ page });
 }
 
 export async function DELETE(_: Request, { params }: RouteContext) {
@@ -120,9 +115,9 @@ export async function DELETE(_: Request, { params }: RouteContext) {
     return errorResponse("FORBIDDEN", (error as Error).message, 403);
   }
 
-  const existing = await db.questionnaireSection.findUnique({ where: { id } });
+  const existing = await db.questionnairePage.findUnique({ where: { id } });
   if (!existing) {
-    return errorResponse("NOT_FOUND", "Section not found", 404);
+    return errorResponse("NOT_FOUND", "Page not found", 404);
   }
 
   const adminUser = await getOrCreateAdminUser({
@@ -130,7 +125,7 @@ export async function DELETE(_: Request, { params }: RouteContext) {
     email: auth.email,
   });
 
-  const section = await db.questionnaireSection.update({
+  const page = await db.questionnairePage.update({
     where: { id },
     data: {
       deletedAt: new Date(),
@@ -138,5 +133,5 @@ export async function DELETE(_: Request, { params }: RouteContext) {
     },
   });
 
-  return successResponse({ section });
+  return successResponse({ page });
 }

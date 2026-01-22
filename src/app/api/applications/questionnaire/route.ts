@@ -41,6 +41,8 @@ async function requireInvitedApplicant(
 
 export async function GET(request: NextRequest) {
   const applicationId = request.nextUrl.searchParams.get("applicationId") ?? "";
+  const pageId = request.nextUrl.searchParams.get("pageId");
+
   if (!applicationId) {
     return errorResponse(
       "MISSING_APPLICATION",
@@ -71,9 +73,18 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const [sections, answers] = await Promise.all([
+  const [pages, sections, answers] = await Promise.all([
+    db.questionnairePage.findMany({
+      where: { deletedAt: null },
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      select: { id: true, title: true, order: true },
+    }),
     db.questionnaireSection.findMany({
-      where: { deletedAt: null, isActive: true },
+      where: {
+        deletedAt: null,
+        isActive: true,
+        ...(pageId ? { pageId } : {}),
+      },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       include: {
         questions: {
@@ -117,6 +128,12 @@ export async function GET(request: NextRequest) {
       })),
     })),
     answers: answerMap,
+    pages: pages.map((page) => ({
+      id: page.id,
+      title: page.title,
+      order: page.order,
+    })),
+    currentPageId: pageId ?? undefined,
   });
 }
 

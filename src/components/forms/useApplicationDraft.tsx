@@ -30,6 +30,8 @@ type DraftState = {
   demographics?: Record<string, unknown>;
   questionnaire?: Record<string, unknown>;
   photos?: string[];
+  currentPageId?: string;
+  completedPageIds?: string[];
 };
 
 const STORAGE_KEY = "reality-application-draft";
