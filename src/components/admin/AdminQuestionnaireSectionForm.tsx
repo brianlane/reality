@@ -248,6 +248,7 @@ export default function AdminQuestionnaireSectionForm({
           value={form.pageId}
           onChange={(event) => updateField("pageId", event.target.value)}
         >
+          <option value="">Select a page</option>
           {pages.map((page) => (
             <option key={page.id} value={page.id}>
               {page.title}

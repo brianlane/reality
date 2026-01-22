@@ -208,7 +208,12 @@ export default function ApplicationDraftForm({
         >
           Occupation
         </label>
-        <Input id="occupation" name="occupation" required />
+        <Input
+          id="occupation"
+          name="occupation"
+          defaultValue={draft.occupation ?? ""}
+          required
+        />
       </div>
       <div>
         <label
@@ -217,7 +222,11 @@ export default function ApplicationDraftForm({
         >
           Career
         </label>
-        <Input id="employer" name="employer" />
+        <Input
+          id="employer"
+          name="employer"
+          defaultValue={draft.employer ?? ""}
+        />
       </div>
       <div>
         <label
@@ -226,7 +235,12 @@ export default function ApplicationDraftForm({
         >
           Education
         </label>
-        <Input id="education" name="education" required />
+        <Input
+          id="education"
+          name="education"
+          defaultValue={draft.education ?? ""}
+          required
+        />
       </div>
       <div>
         <label
@@ -235,7 +249,12 @@ export default function ApplicationDraftForm({
         >
           Select your current income range
         </label>
-        <Select id="incomeRange" name="incomeRange" required>
+        <Select
+          id="incomeRange"
+          name="incomeRange"
+          defaultValue={draft.incomeRange ?? ""}
+          required
+        >
           <option value="">Select income range</option>
           <option value="<100k">&lt;100k</option>
           <option value="100k-200k">100k-200k</option>
