@@ -26,18 +26,8 @@ export async function GET(request: Request) {
   const sortBy = url.searchParams.get("sortBy") ?? "submittedAt";
   const sortOrder = url.searchParams.get("sortOrder") ?? "desc";
 
-  const waitlistStatuses: ApplicationStatus[] = [
-    "WAITLIST",
-    "WAITLIST_INVITED",
-  ];
   const where = {
-    ...(status
-      ? { applicationStatus: status as never }
-      : {
-          applicationStatus: {
-            notIn: waitlistStatuses,
-          },
-        }),
+    ...(status ? { applicationStatus: status as never } : {}),
     ...(gender ? { gender: gender as never } : {}),
     ...(screeningStatus ? { screeningStatus: screeningStatus as never } : {}),
     ...(includeDeleted ? {} : { deletedAt: null }),

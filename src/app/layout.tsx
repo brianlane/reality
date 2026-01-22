@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Reality Matchmaking",
     description:
-      "Private experiences designed for real connections to feel like matchmaking in reality.",
+      "",
     url: "https://www.realitymatchmaking.com",
     siteName: "Reality Matchmaking",
     locale: "en_US",
@@ -42,8 +42,40 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "ProfessionalService",
+    name: "Reality Matchmaking",
+    description:
+      "Private experiences designed for real connections to feel like matchmaking in reality.",
+    url: "https://www.realitymatchmaking.com",
+    serviceType: "Matchmaking Service",
+    areaServed: {
+      "@type": "Country",
+      name: "United States",
+    },
+    additionalType: "https://schema.org/Service",
+    potentialAction: {
+      "@type": "ReserveAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: "https://www.realitymatchmaking.com/apply",
+        actionPlatform: [
+          "http://schema.org/DesktopWebPlatform",
+          "http://schema.org/MobileWebPlatform",
+        ],
+      },
+    },
+  };
+
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
