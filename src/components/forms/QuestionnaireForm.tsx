@@ -159,9 +159,12 @@ export default function QuestionnaireForm({
             { signal: controller.signal },
           );
           const sectionsJson = await sectionsRes.json();
-          if (sectionsRes.ok && !sectionsJson?.error) {
-            setSections(sectionsJson.sections ?? []);
+          if (!sectionsRes.ok || sectionsJson?.error) {
+            setStatus("Failed to load questionnaire sections.");
+            setIsLoading(false);
+            return;
           }
+          setSections(sectionsJson.sections ?? []);
         } else {
           // No pages, fallback to all sections
           setSections(json.sections ?? []);
@@ -260,6 +263,7 @@ export default function QuestionnaireForm({
       if (nextPageId) {
         // Load next page sections
         setIsLoading(true);
+        let nextLoaded = false;
         try {
           const res = await fetch(
             `/api/applications/questionnaire?applicationId=${applicationId}&pageId=${nextPageId}`,
@@ -272,14 +276,17 @@ export default function QuestionnaireForm({
           setSections(json.sections ?? []);
           setCurrentPageIndex(nextPageIndex);
           updateDraft({ currentPageId: nextPageId });
+          nextLoaded = true;
         } catch {
           setStatus("Failed to load next page.");
         } finally {
           setIsLoading(false);
         }
 
-        // Scroll to top
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        if (nextLoaded) {
+          // Scroll to top
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
       }
     }
   }
@@ -298,6 +305,7 @@ export default function QuestionnaireForm({
 
       // Load previous page sections
       setIsLoading(true);
+      let prevLoaded = false;
       try {
         const res = await fetch(
           `/api/applications/questionnaire?applicationId=${applicationId}&pageId=${prevPageId}`,
@@ -310,14 +318,17 @@ export default function QuestionnaireForm({
         setSections(json.sections ?? []);
         setCurrentPageIndex(prevPageIndex);
         updateDraft({ currentPageId: prevPageId });
+        prevLoaded = true;
       } catch {
         setStatus("Failed to load previous page.");
       } finally {
         setIsLoading(false);
       }
 
-      // Scroll to top
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (prevLoaded) {
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     }
   }
 

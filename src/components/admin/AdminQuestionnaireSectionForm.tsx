@@ -62,11 +62,13 @@ export default function AdminQuestionnaireSectionForm({
           setPages(loadedPages);
 
           // For create mode, auto-select the first page
-          if (mode === "create" && loadedPages.length > 0 && !form.pageId) {
-            setForm((prev) => ({
-              ...prev,
-              pageId: loadedPages[0].id,
-            }));
+          if (mode === "create" && loadedPages.length > 0) {
+            setForm((prev) => {
+              if (prev.pageId) {
+                return prev;
+              }
+              return { ...prev, pageId: loadedPages[0].id };
+            });
           }
         }
       } catch (err) {
@@ -79,7 +81,7 @@ export default function AdminQuestionnaireSectionForm({
     loadPages();
 
     return () => controller.abort();
-  }, [mode, form.pageId]);
+  }, [mode]);
 
   useEffect(() => {
     if (mode !== "edit" || !sectionId) return;
