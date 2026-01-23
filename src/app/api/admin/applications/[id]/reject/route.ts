@@ -43,20 +43,22 @@ export async function POST(request: Request, { params }: RouteContext) {
   const applicant = await db.applicant.update({
     where: { id },
     data: {
-      applicationStatus: "REJECTED",
+      softRejectedAt: new Date(),
+      softRejectedFromStatus:
+        existing.softRejectedFromStatus ?? existing.applicationStatus,
       reviewedAt: new Date(),
       reviewedBy: adminUser.id,
-      rejectionReason: body.reason ?? "Rejected",
+      rejectionReason: body.reason ?? "Soft rejected",
     },
   });
 
   await db.adminAction.create({
     data: {
       userId: adminUser.id,
-      type: "REJECT_APPLICATION",
+      type: "MANUAL_ADJUSTMENT",
       targetId: applicant.id,
       targetType: "applicant",
-      description: "Rejected applicant",
+      description: "Soft rejected applicant",
       metadata: { reason: body.reason },
     },
   });

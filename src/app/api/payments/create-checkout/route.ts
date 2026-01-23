@@ -12,6 +12,23 @@ export async function POST(request: Request) {
 
   const amount = type === "EVENT_FEE" ? 74900 : 19900;
 
+  if (type === "APPLICATION_FEE") {
+    const applicant = await db.applicant.findUnique({
+      where: { id: applicantId },
+      select: { softRejectedAt: true },
+    });
+    if (!applicant) {
+      return errorResponse("NOT_FOUND", "Application not found", 404);
+    }
+    if (applicant.softRejectedAt) {
+      return errorResponse(
+        "APPLICATION_LOCKED",
+        "Application can no longer be paid.",
+        403,
+      );
+    }
+  }
+
   const payment = await db.payment.create({
     data: {
       applicantId,

@@ -26,10 +26,14 @@ export default function AdminApplicationForm({
     age: "",
     gender: "MALE",
     location: "",
+    cityFrom: "",
+    industry: "",
     occupation: "",
     employer: "",
     education: "",
     incomeRange: "",
+    referredBy: "",
+    aboutYourself: "",
     applicationStatus: "SUBMITTED",
     screeningStatus: "PENDING",
     compatibilityScore: "",
@@ -68,10 +72,14 @@ export default function AdminApplicationForm({
           age: String(json.applicant.age ?? ""),
           gender: json.applicant.gender ?? "MALE",
           location: json.applicant.location ?? "",
+          cityFrom: json.applicant.cityFrom ?? "",
+          industry: json.applicant.industry ?? "",
           occupation: json.applicant.occupation ?? "",
           employer: json.applicant.employer ?? "",
           education: json.applicant.education ?? "",
           incomeRange: json.applicant.incomeRange ?? "",
+          referredBy: json.applicant.referredBy ?? "",
+          aboutYourself: json.applicant.aboutYourself ?? "",
           applicationStatus: json.applicant.applicationStatus ?? "SUBMITTED",
           screeningStatus: json.applicant.screeningStatus ?? "PENDING",
           compatibilityScore: json.applicant.compatibilityScore
@@ -119,10 +127,14 @@ export default function AdminApplicationForm({
                 age: Number(form.age),
                 gender: form.gender,
                 location: form.location,
+                cityFrom: form.cityFrom.trim(),
+                industry: form.industry.trim(),
                 occupation: form.occupation,
                 employer: form.employer || null,
                 education: form.education,
                 incomeRange: form.incomeRange,
+                referredBy: form.referredBy.trim() || null,
+                aboutYourself: form.aboutYourself.trim(),
                 applicationStatus: form.applicationStatus,
                 screeningStatus: form.screeningStatus,
                 photos: form.photos
@@ -135,11 +147,18 @@ export default function AdminApplicationForm({
                 age: form.age ? Number(form.age) : undefined,
                 gender: form.gender,
                 location: form.location,
+                cityFrom: form.cityFrom.trim() || undefined,
+                industry: form.industry.trim() || undefined,
                 occupation: form.occupation,
                 employer: form.employer || null,
                 education: form.education,
                 incomeRange: form.incomeRange,
-                applicationStatus: form.applicationStatus,
+                referredBy: form.referredBy.trim() || null,
+                aboutYourself: form.aboutYourself.trim() || undefined,
+                applicationStatus:
+                  form.applicationStatus === "REJECTED"
+                    ? undefined
+                    : form.applicationStatus,
                 screeningStatus: form.screeningStatus,
                 compatibilityScore: form.compatibilityScore
                   ? Number(form.compatibilityScore)
@@ -312,7 +331,7 @@ export default function AdminApplicationForm({
         setIsLoading(false);
         return;
       }
-      setSuccess("Application rejected.");
+      setSuccess("Applicant soft rejected.");
       setIsLoading(false);
     } catch {
       setError("Failed to reject application.");
@@ -385,9 +404,19 @@ export default function AdminApplicationForm({
           onChange={(event) => updateField("location", event.target.value)}
         />
         <Input
+          placeholder="City From"
+          value={form.cityFrom}
+          onChange={(event) => updateField("cityFrom", event.target.value)}
+        />
+        <Input
           placeholder="Occupation"
           value={form.occupation}
           onChange={(event) => updateField("occupation", event.target.value)}
+        />
+        <Input
+          placeholder="Industry"
+          value={form.industry}
+          onChange={(event) => updateField("industry", event.target.value)}
         />
         <Input
           placeholder="Employer"
@@ -404,6 +433,11 @@ export default function AdminApplicationForm({
           value={form.incomeRange}
           onChange={(event) => updateField("incomeRange", event.target.value)}
         />
+        <Input
+          placeholder="Referred By (optional)"
+          value={form.referredBy}
+          onChange={(event) => updateField("referredBy", event.target.value)}
+        />
         <Select
           value={form.applicationStatus}
           onChange={(event) =>
@@ -415,7 +449,6 @@ export default function AdminApplicationForm({
           <option value="PAYMENT_PENDING">Payment Pending</option>
           <option value="SCREENING_IN_PROGRESS">Screening</option>
           <option value="APPROVED">Approved</option>
-          <option value="REJECTED">Rejected</option>
           <option value="WAITLIST">Waitlist</option>
           <option value="WAITLIST_INVITED">Waitlist Invited</option>
         </Select>
@@ -441,6 +474,16 @@ export default function AdminApplicationForm({
           placeholder="Photos (comma-separated URLs)"
           value={form.photos}
           onChange={(event) => updateField("photos", event.target.value)}
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-xs font-semibold text-navy-soft">
+          About Yourself
+        </label>
+        <Textarea
+          value={form.aboutYourself}
+          onChange={(event) => updateField("aboutYourself", event.target.value)}
+          rows={4}
         />
       </div>
       <div className="space-y-2">
@@ -477,7 +520,7 @@ export default function AdminApplicationForm({
               onClick={handleReject}
               disabled={isLoading}
             >
-              Reject
+              Soft Reject
             </Button>
             <Button
               type="button"

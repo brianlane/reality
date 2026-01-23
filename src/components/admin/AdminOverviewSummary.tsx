@@ -8,7 +8,6 @@ type OverviewResponse = {
   applicants: {
     total: number;
     approved: number;
-    rejected: number;
     waitlist: number;
   };
   events: { total: number; upcoming: number; completed: number };

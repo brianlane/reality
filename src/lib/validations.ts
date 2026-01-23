@@ -10,25 +10,26 @@ export const stage1QualificationSchema = z.object({
     .string()
     .min(1, "Email is required")
     .regex(EMAIL_REGEX, "Please enter a valid email address"),
-  phone: z.string().optional().nullable(),
-  age: z.number().int().min(18, "Must be 18 or older").max(100),
+  phone: z.string().min(1, "Phone is required"),
+  age: z.number().int().min(24, "Must be 24 or older").max(41),
   gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
   location: z.string().min(1, "Location is required"),
-  aboutYourself: z
-    .string()
-    .min(50, "Please write at least 50 characters")
-    .max(500, "Please keep it under 500 characters"),
+  instagram: z.string().min(1, "Instagram is required"),
 });
 
 export const demographicsSchema = z.object({
-  age: z.number().int().min(18).max(100),
+  age: z.number().int().min(24).max(41),
   gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
   seeking: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
   location: z.string().min(1),
+  cityFrom: z.string().min(1),
+  industry: z.string().min(1),
   occupation: z.string().min(1),
   employer: z.string().optional().nullable(),
   education: z.string().min(1),
   incomeRange: z.string().min(1),
+  referredBy: z.string().optional().nullable(),
+  aboutYourself: z.string().min(50).max(500),
 });
 
 export const questionnaireSchema = z
@@ -120,20 +121,23 @@ export const adminUserUpdateSchema = adminUserCreateSchema
 export const adminApplicantCreateSchema = z.object({
   user: adminUserCreateSchema,
   applicant: z.object({
-    age: z.number().int().min(18).max(100),
+    age: z.number().int().min(24).max(41),
     gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
     location: z.string().min(1),
+    cityFrom: z.string().min(1),
+    industry: z.string().min(1),
     occupation: z.string().min(1),
     employer: z.string().optional().nullable(),
     education: z.string().min(1),
     incomeRange: z.string().min(1),
+    referredBy: z.string().optional().nullable(),
+    aboutYourself: z.string().min(50).max(500),
     applicationStatus: z.enum([
       "DRAFT",
       "SUBMITTED",
       "PAYMENT_PENDING",
       "SCREENING_IN_PROGRESS",
       "APPROVED",
-      "REJECTED",
       "WAITLIST",
       "WAITLIST_INVITED",
     ]),
@@ -145,15 +149,19 @@ export const adminApplicantCreateSchema = z.object({
 export const adminApplicantUpdateSchema = z.object({
   applicant: z
     .object({
-      age: z.number().int().min(18).max(100).optional(),
+      age: z.number().int().min(24).max(41).optional(),
       gender: z
         .enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"])
         .optional(),
       location: z.string().min(1).optional(),
+      cityFrom: z.string().min(1).optional(),
+      industry: z.string().min(1).optional(),
       occupation: z.string().min(1).optional(),
       employer: z.string().optional().nullable(),
       education: z.string().min(1).optional(),
       incomeRange: z.string().min(1).optional(),
+      referredBy: z.string().optional().nullable(),
+      aboutYourself: z.string().min(50).max(500).optional(),
       applicationStatus: z
         .enum([
           "DRAFT",
@@ -161,7 +169,6 @@ export const adminApplicantUpdateSchema = z.object({
           "PAYMENT_PENDING",
           "SCREENING_IN_PROGRESS",
           "APPROVED",
-          "REJECTED",
           "WAITLIST",
           "WAITLIST_INVITED",
         ])

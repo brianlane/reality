@@ -29,8 +29,20 @@ export default async function ApplyPage() {
 
   // If user has an existing application, handle based on status
   if (existingApplication) {
+    const softRejectedApplication =
+      existingApplication as typeof existingApplication & {
+        softRejectedAt?: Date | null;
+        softRejectedFromStatus?: string | null;
+      };
+    const effectiveStatus = softRejectedApplication.softRejectedAt
+      ? (softRejectedApplication.softRejectedFromStatus ??
+        existingApplication.applicationStatus)
+      : existingApplication.applicationStatus;
     // If on waitlist, redirect to waitlist confirmation page
-    if (existingApplication.applicationStatus === "WAITLIST") {
+    if (
+      effectiveStatus === "WAITLIST" &&
+      !softRejectedApplication.softRejectedAt
+    ) {
       redirect(`/apply/waitlist?id=${existingApplication.id}`);
     }
 

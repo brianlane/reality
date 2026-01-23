@@ -8,16 +8,20 @@ export const mockBasicInfo = {
   age: 28,
   gender: "FEMALE" as const,
   location: "San Francisco, CA",
-  aboutYourself:
-    "Passionate about technology and outdoor activities. I love hiking, reading science fiction, and building community connections. Looking forward to being part of this journey.",
+  instagram: "@alexjohnson",
 };
 
 export const mockDemographics = {
   ...mockBasicInfo,
+  cityFrom: "Austin, TX",
+  industry: "Technology",
   occupation: "Software Engineer",
   employer: "Tech Corp",
   education: "Bachelor's Degree",
   incomeRange: "100k-200k",
+  referredBy: "Jordan Lee",
+  aboutYourself:
+    "Passionate about technology and outdoor activities. I love hiking, reading science fiction, and building community connections. Looking forward to being part of this journey.",
   seeking: "MALE",
   height: "5'6\"",
   bodyType: "Athletic",

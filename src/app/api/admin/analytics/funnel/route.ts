@@ -39,7 +39,6 @@ const getFunnelAnalytics = unstable_cache(
         paymentPending: statusMap.PAYMENT_PENDING ?? 0,
         screening: statusMap.SCREENING_IN_PROGRESS ?? 0,
         approved: statusMap.APPROVED ?? 0,
-        rejected: statusMap.REJECTED ?? 0,
         waitlist: (statusMap.WAITLIST ?? 0) + (statusMap.WAITLIST_INVITED ?? 0),
       },
       invitations: {

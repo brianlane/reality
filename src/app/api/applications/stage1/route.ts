@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       age,
       gender,
       location,
-      aboutYourself,
+      instagram,
     } = payload;
 
     const normalizedEmail = email.toLowerCase();
@@ -77,11 +77,11 @@ export async function POST(request: NextRequest) {
       firstName,
       lastName,
       email,
-      phone: phone ?? null,
+      phone,
       age,
       gender,
       location,
-      aboutYourself,
+      instagram,
       submittedAt: new Date().toISOString(),
     };
 
@@ -105,6 +105,8 @@ export async function POST(request: NextRequest) {
                   reviewedAt: null,
                   reviewedBy: null,
                   rejectionReason: null,
+                  softRejectedAt: null,
+                  softRejectedFromStatus: null,
                   compatibilityScore: null,
                   backgroundCheckNotes: null,
                   waitlistedAt,

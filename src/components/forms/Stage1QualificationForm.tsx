@@ -13,10 +13,11 @@ type FieldErrors = {
   firstName?: string;
   lastName?: string;
   email?: string;
+  phone?: string;
   age?: string;
   gender?: string;
   location?: string;
-  aboutYourself?: string;
+  instagram?: string;
 };
 
 const CITIES = [
@@ -67,16 +68,21 @@ export default function Stage1QualificationForm({
           return "Please enter a valid email address (e.g., user@example.com)";
         }
         break;
+      case "phone":
+        if (!value || String(value).trim().length === 0) {
+          return "Phone is required";
+        }
+        break;
       case "age":
         const age = Number(value);
         if (!value || isNaN(age)) {
           return "Age is required";
         }
-        if (age < 18) {
-          return "Must be 18 or older";
+        if (age < 24) {
+          return "Must be 24 or older";
         }
-        if (age > 100) {
-          return "Please enter a valid age";
+        if (age > 41) {
+          return "Must be 41 or younger";
         }
         break;
       case "gender":
@@ -89,15 +95,9 @@ export default function Stage1QualificationForm({
           return "Location is required";
         }
         break;
-      case "aboutYourself":
+      case "instagram":
         if (!value || String(value).trim().length === 0) {
-          return "Please tell us about yourself";
-        }
-        if (String(value).trim().length < 50) {
-          return `Please write at least 50 characters (${String(value).trim().length}/50)`;
-        }
-        if (String(value).trim().length > 500) {
-          return "Please keep it under 500 characters";
+          return "Instagram is required";
         }
         break;
     }
@@ -186,11 +186,11 @@ export default function Stage1QualificationForm({
       email: String(formData.get("email") ?? "")
         .trim()
         .toLowerCase(),
-      phone: String(formData.get("phone") ?? "").trim() || null,
+      phone: String(formData.get("phone") ?? "").trim(),
       age: Number(formData.get("age")),
       gender: formData.get("gender"),
       location: finalLocation,
-      aboutYourself: String(formData.get("aboutYourself") ?? "").trim(),
+      instagram: String(formData.get("instagram") ?? "").trim(),
     };
 
     // Validate all fields
@@ -198,20 +198,16 @@ export default function Stage1QualificationForm({
     let hasErrors = false;
 
     Object.entries(payload).forEach(([key, value]) => {
-      if (key !== "phone") {
-        const error = validateField(key, value as string | number);
-        if (error) {
-          newErrors[key as keyof FieldErrors] = error;
-          hasErrors = true;
-        }
+      const error = validateField(key, value as string | number);
+      if (error) {
+        newErrors[key as keyof FieldErrors] = error;
+        hasErrors = true;
       }
     });
 
     if (hasErrors) {
       setErrors(newErrors);
-      setTouched(
-        new Set(Object.keys(payload).filter((key) => key !== "phone")),
-      );
+      setTouched(new Set(Object.keys(payload)));
       setStatus("Please fix the errors above before submitting.");
       return;
     }
@@ -313,9 +309,20 @@ export default function Stage1QualificationForm({
             htmlFor="phone"
             className="text-sm font-medium text-navy-muted"
           >
-            Phone (optional)
+            Phone
           </label>
-          <Input id="phone" name="phone" type="tel" />
+          <Input
+            id="phone"
+            name="phone"
+            type="tel"
+            required
+            onChange={handleFieldChange}
+            onBlur={handleFieldBlur}
+            className={errors.phone ? "border-red-500" : ""}
+          />
+          {errors.phone && (
+            <p className="mt-1 text-xs text-red-500">{errors.phone}</p>
+          )}
         </div>
       </div>
 
@@ -334,8 +341,8 @@ export default function Stage1QualificationForm({
               id="age"
               name="age"
               type="number"
-              min={18}
-              max={100}
+              min={24}
+              max={41}
               required
               onChange={handleFieldChange}
               onBlur={handleFieldBlur}
@@ -371,74 +378,67 @@ export default function Stage1QualificationForm({
             )}
           </div>
         </div>
-        <div>
-          <label
-            htmlFor="locationSelect"
-            className="text-sm font-medium text-navy-muted"
-          >
-            Location (City, State)
-          </label>
-          <Select
-            id="locationSelect"
-            name="locationSelect"
-            required={locationSelection !== "Other"}
-            value={locationSelection}
-            onChange={handleFieldChange}
-            onBlur={handleFieldBlur}
-            className={errors.location ? "border-red-500" : ""}
-          >
-            <option value="">Select a city</option>
-            {CITIES.map((city) => (
-              <option key={city} value={city}>
-                {city}
-              </option>
-            ))}
-          </Select>
-          {locationSelection === "Other" && (
-            <div className="mt-2">
-              <Input
-                id="location"
-                name="location"
-                placeholder="e.g., Phoenix, AZ"
-                required
-                onChange={handleFieldChange}
-                onBlur={handleFieldBlur}
-                className={errors.location ? "border-red-500" : ""}
-              />
-            </div>
-          )}
-          {errors.location && (
-            <p className="mt-1 text-xs text-red-500">{errors.location}</p>
-          )}
-        </div>
-      </div>
-
-      {/* About Yourself */}
-      <div className="space-y-4">
-        <div>
-          <label
-            htmlFor="aboutYourself"
-            className="text-sm font-medium text-navy-muted"
-          >
-            Tell us about yourself
-          </label>
-          <textarea
-            id="aboutYourself"
-            name="aboutYourself"
-            rows={4}
-            minLength={50}
-            maxLength={500}
-            required
-            onChange={handleFieldChange}
-            onBlur={handleFieldBlur}
-            className={`w-full rounded-md border px-3 py-2 text-sm focus:border-copper focus:outline-none focus:ring-1 focus:ring-copper ${
-              errors.aboutYourself ? "border-red-500" : "border-gray-300"
-            }`}
-            placeholder="Share what makes you unique, your interests, values, or what you're passionate about..."
-          />
-          {errors.aboutYourself && (
-            <p className="mt-1 text-xs text-red-500">{errors.aboutYourself}</p>
-          )}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label
+              htmlFor="locationSelect"
+              className="text-sm font-medium text-navy-muted"
+            >
+              Location (City, State)
+            </label>
+            <Select
+              id="locationSelect"
+              name="locationSelect"
+              required={locationSelection !== "Other"}
+              value={locationSelection}
+              onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
+              className={errors.location ? "border-red-500" : ""}
+            >
+              <option value="">Select a city</option>
+              {CITIES.map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </Select>
+            {locationSelection === "Other" && (
+              <div className="mt-2">
+                <Input
+                  id="location"
+                  name="location"
+                  placeholder="e.g., Phoenix, AZ"
+                  required
+                  onChange={handleFieldChange}
+                  onBlur={handleFieldBlur}
+                  className={errors.location ? "border-red-500" : ""}
+                />
+              </div>
+            )}
+            {errors.location && (
+              <p className="mt-1 text-xs text-red-500">{errors.location}</p>
+            )}
+          </div>
+          <div>
+            <label
+              htmlFor="instagram"
+              className="text-sm font-medium text-navy-muted"
+            >
+              Instagram
+            </label>
+            <Input
+              id="instagram"
+              name="instagram"
+              placeholder="@yourusername"
+              required
+              onChange={handleFieldChange}
+              onBlur={handleFieldBlur}
+              className={errors.instagram ? "border-red-500" : ""}
+            />
+            {errors.instagram && (
+              <p className="mt-1 text-xs text-red-500">{errors.instagram}</p>
+            )}
+          </div>
         </div>
       </div>
 

@@ -101,7 +101,6 @@ const getOverviewAnalytics = unstable_cache(
         total: applicantTotal,
         pending: statusMap.SCREENING_IN_PROGRESS ?? 0,
         approved: statusMap.APPROVED ?? 0,
-        rejected: statusMap.REJECTED ?? 0,
         waitlist: (statusMap.WAITLIST ?? 0) + (statusMap.WAITLIST_INVITED ?? 0),
         approvalRate:
           applicantTotal > 0

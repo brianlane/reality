@@ -7,6 +7,29 @@ type Props = {
 
 export default function ExistingApplicationStatus({ application }: Props) {
   const { applicationStatus, waitlistInviteToken } = application;
+  const displayStatus = application.softRejectedAt
+    ? (application.softRejectedFromStatus ?? applicationStatus)
+    : applicationStatus;
+
+  if (application.softRejectedAt) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="flex flex-col items-center text-center space-y-6">
+          <div className="text-6xl">⏳</div>
+          <h1 className="text-3xl font-semibold text-navy">
+            Application Under Review
+          </h1>
+          <p className="text-lg text-navy-soft max-w-2xl">
+            We&apos;re currently reviewing your application. We&apos;ll notify
+            you once we&apos;ve completed the review.
+          </p>
+          <p className="text-xs text-slate-400 pt-4">
+            Application ID: {application.id}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Define status-specific content
   const statusContent = {
@@ -50,14 +73,6 @@ export default function ExistingApplicationStatus({ application }: Props) {
       actionText: "Go to Dashboard",
       actionHref: "/dashboard",
     },
-    REJECTED: {
-      icon: "✕",
-      title: "Application Decision",
-      description:
-        "Thank you for your interest in Reality Matchmaking. After careful review, we're unable to move forward with your application at this time. This decision is based on our current matching criteria and availability.",
-      actionText: "Back to Home",
-      actionHref: "/",
-    },
     WAITLIST_INVITED: {
       icon: "🎊",
       title: "You've Been Invited!",
@@ -70,8 +85,7 @@ export default function ExistingApplicationStatus({ application }: Props) {
     },
   };
 
-  const content =
-    statusContent[applicationStatus as keyof typeof statusContent];
+  const content = statusContent[displayStatus as keyof typeof statusContent];
 
   if (!content) {
     return (

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { adminApplicantUpdateSchema } from "@/lib/validations";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
+import { Prisma } from "@prisma/client";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -47,10 +48,14 @@ export async function GET(request: Request, { params }: RouteContext) {
       age: applicant.age,
       gender: applicant.gender,
       location: applicant.location,
+      cityFrom: applicant.cityFrom,
+      industry: applicant.industry,
       occupation: applicant.occupation,
       employer: applicant.employer,
       education: applicant.education,
       incomeRange: applicant.incomeRange,
+      referredBy: applicant.referredBy,
+      aboutYourself: applicant.aboutYourself,
       incomeVerified: applicant.incomeVerified,
       applicationStatus: applicant.applicationStatus,
       submittedAt: applicant.submittedAt,
@@ -103,13 +108,24 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     email: auth.email,
   });
 
+  const updateData: Prisma.ApplicantUpdateInput = {
+    ...body.applicant,
+    reviewedAt: new Date(),
+    reviewedBy: adminUser.id,
+  };
+
+  const applicationStatusChangeRequested =
+    body.applicant?.applicationStatus &&
+    body.applicant.applicationStatus !== existing.applicationStatus;
+
+  if (applicationStatusChangeRequested) {
+    updateData.softRejectedAt = null;
+    updateData.softRejectedFromStatus = null;
+  }
+
   const applicant = await db.applicant.update({
     where: { id },
-    data: {
-      ...body.applicant,
-      reviewedAt: new Date(),
-      reviewedBy: adminUser.id,
-    },
+    data: updateData,
   });
 
   await db.adminAction.create({
