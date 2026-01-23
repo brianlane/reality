@@ -86,7 +86,10 @@ export async function requireAdminRole(
     // Legacy admin - look up or create user
     const { db } = await import("@/lib/db");
     const user = await db.user.findFirst({
-      where: { email: { equals: email, mode: "insensitive" } },
+      where: {
+        email: { equals: email, mode: "insensitive" },
+        deletedAt: null,
+      },
     });
 
     if (user?.role === "ADMIN") {

@@ -139,7 +139,8 @@ export async function POST(request: NextRequest) {
         applicationId: applicant.id,
       });
     } catch (emailError) {
-      const errorMessage = emailError instanceof Error ? emailError.message : String(emailError);
+      const errorMessage =
+        emailError instanceof Error ? emailError.message : String(emailError);
       logger.error("Failed to send waitlist confirmation email", {
         applicationId: applicant.id,
         error: errorMessage,

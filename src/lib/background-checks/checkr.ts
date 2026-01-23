@@ -14,8 +14,8 @@ export function verifyCheckrSignature(signature: string, payload: string) {
 
     // Use timing-safe comparison to prevent timing attacks
     return crypto.timingSafeEqual(
-      Buffer.from(signature, 'hex'),
-      Buffer.from(computedSignature, 'hex'),
+      Buffer.from(signature, "hex"),
+      Buffer.from(computedSignature, "hex"),
     );
   } catch {
     // If signature format is invalid, return false

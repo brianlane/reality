@@ -58,8 +58,7 @@ export function verifyStripeWebhook(
   try {
     return stripe.webhooks.constructEvent(payload, signature, webhookSecret);
   } catch (error) {
-    throw new Error(
-      `Webhook signature verification failed: ${(error as Error).message}`,
-    );
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Webhook signature verification failed: ${errorMessage}`);
   }
 }

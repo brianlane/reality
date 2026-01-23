@@ -173,7 +173,10 @@ export async function POST(request: Request) {
       // Log cleanup failure but don't mask original error
       logger.error("Failed to cleanup orphaned file", {
         path,
-        error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+        error:
+          cleanupError instanceof Error
+            ? cleanupError.message
+            : String(cleanupError),
       });
     }
 

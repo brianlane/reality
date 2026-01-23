@@ -15,9 +15,10 @@ export async function POST(request: Request) {
   try {
     event = verifyStripeWebhook(payload, signature);
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return errorResponse(
       "FORBIDDEN",
-      `Webhook verification failed: ${(error as Error).message}`,
+      `Webhook verification failed: ${errorMessage}`,
       403,
     );
   }
@@ -63,9 +64,10 @@ export async function POST(request: Request) {
       }
     }
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return errorResponse(
       "INTERNAL_SERVER_ERROR",
-      `Webhook processing failed: ${(error as Error).message}`,
+      `Webhook processing failed: ${errorMessage}`,
       500,
     );
   }

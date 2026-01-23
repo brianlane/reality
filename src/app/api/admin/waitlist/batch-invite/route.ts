@@ -134,7 +134,8 @@ export async function POST(request: Request) {
           inviteToken,
         });
       } catch (emailError) {
-        const errorMessage = emailError instanceof Error ? emailError.message : String(emailError);
+        const errorMessage =
+          emailError instanceof Error ? emailError.message : String(emailError);
         logger.error("Failed to send waitlist invite email", {
           applicantId,
           error: errorMessage,
@@ -144,7 +145,8 @@ export async function POST(request: Request) {
 
       success.push(applicantId);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       logger.error("Error processing applicant in batch invite", {
         applicantId,
         error: errorMessage,

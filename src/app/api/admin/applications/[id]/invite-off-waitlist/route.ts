@@ -24,7 +24,8 @@ export async function POST(request: Request, { params }: RouteContext) {
   try {
     requireAdmin(auth.email);
   } catch (error) {
-    return errorResponse("FORBIDDEN", (error as Error).message, 403);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse("FORBIDDEN", errorMessage, 403);
   }
 
   const adminUser = await getOrCreateAdminUser({
@@ -116,9 +117,11 @@ export async function POST(request: Request, { params }: RouteContext) {
       inviteToken,
     });
   } catch (emailError) {
+    const errorMessage =
+      emailError instanceof Error ? emailError.message : String(emailError);
     logger.error("Failed to send waitlist invite email", {
       applicantId: applicant.id,
-      error: (emailError as Error).message,
+      error: errorMessage,
     });
     // Continue even if email fails - admin can resend manually
   }

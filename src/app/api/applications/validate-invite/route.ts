@@ -67,14 +67,15 @@ export async function GET(request: NextRequest) {
       applicationId: applicant.id,
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error("Token validation error", {
-      error: (error as Error).message,
+      error: errorMessage,
     });
     return errorResponse(
       "VALIDATION_ERROR",
       "Failed to validate invite token",
       400,
-      [{ message: (error as Error).message }],
+      [{ message: errorMessage }],
     );
   }
 }
