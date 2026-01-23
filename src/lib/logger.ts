@@ -24,7 +24,10 @@ const SENSITIVE_FIELDS = [
   "phone",
 ];
 
-function redactSensitiveData(obj: unknown): unknown {
+function redactSensitiveData(
+  obj: unknown,
+  visited = new WeakSet<object>(),
+): unknown {
   if (obj === null || obj === undefined) {
     return obj;
   }
@@ -33,13 +36,20 @@ function redactSensitiveData(obj: unknown): unknown {
     return obj;
   }
 
+  // Prevent circular references
+  if (visited.has(obj as object)) {
+    return "[Circular]";
+  }
+  visited.add(obj as object);
+
   if (Array.isArray(obj)) {
-    return obj.map((item) => redactSensitiveData(item));
+    return obj.map((item) => redactSensitiveData(item, visited));
   }
 
   const redacted: Record<string, unknown> = {};
+  const objRecord = obj as Record<string, unknown>;
 
-  for (const [key, value] of Object.entries(obj)) {
+  for (const [key, value] of Object.entries(objRecord)) {
     // Check if key matches sensitive pattern
     const isSensitive = SENSITIVE_FIELDS.some((field) =>
       key.toLowerCase().includes(field.toLowerCase()),
@@ -48,7 +58,7 @@ function redactSensitiveData(obj: unknown): unknown {
     if (isSensitive) {
       redacted[key] = "[REDACTED]";
     } else if (typeof value === "object" && value !== null) {
-      redacted[key] = redactSensitiveData(value);
+      redacted[key] = redactSensitiveData(value, visited);
     } else {
       redacted[key] = value;
     }
@@ -59,13 +69,17 @@ function redactSensitiveData(obj: unknown): unknown {
 
 function formatLog(level: LogLevel, message: string, context?: LogContext) {
   const timestamp = new Date().toISOString();
-  const redactedContext = context ? redactSensitiveData(context) : {};
+  const redactedContext = context
+    ? (redactSensitiveData(context) as Record<string, unknown>)
+    : {};
 
   const logEntry = {
     timestamp,
     level,
     message,
-    ...(Object.keys(redactedContext).length > 0 && { context: redactedContext }),
+    ...(Object.keys(redactedContext).length > 0 && {
+      context: redactedContext,
+    }),
     environment: process.env.NODE_ENV || "development",
   };
 

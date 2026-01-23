@@ -24,6 +24,21 @@ function verifyFileSignature(buffer: Uint8Array, mimeType: string): boolean {
   const signatures = FILE_SIGNATURES[mimeType];
   if (!signatures) return false;
 
+  // Special handling for WebP - check RIFF at 0-3 and WEBP at 8-11
+  if (mimeType === "image/webp") {
+    return (
+      buffer.length >= 12 &&
+      buffer[0] === 0x52 &&
+      buffer[1] === 0x49 &&
+      buffer[2] === 0x46 &&
+      buffer[3] === 0x46 && // RIFF
+      buffer[8] === 0x57 &&
+      buffer[9] === 0x45 &&
+      buffer[10] === 0x42 &&
+      buffer[11] === 0x50 // WEBP
+    );
+  }
+
   return signatures.some((signature) =>
     signature.every((byte, index) => buffer[index] === byte),
   );
@@ -121,15 +136,46 @@ export async function POST(request: Request) {
 
   const { data } = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(path);
 
-  const updated = await db.applicant.update({
-    where: { id: applicantId },
-    data: {
-      photos: [...applicant.photos, data.publicUrl],
-    },
-  });
+  try {
+    // Use transaction to prevent race condition (TOCTOU)
+    const updated = await db.$transaction(async (tx) => {
+      // Re-fetch applicant to get latest photo count
+      const currentApplicant = await tx.applicant.findUnique({
+        where: { id: applicantId },
+        select: { photos: true },
+      });
 
-  return successResponse({
-    photoUrl: data.publicUrl,
-    applicantId: updated.id,
-  });
+      if (
+        !currentApplicant ||
+        currentApplicant.photos.length >= MAX_PHOTOS_PER_APPLICANT
+      ) {
+        throw new Error("Photo limit exceeded by concurrent request");
+      }
+
+      return await tx.applicant.update({
+        where: { id: applicantId },
+        data: {
+          photos: [...currentApplicant.photos, data.publicUrl],
+        },
+      });
+    });
+
+    return successResponse({
+      photoUrl: data.publicUrl,
+      applicantId: updated.id,
+    });
+  } catch (error) {
+    // Cleanup orphaned file if database update fails
+    await supabase.storage.from(PHOTO_BUCKET).remove([path]);
+
+    if ((error as Error).message.includes("Photo limit exceeded")) {
+      return errorResponse(
+        "VALIDATION_ERROR",
+        `Maximum of ${MAX_PHOTOS_PER_APPLICANT} photos allowed.`,
+        400,
+      );
+    }
+
+    throw error;
+  }
 }

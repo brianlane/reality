@@ -17,7 +17,7 @@ export function verifyCheckrSignature(signature: string, payload: string) {
       Buffer.from(signature),
       Buffer.from(computedSignature),
     );
-  } catch (error) {
+  } catch {
     // If signature format is invalid, return false
     return false;
   }

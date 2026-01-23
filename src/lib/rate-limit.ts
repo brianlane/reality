@@ -10,18 +10,15 @@ type RateLimitEntry = {
 
 const store = new Map<string, RateLimitEntry>();
 
-// Cleanup old entries every 5 minutes
-setInterval(
-  () => {
-    const now = Date.now();
-    for (const [key, entry] of store.entries()) {
-      if (entry.resetAt < now) {
-        store.delete(key);
-      }
-    }
-  },
-  5 * 60 * 1000,
-);
+/**
+ * NOTE: Stale entries will remain in memory until their resetAt time is checked
+ * during the next request. This is acceptable for single-instance development.
+ *
+ * IMPORTANT: In serverless environments (Vercel/AWS Lambda), module-level setInterval
+ * causes memory leaks and unpredictable behavior as each invocation may load the module fresh.
+ *
+ * For production with multiple instances, upgrade to Redis-based rate limiting.
+ */
 
 export type RateLimitConfig = {
   interval: number; // in milliseconds

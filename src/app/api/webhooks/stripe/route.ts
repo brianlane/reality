@@ -23,7 +23,19 @@ export async function POST(request: Request) {
   }
 
   try {
-    const paymentId = event.data.object.metadata?.paymentId;
+    // Extract metadata based on event type
+    let paymentId: string | undefined;
+    if (
+      event.type === "payment_intent.succeeded" ||
+      event.type === "payment_intent.payment_failed"
+    ) {
+      paymentId = (event.data.object as { metadata?: { paymentId?: string } })
+        .metadata?.paymentId;
+    } else if (event.type === "checkout.session.completed") {
+      paymentId = (event.data.object as { metadata?: { paymentId?: string } })
+        .metadata?.paymentId;
+    }
+
     let status: "SUCCEEDED" | "FAILED" | null = null;
 
     if (event.type === "payment_intent.succeeded") {

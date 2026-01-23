@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { rateLimit, RATE_LIMITS, type RateLimitConfig } from "@/lib/rate-limit";
 
 type AuthUser = {
   id: string;
@@ -27,8 +28,118 @@ function redirectWithCookies(response: NextResponse, url: URL): NextResponse {
   return redirectResponse;
 }
 
+function getIdentifier(request: NextRequest): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  const realIp = request.headers.get("x-real-ip");
+  const ip = forwarded?.split(",")[0]?.trim() || realIp?.trim() || "anonymous";
+
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return `${ip}:${request.nextUrl.pathname}`;
+  }
+
+  return ip;
+}
+
 export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const method = request.method;
+
+  // CSRF Protection: Verify origin for state-changing requests to API routes
+  if (
+    pathname.startsWith("/api/") &&
+    !pathname.includes("/api/webhooks/") &&
+    (method === "POST" ||
+      method === "PUT" ||
+      method === "DELETE" ||
+      method === "PATCH")
+  ) {
+    const origin = request.headers.get("origin");
+    const referer = request.headers.get("referer");
+    const expectedOrigin =
+      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+    let originValid = false;
+
+    if (origin) {
+      try {
+        const originUrl = new URL(origin);
+        const expectedUrl = new URL(expectedOrigin);
+        originValid = originUrl.origin === expectedUrl.origin;
+      } catch {
+        originValid = false;
+      }
+    } else if (referer) {
+      try {
+        const refererUrl = new URL(referer);
+        const expectedUrl = new URL(expectedOrigin);
+        originValid = refererUrl.origin === expectedUrl.origin;
+      } catch {
+        originValid = false;
+      }
+    } else {
+      // No origin or referer - reject for API routes
+      originValid = false;
+    }
+
+    if (!originValid) {
+      return new NextResponse(
+        JSON.stringify({
+          error: "FORBIDDEN",
+          message: "CSRF validation failed",
+        }),
+        {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+  }
+
+  // Rate Limiting
+  let config: RateLimitConfig = RATE_LIMITS.API;
+  const identifier = getIdentifier(request);
+
+  if (pathname.includes("/api/webhooks/")) {
+    config = RATE_LIMITS.WEBHOOK;
+  } else if (
+    pathname.includes("/sign-in") ||
+    pathname.includes("/admin/login") ||
+    pathname.includes("/api/auth")
+  ) {
+    config = RATE_LIMITS.AUTH;
+  } else if (pathname.includes("/upload")) {
+    config = RATE_LIMITS.UPLOAD;
+  }
+
+  const result = rateLimit(identifier, config);
+
+  if (!result.success) {
+    return new NextResponse(
+      JSON.stringify({
+        error: "TOO_MANY_REQUESTS",
+        message: "Rate limit exceeded. Please try again later.",
+        retryAfter: Math.ceil((result.reset - Date.now()) / 1000),
+      }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(Math.ceil((result.reset - Date.now()) / 1000)),
+          "X-RateLimit-Limit": String(result.limit),
+          "X-RateLimit-Remaining": String(result.remaining),
+          "X-RateLimit-Reset": String(result.reset),
+        },
+      },
+    );
+  }
+
   const response = NextResponse.next();
+
+  // Add rate limit headers
+  response.headers.set("X-RateLimit-Limit", String(result.limit));
+  response.headers.set("X-RateLimit-Remaining", String(result.remaining));
+  response.headers.set("X-RateLimit-Reset", String(result.reset));
+
   const e2eEnabled = process.env.E2E_AUTH_ENABLED === "true";
   const e2eUserId = request.headers.get("x-e2e-user-id");
   const e2eUserEmail = request.headers.get("x-e2e-user-email");
@@ -64,7 +175,6 @@ export async function proxy(request: NextRequest) {
       : null;
   }
 
-  const { pathname } = request.nextUrl;
   const isAdminRoute = pathname.startsWith("/admin");
   const isAdminLogin = pathname.startsWith("/admin/login");
 
@@ -109,11 +219,12 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/admin/:path*",
-    "/dashboard/:path*",
-    "/application/:path*",
-    "/events/:path*",
-    "/matches/:path*",
-    "/settings/:path*",
+    /*
+     * Match all request paths except for:
+     * - _next/static (static files)
+     * - _next/image (image optimization)
+     * - favicon.ico, logo.png (static assets)
+     */
+    "/((?!_next/static|_next/image|favicon.ico|logo.png|.*\\.svg$).*)",
   ],
 };

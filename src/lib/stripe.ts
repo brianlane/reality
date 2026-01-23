@@ -6,7 +6,7 @@ const getStripe = () => {
     throw new Error("STRIPE_SECRET_KEY is not configured");
   }
   return new Stripe(secretKey, {
-    apiVersion: "2025-01-27.acacia",
+    apiVersion: "2025-12-15.clover",
   });
 };
 
@@ -32,6 +32,10 @@ export async function createCheckoutSession(params: CheckoutParams) {
     cancel_url: params.cancelUrl,
     metadata: params.metadata ?? {},
   });
+
+  if (!session.url) {
+    throw new Error("Failed to create checkout session: URL is null");
+  }
 
   return {
     id: session.id,
