@@ -9,7 +9,19 @@ export async function POST(request: Request) {
   const signature = request.headers.get("x-checkr-signature") ?? "";
   const payload = await request.text();
 
-  if (!verifyCheckrSignature(signature, payload)) {
+  let signatureValid = false;
+  try {
+    signatureValid = verifyCheckrSignature(signature, payload);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse(
+      "FORBIDDEN",
+      `Webhook verification failed: ${errorMessage}`,
+      403,
+    );
+  }
+
+  if (!signatureValid) {
     return errorResponse("FORBIDDEN", "Invalid signature", 403);
   }
 

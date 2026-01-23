@@ -29,6 +29,15 @@ export default function RichTextEditor({
     }
   }, [editor, value]);
 
+  // Cleanup: Destroy editor on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (editor && !editor.isDestroyed) {
+        editor.destroy();
+      }
+    };
+  }, [editor]);
+
   if (!editor) {
     return null;
   }

@@ -8,7 +8,14 @@ export type AuthUser = {
 
 export async function getAuthUser(): Promise<AuthUser | null> {
   const headerList = await headers();
-  if (process.env.E2E_AUTH_ENABLED === "true") {
+
+  // E2E auth bypass - ONLY enabled in test environments
+  // SECURITY: Never enable this in production unless CI is explicitly allowed
+  const e2eBypassAllowed =
+    process.env.E2E_AUTH_ENABLED === "true" &&
+    (process.env.NODE_ENV !== "production" ||
+      (process.env.CI === "true" && process.env.E2E_AUTH_ALLOW_CI === "true"));
+  if (e2eBypassAllowed) {
     const userId = headerList.get("x-e2e-user-id");
     const email = headerList.get("x-e2e-user-email");
 
@@ -65,4 +72,72 @@ export function isAdminEmail(email: string | null) {
   }
 
   return email.toLowerCase() === adminEmail.toLowerCase();
+}
+
+/**
+ * Enhanced admin check using database role (RBAC foundation)
+ * Use this in new code instead of requireAdmin
+ */
+export async function requireAdminRole(
+  email: string | null,
+): Promise<{ userId: string; email: string; role: "ADMIN" }> {
+  // First check legacy ADMIN_EMAIL for backwards compatibility
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (adminEmail && email?.toLowerCase() === adminEmail.toLowerCase()) {
+    // Legacy admin - look up or create user with ADMIN role
+    const { db } = await import("@/lib/db");
+    let user = await db.user.findFirst({
+      where: {
+        email: { equals: email, mode: "insensitive" },
+        deletedAt: null,
+      },
+    });
+
+    if (user) {
+      // User exists - ensure they have ADMIN role for backwards compatibility
+      if (user.role !== "ADMIN") {
+        user = await db.user.update({
+          where: { id: user.id },
+          data: { role: "ADMIN" },
+        });
+      }
+      return { userId: user.id, email: user.email, role: "ADMIN" };
+    }
+
+    // User doesn't exist - create with ADMIN role for backwards compatibility
+    const newUser = await db.user.create({
+      data: {
+        clerkId: email.toLowerCase(),
+        email: email.toLowerCase(),
+        firstName: "Admin",
+        lastName: "User",
+        role: "ADMIN",
+      },
+    });
+    return { userId: newUser.id, email: newUser.email, role: "ADMIN" };
+  }
+
+  // Check database role
+  if (!email) {
+    const error = new Error("Admin access required");
+    (error as Error & { status?: number }).status = 403;
+    throw error;
+  }
+
+  const { db } = await import("@/lib/db");
+  const user = await db.user.findFirst({
+    where: {
+      email: { equals: email, mode: "insensitive" },
+      role: "ADMIN",
+      deletedAt: null,
+    },
+  });
+
+  if (!user) {
+    const error = new Error("Admin access required");
+    (error as Error & { status?: number }).status = 403;
+    throw error;
+  }
+
+  return { userId: user.id, email: user.email, role: "ADMIN" };
 }

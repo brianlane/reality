@@ -2,6 +2,7 @@ import { ApplicationStatus } from "@prisma/client";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   const auth = await getAuthUser();
@@ -14,7 +15,8 @@ export async function GET(request: Request) {
   try {
     requireAdmin(auth.email);
   } catch (error) {
-    return errorResponse("FORBIDDEN", (error as Error).message, 403);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse("FORBIDDEN", errorMessage, 403);
   }
 
   try {
@@ -77,9 +79,12 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Error fetching waitlist:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error("Error fetching waitlist", {
+      error: errorMessage,
+    });
     return errorResponse("SERVER_ERROR", "Failed to fetch waitlist", 500, [
-      { message: (error as Error).message },
+      { message: errorMessage },
     ]);
   }
 }

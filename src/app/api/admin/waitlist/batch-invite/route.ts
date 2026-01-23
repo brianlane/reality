@@ -4,6 +4,7 @@ import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { sendWaitlistInviteEmail } from "@/lib/email/waitlist";
 import { randomBytes } from "crypto";
+import { logger } from "@/lib/logger";
 
 type BatchInviteBody = {
   applicantIds: string[];
@@ -20,7 +21,8 @@ export async function POST(request: Request) {
   try {
     requireAdmin(auth.email);
   } catch (error) {
-    return errorResponse("FORBIDDEN", (error as Error).message, 403);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return errorResponse("FORBIDDEN", errorMessage, 403);
   }
 
   const adminUser = await getOrCreateAdminUser({
@@ -132,19 +134,26 @@ export async function POST(request: Request) {
           inviteToken,
         });
       } catch (emailError) {
-        console.error(
-          `Failed to send email to ${applicant.user.email}:`,
-          emailError,
-        );
+        const errorMessage =
+          emailError instanceof Error ? emailError.message : String(emailError);
+        logger.error("Failed to send waitlist invite email", {
+          applicantId,
+          error: errorMessage,
+        });
         // Continue - email failure shouldn't fail the entire invite
       }
 
       success.push(applicantId);
     } catch (error) {
-      console.error("Error processing applicant %s:", applicantId, error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      logger.error("Error processing applicant in batch invite", {
+        applicantId,
+        error: errorMessage,
+      });
       failed.push({
         id: applicantId,
-        reason: (error as Error).message || "Unknown error",
+        reason: errorMessage || "Unknown error",
       });
     }
   }

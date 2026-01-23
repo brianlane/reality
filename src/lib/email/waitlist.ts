@@ -2,17 +2,16 @@ import { sendEmail } from "./client";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-// Escape HTML to prevent injection attacks
-function escapeHtml(text: string): string {
-  const htmlEscapeMap: Record<string, string> = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#x27;",
-    "/": "&#x2F;",
-  };
-  return text.replace(/[&<>"'/]/g, (char) => htmlEscapeMap[char] || char);
+const htmlEscapes: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (char) => htmlEscapes[char] ?? char);
 }
 
 type WaitlistConfirmationParams = {
@@ -26,7 +25,7 @@ export async function sendWaitlistConfirmationEmail({
   firstName,
   applicationId,
 }: WaitlistConfirmationParams) {
-  const subject = "You're on the Reality Matchmaking Waitlist!";
+  const subject = "You're on the Reality Matchmaking Waitlist";
   const safeFirstName = escapeHtml(firstName);
 
   const html = `
@@ -44,7 +43,7 @@ export async function sendWaitlistConfirmationEmail({
       <div style="width: 60px; height: 60px; margin: 0 auto 16px; background-color: #c8915f; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
         <span style="font-size: 32px; color: white;">✓</span>
       </div>
-      <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">You're on the Waitlist!</h1>
+      <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">You're on the Waitlist</h1>
     </div>
 
     <!-- Content -->
@@ -54,7 +53,7 @@ export async function sendWaitlistConfirmationEmail({
       </p>
 
       <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-        Thank you for your interest in Reality Matchmaking! We've received your qualification and you're now on our waitlist.
+        Thank you for your interest in Reality Matchmaking. We've received your qualification and you're now on our waitlist.
       </p>
 
       <div style="background-color: #f8f9fa; border-left: 4px solid #c8915f; padding: 20px; margin: 32px 0; border-radius: 4px;">
@@ -62,23 +61,14 @@ export async function sendWaitlistConfirmationEmail({
         <ol style="color: #4a5568; margin: 0; padding-left: 20px; line-height: 1.8;">
           <li style="margin-bottom: 12px;"><strong>Review:</strong> Our team will carefully review your qualification</li>
           <li style="margin-bottom: 12px;"><strong>Invitation:</strong> You'll receive an email invitation to continue your application</li>
-          <li style="margin-bottom: 12px;"><strong>Complete:</strong> Finish your full profile, payment, and assessment</li>
         </ol>
       </div>
-
-      <p style="color: #4a5568; font-size: 14px; line-height: 1.6; margin: 24px 0;">
-        <strong>Timeline:</strong> We typically review applications within 2-4 weeks. We'll notify you as soon as a spot opens up.
-      </p>
 
       <div style="background-color: #f8f9fa; padding: 16px; border-radius: 4px; margin: 24px 0;">
         <p style="color: #4a5568; font-size: 14px; margin: 0;">
           <strong>Application Reference:</strong> ${applicationId}
         </p>
       </div>
-
-      <p style="color: #4a5568; font-size: 14px; line-height: 1.6; margin: 32px 0 0;">
-        If you have any questions, please don't hesitate to reach out to us.
-      </p>
     </div>
 
     <!-- Footer -->
@@ -110,7 +100,7 @@ export async function sendWaitlistInviteEmail({
   inviteToken,
 }: WaitlistInviteParams) {
   const subject =
-    "🎉 You're Invited to Continue Your Reality Matchmaking Application!";
+    "You're Invited to Continue Your Reality Matchmaking Application!";
   const inviteUrl = `${APP_URL}/apply/continue?token=${inviteToken}`;
   const safeFirstName = escapeHtml(firstName);
 
