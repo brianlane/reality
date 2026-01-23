@@ -13,7 +13,7 @@ export async function getAuthUser(): Promise<AuthUser | null> {
   // SECURITY: Never enable this in production
   if (
     process.env.E2E_AUTH_ENABLED === "true" &&
-    process.env.NODE_ENV === "development"
+    process.env.NODE_ENV !== "production"
   ) {
     const userId = headerList.get("x-e2e-user-id");
     const email = headerList.get("x-e2e-user-email");
