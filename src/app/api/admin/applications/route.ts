@@ -70,6 +70,7 @@ export async function GET(request: Request) {
       id: applicant.id,
       firstName: applicant.user.firstName,
       lastName: applicant.user.lastName,
+      email: applicant.user.email,
       age: applicant.age,
       gender: applicant.gender,
       occupation: applicant.occupation,

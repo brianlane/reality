@@ -279,6 +279,7 @@ export default function AdminWaitlistTable({
                   />
                 </th>
                 <th className="py-2 text-left">Name</th>
+                <th className="py-2 text-left">Email</th>
                 <th className="py-2 text-left">Location</th>
                 <th className="py-2 text-left">Age</th>
                 <th className="py-2 text-left">Waitlisted</th>
@@ -304,6 +305,7 @@ export default function AdminWaitlistTable({
                   <td className="py-2">
                     {applicant.user.firstName} {applicant.user.lastName}
                   </td>
+                  <td className="py-2">{applicant.user.email}</td>
                   <td className="py-2">{applicant.location}</td>
                   <td className="py-2">{applicant.age}</td>
                   <td className="py-2">{formatDate(applicant.waitlistedAt)}</td>

@@ -11,6 +11,7 @@ type ApplicationItem = {
   id: string;
   firstName: string;
   lastName: string;
+  email: string;
   applicationStatus: string;
   screeningStatus?: string;
 };
@@ -73,6 +74,7 @@ export default function AdminApplicationsTable() {
           <thead>
             <tr className="border-b text-xs uppercase text-slate-400">
               <th className="py-2 text-left">Applicant</th>
+              <th className="py-2 text-left">Email</th>
               <th className="py-2 text-left">Status</th>
               <th className="py-2 text-left">Screening</th>
               <th className="py-2 text-left">Waitlist</th>
@@ -85,6 +87,7 @@ export default function AdminApplicationsTable() {
                 <td className="py-2">
                   {app.firstName} {app.lastName}
                 </td>
+                <td className="py-2">{app.email}</td>
                 <td className="py-2">{app.applicationStatus}</td>
                 <td className="py-2">{app.screeningStatus ?? "N/A"}</td>
                 <td className="py-2">

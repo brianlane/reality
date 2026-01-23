@@ -72,10 +72,7 @@ export default function AdminApplicationForm({
           employer: json.applicant.employer ?? "",
           education: json.applicant.education ?? "",
           incomeRange: json.applicant.incomeRange ?? "",
-          applicationStatus:
-            json.applicant.applicationStatus === "REJECTED"
-              ? "SCREENING_IN_PROGRESS"
-              : (json.applicant.applicationStatus ?? "SUBMITTED"),
+          applicationStatus: json.applicant.applicationStatus ?? "SUBMITTED",
           screeningStatus: json.applicant.screeningStatus ?? "PENDING",
           compatibilityScore: json.applicant.compatibilityScore
             ? String(json.applicant.compatibilityScore)

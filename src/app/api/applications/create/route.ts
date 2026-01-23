@@ -91,6 +91,17 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingApplicant) {
+      const softRejectedApplicant =
+        existingApplicant as typeof existingApplicant & {
+          softRejectedAt?: Date | null;
+        };
+      if (softRejectedApplicant.softRejectedAt) {
+        return errorResponse(
+          "APPLICATION_LOCKED",
+          "Application can no longer be edited.",
+          403,
+        );
+      }
       if (!applicationId || applicationId !== existingApplicant.id) {
         return errorResponse(
           "APPLICATION_CONFLICT",

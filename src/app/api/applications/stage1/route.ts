@@ -105,6 +105,8 @@ export async function POST(request: NextRequest) {
                   reviewedAt: null,
                   reviewedBy: null,
                   rejectionReason: null,
+                  softRejectedAt: null,
+                  softRejectedFromStatus: null,
                   compatibilityScore: null,
                   backgroundCheckNotes: null,
                   waitlistedAt,
