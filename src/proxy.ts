@@ -142,7 +142,7 @@ export async function proxy(request: NextRequest) {
 
   const e2eEnabled =
     process.env.E2E_AUTH_ENABLED === "true" &&
-    process.env.NODE_ENV !== "production";
+    (process.env.NODE_ENV !== "production" || process.env.CI === "true");
   const e2eUserId = request.headers.get("x-e2e-user-id");
   const e2eUserEmail = request.headers.get("x-e2e-user-email");
   const e2eUser: AuthUser | null =
