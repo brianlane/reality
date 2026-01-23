@@ -44,9 +44,12 @@ export async function POST(request: Request, { params }: RouteContext) {
     where: { id },
     data: {
       applicationStatus: "REJECTED",
+      softRejectedAt: new Date(),
+      softRejectedFromStatus:
+        existing.softRejectedFromStatus ?? existing.applicationStatus,
       reviewedAt: new Date(),
       reviewedBy: adminUser.id,
-      rejectionReason: body.reason ?? "Rejected",
+      rejectionReason: body.reason ?? "Soft rejected",
     },
   });
 

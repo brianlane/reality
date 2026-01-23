@@ -12,10 +12,14 @@ type DraftState = {
   gender?: string;
   seeking?: string;
   location?: string;
+  cityFrom?: string;
+  industry?: string;
   occupation?: string;
   employer?: string | null;
   education?: string;
   incomeRange?: string;
+  referredBy?: string | null;
+  aboutYourself?: string;
   height?: string;
   bodyType?: string;
   ethnicity?: string;

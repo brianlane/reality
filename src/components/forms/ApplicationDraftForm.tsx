@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useApplicationDraft } from "./useApplicationDraft";
 
 export default function ApplicationDraftForm({
@@ -39,10 +40,14 @@ export default function ApplicationDraftForm({
       gender: formData.get("gender"),
       seeking: formData.get("seeking"),
       location: formData.get("location"),
+      cityFrom: formData.get("cityFrom"),
+      industry: formData.get("industry"),
       occupation: formData.get("occupation"),
       employer: formData.get("employer") || null,
       education: formData.get("education"),
       incomeRange: formData.get("incomeRange"),
+      referredBy: formData.get("referredBy") || null,
+      aboutYourself: String(formData.get("aboutYourself") ?? "").trim(),
     };
 
     // Retrieve waitlist invite token and application id if present
@@ -165,7 +170,8 @@ export default function ApplicationDraftForm({
           id="age"
           name="age"
           type="number"
-          min={18}
+          min={24}
+          max={41}
           defaultValue={draft.age ?? ""}
           required
         />
@@ -203,6 +209,20 @@ export default function ApplicationDraftForm({
       </div>
       <div>
         <label
+          htmlFor="cityFrom"
+          className="text-sm font-medium text-navy-muted"
+        >
+          City you are from
+        </label>
+        <Input
+          id="cityFrom"
+          name="cityFrom"
+          defaultValue={draft.cityFrom ?? ""}
+          required
+        />
+      </div>
+      <div>
+        <label
           htmlFor="occupation"
           className="text-sm font-medium text-navy-muted"
         >
@@ -212,6 +232,20 @@ export default function ApplicationDraftForm({
           id="occupation"
           name="occupation"
           defaultValue={draft.occupation ?? ""}
+          required
+        />
+      </div>
+      <div>
+        <label
+          htmlFor="industry"
+          className="text-sm font-medium text-navy-muted"
+        >
+          Industry
+        </label>
+        <Input
+          id="industry"
+          name="industry"
+          defaultValue={draft.industry ?? ""}
           required
         />
       </div>
@@ -269,6 +303,37 @@ export default function ApplicationDraftForm({
           <option value="5M+">5M+</option>
           <option value="20M+">20M+</option>
         </Select>
+      </div>
+      <div>
+        <label
+          htmlFor="referredBy"
+          className="text-sm font-medium text-navy-muted"
+        >
+          Referred by someone? (optional)
+        </label>
+        <Input
+          id="referredBy"
+          name="referredBy"
+          defaultValue={draft.referredBy ?? ""}
+        />
+      </div>
+      <div>
+        <label
+          htmlFor="aboutYourself"
+          className="text-sm font-medium text-navy-muted"
+        >
+          Tell us about yourself
+        </label>
+        <Textarea
+          id="aboutYourself"
+          name="aboutYourself"
+          rows={4}
+          minLength={50}
+          maxLength={500}
+          defaultValue={draft.aboutYourself ?? ""}
+          required
+          placeholder="Share what makes you unique, your interests, values, or what you're passionate about..."
+        />
       </div>
       <Button type="submit">Save and continue</Button>
       {status && <p className="text-sm text-red-500">{status}</p>}

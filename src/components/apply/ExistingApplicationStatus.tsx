@@ -7,6 +7,9 @@ type Props = {
 
 export default function ExistingApplicationStatus({ application }: Props) {
   const { applicationStatus, waitlistInviteToken } = application;
+  const displayStatus = application.softRejectedAt
+    ? (application.softRejectedFromStatus ?? applicationStatus)
+    : applicationStatus;
 
   // Define status-specific content
   const statusContent = {
@@ -70,8 +73,7 @@ export default function ExistingApplicationStatus({ application }: Props) {
     },
   };
 
-  const content =
-    statusContent[applicationStatus as keyof typeof statusContent];
+  const content = statusContent[displayStatus as keyof typeof statusContent];
 
   if (!content) {
     return (

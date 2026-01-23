@@ -80,11 +80,15 @@ model Applicant {
   gender                Gender
   seeking               Gender?
   location              String
+  cityFrom              String?
+  industry              String?
   occupation            String
   employer              String?
   education             String
   incomeRange           String
   incomeVerified        Boolean           @default(false)
+  referredBy            String?
+  aboutYourself         String?           @db.Text
 
   // Stage 1 Qualification
   stage1CompletedAt     DateTime?
@@ -104,6 +108,8 @@ model Applicant {
   reviewedAt            DateTime?
   reviewedBy            String?           // Admin user ID
   rejectionReason       String?
+  softRejectedAt        DateTime?
+  softRejectedFromStatus ApplicationStatus?
   
   // Screening - CRITICAL: Only store pass/fail status
   screeningStatus       ScreeningStatus   @default(PENDING)

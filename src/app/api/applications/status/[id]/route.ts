@@ -15,14 +15,18 @@ export async function GET(_: Request, { params }: RouteContext) {
     return errorResponse("NOT_FOUND", "Application not found", 404);
   }
 
+  const displayStatus = applicant.softRejectedAt
+    ? (applicant.softRejectedFromStatus ?? applicant.applicationStatus)
+    : applicant.applicationStatus;
+
   return successResponse({
     applicationId: applicant.id,
-    status: applicant.applicationStatus,
+    status: displayStatus,
     screeningStatus: applicant.screeningStatus,
     idenfyStatus: applicant.idenfyStatus,
     checkrStatus: applicant.checkrStatus,
     nextStep:
-      applicant.applicationStatus === "PAYMENT_PENDING"
+      displayStatus === "PAYMENT_PENDING"
         ? "Complete payment to begin screening."
         : "We are reviewing your application.",
     submittedAt: applicant.submittedAt,
