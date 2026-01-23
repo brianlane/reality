@@ -15,15 +15,15 @@ export default async function ApplyPage() {
         email: { equals: auth.email, mode: "insensitive" },
         deletedAt: null,
       },
-      include: {
-        applicant: {
-          where: { deletedAt: null },
-        },
-      },
     });
 
-    if (user?.applicant) {
-      existingApplication = user.applicant;
+    if (user) {
+      const applicant = await db.applicant.findFirst({
+        where: { userId: user.id, deletedAt: null },
+      });
+      if (applicant) {
+        existingApplication = applicant;
+      }
     }
   }
 

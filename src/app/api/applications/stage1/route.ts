@@ -26,12 +26,14 @@ export async function POST(request: NextRequest) {
       where: { email: { equals: normalizedEmail, mode: "insensitive" } },
       include: { applicant: true },
     });
+    const existingApplicant = existingUser?.applicant ?? null;
+    const activeApplicant =
+      existingApplicant && existingApplicant.deletedAt === null
+        ? existingApplicant
+        : null;
 
     // Only allow Stage 1 for new users or existing WAITLIST applicants
-    if (
-      existingUser?.applicant &&
-      existingUser.applicant.applicationStatus !== "WAITLIST"
-    ) {
+    if (activeApplicant && activeApplicant.applicationStatus !== "WAITLIST") {
       return errorResponse(
         "APPLICATION_EXISTS",
         "You already have an application in progress or submitted.",
@@ -48,6 +50,8 @@ export async function POST(request: NextRequest) {
             lastName,
             phone: phone ?? null,
             email: normalizedEmail,
+            deletedAt: null,
+            deletedBy: null,
           },
         })
       : await db.user.create({
@@ -74,17 +78,26 @@ export async function POST(request: NextRequest) {
     };
 
     // Create or update Applicant with WAITLIST status
-    const applicant = existingUser?.applicant
+    const restoringApplicant = existingApplicant?.deletedAt !== null;
+    const applicant = existingApplicant
       ? await db.applicant.update({
-          where: { id: existingUser.applicant.id },
+          where: { id: existingApplicant.id },
           data: {
             age,
             gender,
             location,
             stage1CompletedAt: new Date(),
             stage1Responses: stage1Responses,
+            ...(restoringApplicant
+              ? {
+                  deletedAt: null,
+                  deletedBy: null,
+                  applicationStatus: "WAITLIST",
+                  waitlistedAt: new Date(),
+                }
+              : {}),
             // Only set waitlistedAt if not already set (preserve queue position)
-            ...(existingUser.applicant.waitlistedAt
+            ...(existingApplicant.waitlistedAt
               ? {}
               : { waitlistedAt: new Date() }),
           },
