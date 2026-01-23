@@ -26,10 +26,14 @@ export default function AdminApplicationForm({
     age: "",
     gender: "MALE",
     location: "",
+    cityFrom: "",
+    industry: "",
     occupation: "",
     employer: "",
     education: "",
     incomeRange: "",
+    referredBy: "",
+    aboutYourself: "",
     applicationStatus: "SUBMITTED",
     screeningStatus: "PENDING",
     compatibilityScore: "",
@@ -68,10 +72,14 @@ export default function AdminApplicationForm({
           age: String(json.applicant.age ?? ""),
           gender: json.applicant.gender ?? "MALE",
           location: json.applicant.location ?? "",
+          cityFrom: json.applicant.cityFrom ?? "",
+          industry: json.applicant.industry ?? "",
           occupation: json.applicant.occupation ?? "",
           employer: json.applicant.employer ?? "",
           education: json.applicant.education ?? "",
           incomeRange: json.applicant.incomeRange ?? "",
+          referredBy: json.applicant.referredBy ?? "",
+          aboutYourself: json.applicant.aboutYourself ?? "",
           applicationStatus: json.applicant.applicationStatus ?? "SUBMITTED",
           screeningStatus: json.applicant.screeningStatus ?? "PENDING",
           compatibilityScore: json.applicant.compatibilityScore
@@ -119,10 +127,14 @@ export default function AdminApplicationForm({
                 age: Number(form.age),
                 gender: form.gender,
                 location: form.location,
+                cityFrom: form.cityFrom,
+                industry: form.industry,
                 occupation: form.occupation,
                 employer: form.employer || null,
                 education: form.education,
                 incomeRange: form.incomeRange,
+                referredBy: form.referredBy || null,
+                aboutYourself: form.aboutYourself,
                 applicationStatus: form.applicationStatus,
                 screeningStatus: form.screeningStatus,
                 photos: form.photos
@@ -135,10 +147,14 @@ export default function AdminApplicationForm({
                 age: form.age ? Number(form.age) : undefined,
                 gender: form.gender,
                 location: form.location,
+                cityFrom: form.cityFrom,
+                industry: form.industry,
                 occupation: form.occupation,
                 employer: form.employer || null,
                 education: form.education,
                 incomeRange: form.incomeRange,
+                referredBy: form.referredBy || null,
+                aboutYourself: form.aboutYourself || undefined,
                 applicationStatus:
                   form.applicationStatus === "REJECTED"
                     ? undefined
@@ -388,9 +404,19 @@ export default function AdminApplicationForm({
           onChange={(event) => updateField("location", event.target.value)}
         />
         <Input
+          placeholder="City From"
+          value={form.cityFrom}
+          onChange={(event) => updateField("cityFrom", event.target.value)}
+        />
+        <Input
           placeholder="Occupation"
           value={form.occupation}
           onChange={(event) => updateField("occupation", event.target.value)}
+        />
+        <Input
+          placeholder="Industry"
+          value={form.industry}
+          onChange={(event) => updateField("industry", event.target.value)}
         />
         <Input
           placeholder="Employer"
@@ -406,6 +432,11 @@ export default function AdminApplicationForm({
           placeholder="Income Range"
           value={form.incomeRange}
           onChange={(event) => updateField("incomeRange", event.target.value)}
+        />
+        <Input
+          placeholder="Referred By (optional)"
+          value={form.referredBy}
+          onChange={(event) => updateField("referredBy", event.target.value)}
         />
         <Select
           value={form.applicationStatus}
@@ -443,6 +474,16 @@ export default function AdminApplicationForm({
           placeholder="Photos (comma-separated URLs)"
           value={form.photos}
           onChange={(event) => updateField("photos", event.target.value)}
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-xs font-semibold text-navy-soft">
+          About Yourself
+        </label>
+        <Textarea
+          value={form.aboutYourself}
+          onChange={(event) => updateField("aboutYourself", event.target.value)}
+          rows={4}
         />
       </div>
       <div className="space-y-2">

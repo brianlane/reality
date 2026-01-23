@@ -121,13 +121,17 @@ export const adminUserUpdateSchema = adminUserCreateSchema
 export const adminApplicantCreateSchema = z.object({
   user: adminUserCreateSchema,
   applicant: z.object({
-    age: z.number().int().min(18).max(100),
+    age: z.number().int().min(24).max(41),
     gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
     location: z.string().min(1),
+    cityFrom: z.string().min(1),
+    industry: z.string().min(1),
     occupation: z.string().min(1),
     employer: z.string().optional().nullable(),
     education: z.string().min(1),
     incomeRange: z.string().min(1),
+    referredBy: z.string().optional().nullable(),
+    aboutYourself: z.string().min(50).max(500),
     applicationStatus: z.enum([
       "DRAFT",
       "SUBMITTED",
@@ -145,15 +149,19 @@ export const adminApplicantCreateSchema = z.object({
 export const adminApplicantUpdateSchema = z.object({
   applicant: z
     .object({
-      age: z.number().int().min(18).max(100).optional(),
+      age: z.number().int().min(24).max(41).optional(),
       gender: z
         .enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"])
         .optional(),
       location: z.string().min(1).optional(),
+      cityFrom: z.string().min(1).optional(),
+      industry: z.string().min(1).optional(),
       occupation: z.string().min(1).optional(),
       employer: z.string().optional().nullable(),
       education: z.string().min(1).optional(),
       incomeRange: z.string().min(1).optional(),
+      referredBy: z.string().optional().nullable(),
+      aboutYourself: z.string().min(50).max(500).optional(),
       applicationStatus: z
         .enum([
           "DRAFT",
