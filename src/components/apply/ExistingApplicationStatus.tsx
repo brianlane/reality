@@ -11,6 +11,26 @@ export default function ExistingApplicationStatus({ application }: Props) {
     ? (application.softRejectedFromStatus ?? applicationStatus)
     : applicationStatus;
 
+  if (application.softRejectedAt) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="flex flex-col items-center text-center space-y-6">
+          <div className="text-6xl">⏳</div>
+          <h1 className="text-3xl font-semibold text-navy">
+            Application Under Review
+          </h1>
+          <p className="text-lg text-navy-soft max-w-2xl">
+            We&apos;re currently reviewing your application. We&apos;ll notify
+            you once we&apos;ve completed the review.
+          </p>
+          <p className="text-xs text-slate-400 pt-4">
+            Application ID: {application.id}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // Define status-specific content
   const statusContent = {
     DRAFT: {
