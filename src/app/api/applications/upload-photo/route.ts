@@ -146,10 +146,11 @@ export async function POST(request: Request) {
         select: { photos: true },
       });
 
-      if (
-        !currentApplicant ||
-        currentApplicant.photos.length >= MAX_PHOTOS_PER_APPLICANT
-      ) {
+      if (!currentApplicant) {
+        throw new Error("Applicant not found");
+      }
+
+      if (currentApplicant.photos.length >= MAX_PHOTOS_PER_APPLICANT) {
         throw new Error("Photo limit exceeded by concurrent request");
       }
 
@@ -181,6 +182,10 @@ export async function POST(request: Request) {
     }
 
     const errorMessage = error instanceof Error ? error.message : String(error);
+
+    if (errorMessage.includes("Applicant not found")) {
+      return errorResponse("NOT_FOUND", "Applicant not found", 404);
+    }
 
     if (errorMessage.includes("Photo limit exceeded")) {
       return errorResponse(
