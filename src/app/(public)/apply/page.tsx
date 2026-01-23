@@ -39,7 +39,10 @@ export default async function ApplyPage() {
         existingApplication.applicationStatus)
       : existingApplication.applicationStatus;
     // If on waitlist, redirect to waitlist confirmation page
-    if (effectiveStatus === "WAITLIST" && !softRejectedApplication.softRejectedAt) {
+    if (
+      effectiveStatus === "WAITLIST" &&
+      !softRejectedApplication.softRejectedAt
+    ) {
       redirect(`/apply/waitlist?id=${existingApplication.id}`);
     }
 
