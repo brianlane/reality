@@ -28,16 +28,19 @@ function redirectWithCookies(response: NextResponse, url: URL): NextResponse {
   return redirectResponse;
 }
 
-function getIdentifier(request: NextRequest): string {
+function getIdentifier(
+  request: NextRequest,
+  configKey: keyof typeof RATE_LIMITS,
+) {
   const forwarded = request.headers.get("x-forwarded-for");
   const realIp = request.headers.get("x-real-ip");
   const ip = forwarded?.split(",")[0]?.trim() || realIp?.trim() || "anonymous";
 
-  if (request.nextUrl.pathname.startsWith("/api/")) {
-    return `${ip}:${request.nextUrl.pathname}`;
+  if (configKey === "API") {
+    return `${ip}:${configKey.toLowerCase()}:${request.nextUrl.pathname}`;
   }
 
-  return ip;
+  return `${ip}:${configKey.toLowerCase()}`;
 }
 
 export async function proxy(request: NextRequest) {
@@ -96,20 +99,22 @@ export async function proxy(request: NextRequest) {
   }
 
   // Rate Limiting
-  let config: RateLimitConfig = RATE_LIMITS.API;
-  const identifier = getIdentifier(request);
+  let configKey: keyof typeof RATE_LIMITS = "API";
 
   if (pathname.includes("/api/webhooks/")) {
-    config = RATE_LIMITS.WEBHOOK;
+    configKey = "WEBHOOK";
   } else if (
     pathname.includes("/sign-in") ||
     pathname.includes("/admin/login") ||
     pathname.includes("/api/auth")
   ) {
-    config = RATE_LIMITS.AUTH;
+    configKey = "AUTH";
   } else if (pathname.includes("/upload")) {
-    config = RATE_LIMITS.UPLOAD;
+    configKey = "UPLOAD";
   }
+
+  const config: RateLimitConfig = RATE_LIMITS[configKey];
+  const identifier = getIdentifier(request, configKey);
 
   const result = rateLimit(identifier, config);
 
@@ -142,7 +147,8 @@ export async function proxy(request: NextRequest) {
 
   const e2eEnabled =
     process.env.E2E_AUTH_ENABLED === "true" &&
-    (process.env.NODE_ENV !== "production" || process.env.CI === "true");
+    (process.env.NODE_ENV !== "production" ||
+      (process.env.CI === "true" && process.env.E2E_AUTH_ALLOW_CI === "true"));
   const e2eUserId = request.headers.get("x-e2e-user-id");
   const e2eUserEmail = request.headers.get("x-e2e-user-email");
   const e2eUser: AuthUser | null =

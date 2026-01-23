@@ -24,6 +24,7 @@ export default defineConfig({
       ...process.env,
       NODE_ENV: "test",
       E2E_AUTH_ENABLED: "true",
+      E2E_AUTH_ALLOW_CI: "true",
       ADMIN_EMAIL: "admin@example.com",
       DATABASE_URL:
         process.env.DATABASE_URL ||
