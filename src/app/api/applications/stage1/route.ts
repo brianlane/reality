@@ -31,9 +31,16 @@ export async function POST(request: NextRequest) {
       existingApplicant && existingApplicant.deletedAt === null
         ? existingApplicant
         : null;
+    const restoredApplicant =
+      existingApplicant && existingApplicant.deletedAt !== null
+        ? existingApplicant
+        : null;
 
     // Only allow Stage 1 for new users or existing WAITLIST applicants
-    if (activeApplicant && activeApplicant.applicationStatus !== "WAITLIST") {
+    if (
+      (activeApplicant && activeApplicant.applicationStatus !== "WAITLIST") ||
+      (restoredApplicant && restoredApplicant.applicationStatus !== "WAITLIST")
+    ) {
       return errorResponse(
         "APPLICATION_EXISTS",
         "You already have an application in progress or submitted.",
@@ -78,7 +85,8 @@ export async function POST(request: NextRequest) {
     };
 
     // Create or update Applicant with WAITLIST status
-    const restoringApplicant = existingApplicant?.deletedAt !== null;
+    const restoringApplicant = !!restoredApplicant;
+    const waitlistedAt = existingApplicant?.waitlistedAt ?? new Date();
     const applicant = existingApplicant
       ? await db.applicant.update({
           where: { id: existingApplicant.id },
@@ -93,13 +101,16 @@ export async function POST(request: NextRequest) {
                   deletedAt: null,
                   deletedBy: null,
                   applicationStatus: "WAITLIST",
-                  waitlistedAt: new Date(),
+                  reviewedAt: null,
+                  reviewedBy: null,
+                  rejectionReason: null,
+                  compatibilityScore: null,
+                  backgroundCheckNotes: null,
+                  waitlistedAt,
                 }
               : {}),
             // Only set waitlistedAt if not already set (preserve queue position)
-            ...(existingApplicant.waitlistedAt
-              ? {}
-              : { waitlistedAt: new Date() }),
+            ...(existingApplicant.waitlistedAt ? {} : { waitlistedAt }),
           },
         })
       : await db.applicant.create({
