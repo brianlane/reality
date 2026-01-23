@@ -4,6 +4,7 @@ import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { sendWaitlistInviteEmail } from "@/lib/email/waitlist";
 import { randomBytes } from "crypto";
+import { logger } from "@/lib/logger";
 
 type BatchInviteBody = {
   applicantIds: string[];
@@ -132,16 +133,19 @@ export async function POST(request: Request) {
           inviteToken,
         });
       } catch (emailError) {
-        console.error(
-          `Failed to send email to ${applicant.user.email}:`,
-          emailError,
-        );
+        logger.error("Failed to send waitlist invite email", {
+          applicantId,
+          error: (emailError as Error).message,
+        });
         // Continue - email failure shouldn't fail the entire invite
       }
 
       success.push(applicantId);
     } catch (error) {
-      console.error("Error processing applicant %s:", applicantId, error);
+      logger.error("Error processing applicant in batch invite", {
+        applicantId,
+        error: (error as Error).message,
+      });
       failed.push({
         id: applicantId,
         reason: (error as Error).message || "Unknown error",

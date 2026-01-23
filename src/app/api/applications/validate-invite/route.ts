@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { logger } from "@/lib/logger";
 
 const INVITE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -66,7 +67,9 @@ export async function GET(request: NextRequest) {
       applicationId: applicant.id,
     });
   } catch (error) {
-    console.error("Token validation error:", error);
+    logger.error("Token validation error", {
+      error: (error as Error).message,
+    });
     return errorResponse(
       "VALIDATION_ERROR",
       "Failed to validate invite token",

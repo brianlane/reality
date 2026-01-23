@@ -4,6 +4,7 @@ import { stage1QualificationSchema } from "@/lib/validations";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { sendWaitlistConfirmationEmail } from "@/lib/email/waitlist";
 import type { JsonValueNonNull } from "@/lib/json";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -138,7 +139,10 @@ export async function POST(request: NextRequest) {
         applicationId: applicant.id,
       });
     } catch (emailError) {
-      console.error("Failed to send waitlist confirmation email:", emailError);
+      logger.error("Failed to send waitlist confirmation email", {
+        applicationId: applicant.id,
+        error: (emailError as Error).message,
+      });
       // Continue even if email fails - don't block the application
     }
 
@@ -147,7 +151,9 @@ export async function POST(request: NextRequest) {
       status: "WAITLIST",
     });
   } catch (error) {
-    console.error("Stage 1 submission error:", error);
+    logger.error("Stage 1 submission error", {
+      error: (error as Error).message,
+    });
     return errorResponse(
       "VALIDATION_ERROR",
       "Invalid qualification data",

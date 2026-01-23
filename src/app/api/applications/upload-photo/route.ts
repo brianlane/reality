@@ -3,6 +3,31 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { getSupabaseClient } from "@/lib/storage/client";
 
 const PHOTO_BUCKET = "photos";
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_PHOTOS_PER_APPLICANT = 10;
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+// Magic numbers for file type verification
+const FILE_SIGNATURES: Record<string, number[][]> = {
+  "image/jpeg": [
+    [0xff, 0xd8, 0xff], // JPEG
+  ],
+  "image/png": [
+    [0x89, 0x50, 0x4e, 0x47], // PNG
+  ],
+  "image/webp": [
+    [0x52, 0x49, 0x46, 0x46], // RIFF (WebP container)
+  ],
+};
+
+function verifyFileSignature(buffer: Uint8Array, mimeType: string): boolean {
+  const signatures = FILE_SIGNATURES[mimeType];
+  if (!signatures) return false;
+
+  return signatures.some((signature) =>
+    signature.every((byte, index) => buffer[index] === byte),
+  );
+}
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -17,6 +42,29 @@ export async function POST(request: Request) {
     );
   }
 
+  // Validate file type
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "Invalid file type. Only JPEG, PNG, and WebP images are allowed.",
+      400,
+    );
+  }
+
+  // Validate file size
+  if (file.size > MAX_FILE_SIZE) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
+      400,
+    );
+  }
+
+  if (file.size === 0) {
+    return errorResponse("VALIDATION_ERROR", "File is empty.", 400);
+  }
+
+  // Validate applicant exists and hasn't exceeded photo limit
   const applicant = await db.applicant.findUnique({
     where: { id: applicantId },
   });
@@ -25,8 +73,28 @@ export async function POST(request: Request) {
     return errorResponse("NOT_FOUND", "Applicant not found", 404);
   }
 
-  const path = `${applicantId}/${Date.now()}-${file.name}`;
+  if (applicant.photos.length >= MAX_PHOTOS_PER_APPLICANT) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      `Maximum of ${MAX_PHOTOS_PER_APPLICANT} photos allowed.`,
+      400,
+    );
+  }
+
+  // Read file buffer and verify actual content matches declared MIME type
   const buffer = new Uint8Array(await file.arrayBuffer());
+
+  if (!verifyFileSignature(buffer, file.type)) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "File content does not match declared file type.",
+      400,
+    );
+  }
+
+  // Sanitize filename to prevent path traversal
+  const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${applicantId}/${Date.now()}-${sanitizedFilename}`;
 
   const supabase = getSupabaseClient();
   if (!supabase) {
@@ -41,7 +109,8 @@ export async function POST(request: Request) {
     .from(PHOTO_BUCKET)
     .upload(path, buffer, {
       contentType: file.type,
-      upsert: true,
+      upsert: false, // Don't overwrite existing files
+      cacheControl: "3600",
     });
 
   if (error) {

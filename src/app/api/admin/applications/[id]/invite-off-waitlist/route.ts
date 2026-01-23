@@ -4,6 +4,7 @@ import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { sendWaitlistInviteEmail } from "@/lib/email/waitlist";
 import { randomBytes } from "crypto";
+import { logger } from "@/lib/logger";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -115,7 +116,10 @@ export async function POST(request: Request, { params }: RouteContext) {
       inviteToken,
     });
   } catch (emailError) {
-    console.error("Failed to send waitlist invite email:", emailError);
+    logger.error("Failed to send waitlist invite email", {
+      applicantId: applicant.id,
+      error: (emailError as Error).message,
+    });
     // Continue even if email fails - admin can resend manually
   }
 

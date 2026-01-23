@@ -1,23 +1,36 @@
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { verifyStripeWebhook } from "@/lib/stripe";
+import type Stripe from "stripe";
 
 export async function POST(request: Request) {
-  const signature = request.headers.get("stripe-signature") ?? "";
+  const signature = request.headers.get("stripe-signature");
+  if (!signature) {
+    return errorResponse("VALIDATION_ERROR", "Missing signature", 400);
+  }
+
   const payload = await request.text();
-  const event = verifyStripeWebhook(payload, signature);
+
+  let event: Stripe.Event;
+  try {
+    event = verifyStripeWebhook(payload, signature);
+  } catch (error) {
+    return errorResponse(
+      "FORBIDDEN",
+      `Webhook verification failed: ${(error as Error).message}`,
+      403,
+    );
+  }
 
   try {
-    const parsed = JSON.parse(payload);
-    const paymentId = parsed?.data?.object?.metadata?.paymentId;
-    const eventType = parsed?.type;
+    const paymentId = event.data.object.metadata?.paymentId;
     let status: "SUCCEEDED" | "FAILED" | null = null;
 
-    if (eventType === "payment_intent.succeeded") {
+    if (event.type === "payment_intent.succeeded") {
       status = "SUCCEEDED";
-    } else if (eventType === "payment_intent.payment_failed") {
+    } else if (event.type === "payment_intent.payment_failed") {
       status = "FAILED";
-    } else if (eventType === "checkout.session.completed") {
+    } else if (event.type === "checkout.session.completed") {
       status = "SUCCEEDED";
     }
 
@@ -37,8 +50,12 @@ export async function POST(request: Request) {
         });
       }
     }
-  } catch {
-    return errorResponse("VALIDATION_ERROR", "Invalid payload", 400);
+  } catch (error) {
+    return errorResponse(
+      "INTERNAL_SERVER_ERROR",
+      `Webhook processing failed: ${(error as Error).message}`,
+      500,
+    );
   }
 
   return successResponse({ received: true, eventId: event.id });
