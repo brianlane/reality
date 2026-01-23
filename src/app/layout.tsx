@@ -25,12 +25,21 @@ export const metadata: Metadata = {
     siteName: "Reality Matchmaking",
     locale: "en_US",
     type: "website",
+    images: [
+      {
+        url: "/logo.png",
+        width: 1200,
+        height: 630,
+        alt: "Reality Matchmaking",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Reality Matchmaking",
     description:
       "Private experiences designed for real connections to feel like matchmaking in reality.",
+    images: ["/logo.png"],
   },
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
@@ -44,17 +53,27 @@ export default function RootLayout({
 }>) {
   const structuredData = {
     "@context": "https://schema.org",
-    "@type": "ProfessionalService",
+    "@type": "Service",
     name: "Reality Matchmaking",
     description:
       "Private experiences designed for real connections to feel like matchmaking in reality.",
     url: "https://www.realitymatchmaking.com",
     serviceType: "Matchmaking Service",
+    provider: {
+      "@type": "Organization",
+      name: "Reality Matchmaking",
+      url: "https://www.realitymatchmaking.com",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://www.realitymatchmaking.com/logo.png",
+      },
+    },
     areaServed: {
       "@type": "Country",
       name: "United States",
     },
-    additionalType: "https://schema.org/Service",
+    category: "Dating & Relationships",
+    image: "https://www.realitymatchmaking.com/logo.png",
     potentialAction: {
       "@type": "ReserveAction",
       target: {
