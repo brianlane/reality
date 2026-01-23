@@ -53,14 +53,6 @@ export default function ExistingApplicationStatus({ application }: Props) {
       actionText: "Go to Dashboard",
       actionHref: "/dashboard",
     },
-    REJECTED: {
-      icon: "✕",
-      title: "Application Decision",
-      description:
-        "Thank you for your interest in Reality Matchmaking. After careful review, we're unable to move forward with your application at this time. This decision is based on our current matching criteria and availability.",
-      actionText: "Back to Home",
-      actionHref: "/",
-    },
     WAITLIST_INVITED: {
       icon: "🎊",
       title: "You've Been Invited!",

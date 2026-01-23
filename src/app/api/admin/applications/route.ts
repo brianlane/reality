@@ -88,7 +88,6 @@ export async function GET(request: Request) {
       totalSubmitted: statusCounts.SUBMITTED ?? 0,
       pending: statusCounts.SCREENING_IN_PROGRESS ?? 0,
       approved: statusCounts.APPROVED ?? 0,
-      rejected: statusCounts.REJECTED ?? 0,
       waitlist:
         (statusCounts.WAITLIST ?? 0) + (statusCounts.WAITLIST_INVITED ?? 0),
     },

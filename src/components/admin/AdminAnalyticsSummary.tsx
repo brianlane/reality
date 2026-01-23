@@ -16,7 +16,6 @@ type Funnel = {
     submitted: number;
     screening: number;
     approved: number;
-    rejected: number;
     waitlist: number;
   };
   invitations: { sent: number; accepted: number; attended: number };
@@ -166,7 +165,6 @@ export default function AdminAnalyticsSummary() {
           <div>Submitted: {funnel.applications.submitted}</div>
           <div>Screening: {funnel.applications.screening}</div>
           <div>Approved: {funnel.applications.approved}</div>
-          <div>Rejected: {funnel.applications.rejected}</div>
           <div>Waitlist: {funnel.applications.waitlist}</div>
           <div>Invitations Sent: {funnel.invitations.sent}</div>
         </div>

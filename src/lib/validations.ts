@@ -134,7 +134,6 @@ export const adminApplicantCreateSchema = z.object({
       "PAYMENT_PENDING",
       "SCREENING_IN_PROGRESS",
       "APPROVED",
-      "REJECTED",
       "WAITLIST",
       "WAITLIST_INVITED",
     ]),
@@ -162,7 +161,6 @@ export const adminApplicantUpdateSchema = z.object({
           "PAYMENT_PENDING",
           "SCREENING_IN_PROGRESS",
           "APPROVED",
-          "REJECTED",
           "WAITLIST",
           "WAITLIST_INVITED",
         ])

@@ -312,7 +312,7 @@ export default function AdminApplicationForm({
         setIsLoading(false);
         return;
       }
-      setSuccess("Application rejected.");
+      setSuccess("Applicant soft rejected.");
       setIsLoading(false);
     } catch {
       setError("Failed to reject application.");
@@ -415,7 +415,6 @@ export default function AdminApplicationForm({
           <option value="PAYMENT_PENDING">Payment Pending</option>
           <option value="SCREENING_IN_PROGRESS">Screening</option>
           <option value="APPROVED">Approved</option>
-          <option value="REJECTED">Rejected</option>
           <option value="WAITLIST">Waitlist</option>
           <option value="WAITLIST_INVITED">Waitlist Invited</option>
         </Select>
@@ -477,7 +476,7 @@ export default function AdminApplicationForm({
               onClick={handleReject}
               disabled={isLoading}
             >
-              Reject
+              Soft Reject
             </Button>
             <Button
               type="button"
