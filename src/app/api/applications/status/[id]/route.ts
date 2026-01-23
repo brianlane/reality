@@ -18,6 +18,11 @@ export async function GET(_: Request, { params }: RouteContext) {
   const displayStatus = applicant.softRejectedAt
     ? (applicant.softRejectedFromStatus ?? applicant.applicationStatus)
     : applicant.applicationStatus;
+  const nextStepMessage = applicant.softRejectedAt
+    ? "We are reviewing your application."
+    : displayStatus === "PAYMENT_PENDING"
+      ? "Complete payment to begin screening."
+      : "We are reviewing your application.";
 
   return successResponse({
     applicationId: applicant.id,
@@ -25,10 +30,7 @@ export async function GET(_: Request, { params }: RouteContext) {
     screeningStatus: applicant.screeningStatus,
     idenfyStatus: applicant.idenfyStatus,
     checkrStatus: applicant.checkrStatus,
-    nextStep:
-      displayStatus === "PAYMENT_PENDING"
-        ? "Complete payment to begin screening."
-        : "We are reviewing your application.",
+    nextStep: nextStepMessage,
     submittedAt: applicant.submittedAt,
   });
 }

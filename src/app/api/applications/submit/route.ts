@@ -19,6 +19,13 @@ export async function POST(request: NextRequest) {
     if (!applicant) {
       return errorResponse("NOT_FOUND", "Application not found", 404);
     }
+    if (applicant.softRejectedAt) {
+      return errorResponse(
+        "APPLICATION_LOCKED",
+        "Application can no longer be submitted.",
+        403,
+      );
+    }
 
     // Handle two different submission scenarios based on current status
     if (applicant.applicationStatus === "PAYMENT_PENDING") {
