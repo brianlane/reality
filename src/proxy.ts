@@ -104,9 +104,10 @@ export async function proxy(request: NextRequest) {
   if (pathname.includes("/api/webhooks/")) {
     configKey = "WEBHOOK";
   } else if (
-    pathname.includes("/sign-in") ||
-    pathname.includes("/admin/login") ||
-    pathname.includes("/api/auth")
+    method === "POST" &&
+    (pathname.includes("/sign-in") ||
+      pathname.includes("/admin/login") ||
+      pathname.includes("/api/auth"))
   ) {
     configKey = "AUTH";
   } else if (pathname.includes("/upload")) {
