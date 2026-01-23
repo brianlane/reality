@@ -110,7 +110,11 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     reviewedBy: adminUser.id,
   };
 
-  if (body.applicant?.applicationStatus) {
+  const applicationStatusChangeRequested =
+    body.applicant?.applicationStatus &&
+    body.applicant.applicationStatus !== existing.applicationStatus;
+
+  if (applicationStatusChangeRequested) {
     updateData.softRejectedAt = null;
     updateData.softRejectedFromStatus = null;
   }
