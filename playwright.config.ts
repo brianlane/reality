@@ -22,6 +22,7 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       ...process.env,
+      NODE_ENV: "test",
       E2E_AUTH_ENABLED: "true",
       ADMIN_EMAIL: "admin@example.com",
       DATABASE_URL:
