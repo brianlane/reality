@@ -2,6 +2,18 @@ import { sendEmail } from "./client";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
+const htmlEscapes: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (char) => htmlEscapes[char] ?? char);
+}
+
 type WaitlistConfirmationParams = {
   to: string;
   firstName: string;
@@ -14,6 +26,7 @@ export async function sendWaitlistConfirmationEmail({
   applicationId,
 }: WaitlistConfirmationParams) {
   const subject = "You're on the Reality Matchmaking Waitlist";
+  const safeFirstName = escapeHtml(firstName);
 
   const html = `
 <!DOCTYPE html>
@@ -36,7 +49,7 @@ export async function sendWaitlistConfirmationEmail({
     <!-- Content -->
     <div style="padding: 40px 32px;">
       <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-        Hi ${firstName},
+        Hi ${safeFirstName},
       </p>
 
       <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
@@ -89,6 +102,7 @@ export async function sendWaitlistInviteEmail({
   const subject =
     "You're Invited to Continue Your Reality Matchmaking Application!";
   const inviteUrl = `${APP_URL}/apply/continue?token=${inviteToken}`;
+  const safeFirstName = escapeHtml(firstName);
 
   const html = `
 <!DOCTYPE html>
@@ -111,7 +125,7 @@ export async function sendWaitlistInviteEmail({
     <!-- Content -->
     <div style="padding: 40px 32px;">
       <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-        Hi ${firstName},
+        Hi ${safeFirstName},
       </p>
 
       <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
