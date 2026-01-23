@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { getSupabaseClient } from "@/lib/storage/client";
+import { logger } from "@/lib/logger";
 
 const PHOTO_BUCKET = "photos";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -166,9 +167,19 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     // Cleanup orphaned file if database update fails
-    await supabase.storage.from(PHOTO_BUCKET).remove([path]);
+    try {
+      await supabase.storage.from(PHOTO_BUCKET).remove([path]);
+    } catch (cleanupError) {
+      // Log cleanup failure but don't mask original error
+      logger.error("Failed to cleanup orphaned file", {
+        path,
+        error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+      });
+    }
 
-    if ((error as Error).message.includes("Photo limit exceeded")) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    if (errorMessage.includes("Photo limit exceeded")) {
       return errorResponse(
         "VALIDATION_ERROR",
         `Maximum of ${MAX_PHOTOS_PER_APPLICANT} photos allowed.`,

@@ -37,6 +37,18 @@ export function rateLimit(
   config: RateLimitConfig,
 ): RateLimitResult {
   const now = Date.now();
+
+  // Opportunistic cleanup: Remove a few expired entries on each request
+  // This prevents unbounded growth without the serverless issues of setInterval
+  let cleaned = 0;
+  for (const [key, entry] of store.entries()) {
+    if (entry.resetAt < now) {
+      store.delete(key);
+      cleaned++;
+      if (cleaned >= 10) break; // Limit cleanup work per request
+    }
+  }
+
   const entry = store.get(identifier);
 
   if (!entry || entry.resetAt < now) {

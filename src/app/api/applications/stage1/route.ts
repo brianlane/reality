@@ -139,9 +139,10 @@ export async function POST(request: NextRequest) {
         applicationId: applicant.id,
       });
     } catch (emailError) {
+      const errorMessage = emailError instanceof Error ? emailError.message : String(emailError);
       logger.error("Failed to send waitlist confirmation email", {
         applicationId: applicant.id,
-        error: (emailError as Error).message,
+        error: errorMessage,
       });
       // Continue even if email fails - don't block the application
     }
@@ -151,14 +152,15 @@ export async function POST(request: NextRequest) {
       status: "WAITLIST",
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error("Stage 1 submission error", {
-      error: (error as Error).message,
+      error: errorMessage,
     });
     return errorResponse(
       "VALIDATION_ERROR",
       "Invalid qualification data",
       400,
-      [{ message: (error as Error).message }],
+      [{ message: errorMessage }],
     );
   }
 }

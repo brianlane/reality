@@ -47,7 +47,7 @@ export async function proxy(request: NextRequest) {
   // CSRF Protection: Verify origin for state-changing requests to API routes
   if (
     pathname.startsWith("/api/") &&
-    !pathname.includes("/api/webhooks/") &&
+    !pathname.startsWith("/api/webhooks/") &&
     (method === "POST" ||
       method === "PUT" ||
       method === "DELETE" ||
@@ -140,7 +140,9 @@ export async function proxy(request: NextRequest) {
   response.headers.set("X-RateLimit-Remaining", String(result.remaining));
   response.headers.set("X-RateLimit-Reset", String(result.reset));
 
-  const e2eEnabled = process.env.E2E_AUTH_ENABLED === "true";
+  const e2eEnabled =
+    process.env.E2E_AUTH_ENABLED === "true" &&
+    process.env.NODE_ENV === "development";
   const e2eUserId = request.headers.get("x-e2e-user-id");
   const e2eUserEmail = request.headers.get("x-e2e-user-email");
   const e2eUser: AuthUser | null =
