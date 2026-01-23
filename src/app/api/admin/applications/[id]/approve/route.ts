@@ -45,6 +45,8 @@ export async function POST(request: Request, { params }: RouteContext) {
     where: { id },
     data: {
       applicationStatus: "APPROVED",
+      softRejectedAt: null,
+      softRejectedFromStatus: null,
       reviewedAt: new Date(),
       reviewedBy: adminUser.id,
       compatibilityScore: body.compatibilityScore,

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { adminApplicantUpdateSchema } from "@/lib/validations";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
+import { Prisma } from "@prisma/client";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -103,13 +104,20 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     email: auth.email,
   });
 
+  const updateData: Prisma.ApplicantUpdateInput = {
+    ...body.applicant,
+    reviewedAt: new Date(),
+    reviewedBy: adminUser.id,
+  };
+
+  if (body.applicant?.applicationStatus) {
+    updateData.softRejectedAt = null;
+    updateData.softRejectedFromStatus = null;
+  }
+
   const applicant = await db.applicant.update({
     where: { id },
-    data: {
-      ...body.applicant,
-      reviewedAt: new Date(),
-      reviewedBy: adminUser.id,
-    },
+    data: updateData,
   });
 
   await db.adminAction.create({
