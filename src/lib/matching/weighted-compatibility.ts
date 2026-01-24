@@ -124,11 +124,23 @@ function calculateSimilarity(
       }
 
       const options = question.options as { min: number; max: number };
+
+      // Validate that min and max exist and are valid numbers
+      if (
+        typeof options.min !== "number" ||
+        typeof options.max !== "number" ||
+        isNaN(options.min) ||
+        isNaN(options.max)
+      ) {
+        // Malformed options object - treat identical answers as match
+        return valueA === valueB ? 1.0 : 0.0;
+      }
+
       const diff = Math.abs(Number(valueA) - Number(valueB));
       const maxDelta = options.max - options.min;
 
       // Handle invalid range (min >= max)
-      if (maxDelta <= 0) {
+      if (maxDelta <= 0 || isNaN(maxDelta)) {
         // Invalid or zero range - treat same values as perfect match, different as no match
         return diff === 0 ? 1.0 : 0.0;
       }

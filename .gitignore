@@ -42,3 +42,8 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# Development workflow notes (internal, not permanent docs)
+ALL_TESTS_PASSING.md
+BUGFIX_SUMMARY.md
+CURSOR_BUGS_FIXED*.md
