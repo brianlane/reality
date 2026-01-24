@@ -50,6 +50,7 @@ export async function POST(
   }
 
   // 4. Get all approved applicants with completed questionnaires
+  // Filter by event invitations to only include applicants invited to this specific event
   const applicants = await db.applicant.findMany({
     where: {
       applicationStatus: ApplicationStatus.APPROVED,
@@ -57,6 +58,11 @@ export async function POST(
       deletedAt: null,
       questionnaire: {
         isNot: null,
+      },
+      eventInvitations: {
+        some: {
+          eventId: eventId,
+        },
       },
     },
     include: {

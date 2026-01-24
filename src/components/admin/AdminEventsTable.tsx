@@ -69,35 +69,37 @@ export default function AdminEventsTable() {
       {error ? (
         <p className="mt-2 text-sm text-red-600">{error}</p>
       ) : (
-        <Table className="mt-4">
-          <thead>
-            <tr className="border-b text-xs uppercase text-slate-400">
-              <th className="py-2 text-left">Event</th>
-              <th className="py-2 text-left">Date</th>
-              <th className="py-2 text-left">Status</th>
-              <th className="py-2 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {events.map((event) => (
-              <tr key={event.id} className="border-b text-sm text-navy-soft">
-                <td className="py-2">{event.name}</td>
-                <td className="py-2">
-                  {new Date(event.date).toLocaleDateString()}
-                </td>
-                <td className="py-2">{event.status}</td>
-                <td className="py-2">
-                  <Link
-                    href={`/admin/events/${event.id}`}
-                    className="text-xs font-medium text-copper hover:underline"
-                  >
-                    View
-                  </Link>
-                </td>
+        <div className="mt-4 overflow-x-auto">
+          <Table className="min-w-full">
+            <thead>
+              <tr className="border-b text-xs uppercase text-slate-400">
+                <th className="py-2 text-left">Event</th>
+                <th className="py-2 text-left">Date</th>
+                <th className="py-2 text-left">Status</th>
+                <th className="py-2 text-left">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {events.map((event) => (
+                <tr key={event.id} className="border-b text-sm text-navy-soft">
+                  <td className="py-2 whitespace-nowrap">{event.name}</td>
+                  <td className="py-2 whitespace-nowrap">
+                    {new Date(event.date).toLocaleDateString()}
+                  </td>
+                  <td className="py-2 whitespace-nowrap">{event.status}</td>
+                  <td className="py-2 whitespace-nowrap">
+                    <Link
+                      href={`/admin/events/${event.id}`}
+                      className="text-xs font-medium text-copper hover:underline"
+                    >
+                      View
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
       )}
       <div className="mt-4 flex items-center justify-between text-sm text-navy-soft">
         <span>

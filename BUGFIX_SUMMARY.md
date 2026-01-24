@@ -12,13 +12,16 @@ Two critical bugs in the weighted compatibility scoring algorithm have been iden
 **Status:** ✅ Fixed
 
 ### Problem
+
 When a NUMBER_SCALE question is misconfigured with `min === max`, the calculation `1 - diff / maxDelta` produces:
+
 - **NaN** (when both applicants give the same answer)
 - **-Infinity** (when they give different answers)
 
 This corrupted the final compatibility score and broke dealbreaker enforcement.
 
 ### Fix
+
 **File:** `src/lib/matching/weighted-compatibility.ts`
 
 Added guard clause to handle `maxDelta === 0`:
@@ -31,6 +34,7 @@ if (maxDelta === 0) {
 ```
 
 ### Test Results
+
 ```
 ✅ Same value (5 vs 5) on min=max question: 100/100 score
 ✅ Different value (5 vs 7) on min=max question: 0/100 score
@@ -45,23 +49,28 @@ if (maxDelta === 0) {
 **Status:** ✅ Fixed
 
 ### Problem
+
 The code checked if answer records exist but didn't check if `answerA.value` or `answerB.value` is `null`. This caused:
+
 - **DROPDOWN/RADIO_7:** `null === null` returns `true` → 100% similarity
 - **NUMBER_SCALE:** `Number(null) === 0`, so two nulls both become 0 → 100% similarity
 
 Two applicants with missing answers were incorrectly scored as perfectly compatible.
 
 ### Fix
+
 **File:** `src/lib/matching/weighted-compatibility.ts`
 
 Added explicit null checks:
 
 ```typescript
 // Skip if either didn't answer OR if either value is null
-if (!answerA || !answerB || answerA.value === null || answerB.value === null) continue;
+if (!answerA || !answerB || answerA.value === null || answerB.value === null)
+  continue;
 ```
 
 ### Test Results
+
 ```
 ✅ Questions with null values are skipped (not scored)
 ✅ Questions scored: 0 (when both have null values)
@@ -73,21 +82,24 @@ if (!answerA || !answerB || answerA.value === null || answerB.value === null) co
 ## 📊 Testing Summary
 
 ### New Tests Created
+
 - **`scripts/test-bug-fixes.ts`** - Comprehensive tests for both bugs
 
 ### Test Results
-| Test Suite | Tests | Status |
-|------------|-------|--------|
-| Bug Fix Tests | 2/2 | ✅ PASS |
-| Original Compatibility Tests | 5/5 | ✅ PASS |
-| **Total** | **7/7** | **✅ PASS** |
+
+| Test Suite                   | Tests   | Status      |
+| ---------------------------- | ------- | ----------- |
+| Bug Fix Tests                | 2/2     | ✅ PASS     |
+| Original Compatibility Tests | 5/5     | ✅ PASS     |
+| **Total**                    | **7/7** | **✅ PASS** |
 
 ### Code Quality Checks
-| Check | Status |
-|-------|--------|
+
+| Check      | Status  |
+| ---------- | ------- |
 | TypeScript | ✅ PASS |
-| ESLint | ✅ PASS |
-| Prettier | ✅ PASS |
+| ESLint     | ✅ PASS |
+| Prettier   | ✅ PASS |
 
 ---
 
@@ -110,6 +122,7 @@ if (!answerA || !answerB || answerA.value === null || answerB.value === null) co
 ### Immediate Actions
 
 1. **Audit Database for Misconfigured Questions**
+
    ```sql
    SELECT id, prompt, options
    FROM "QuestionnaireQuestion"
@@ -118,6 +131,7 @@ if (!answerA || !answerB || answerA.value === null || answerB.value === null) co
    ```
 
 2. **Check for Null Answer Values**
+
    ```sql
    SELECT COUNT(*) as null_count
    FROM "QuestionnaireAnswer"
@@ -141,6 +155,7 @@ if (type === "NUMBER_SCALE" && min >= max) {
 ## ✅ Verification Complete
 
 All bugs have been:
+
 - ✅ Identified and documented
 - ✅ Fixed with proper guard clauses
 - ✅ Tested with comprehensive test suite
@@ -151,6 +166,6 @@ All bugs have been:
 
 ---
 
-*Bug fixes completed: January 23, 2026*
-*Discovered by: Cursor AI Code Review*
-*Fixed by: Claude Sonnet 4.5*
+_Bug fixes completed: January 23, 2026_
+_Discovered by: Cursor AI Code Review_
+_Fixed by: Claude Sonnet 4.5_

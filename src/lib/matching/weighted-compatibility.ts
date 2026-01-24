@@ -69,24 +69,9 @@ export async function calculateWeightedCompatibility(
       answerB.value,
     );
 
-    // Check dealbreaker - if mismatch on dealbreaker question, return 0 immediately
+    // Check dealbreaker - collect all violations, don't return immediately
     if (question.isDealbreaker && similarity < 0.5) {
       dealbreakersViolated.push(question.id);
-      // Return immediately with score 0
-      return {
-        score: 0,
-        dealbreakersViolated,
-        questionsScored: 0,
-        breakdown: [
-          {
-            questionId: question.id,
-            prompt: question.prompt,
-            similarity,
-            weight: question.mlWeight,
-            weightedScore: 0,
-          },
-        ],
-      };
     }
 
     // Apply weight
@@ -104,8 +89,13 @@ export async function calculateWeightedCompatibility(
   }
 
   // 3. Calculate final score (weighted average)
-  const score =
+  let score =
     totalWeight > 0 ? Math.round((totalWeightedScore / totalWeight) * 100) : 50; // Default if no questions answered
+
+  // 4. If any dealbreakers were violated, set score to 0
+  if (dealbreakersViolated.length > 0) {
+    score = 0;
+  }
 
   return {
     score,
@@ -127,17 +117,23 @@ function calculateSimilarity(
   switch (question.type) {
     case QuestionnaireQuestionType.NUMBER_SCALE: {
       // For numeric scales, calculate similarity based on distance
+      // Check if options is null (misconfigured question)
+      if (!question.options || typeof question.options !== "object") {
+        // No valid options - treat identical answers as match, different as no match
+        return valueA === valueB ? 1.0 : 0.0;
+      }
+
       const options = question.options as { min: number; max: number };
       const diff = Math.abs(Number(valueA) - Number(valueB));
       const maxDelta = options.max - options.min;
 
-      // Handle division by zero (misconfigured question where min === max)
-      if (maxDelta === 0) {
-        // If range is 0, treat same values as perfect match, different as no match
+      // Handle invalid range (min >= max)
+      if (maxDelta <= 0) {
+        // Invalid or zero range - treat same values as perfect match, different as no match
         return diff === 0 ? 1.0 : 0.0;
       }
 
-      return Math.max(0, 1 - diff / maxDelta);
+      return Math.max(0, Math.min(1, 1 - diff / maxDelta));
     }
 
     case QuestionnaireQuestionType.DROPDOWN:
@@ -152,7 +148,13 @@ function calculateSimilarity(
       const setB = new Set(valueB as string[]);
       const intersection = new Set([...setA].filter((x) => setB.has(x)));
       const union = new Set([...setA, ...setB]);
-      return union.size > 0 ? intersection.size / union.size : 0;
+
+      // Both empty arrays = perfect agreement (100% similar)
+      if (union.size === 0) {
+        return 1.0;
+      }
+
+      return intersection.size / union.size;
     }
 
     case QuestionnaireQuestionType.TEXT:
