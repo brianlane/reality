@@ -65,6 +65,8 @@ export default function AdminQuestionnaireQuestionForm({
     order: "0",
     isRequired: "false",
     isActive: "true",
+    mlWeight: "1.0",
+    isDealbreaker: "false",
   });
   const [optionLines, setOptionLines] = useState<string>("");
   const [scaleOptions, setScaleOptions] = useState<NumberScaleState>({
@@ -158,6 +160,8 @@ export default function AdminQuestionnaireQuestionForm({
           order: String(loaded.order ?? 0),
           isRequired: loaded.isRequired ? "true" : "false",
           isActive: loaded.isActive ? "true" : "false",
+          mlWeight: String((loaded as any).mlWeight ?? 1.0),
+          isDealbreaker: (loaded as any).isDealbreaker ? "true" : "false",
         });
         if (loaded.type === "NUMBER_SCALE" && loaded.options) {
           const options = loaded.options as Record<string, unknown>;
@@ -226,6 +230,8 @@ export default function AdminQuestionnaireQuestionForm({
         order: Number(form.order || 0),
         isRequired: form.isRequired === "true",
         isActive: form.isActive === "true",
+        mlWeight: Number(form.mlWeight || 1.0),
+        isDealbreaker: form.isDealbreaker === "true",
       };
 
       const res = await fetch(
@@ -349,6 +355,22 @@ export default function AdminQuestionnaireQuestionForm({
         >
           <option value="true">Active</option>
           <option value="false">Inactive</option>
+        </Select>
+        <Input
+          placeholder="Weight (0-1)"
+          type="number"
+          step="0.1"
+          min="0"
+          max="1"
+          value={form.mlWeight}
+          onChange={(event) => updateField("mlWeight", event.target.value)}
+        />
+        <Select
+          value={form.isDealbreaker}
+          onChange={(event) => updateField("isDealbreaker", event.target.value)}
+        >
+          <option value="false">Not a dealbreaker</option>
+          <option value="true">Dealbreaker</option>
         </Select>
       </div>
       <div className="space-y-2">
