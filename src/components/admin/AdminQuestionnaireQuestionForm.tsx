@@ -30,6 +30,8 @@ type QuestionDetail = {
   isRequired: boolean;
   isActive: boolean;
   deletedAt: string | null;
+  mlWeight: number;
+  isDealbreaker: boolean;
 };
 
 type NumberScaleState = {
@@ -160,8 +162,8 @@ export default function AdminQuestionnaireQuestionForm({
           order: String(loaded.order ?? 0),
           isRequired: loaded.isRequired ? "true" : "false",
           isActive: loaded.isActive ? "true" : "false",
-          mlWeight: String((loaded as any).mlWeight ?? 1.0),
-          isDealbreaker: (loaded as any).isDealbreaker ? "true" : "false",
+          mlWeight: String(loaded.mlWeight ?? 1.0),
+          isDealbreaker: loaded.isDealbreaker ? "true" : "false",
         });
         if (loaded.type === "NUMBER_SCALE" && loaded.options) {
           const options = loaded.options as Record<string, unknown>;

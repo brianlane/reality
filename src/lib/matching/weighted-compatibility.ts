@@ -53,8 +53,14 @@ export async function calculateWeightedCompatibility(
     const answerA = question.answers.find((a) => a.applicantId === applicantId);
     const answerB = question.answers.find((a) => a.applicantId === candidateId);
 
-    // Skip if either didn't answer
-    if (!answerA || !answerB) continue;
+    // Skip if either didn't answer OR if either value is null
+    if (
+      !answerA ||
+      !answerB ||
+      answerA.value === null ||
+      answerB.value === null
+    )
+      continue;
 
     // Calculate similarity based on question type
     const similarity = calculateSimilarity(
@@ -99,9 +105,7 @@ export async function calculateWeightedCompatibility(
 
   // 3. Calculate final score (weighted average)
   const score =
-    totalWeight > 0
-      ? Math.round((totalWeightedScore / totalWeight) * 100)
-      : 50; // Default if no questions answered
+    totalWeight > 0 ? Math.round((totalWeightedScore / totalWeight) * 100) : 50; // Default if no questions answered
 
   return {
     score,
@@ -117,8 +121,8 @@ export async function calculateWeightedCompatibility(
  */
 function calculateSimilarity(
   question: QuestionnaireQuestion,
-  valueA: any,
-  valueB: any,
+  valueA: unknown,
+  valueB: unknown,
 ): number {
   switch (question.type) {
     case QuestionnaireQuestionType.NUMBER_SCALE: {
@@ -126,6 +130,13 @@ function calculateSimilarity(
       const options = question.options as { min: number; max: number };
       const diff = Math.abs(Number(valueA) - Number(valueB));
       const maxDelta = options.max - options.min;
+
+      // Handle division by zero (misconfigured question where min === max)
+      if (maxDelta === 0) {
+        // If range is 0, treat same values as perfect match, different as no match
+        return diff === 0 ? 1.0 : 0.0;
+      }
+
       return Math.max(0, 1 - diff / maxDelta);
     }
 

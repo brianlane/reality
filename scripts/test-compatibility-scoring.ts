@@ -51,7 +51,9 @@ async function runTests() {
 }
 
 async function testPerfectMatch() {
-  console.log("Creating two applicants with identical questionnaire answers...");
+  console.log(
+    "Creating two applicants with identical questionnaire answers...",
+  );
 
   // Create test user and applicant A
   const userA = await db.user.create({
@@ -176,7 +178,10 @@ async function testPerfectMatch() {
   }
 
   // Calculate compatibility
-  const result = await calculateWeightedCompatibility(applicantA.id, applicantB.id);
+  const result = await calculateWeightedCompatibility(
+    applicantA.id,
+    applicantB.id,
+  );
 
   console.log(`Questions scored: ${result.questionsScored}`);
   console.log(`Compatibility score: ${result.score}/100`);
@@ -185,7 +190,9 @@ async function testPerfectMatch() {
   if (result.breakdown.length > 0) {
     console.log("\nScore breakdown:");
     result.breakdown.forEach((b) => {
-      console.log(`  - ${b.prompt}: similarity=${(b.similarity * 100).toFixed(0)}%, weight=${b.weight}`);
+      console.log(
+        `  - ${b.prompt}: similarity=${(b.similarity * 100).toFixed(0)}%, weight=${b.weight}`,
+      );
     });
   }
 
@@ -319,7 +326,10 @@ async function testDealbreaker() {
   });
 
   // Calculate compatibility
-  const result = await calculateWeightedCompatibility(applicantA.id, applicantB.id);
+  const result = await calculateWeightedCompatibility(
+    applicantA.id,
+    applicantB.id,
+  );
 
   console.log(`Compatibility score: ${result.score}/100`);
   console.log(`Dealbreakers violated: ${result.dealbreakersViolated.length}`);
@@ -328,7 +338,9 @@ async function testDealbreaker() {
   if (result.score === 0 && result.dealbreakersViolated.length > 0) {
     console.log("✅ PASS: Dealbreaker mismatch returns score of 0");
   } else {
-    console.log(`❌ FAIL: Expected score=0 with dealbreakers, got ${result.score}`);
+    console.log(
+      `❌ FAIL: Expected score=0 with dealbreakers, got ${result.score}`,
+    );
   }
 
   // Cleanup
@@ -360,11 +372,15 @@ async function testWeights() {
 
   console.log(`Found ${questions.length} questions with weights:`);
   questions.forEach((q) => {
-    console.log(`  - "${q.prompt.substring(0, 50)}..." (weight: ${q.mlWeight})`);
+    console.log(
+      `  - "${q.prompt.substring(0, 50)}..." (weight: ${q.mlWeight})`,
+    );
   });
 
   console.log("✅ PASS: Weights are properly stored in database");
-  console.log("Note: Weight impact is verified through calculation in algorithm");
+  console.log(
+    "Note: Weight impact is verified through calculation in algorithm",
+  );
 }
 
 async function testPartialMatch() {
@@ -500,7 +516,10 @@ async function testPartialMatch() {
   });
 
   // Calculate compatibility
-  const result = await calculateWeightedCompatibility(applicantA.id, applicantB.id);
+  const result = await calculateWeightedCompatibility(
+    applicantA.id,
+    applicantB.id,
+  );
 
   console.log(`Questions scored: ${result.questionsScored}`);
   console.log(`Compatibility score: ${result.score}/100`);
@@ -520,12 +539,21 @@ async function testPartialMatch() {
     console.log("\n✅ PASS: Partial match scores between 0-100");
 
     // Verify high weight question had more impact
-    const highWeightContribution = result.breakdown.find(b => b.questionId === highWeightQuestion.id);
-    const lowWeightContribution = result.breakdown.find(b => b.questionId === lowWeightQuestion.id);
+    const highWeightContribution = result.breakdown.find(
+      (b) => b.questionId === highWeightQuestion.id,
+    );
+    const lowWeightContribution = result.breakdown.find(
+      (b) => b.questionId === lowWeightQuestion.id,
+    );
 
     if (highWeightContribution && lowWeightContribution) {
-      if (highWeightContribution.weightedScore > lowWeightContribution.weightedScore) {
-        console.log("✅ PASS: High weight question has more impact than low weight question");
+      if (
+        highWeightContribution.weightedScore >
+        lowWeightContribution.weightedScore
+      ) {
+        console.log(
+          "✅ PASS: High weight question has more impact than low weight question",
+        );
       } else {
         console.log("⚠️  WARNING: Weight impact may not be as expected");
       }
@@ -536,7 +564,9 @@ async function testPartialMatch() {
 
   // Cleanup
   await db.questionnaireAnswer.deleteMany({
-    where: { questionId: { in: [highWeightQuestion.id, lowWeightQuestion.id] } },
+    where: {
+      questionId: { in: [highWeightQuestion.id, lowWeightQuestion.id] },
+    },
   });
   await db.questionnaireQuestion.deleteMany({
     where: { id: { in: [highWeightQuestion.id, lowWeightQuestion.id] } },
@@ -566,7 +596,9 @@ async function testRealData() {
   });
 
   if (applicants.length < 2) {
-    console.log("⚠️  Need at least 2 approved applicants. Skipping real data test.");
+    console.log(
+      "⚠️  Need at least 2 approved applicants. Skipping real data test.",
+    );
     return;
   }
 
@@ -576,12 +608,17 @@ async function testRealData() {
   console.log(`Applicant B: ${applicantB.id}`);
 
   try {
-    const result = await calculateWeightedCompatibility(applicantA.id, applicantB.id);
+    const result = await calculateWeightedCompatibility(
+      applicantA.id,
+      applicantB.id,
+    );
 
     console.log(`\nResults:`);
     console.log(`  Score: ${result.score}/100`);
     console.log(`  Questions scored: ${result.questionsScored}`);
-    console.log(`  Dealbreakers violated: ${result.dealbreakersViolated.length}`);
+    console.log(
+      `  Dealbreakers violated: ${result.dealbreakersViolated.length}`,
+    );
 
     if (result.breakdown.length > 0) {
       console.log(`\nTop 3 question contributions:`);
@@ -591,7 +628,9 @@ async function testRealData() {
 
       top3.forEach((b, i) => {
         console.log(`  ${i + 1}. ${b.prompt.substring(0, 40)}...`);
-        console.log(`     Similarity: ${(b.similarity * 100).toFixed(1)}%, Weight: ${b.weight}, Contribution: ${b.weightedScore.toFixed(3)}`);
+        console.log(
+          `     Similarity: ${(b.similarity * 100).toFixed(1)}%, Weight: ${b.weight}, Contribution: ${b.weightedScore.toFixed(3)}`,
+        );
       });
     }
 
