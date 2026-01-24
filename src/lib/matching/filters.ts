@@ -8,9 +8,10 @@ export function filterByGenderPreferences(
   applicant: Applicant,
   candidate: Applicant,
 ): boolean {
-  // If either doesn't have seeking preference, skip this filter
+  // Both must have explicit seeking preferences
+  // If either has null seeking, they're not ready for matching
   if (!applicant.seeking || !candidate.seeking) {
-    return true;
+    return false;
   }
 
   // Check mutual compatibility

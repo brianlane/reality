@@ -51,6 +51,7 @@ export async function POST(
 
   // 4. Get all approved applicants with completed questionnaires
   // Filter by event invitations to only include applicants invited to this specific event
+  // Exclude those who declined or didn't show up
   const applicants = await db.applicant.findMany({
     where: {
       applicationStatus: ApplicationStatus.APPROVED,
@@ -62,6 +63,9 @@ export async function POST(
       eventInvitations: {
         some: {
           eventId: eventId,
+          status: {
+            notIn: ["DECLINED", "NO_SHOW"],
+          },
         },
       },
     },
