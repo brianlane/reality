@@ -48,6 +48,8 @@ export async function GET(request: Request, { params }: RouteContext) {
       order: question.order,
       isRequired: question.isRequired,
       isActive: question.isActive,
+      mlWeight: question.mlWeight,
+      isDealbreaker: question.isDealbreaker,
       deletedAt: question.deletedAt,
     },
   });
@@ -117,6 +119,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       isRequired: body.isRequired,
       order: body.order,
       isActive: body.isActive,
+      mlWeight: body.mlWeight,
+      isDealbreaker: body.isDealbreaker,
     },
   });
 

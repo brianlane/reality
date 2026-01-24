@@ -53,6 +53,8 @@ export async function GET(request: Request) {
       order: question.order,
       isRequired: question.isRequired,
       isActive: question.isActive,
+      mlWeight: question.mlWeight,
+      isDealbreaker: question.isDealbreaker,
       deletedAt: question.deletedAt,
     })),
     pagination: {
@@ -111,6 +113,8 @@ export async function POST(request: Request) {
       isRequired: body.isRequired ?? false,
       order: body.order ?? 0,
       isActive: body.isActive ?? true,
+      mlWeight: body.mlWeight ?? 1.0,
+      isDealbreaker: body.isDealbreaker ?? false,
     },
   });
 
