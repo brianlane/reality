@@ -44,13 +44,21 @@ export async function getRecommendations(
     }),
   );
 
-  // 3. Filter by minimum score
-  const qualifying = scored.filter((s) => s.result.score >= minScore);
+  // 3. Filter out dealbreaker violations first (absolute exclusions)
+  // Dealbreakers cannot be overridden by minScore parameter
+  const withoutDealbreakers = scored.filter(
+    (s) => s.result.dealbreakersViolated.length === 0,
+  );
 
-  // 4. Sort by score (descending)
+  // 4. Filter by minimum score
+  const qualifying = withoutDealbreakers.filter(
+    (s) => s.result.score >= minScore,
+  );
+
+  // 5. Sort by score (descending)
   qualifying.sort((a, b) => b.result.score - a.result.score);
 
-  // 5. Return top N recommendations
+  // 6. Return top N recommendations
   return qualifying.slice(0, maxResults).map((s) => ({
     applicantId: s.candidate.id,
     compatibilityScore: s.result.score,

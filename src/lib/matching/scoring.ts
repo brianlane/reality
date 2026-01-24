@@ -1,6 +1,5 @@
 import { Applicant, Questionnaire } from "@prisma/client";
 import { calculateWeightedCompatibility } from "./weighted-compatibility";
-import { calculateCompatibility } from "./compatibility";
 
 type ApplicantWithQuestionnaire = Applicant & {
   questionnaire?: Questionnaire | null;
@@ -8,29 +7,14 @@ type ApplicantWithQuestionnaire = Applicant & {
 
 /**
  * Score a match between two applicants using weighted compatibility algorithm
- * Falls back to old algorithm if weighted scoring fails
+ * Throws error if scoring fails (no silent fallback to preserve dealbreaker info)
  */
 export async function scoreApplicantMatch(
   applicant: ApplicantWithQuestionnaire,
   candidate: ApplicantWithQuestionnaire,
 ) {
-  try {
-    // Use new weighted compatibility algorithm
-    return await calculateWeightedCompatibility(applicant.id, candidate.id);
-  } catch (error) {
-    console.error("Weighted compatibility failed, falling back:", error);
-
-    // Fallback to old algorithm
-    const score = calculateCompatibility(
-      applicant.questionnaire ?? undefined,
-      candidate.questionnaire ?? undefined,
-    );
-
-    return {
-      score,
-      dealbreakersViolated: [],
-      questionsScored: 0,
-      breakdown: [],
-    };
-  }
+  // Use weighted compatibility algorithm
+  // If this fails, we throw the error rather than silently falling back
+  // because the fallback loses critical dealbreaker violation information
+  return await calculateWeightedCompatibility(applicant.id, candidate.id);
 }

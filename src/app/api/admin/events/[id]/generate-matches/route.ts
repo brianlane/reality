@@ -3,12 +3,15 @@ import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { getRecommendations } from "@/lib/matching/recommendations";
 import { ApplicationStatus, ScreeningStatus } from "@prisma/client";
+import { z } from "zod";
 
-interface GenerateMatchesRequest {
-  maxPerApplicant?: number;
-  minScore?: number;
-  createMatches?: boolean; // If false, just return recommendations without creating
-}
+const generateMatchesSchema = z.object({
+  maxPerApplicant: z.number().int().min(1).max(50).optional().default(5),
+  minScore: z.number().min(0).max(100).optional().default(60),
+  createMatches: z.boolean().optional().default(true),
+});
+
+type GenerateMatchesRequest = z.infer<typeof generateMatchesSchema>;
 
 export async function POST(
   request: Request,
@@ -28,17 +31,20 @@ export async function POST(
 
   const { id: eventId } = await params;
 
-  // 2. Parse request body
+  // 2. Parse and validate request body
   let body: GenerateMatchesRequest;
   try {
-    body = await request.json();
-  } catch {
-    body = {};
+    const rawBody = await request.json().catch(() => ({}));
+    body = generateMatchesSchema.parse(rawBody);
+  } catch (error) {
+    return errorResponse("VALIDATION_ERROR", "Invalid request body", 400, [
+      { message: (error as Error).message },
+    ]);
   }
 
-  const maxPerApplicant = body.maxPerApplicant ?? 5;
-  const minScore = body.minScore ?? 60;
-  const createMatches = body.createMatches ?? true;
+  const maxPerApplicant = body.maxPerApplicant;
+  const minScore = body.minScore;
+  const createMatches = body.createMatches;
 
   // 3. Verify event exists
   const event = await db.event.findUnique({
@@ -117,7 +123,25 @@ export async function POST(
   // 6. Create matches if requested
   let matchesCreated = 0;
   if (createMatches && allRecommendations.length > 0) {
-    const matchesToCreate = allRecommendations.map((rec) => ({
+    // Deduplicate bidirectional matches: for mutual pairs (A,B) and (B,A),
+    // only create one match record using canonical ordering (smaller ID first)
+    const seen = new Set<string>();
+    const uniqueMatches: typeof allRecommendations = [];
+
+    for (const rec of allRecommendations) {
+      // Create canonical key: always smaller ID first
+      const key =
+        rec.applicantId < rec.partnerId
+          ? `${rec.applicantId}:${rec.partnerId}`
+          : `${rec.partnerId}:${rec.applicantId}`;
+
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueMatches.push(rec);
+      }
+    }
+
+    const matchesToCreate = uniqueMatches.map((rec) => ({
       eventId,
       applicantId: rec.applicantId,
       partnerId: rec.partnerId,
