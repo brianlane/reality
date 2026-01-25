@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { submitApplicationSchema } from "@/lib/validations";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { ensureApplicantAccount } from "@/lib/account-init";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const APPLICATION_FEE_AMOUNT = 19900;
 
@@ -60,7 +61,37 @@ export async function POST(request: NextRequest) {
         applicationId: applicant.id,
       });
     } else if (applicant.applicationStatus === "DRAFT") {
-      // Final submission: Mark application as submitted after questionnaire completed
+      // Final submission: Mark application as submitted after password creation
+      // Validate that the user is authenticated and their email matches
+      const supabase = await createSupabaseServerClient();
+      if (!supabase) {
+        return errorResponse(
+          "AUTH_NOT_CONFIGURED",
+          "Authentication is not configured.",
+          500,
+        );
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        return errorResponse(
+          "UNAUTHORIZED",
+          "You must be signed in to submit your application.",
+          401,
+        );
+      }
+
+      if (user.email?.toLowerCase() !== applicant.user.email.toLowerCase()) {
+        return errorResponse(
+          "FORBIDDEN",
+          "You can only submit your own application.",
+          403,
+        );
+      }
+
       await db.applicant.update({
         where: { id: applicant.id },
         data: {

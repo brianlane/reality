@@ -107,7 +107,10 @@ export async function proxy(request: NextRequest) {
     method === "POST" &&
     (pathname.includes("/sign-in") ||
       pathname.includes("/admin/login") ||
-      pathname.includes("/api/auth"))
+      pathname.includes("/api/auth") ||
+      pathname.includes("/forgot-password") ||
+      pathname.includes("/reset-password") ||
+      pathname.includes("/create-password"))
   ) {
     configKey = "AUTH";
   } else if (pathname.includes("/upload")) {
