@@ -124,20 +124,42 @@ export async function POST(
   let matchesCreated = 0;
   if (createMatches && allRecommendations.length > 0) {
     // Deduplicate bidirectional matches: for mutual pairs (A,B) and (B,A),
-    // only create one match record using canonical ordering (smaller ID first)
+    // only create one match record using canonical ordering (smaller ID first).
+    // This ensures consistent storage and prevents reverse duplicates in future runs.
     const seen = new Set<string>();
-    const uniqueMatches: typeof allRecommendations = [];
+    const uniqueMatches: Array<{
+      applicantId: string;
+      partnerId: string;
+      score: number;
+    }> = [];
 
     for (const rec of allRecommendations) {
-      // Create canonical key: always smaller ID first
-      const key =
+      // Canonical ordering: always store with smaller ID as applicantId
+      const [canonicalApplicantId, canonicalPartnerId] =
         rec.applicantId < rec.partnerId
-          ? `${rec.applicantId}:${rec.partnerId}`
-          : `${rec.partnerId}:${rec.applicantId}`;
+          ? [rec.applicantId, rec.partnerId]
+          : [rec.partnerId, rec.applicantId];
+
+      const key = `${canonicalApplicantId}:${canonicalPartnerId}`;
 
       if (!seen.has(key)) {
         seen.add(key);
-        uniqueMatches.push(rec);
+        // For mutual matches, use the higher score (both parties compatible)
+        uniqueMatches.push({
+          applicantId: canonicalApplicantId,
+          partnerId: canonicalPartnerId,
+          score: rec.score,
+        });
+      } else {
+        // Found the reverse pair - update score if this one is higher
+        const existing = uniqueMatches.find(
+          (m) =>
+            m.applicantId === canonicalApplicantId &&
+            m.partnerId === canonicalPartnerId,
+        );
+        if (existing && rec.score > existing.score) {
+          existing.score = rec.score;
+        }
       }
     }
 
