@@ -7,8 +7,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 // ============================================
@@ -202,6 +203,11 @@ model QuestionnaireQuestion {
   isRequired Boolean                   @default(false)
   order      Int                       @default(0)
   isActive   Boolean                   @default(true)
+
+  // Compatibility scoring metadata
+  mlWeight      Float                   @default(1.0)  // 0.0-1.0 importance weight
+  isDealbreaker Boolean                 @default(false) // If mismatch, score = 0
+
   createdAt  DateTime                  @default(now())
   updatedAt  DateTime                  @updatedAt
   deletedAt  DateTime?
@@ -456,10 +462,13 @@ model Match {
   
   // Compatibility from questionnaire
   compatibilityScore Float?
-  
+
   // Outcome tracking
   outcome         MatchOutcome  @default(PENDING)
-  
+
+  // Detailed analytics data
+  analytics       MatchAnalytics?
+
   // Contact exchange
   contactExchanged Boolean      @default(false)
   contactExchangedAt DateTime?
@@ -483,6 +492,40 @@ model Match {
   @@index([outcome])
   @@index([type])
   @@index([deletedAt])
+}
+
+// Track detailed match analytics for insights
+model MatchAnalytics {
+  id              String   @id @default(cuid())
+  matchId         String   @unique
+  match           Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  // Date outcome
+  dateAccepted    Boolean?     // Did both agree to date?
+  dateCompleted   Boolean?     // Did the date happen?
+  dateCompletedAt DateTime?
+
+  // Post-date feedback (1-5 stars)
+  applicantRating    Int?      // Applicant's rating of partner
+  applicantFeedback  String?   @db.Text
+  partnerRating      Int?      // Partner's rating of applicant
+  partnerFeedback    String?   @db.Text
+
+  // Relationship tracking
+  relationshipFormed Boolean   @default(false)
+  relationshipStatus String?   // 'dating', 'exclusive', 'ended', etc.
+  relationshipEndedAt DateTime?
+
+  // Admin feedback
+  adminRating     Int?          // Admin assessment (1-5)
+  adminNotes      String?       @db.Text
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([matchId])
+  @@index([dateAccepted])
+  @@index([relationshipFormed])
 }
 
 // ============================================

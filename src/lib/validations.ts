@@ -295,6 +295,8 @@ export const adminQuestionnaireQuestionCreateSchema = z
     isRequired: z.boolean().optional(),
     order: z.number().int().min(0).optional(),
     isActive: z.boolean().optional(),
+    mlWeight: z.number().min(0).max(1).optional().default(1.0),
+    isDealbreaker: z.boolean().optional().default(false),
   })
   .superRefine((data, ctx) => {
     if (data.type === "RADIO_7" && Array.isArray(data.options)) {
@@ -319,6 +321,8 @@ export const adminQuestionnaireQuestionUpdateSchema = z
     isRequired: z.boolean().optional(),
     order: z.number().int().min(0).optional(),
     isActive: z.boolean().optional(),
+    mlWeight: z.number().min(0).max(1).optional(),
+    isDealbreaker: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.type === "RADIO_7" && Array.isArray(data.options)) {

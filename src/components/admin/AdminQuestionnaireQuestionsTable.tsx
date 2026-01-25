@@ -92,45 +92,60 @@ export default function AdminQuestionnaireQuestionsTable({
       {error ? (
         <p className="mt-2 text-sm text-red-600">{error}</p>
       ) : (
-        <Table className="mt-4">
-          <thead>
-            <tr className="border-b text-xs uppercase text-slate-400">
-              {!hideSection ? (
-                <th className="py-2 text-left">Section</th>
-              ) : null}
-              <th className="py-2 text-left">Prompt</th>
-              <th className="py-2 text-left">Type</th>
-              <th className="py-2 text-left">Order</th>
-              <th className="py-2 text-left">Required</th>
-              <th className="py-2 text-left">Status</th>
-              <th className="py-2 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {questions.map((question) => (
-              <tr key={question.id} className="border-b text-sm text-navy-soft">
+        <div className="mt-4 overflow-x-auto">
+          <Table className="min-w-full">
+            <thead>
+              <tr className="border-b text-xs uppercase text-slate-400">
                 {!hideSection ? (
-                  <td className="py-2">{question.sectionTitle}</td>
+                  <th className="py-2 pr-6 text-left">Section</th>
                 ) : null}
-                <td className="py-2">{question.prompt}</td>
-                <td className="py-2">{question.type}</td>
-                <td className="py-2">{question.order}</td>
-                <td className="py-2">{question.isRequired ? "Yes" : "No"}</td>
-                <td className="py-2">
-                  {question.isActive ? "Active" : "Inactive"}
-                </td>
-                <td className="py-2">
-                  <Link
-                    href={`/admin/questionnaire/questions/${question.id}`}
-                    className="text-xs font-medium text-copper hover:underline"
-                  >
-                    View
-                  </Link>
-                </td>
+                <th className="py-2 px-6 text-left">Prompt</th>
+                <th className="py-2 px-6 text-left">Type</th>
+                <th className="py-2 px-6 text-left">Order</th>
+                <th className="py-2 px-6 text-left">Required</th>
+                <th className="py-2 px-6 text-left">Status</th>
+                <th className="py-2 pl-6 text-left">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {questions.map((question) => (
+                <tr
+                  key={question.id}
+                  className="border-b text-sm text-navy-soft"
+                >
+                  {!hideSection ? (
+                    <td className="py-2 pr-6 whitespace-nowrap">
+                      {question.sectionTitle}
+                    </td>
+                  ) : null}
+                  <td className="py-2 px-6 whitespace-nowrap">
+                    {question.prompt}
+                  </td>
+                  <td className="py-2 px-6 whitespace-nowrap">
+                    {question.type}
+                  </td>
+                  <td className="py-2 px-6 whitespace-nowrap">
+                    {question.order}
+                  </td>
+                  <td className="py-2 px-6 whitespace-nowrap">
+                    {question.isRequired ? "Yes" : "No"}
+                  </td>
+                  <td className="py-2 px-6 whitespace-nowrap">
+                    {question.isActive ? "Active" : "Inactive"}
+                  </td>
+                  <td className="py-2 pl-6 whitespace-nowrap">
+                    <Link
+                      href={`/admin/questionnaire/questions/${question.id}`}
+                      className="text-xs font-medium text-copper hover:underline"
+                    >
+                      View
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
       )}
       <div className="mt-4 flex items-center justify-between text-sm text-navy-soft">
         <span>
