@@ -37,7 +37,7 @@ export async function GET(request: Request) {
       : {}),
   };
 
-  const [users, total] = await Promise.all([
+  const [users, total, totalApplicants, totalAdmins] = await Promise.all([
     db.user.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -50,6 +50,18 @@ export async function GET(request: Request) {
       },
     }),
     db.user.count({ where }),
+    db.user.count({
+      where: {
+        ...where,
+        role: "APPLICANT",
+      },
+    }),
+    db.user.count({
+      where: {
+        ...where,
+        role: "ADMIN",
+      },
+    }),
   ]);
 
   // Get session data from Supabase
@@ -57,7 +69,6 @@ export async function GET(request: Request) {
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   let authDataMap = new Map();
-  const loginCountsMap = new Map();
 
   if (supabaseUrl && supabaseServiceKey) {
     try {
@@ -78,25 +89,6 @@ export async function GET(request: Request) {
             authUser,
           ]),
         );
-
-        // Get login counts from audit log
-        for (const authUser of authUsers.users) {
-          try {
-            // Query audit log for sign-in events
-            const { count } = await supabaseAdmin
-              .from("auth.audit_log_entries")
-              .select("*", { count: "exact", head: true })
-              .eq("instance_id", authUser.id)
-              .eq("action", "login");
-
-            if (count !== null) {
-              loginCountsMap.set(authUser.email?.toLowerCase(), count);
-            }
-          } catch {
-            // Ignore errors for individual users
-            loginCountsMap.set(authUser.email?.toLowerCase(), 0);
-          }
-        }
       }
     } catch (error) {
       console.error("Error fetching Supabase session data:", error);
@@ -104,10 +96,19 @@ export async function GET(request: Request) {
     }
   }
 
+  // Calculate total active sessions count from all auth users
+  let totalActive = 0;
+  if (authDataMap.size > 0) {
+    for (const [, authUser] of authDataMap) {
+      if (authUser.last_sign_in_at) {
+        totalActive++;
+      }
+    }
+  }
+
   return successResponse({
     users: users.map((user) => {
       const authData = authDataMap.get(user.email.toLowerCase());
-      const loginCount = loginCountsMap.get(user.email.toLowerCase()) || 0;
 
       return {
         id: user.id,
@@ -123,7 +124,7 @@ export async function GET(request: Request) {
         authCreatedAt: authData?.created_at || null,
         lastSignIn: authData?.last_sign_in_at || null,
         emailConfirmed: authData?.email_confirmed_at || null,
-        loginCount: loginCount,
+        loginCount: 0, // Login count unavailable without direct auth schema access
         supabaseId: authData?.id || null,
       };
     }),
@@ -132,6 +133,12 @@ export async function GET(request: Request) {
       pages: Math.ceil(total / limit),
       currentPage: page,
       perPage: limit,
+    },
+    stats: {
+      total,
+      active: totalActive,
+      applicants: totalApplicants,
+      admins: totalAdmins,
     },
   });
 }

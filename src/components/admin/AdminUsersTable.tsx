@@ -25,6 +25,13 @@ type UserRow = {
   supabaseId: string | null;
 };
 
+type Stats = {
+  total: number;
+  active: number;
+  applicants: number;
+  admins: number;
+};
+
 function formatDate(dateString: string | null): string {
   if (!dateString) return "Never";
   const date = new Date(dateString);
@@ -60,7 +67,12 @@ export default function AdminUsersTable() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<Stats>({
+    total: 0,
+    active: 0,
+    applicants: 0,
+    admins: 0,
+  });
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [filter, setFilter] = useState<"all" | "active" | "applicants">("all");
 
@@ -88,7 +100,14 @@ export default function AdminUsersTable() {
         }
         setUsers(json.users ?? []);
         setPages(json.pagination?.pages ?? 1);
-        setTotal(json.pagination?.total ?? 0);
+        setStats(
+          json.stats ?? {
+            total: json.pagination?.total ?? 0,
+            active: 0,
+            applicants: 0,
+            admins: 0,
+          },
+        );
         setLoading(false);
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
@@ -112,13 +131,6 @@ export default function AdminUsersTable() {
     }
     return true;
   });
-
-  const stats = {
-    total: total,
-    active: users.filter((u) => u.lastSignIn !== null).length,
-    applicants: users.filter((u) => u.role === "APPLICANT").length,
-    admins: users.filter((u) => u.role === "ADMIN").length,
-  };
 
   return (
     <div className="space-y-4">
