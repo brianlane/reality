@@ -232,7 +232,7 @@ export default function AdminQuestionnaireQuestionForm({
         order: Number(form.order || 0),
         isRequired: form.isRequired === "true",
         isActive: form.isActive === "true",
-        mlWeight: Number(form.mlWeight || 1.0),
+        mlWeight: form.mlWeight !== "" ? Number(form.mlWeight) : 1.0,
         isDealbreaker: form.isDealbreaker === "true",
       };
 
