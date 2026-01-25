@@ -1,3 +1,4 @@
+import { createClient } from "@supabase/supabase-js";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
@@ -51,18 +52,81 @@ export async function GET(request: Request) {
     db.user.count({ where }),
   ]);
 
+  // Get session data from Supabase
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  let authDataMap = new Map();
+  const loginCountsMap = new Map();
+
+  if (supabaseUrl && supabaseServiceKey) {
+    try {
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+
+      // Fetch auth users
+      const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+
+      if (authUsers) {
+        authDataMap = new Map(
+          authUsers.users.map((authUser) => [
+            authUser.email?.toLowerCase(),
+            authUser,
+          ]),
+        );
+
+        // Get login counts from audit log
+        for (const authUser of authUsers.users) {
+          try {
+            // Query audit log for sign-in events
+            const { count } = await supabaseAdmin
+              .from("auth.audit_log_entries")
+              .select("*", { count: "exact", head: true })
+              .eq("instance_id", authUser.id)
+              .eq("action", "login");
+
+            if (count !== null) {
+              loginCountsMap.set(authUser.email?.toLowerCase(), count);
+            }
+          } catch {
+            // Ignore errors for individual users
+            loginCountsMap.set(authUser.email?.toLowerCase(), 0);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching Supabase session data:", error);
+      // Continue without session data
+    }
+  }
+
   return successResponse({
-    users: users.map((user) => ({
-      id: user.id,
-      clerkId: user.clerkId,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
-      createdAt: user.createdAt,
-      deletedAt: user.deletedAt,
-      applicant: user.applicant,
-    })),
+    users: users.map((user) => {
+      const authData = authDataMap.get(user.email.toLowerCase());
+      const loginCount = loginCountsMap.get(user.email.toLowerCase()) || 0;
+
+      return {
+        id: user.id,
+        clerkId: user.clerkId,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        createdAt: user.createdAt,
+        deletedAt: user.deletedAt,
+        applicant: user.applicant,
+        // Session data
+        authCreatedAt: authData?.created_at || null,
+        lastSignIn: authData?.last_sign_in_at || null,
+        emailConfirmed: authData?.email_confirmed_at || null,
+        loginCount: loginCount,
+        supabaseId: authData?.id || null,
+      };
+    }),
     pagination: {
       total,
       pages: Math.ceil(total / limit),
