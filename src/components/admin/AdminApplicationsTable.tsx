@@ -74,28 +74,28 @@ export default function AdminApplicationsTable() {
           <Table className="min-w-full">
             <thead>
               <tr className="border-b text-xs uppercase text-slate-400">
-                <th className="py-2 text-left">Applicant</th>
-                <th className="py-2 text-left">Email</th>
-                <th className="py-2 text-left">Status</th>
-                <th className="py-2 text-left">Screening</th>
-                <th className="py-2 text-left">Waitlist</th>
-                <th className="py-2 text-left">Actions</th>
+                <th className="py-2 pr-6 text-left">Applicant</th>
+                <th className="py-2 px-6 text-left">Email</th>
+                <th className="py-2 px-6 text-left">Status</th>
+                <th className="py-2 px-6 text-left">Screening</th>
+                <th className="py-2 px-6 text-left">Waitlist</th>
+                <th className="py-2 pl-6 text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
               {applications.map((app) => (
                 <tr key={app.id} className="border-b text-sm text-navy-soft">
-                  <td className="py-2 whitespace-nowrap">
+                  <td className="py-2 pr-6 whitespace-nowrap">
                     {app.firstName} {app.lastName}
                   </td>
-                  <td className="py-2 whitespace-nowrap">{app.email}</td>
-                  <td className="py-2 whitespace-nowrap">
+                  <td className="py-2 px-6 whitespace-nowrap">{app.email}</td>
+                  <td className="py-2 px-6 whitespace-nowrap">
                     {app.applicationStatus}
                   </td>
-                  <td className="py-2 whitespace-nowrap">
+                  <td className="py-2 px-6 whitespace-nowrap">
                     {app.screeningStatus ?? "N/A"}
                   </td>
-                  <td className="py-2 whitespace-nowrap">
+                  <td className="py-2 px-6 whitespace-nowrap">
                     <button
                       type="button"
                       className="text-xs font-medium text-copper hover:underline"
@@ -155,7 +155,7 @@ export default function AdminApplicationsTable() {
                         : "Add"}
                     </button>
                   </td>
-                  <td className="py-2 whitespace-nowrap">
+                  <td className="py-2 pl-6 whitespace-nowrap">
                     <Link
                       href={`/admin/applications/${app.id}`}
                       className="text-xs font-medium text-copper hover:underline"

@@ -73,21 +73,23 @@ export default function AdminEventsTable() {
           <Table className="min-w-full">
             <thead>
               <tr className="border-b text-xs uppercase text-slate-400">
-                <th className="py-2 text-left">Event</th>
-                <th className="py-2 text-left">Date</th>
-                <th className="py-2 text-left">Status</th>
-                <th className="py-2 text-left">Actions</th>
+                <th className="py-2 pr-6 text-left">Event</th>
+                <th className="py-2 px-6 text-left">Date</th>
+                <th className="py-2 px-6 text-left">Status</th>
+                <th className="py-2 pl-6 text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
               {events.map((event) => (
                 <tr key={event.id} className="border-b text-sm text-navy-soft">
-                  <td className="py-2 whitespace-nowrap">{event.name}</td>
-                  <td className="py-2 whitespace-nowrap">
+                  <td className="py-2 pr-6 whitespace-nowrap">{event.name}</td>
+                  <td className="py-2 px-6 whitespace-nowrap">
                     {new Date(event.date).toLocaleDateString()}
                   </td>
-                  <td className="py-2 whitespace-nowrap">{event.status}</td>
-                  <td className="py-2 whitespace-nowrap">
+                  <td className="py-2 px-6 whitespace-nowrap">
+                    {event.status}
+                  </td>
+                  <td className="py-2 pl-6 whitespace-nowrap">
                     <Link
                       href={`/admin/events/${event.id}`}
                       className="text-xs font-medium text-copper hover:underline"
