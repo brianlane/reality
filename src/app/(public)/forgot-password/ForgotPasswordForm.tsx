@@ -49,7 +49,7 @@ export default function ForgotPasswordForm() {
       <div className="mt-8 space-y-4">
         <div className="rounded-md bg-green-50 p-4">
           <p className="text-sm text-green-800">
-            If an account exists with that email, you'll receive a password
+            If an account exists with that email, you&apos;ll receive a password
             reset link shortly. Please check your inbox and spam folder.
           </p>
         </div>

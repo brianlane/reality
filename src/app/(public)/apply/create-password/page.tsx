@@ -31,9 +31,7 @@ export default async function CreatePasswordPage({ searchParams }: PageProps) {
 
   return (
     <section className="mx-auto w-full max-w-md px-6 py-16">
-      <h1 className="text-3xl font-semibold text-navy">
-        Create Your Password
-      </h1>
+      <h1 className="text-3xl font-semibold text-navy">Create Your Password</h1>
       <p className="mt-2 text-navy-soft">
         Almost done! Create a password to secure your account and submit your
         application.
