@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { validatePassword } from "@/lib/utils";
 
 export default function ResetPasswordForm() {
   const router = useRouter();
@@ -20,6 +21,11 @@ export default function ResetPasswordForm() {
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
     if (!supabase) {
+      // Handle missing Supabase configuration asynchronously
+      Promise.resolve().then(() => {
+        setIsValidToken(false);
+        setError("Authentication is not configured. Please contact support.");
+      });
       return;
     }
 
@@ -40,37 +46,15 @@ export default function ResetPasswordForm() {
     };
   }, []);
 
-  const validatePassword = () => {
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return false;
-    }
-    if (!/[A-Z]/.test(password)) {
-      setError("Password must contain at least one uppercase letter");
-      return false;
-    }
-    if (!/[a-z]/.test(password)) {
-      setError("Password must contain at least one lowercase letter");
-      return false;
-    }
-    if (!/[0-9]/.test(password)) {
-      setError("Password must contain at least one number");
-      return false;
-    }
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return false;
-    }
-    return true;
-  };
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
     setError("");
 
     // Validate password
-    if (!validatePassword()) {
+    const validationResult = validatePassword(password, confirmPassword);
+    if (!validationResult.valid) {
+      setError(validationResult.error);
       setIsSubmitting(false);
       return;
     }

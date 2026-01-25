@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { validatePassword } from "@/lib/utils";
 
 type CreatePasswordFormProps = {
   email: string;
@@ -23,37 +24,15 @@ export default function CreatePasswordForm({
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const validatePassword = () => {
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return false;
-    }
-    if (!/[A-Z]/.test(password)) {
-      setError("Password must contain at least one uppercase letter");
-      return false;
-    }
-    if (!/[a-z]/.test(password)) {
-      setError("Password must contain at least one lowercase letter");
-      return false;
-    }
-    if (!/[0-9]/.test(password)) {
-      setError("Password must contain at least one number");
-      return false;
-    }
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return false;
-    }
-    return true;
-  };
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
     setError("");
 
     // Validate password
-    if (!validatePassword()) {
+    const validationResult = validatePassword(password, confirmPassword);
+    if (!validationResult.valid) {
+      setError(validationResult.error);
       setIsSubmitting(false);
       return;
     }
