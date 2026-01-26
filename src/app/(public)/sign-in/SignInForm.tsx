@@ -14,6 +14,7 @@ export default function SignInForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const resetSuccess = searchParams.get("reset") === "success";
 
   const getSafeNext = () => {
     const next = searchParams.get("next") ?? "/dashboard";
@@ -54,6 +55,15 @@ export default function SignInForm() {
     <section className="mx-auto w-full max-w-md px-6 py-16">
       <h1 className="text-3xl font-semibold text-navy">Sign in</h1>
 
+      {resetSuccess ? (
+        <div className="mt-4 rounded-md bg-green-50 p-4">
+          <p className="text-sm text-green-800">
+            Your password has been reset successfully. Please sign in with your
+            new password.
+          </p>
+        </div>
+      ) : null}
+
       <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
         <div>
           <label className="text-sm font-medium text-navy" htmlFor="email">
@@ -80,6 +90,14 @@ export default function SignInForm() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
+          <div className="mt-1 text-right">
+            <Link
+              className="text-sm text-copper hover:underline"
+              href="/forgot-password"
+            >
+              Forgot password?
+            </Link>
+          </div>
         </div>
 
         {error ? (
