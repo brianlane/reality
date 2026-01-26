@@ -30,9 +30,20 @@ export default function ResetPasswordForm() {
     }
 
     // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsValidToken(!!session);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        setIsValidToken(!!session);
+      })
+      .catch((error) => {
+        console.error("Error checking reset token:", error);
+        Promise.resolve().then(() => {
+          setIsValidToken(false);
+          setError(
+            "Unable to verify reset link. Please check your connection and try again.",
+          );
+        });
+      });
 
     // Listen for auth state changes to handle async token exchange
     const {

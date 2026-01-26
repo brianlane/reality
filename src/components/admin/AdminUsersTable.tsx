@@ -73,7 +73,7 @@ export default function AdminUsersTable() {
     admins: 0,
   });
   const [includeDeleted, setIncludeDeleted] = useState(false);
-  const [filter, setFilter] = useState<"all" | "active" | "applicants">("all");
+  const [filter, setFilter] = useState<"all" | "applicants">("all");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -87,8 +87,9 @@ export default function AdminUsersTable() {
           setLoading(false);
           return;
         }
+        const roleParam = filter === "applicants" ? "&role=APPLICANT" : "";
         const res = await fetch(
-          `/api/admin/users?page=${page}&includeDeleted=${includeDeleted}`,
+          `/api/admin/users?page=${page}&includeDeleted=${includeDeleted}${roleParam}`,
           { headers, signal: controller.signal },
         );
         const json = await res.json();
@@ -119,17 +120,7 @@ export default function AdminUsersTable() {
     loadUsers();
 
     return () => controller.abort();
-  }, [page, includeDeleted]);
-
-  const filteredUsers = users.filter((user) => {
-    if (filter === "active") {
-      return user.lastSignIn !== null;
-    }
-    if (filter === "applicants") {
-      return user.role === "APPLICANT";
-    }
-    return true;
-  });
+  }, [page, includeDeleted, filter]);
 
   return (
     <div className="space-y-4">
@@ -142,7 +133,7 @@ export default function AdminUsersTable() {
           </div>
         </Card>
         <Card className="p-4">
-          <div className="text-sm text-navy-soft">Active Sessions</div>
+          <div className="text-sm text-navy-soft">Ever Logged In</div>
           <div className="mt-1 text-2xl font-semibold text-navy">
             {stats.active}
           </div>
@@ -164,7 +155,10 @@ export default function AdminUsersTable() {
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
         <button
-          onClick={() => setFilter("all")}
+          onClick={() => {
+            setFilter("all");
+            setPage(1);
+          }}
           className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             filter === "all"
               ? "bg-navy text-white"
@@ -174,17 +168,10 @@ export default function AdminUsersTable() {
           All Users
         </button>
         <button
-          onClick={() => setFilter("active")}
-          className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-            filter === "active"
-              ? "bg-navy text-white"
-              : "bg-slate-100 text-navy hover:bg-slate-200"
-          }`}
-        >
-          Active Sessions
-        </button>
-        <button
-          onClick={() => setFilter("applicants")}
+          onClick={() => {
+            setFilter("applicants");
+            setPage(1);
+          }}
           className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             filter === "applicants"
               ? "bg-navy text-white"
@@ -234,7 +221,7 @@ export default function AdminUsersTable() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {filteredUsers.length === 0 ? (
+                {users.length === 0 ? (
                   <tr>
                     <td
                       colSpan={8}
@@ -244,7 +231,7 @@ export default function AdminUsersTable() {
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((user) => (
+                  users.map((user) => (
                     <tr key={user.id} className="text-sm hover:bg-slate-50">
                       <td className="py-3 pr-6">
                         <Link
