@@ -23,9 +23,9 @@ export async function GET(request: Request) {
   const search = url.searchParams.get("search") ?? undefined;
   const includeDeleted = url.searchParams.get("includeDeleted") === "true";
 
-  const where = {
+  // Base where clause for stats (excludes role filter to get global counts)
+  const baseWhere = {
     ...(includeDeleted ? {} : { deletedAt: null }),
-    ...(role ? { role: role as never } : {}),
     ...(search
       ? {
           OR: [
@@ -35,6 +35,12 @@ export async function GET(request: Request) {
           ],
         }
       : {}),
+  };
+
+  // Where clause for user list (includes role filter if provided)
+  const where = {
+    ...baseWhere,
+    ...(role ? { role: role as never } : {}),
   };
 
   const [users, total, totalApplicants, totalAdmins] = await Promise.all([
@@ -52,13 +58,13 @@ export async function GET(request: Request) {
     db.user.count({ where }),
     db.user.count({
       where: {
-        ...where,
+        ...baseWhere,
         role: "APPLICANT",
       },
     }),
     db.user.count({
       where: {
-        ...where,
+        ...baseWhere,
         role: "ADMIN",
       },
     }),
@@ -81,13 +87,13 @@ export async function GET(request: Request) {
 
       // Fetch ALL auth users by paginating through results
       const allAuthUsers = [];
-      let page = 1;
+      let authPage = 1;
       const perPage = 1000; // Max allowed by Supabase
 
       while (true) {
         const { data: authUsers, error } =
           await supabaseAdmin.auth.admin.listUsers({
-            page,
+            page: authPage,
             perPage,
           });
 
@@ -107,7 +113,7 @@ export async function GET(request: Request) {
           break;
         }
 
-        page++;
+        authPage++;
       }
 
       if (allAuthUsers.length > 0) {
