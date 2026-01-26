@@ -79,12 +79,40 @@ export async function GET(request: Request) {
         },
       });
 
-      // Fetch auth users
-      const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+      // Fetch ALL auth users by paginating through results
+      const allAuthUsers = [];
+      let page = 1;
+      const perPage = 1000; // Max allowed by Supabase
 
-      if (authUsers) {
+      while (true) {
+        const { data: authUsers, error } =
+          await supabaseAdmin.auth.admin.listUsers({
+            page,
+            perPage,
+          });
+
+        if (error) {
+          console.error("Error fetching auth users:", error);
+          break;
+        }
+
+        if (!authUsers || authUsers.users.length === 0) {
+          break;
+        }
+
+        allAuthUsers.push(...authUsers.users);
+
+        // If we got fewer users than perPage, we've reached the end
+        if (authUsers.users.length < perPage) {
+          break;
+        }
+
+        page++;
+      }
+
+      if (allAuthUsers.length > 0) {
         authDataMap = new Map(
-          authUsers.users.map((authUser) => [
+          allAuthUsers.map((authUser) => [
             authUser.email?.toLowerCase(),
             authUser,
           ]),
@@ -124,7 +152,6 @@ export async function GET(request: Request) {
         authCreatedAt: authData?.created_at || null,
         lastSignIn: authData?.last_sign_in_at || null,
         emailConfirmed: authData?.email_confirmed_at || null,
-        loginCount: 0, // Login count unavailable without direct auth schema access
         supabaseId: authData?.id || null,
       };
     }),

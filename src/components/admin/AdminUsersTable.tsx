@@ -21,7 +21,6 @@ type UserRow = {
   authCreatedAt: string | null;
   lastSignIn: string | null;
   emailConfirmed: string | null;
-  loginCount: number;
   supabaseId: string | null;
 };
 
@@ -229,7 +228,6 @@ export default function AdminUsersTable() {
                   <th className="py-2 px-6 text-left">Role</th>
                   <th className="py-2 px-6 text-left">Status</th>
                   <th className="py-2 px-6 text-left">Last Sign In</th>
-                  <th className="py-2 px-6 text-left">Login Count</th>
                   <th className="py-2 px-6 text-left">Created</th>
                   <th className="py-2 px-6 text-left">Email Verified</th>
                   <th className="py-2 px-6 text-left">Actions</th>
@@ -239,7 +237,7 @@ export default function AdminUsersTable() {
                 {filteredUsers.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={9}
+                      colSpan={8}
                       className="py-8 text-center text-sm text-navy-soft"
                     >
                       No users found
@@ -296,15 +294,6 @@ export default function AdminUsersTable() {
                         ) : (
                           <span className="text-slate-400">Never</span>
                         )}
-                      </td>
-                      <td className="py-3 px-6 text-center">
-                        <span
-                          className={`font-medium ${
-                            user.loginCount > 0 ? "text-navy" : "text-slate-400"
-                          }`}
-                        >
-                          {user.loginCount}
-                        </span>
                       </td>
                       <td className="py-3 px-6 text-navy-soft">
                         {formatDate(user.createdAt)}

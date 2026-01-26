@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import CreatePasswordForm from "./CreatePasswordForm";
 
 type PageProps = {
@@ -27,6 +28,23 @@ export default async function CreatePasswordPage({ searchParams }: PageProps) {
   // Ensure the application is in the right status (DRAFT)
   if (applicant.applicationStatus !== "DRAFT") {
     redirect(`/apply/waitlist?id=${applicationId}`);
+  }
+
+  // SECURITY: Verify authorization - user must either be unauthenticated (first time)
+  // or their email must match the applicant's email (returning user)
+  const supabase = await createSupabaseServerClient();
+  if (supabase) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (
+      user &&
+      user.email?.toLowerCase() !== applicant.user.email.toLowerCase()
+    ) {
+      // Someone is trying to access another user's application
+      redirect("/apply");
+    }
   }
 
   return (
