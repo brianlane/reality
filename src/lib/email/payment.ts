@@ -4,7 +4,7 @@
  * Sends payment confirmation emails with receipt information.
  */
 
-import { sendEmail } from './client';
+import { sendEmail } from "./client";
 
 interface PaymentConfirmationParams {
   to: string;
@@ -15,23 +15,25 @@ interface PaymentConfirmationParams {
   applicantId?: string;
 }
 
-export async function sendPaymentConfirmationEmail(params: PaymentConfirmationParams) {
-  const subject = 'Payment Received - Reality Matchmaking';
+export async function sendPaymentConfirmationEmail(
+  params: PaymentConfirmationParams,
+) {
+  const subject = "Payment Received - Reality Matchmaking";
 
   // Format amount (convert from cents to dollars)
-  const formattedAmount = new Intl.NumberFormat('en-US', {
-    style: 'currency',
+  const formattedAmount = new Intl.NumberFormat("en-US", {
+    style: "currency",
     currency: params.currency.toUpperCase(),
   }).format(params.amount / 100);
 
   // Escape HTML
   const escapeHtml = (str: string) => {
     const htmlEscapes: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;',
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
     };
     return str.replace(/[&<>"']/g, (char) => htmlEscapes[char] ?? char);
   };
@@ -76,11 +78,14 @@ export async function sendPaymentConfirmationEmail(params: PaymentConfirmationPa
           </tr>
           <tr>
             <td style="padding: 12px 0; color: #4a5568; font-weight: 600;">Date:</td>
-            <td style="padding: 12px 0; color: #1a2332; text-align: right;">${new Date().toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}</td>
+            <td style="padding: 12px 0; color: #1a2332; text-align: right;">${new Date().toLocaleDateString(
+              "en-US",
+              {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              },
+            )}</td>
           </tr>
         </table>
       </div>
@@ -125,7 +130,7 @@ export async function sendPaymentConfirmationEmail(params: PaymentConfirmationPa
     to: params.to,
     subject,
     html,
-    emailType: 'PAYMENT_CONFIRMATION',
+    emailType: "PAYMENT_CONFIRMATION",
     applicantId: params.applicantId,
   });
 }

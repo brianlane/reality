@@ -72,7 +72,10 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   // Send invitation emails
   const applicants = await db.applicant.findMany({
-    where: { id: { in: body.applicantIds } },
+    where: {
+      id: { in: body.applicantIds },
+      deletedAt: null,
+    },
     select: {
       id: true,
       user: {
@@ -84,7 +87,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     },
   });
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   for (const applicant of applicants) {
     try {
@@ -101,7 +104,10 @@ export async function POST(request: Request, { params }: RouteContext) {
         applicantId: applicant.id,
       });
     } catch (emailError) {
-      console.error(`Failed to send event invitation email to ${applicant.user.email}:`, emailError);
+      console.error(
+        `Failed to send event invitation email to ${applicant.user.email}:`,
+        emailError,
+      );
       // Continue sending to other applicants even if one fails
     }
   }

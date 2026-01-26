@@ -86,7 +86,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       applicantId: applicant.id,
     });
   } catch (emailError) {
-    console.error('Failed to send approval email:', emailError);
+    console.error("Failed to send approval email:", emailError);
     // Don't fail the request if email fails
   }
 

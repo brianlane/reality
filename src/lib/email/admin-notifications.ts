@@ -4,7 +4,7 @@
  * Sends critical email failure notifications to administrators.
  */
 
-import { sendEmail } from './client';
+import { sendEmail } from "./client";
 
 interface EmailFailureParams {
   recipientEmail: string;
@@ -17,7 +17,9 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
   const adminEmail = process.env.ADMIN_EMAIL;
 
   if (!adminEmail) {
-    console.error('ADMIN_EMAIL not configured - cannot send failure notification');
+    console.error(
+      "ADMIN_EMAIL not configured - cannot send failure notification",
+    );
     return;
   }
 
@@ -58,12 +60,16 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Recipient:</td>
             <td style="padding: 8px 0; color: #1a2332;">${params.recipientEmail}</td>
           </tr>
-          ${params.applicantId ? `
+          ${
+            params.applicantId
+              ? `
           <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Applicant ID:</td>
             <td style="padding: 8px 0; color: #1a2332; font-family: monospace; font-size: 14px;">${params.applicantId}</td>
           </tr>
-          ` : ''}
+          `
+              : ""
+          }
           <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Error:</td>
             <td style="padding: 8px 0; color: #991b1b; word-break: break-word;">${params.errorMessage}</td>
@@ -104,11 +110,11 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
       to: adminEmail,
       subject,
       html,
-      emailType: 'STATUS_UPDATE', // Using STATUS_UPDATE as a general admin notification type
+      emailType: "STATUS_UPDATE", // Using STATUS_UPDATE as a general admin notification type
     });
-    console.log('Admin notification sent successfully');
+    console.log("Admin notification sent successfully");
   } catch (error) {
-    console.error('Failed to send admin notification:', error);
+    console.error("Failed to send admin notification:", error);
     // Don't throw - this is a notification about a failure, we don't want to create a cascade
   }
 }

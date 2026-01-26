@@ -4,7 +4,7 @@
  * Sends event invitation emails with RSVP functionality.
  */
 
-import { sendEmail } from './client';
+import { sendEmail } from "./client";
 
 interface EventInvitationParams {
   to: string;
@@ -25,11 +25,11 @@ export async function sendEventInvitationEmail(params: EventInvitationParams) {
   // Escape HTML
   const escapeHtml = (str: string) => {
     const htmlEscapes: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;',
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
     };
     return str.replace(/[&<>"']/g, (char) => htmlEscapes[char] ?? char);
   };
@@ -40,23 +40,23 @@ export async function sendEventInvitationEmail(params: EventInvitationParams) {
   const safeAddress = escapeHtml(params.eventAddress);
 
   // Format dates and times
-  const formattedDate = params.eventDate.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+  const formattedDate = params.eventDate.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
-  const formattedStartTime = params.startTime.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
+  const formattedStartTime = params.startTime.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
   });
 
-  const formattedEndTime = params.endTime.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
+  const formattedEndTime = params.endTime.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
   });
 
   const html = `
@@ -139,7 +139,7 @@ export async function sendEventInvitationEmail(params: EventInvitationParams) {
 
       <div style="background-color: #fff7ed; border: 1px solid #fed7aa; padding: 20px; border-radius: 8px; margin: 32px 0;">
         <p style="color: #92400e; font-size: 14px; margin: 0 0 12px; font-weight: 600;">
-          ⏰ Please RSVP by ${new Date(params.eventDate.getTime() - 3 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+          ⏰ Please RSVP by ${new Date(params.eventDate.getTime() - 3 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", { month: "long", day: "numeric" })}
         </p>
         <p style="color: #92400e; font-size: 14px; margin: 0; line-height: 1.6;">
           Space is limited, so we need your response to finalize arrangements and ensure everyone has the best experience possible.
@@ -183,7 +183,7 @@ export async function sendEventInvitationEmail(params: EventInvitationParams) {
     to: params.to,
     subject,
     html,
-    emailType: 'EVENT_INVITATION',
+    emailType: "EVENT_INVITATION",
     applicantId: params.applicantId,
   });
 }

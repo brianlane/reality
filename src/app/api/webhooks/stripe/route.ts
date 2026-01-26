@@ -80,27 +80,22 @@ export async function POST(request: Request) {
 
         // Send payment confirmation email
         try {
-          // Get receipt URL from Stripe charge object
-          let receiptUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/payments`;
-
-          if (event.type === "payment_intent.succeeded") {
-            const paymentIntent = event.data.object as Stripe.PaymentIntent;
-            if (paymentIntent.charges && paymentIntent.charges.data.length > 0) {
-              const charge = paymentIntent.charges.data[0];
-              receiptUrl = charge.receipt_url || receiptUrl;
-            }
-          }
+          // Use dashboard/payments URL for receipt access
+          const receiptUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/payments`;
 
           await sendPaymentConfirmationEmail({
             to: payment.applicant.user.email,
             firstName: payment.applicant.user.firstName,
             amount: payment.amount,
-            currency: 'usd',
+            currency: "usd",
             receiptUrl,
             applicantId: payment.applicantId,
           });
         } catch (emailError) {
-          console.error('Failed to send payment confirmation email:', emailError);
+          console.error(
+            "Failed to send payment confirmation email:",
+            emailError,
+          );
           // Don't fail the webhook if email fails
         }
       }

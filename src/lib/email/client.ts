@@ -4,26 +4,38 @@
  * Handles email sending via Resend API with database logging.
  */
 
-import { Resend } from 'resend';
-import { SendEmailParams } from './types';
-import { db } from '@/lib/db';
+import { Resend } from "resend";
+import { SendEmailParams } from "./types";
+import { db } from "@/lib/db";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization to avoid build-time errors
+let resendClient: Resend | null = null;
+
+function getResendClient(): Resend {
+  if (!resendClient) {
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error("RESEND_API_KEY environment variable is not set");
+    }
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendClient;
+}
 
 export async function sendEmail(params: SendEmailParams) {
   // Validate required environment variables
   if (!process.env.RESEND_API_KEY) {
-    throw new Error('RESEND_API_KEY environment variable is not set');
+    throw new Error("RESEND_API_KEY environment variable is not set");
   }
 
   if (!process.env.EMAIL_FROM_ADDRESS) {
-    throw new Error('EMAIL_FROM_ADDRESS environment variable is not set');
+    throw new Error("EMAIL_FROM_ADDRESS environment variable is not set");
   }
 
-  const fromName = process.env.EMAIL_FROM_NAME || 'Reality Matchmaking';
+  const fromName = process.env.EMAIL_FROM_NAME || "Reality Matchmaking";
   const fromAddress = process.env.EMAIL_FROM_ADDRESS;
 
   // Send email via Resend
+  const resend = getResendClient();
   const { data, error } = await resend.emails.send({
     from: `${fromName} <${fromAddress}>`,
     to: params.to,
@@ -40,18 +52,18 @@ export async function sendEmail(params: SendEmailParams) {
         recipientEmail: params.to,
         emailType: params.emailType,
         subject: params.subject,
-        status: error ? 'FAILED' : 'SENT',
+        status: error ? "FAILED" : "SENT",
         failureReason: error?.message || null,
         applicantId: params.applicantId || null,
       },
     });
   } catch (logError) {
-    console.error('Failed to log email to database:', logError);
+    console.error("Failed to log email to database:", logError);
     // Continue execution - logging failure shouldn't prevent email sending
   }
 
   if (error) {
-    console.error('Email sending failed:', {
+    console.error("Email sending failed:", {
       emailType: params.emailType,
       recipient: params.to,
       error: error.message,
@@ -59,7 +71,7 @@ export async function sendEmail(params: SendEmailParams) {
     throw new Error(`Failed to send email: ${error.message}`);
   }
 
-  console.log('Email sent successfully:', {
+  console.log("Email sent successfully:", {
     emailType: params.emailType,
     recipient: params.to,
     resendId: data?.id,

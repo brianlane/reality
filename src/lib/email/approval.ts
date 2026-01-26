@@ -4,7 +4,7 @@
  * Sends approval confirmation emails to applicants.
  */
 
-import { sendEmail } from './client';
+import { sendEmail } from "./client";
 
 interface ApplicationApprovalParams {
   to: string;
@@ -12,17 +12,19 @@ interface ApplicationApprovalParams {
   applicantId: string;
 }
 
-export async function sendApplicationApprovalEmail(params: ApplicationApprovalParams) {
-  const subject = 'Welcome to Reality Matchmaking - Application Approved! 🎉';
+export async function sendApplicationApprovalEmail(
+  params: ApplicationApprovalParams,
+) {
+  const subject = "Welcome to Reality Matchmaking - Application Approved! 🎉";
 
   // Escape HTML
   const escapeHtml = (str: string) => {
     const htmlEscapes: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;',
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
     };
     return str.replace(/[&<>"']/g, (char) => htmlEscapes[char] ?? char);
   };
@@ -121,7 +123,7 @@ export async function sendApplicationApprovalEmail(params: ApplicationApprovalPa
     to: params.to,
     subject,
     html,
-    emailType: 'APPLICATION_APPROVAL',
+    emailType: "APPLICATION_APPROVAL",
     applicantId: params.applicantId,
   });
 }

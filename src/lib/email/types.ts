@@ -5,12 +5,12 @@
  */
 
 export type EmailType =
-  | 'WAITLIST_CONFIRMATION'
-  | 'WAITLIST_INVITE'
-  | 'PAYMENT_CONFIRMATION'
-  | 'APPLICATION_APPROVAL'
-  | 'EVENT_INVITATION'
-  | 'STATUS_UPDATE';
+  | "WAITLIST_CONFIRMATION"
+  | "WAITLIST_INVITE"
+  | "PAYMENT_CONFIRMATION"
+  | "APPLICATION_APPROVAL"
+  | "EVENT_INVITATION"
+  | "STATUS_UPDATE";
 
 export interface SendEmailParams {
   to: string;
@@ -23,6 +23,6 @@ export interface SendEmailParams {
 
 export interface EmailSendResult {
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
 }

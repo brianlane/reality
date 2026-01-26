@@ -4,11 +4,11 @@
  * Provides retry logic with exponential backoff for failed email sends.
  */
 
-import { EmailSendResult } from './types';
+import { EmailSendResult } from "./types";
 
 export async function sendEmailWithRetry(
-  emailFn: () => Promise<any>,
-  maxRetries = 3
+  emailFn: () => Promise<unknown>,
+  maxRetries = 3,
 ): Promise<EmailSendResult> {
   let lastError: Error | null = null;
 
@@ -29,7 +29,7 @@ export async function sendEmailWithRetry(
         // Exponential backoff: 1s, 2s, 4s
         const delayMs = Math.pow(2, attempt - 1) * 1000;
         console.log(`Retrying in ${delayMs}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
     }
   }
@@ -37,6 +37,6 @@ export async function sendEmailWithRetry(
   console.error(`All ${maxRetries} email send attempts failed`);
   return {
     success: false,
-    error: lastError?.message || 'Unknown error occurred',
+    error: lastError?.message || "Unknown error occurred",
   };
 }

@@ -91,7 +91,7 @@ export async function sendWaitlistConfirmationEmail({
     to,
     subject,
     html,
-    emailType: 'WAITLIST_CONFIRMATION',
+    emailType: "WAITLIST_CONFIRMATION",
     applicantId,
   });
 }
@@ -188,7 +188,7 @@ export async function sendWaitlistInviteEmail({
     to,
     subject,
     html,
-    emailType: 'WAITLIST_INVITE',
+    emailType: "WAITLIST_INVITE",
     applicantId,
   });
 }
