@@ -136,7 +136,8 @@ model Applicant {
   eventInvitations      EventInvitation[]
   matches               Match[]           @relation("ApplicantMatches")
   matchesAsPartner      Match[]           @relation("PartnerMatches")
-  
+  emailLogs             EmailLog[]
+
   @@index([applicationStatus])
   @@index([gender])
   @@index([screeningStatus])
@@ -561,4 +562,38 @@ model AdminAction {
   @@index([type])
   @@index([createdAt])
   @@index([targetId])
+}
+
+// ============================================
+// EMAIL LOGGING
+// ============================================
+
+enum EmailStatus {
+  SENT
+  FAILED
+  BOUNCED
+  DELIVERED
+  OPENED
+  CLICKED
+}
+
+model EmailLog {
+  id              String      @id @default(cuid())
+  resendId        String?     // Resend's email ID
+  recipientEmail  String
+  emailType       String      // "WAITLIST_CONFIRMATION", "PAYMENT", etc.
+  subject         String
+  status          EmailStatus @default(SENT)
+  sentAt          DateTime    @default(now())
+  failureReason   String?     @db.Text
+
+  // Relations
+  applicantId     String?
+  applicant       Applicant?  @relation(fields: [applicantId], references: [id], onDelete: SetNull)
+
+  @@index([applicantId])
+  @@index([emailType])
+  @@index([status])
+  @@index([sentAt])
+  @@index([recipientEmail])
 }

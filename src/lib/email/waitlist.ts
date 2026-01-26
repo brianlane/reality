@@ -18,12 +18,14 @@ type WaitlistConfirmationParams = {
   to: string;
   firstName: string;
   applicationId: string;
+  applicantId?: string;
 };
 
 export async function sendWaitlistConfirmationEmail({
   to,
   firstName,
   applicationId,
+  applicantId,
 }: WaitlistConfirmationParams) {
   const subject = "You're on the Reality Matchmaking Waitlist";
   const safeFirstName = escapeHtml(firstName);
@@ -85,19 +87,27 @@ export async function sendWaitlistConfirmationEmail({
 </html>
   `.trim();
 
-  return sendEmail({ to, subject, html });
+  return sendEmail({
+    to,
+    subject,
+    html,
+    emailType: 'WAITLIST_CONFIRMATION',
+    applicantId,
+  });
 }
 
 type WaitlistInviteParams = {
   to: string;
   firstName: string;
   inviteToken: string;
+  applicantId?: string;
 };
 
 export async function sendWaitlistInviteEmail({
   to,
   firstName,
   inviteToken,
+  applicantId,
 }: WaitlistInviteParams) {
   const subject =
     "You're Invited to Continue Your Reality Matchmaking Application!";
@@ -174,5 +184,11 @@ export async function sendWaitlistInviteEmail({
 </html>
   `.trim();
 
-  return sendEmail({ to, subject, html });
+  return sendEmail({
+    to,
+    subject,
+    html,
+    emailType: 'WAITLIST_INVITE',
+    applicantId,
+  });
 }

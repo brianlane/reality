@@ -2,6 +2,7 @@ import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { sendApplicationApprovalEmail } from "@/lib/email/approval";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -52,6 +53,18 @@ export async function POST(request: Request, { params }: RouteContext) {
       compatibilityScore: body.compatibilityScore,
       backgroundCheckNotes: body.notes,
     },
+    select: {
+      id: true,
+      applicationStatus: true,
+      reviewedAt: true,
+      compatibilityScore: true,
+      user: {
+        select: {
+          email: true,
+          firstName: true,
+        },
+      },
+    },
   });
 
   await db.adminAction.create({
@@ -64,6 +77,18 @@ export async function POST(request: Request, { params }: RouteContext) {
       metadata: { compatibilityScore: body.compatibilityScore },
     },
   });
+
+  // Send approval email
+  try {
+    await sendApplicationApprovalEmail({
+      to: applicant.user.email,
+      firstName: applicant.user.firstName,
+      applicantId: applicant.id,
+    });
+  } catch (emailError) {
+    console.error('Failed to send approval email:', emailError);
+    // Don't fail the request if email fails
+  }
 
   return successResponse({
     applicant: {

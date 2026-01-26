@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { verifyStripeWebhook } from "@/lib/stripe";
+import { sendPaymentConfirmationEmail } from "@/lib/email/payment";
 import type Stripe from "stripe";
 
 export async function POST(request: Request) {
@@ -51,7 +52,22 @@ export async function POST(request: Request) {
       const payment = await db.payment.update({
         where: { id: paymentId },
         data: { status },
-        select: { applicantId: true, type: true },
+        select: {
+          applicantId: true,
+          type: true,
+          amount: true,
+          stripePaymentId: true,
+          applicant: {
+            select: {
+              user: {
+                select: {
+                  email: true,
+                  firstName: true,
+                },
+              },
+            },
+          },
+        },
       });
 
       if (status === "SUCCEEDED" && payment.type === "APPLICATION_FEE") {
@@ -61,6 +77,32 @@ export async function POST(request: Request) {
             applicationStatus: "DRAFT",
           },
         });
+
+        // Send payment confirmation email
+        try {
+          // Get receipt URL from Stripe charge object
+          let receiptUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/payments`;
+
+          if (event.type === "payment_intent.succeeded") {
+            const paymentIntent = event.data.object as Stripe.PaymentIntent;
+            if (paymentIntent.charges && paymentIntent.charges.data.length > 0) {
+              const charge = paymentIntent.charges.data[0];
+              receiptUrl = charge.receipt_url || receiptUrl;
+            }
+          }
+
+          await sendPaymentConfirmationEmail({
+            to: payment.applicant.user.email,
+            firstName: payment.applicant.user.firstName,
+            amount: payment.amount,
+            currency: 'usd',
+            receiptUrl,
+            applicantId: payment.applicantId,
+          });
+        } catch (emailError) {
+          console.error('Failed to send payment confirmation email:', emailError);
+          // Don't fail the webhook if email fails
+        }
       }
     }
   } catch (error) {
