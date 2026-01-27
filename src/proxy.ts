@@ -87,22 +87,14 @@ export async function proxy(request: NextRequest) {
     let originValid = false;
 
     if (origin) {
-      try {
-        originValid = originsMatch(origin, expectedOrigin);
-        if (!originValid && vercelUrl) {
-          originValid = originsMatch(origin, vercelUrl);
-        }
-      } catch {
-        originValid = false;
+      originValid = originsMatch(origin, expectedOrigin);
+      if (!originValid && vercelUrl) {
+        originValid = originsMatch(origin, vercelUrl);
       }
     } else if (referer) {
-      try {
-        originValid = originsMatch(referer, expectedOrigin);
-        if (!originValid && vercelUrl) {
-          originValid = originsMatch(referer, vercelUrl);
-        }
-      } catch {
-        originValid = false;
+      originValid = originsMatch(referer, expectedOrigin);
+      if (!originValid && vercelUrl) {
+        originValid = originsMatch(referer, vercelUrl);
       }
     } else {
       // No origin or referer - reject for API routes
