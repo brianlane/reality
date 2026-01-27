@@ -14,16 +14,7 @@ import { sendPaymentConfirmationEmail } from "@/lib/email/payment";
 import { sendApplicationApprovalEmail } from "@/lib/email/approval";
 import { sendEventInvitationEmail } from "@/lib/email/events";
 import { sendApplicationStatusEmail } from "@/lib/email/status";
-
-type TestEmailType =
-  | "WAITLIST_CONFIRMATION"
-  | "WAITLIST_INVITE"
-  | "PAYMENT_CONFIRMATION"
-  | "APPLICATION_APPROVAL"
-  | "EVENT_INVITATION"
-  | "STATUS_UPDATE_SCREENING"
-  | "STATUS_UPDATE_REJECTED"
-  | "STATUS_UPDATE_PAYMENT_PENDING";
+import type { TestEmailType } from "@/lib/email/types";
 
 type RequestBody = {
   emailType: TestEmailType;

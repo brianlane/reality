@@ -1,20 +1,10 @@
 "use client";
 
 import { useState } from "react";
-
-const EMAIL_TYPES = [
-  "WAITLIST_CONFIRMATION",
-  "WAITLIST_INVITE",
-  "PAYMENT_CONFIRMATION",
-  "APPLICATION_APPROVAL",
-  "EVENT_INVITATION",
-  "STATUS_UPDATE_SCREENING",
-  "STATUS_UPDATE_REJECTED",
-  "STATUS_UPDATE_PAYMENT_PENDING",
-];
+import { TEST_EMAIL_TYPES } from "@/lib/email/types";
 
 export default function TestEmailsPage() {
-  const [emailType, setEmailType] = useState(EMAIL_TYPES[0]);
+  const [emailType, setEmailType] = useState(TEST_EMAIL_TYPES[0]);
   const [recipientEmail, setRecipientEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
@@ -73,7 +63,7 @@ export default function TestEmailsPage() {
             onChange={(e) => setEmailType(e.target.value)}
             className="w-full rounded-md border px-3 py-2"
           >
-            {EMAIL_TYPES.map((type) => (
+            {TEST_EMAIL_TYPES.map((type) => (
               <option key={type} value={type}>
                 {type.replace(/_/g, " ")}
               </option>
