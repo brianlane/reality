@@ -66,22 +66,36 @@ export async function proxy(request: NextRequest) {
       ? `https://${process.env.VERCEL_URL}`
       : null;
 
+    // Helper function to check if origins match (with/without www)
+    const originsMatch = (urlA: string, urlB: string): boolean => {
+      try {
+        const a = new URL(urlA);
+        const b = new URL(urlB);
+
+        // Normalize hostnames by removing www prefix for comparison
+        const hostA = a.hostname.replace(/^www\./, "");
+        const hostB = b.hostname.replace(/^www\./, "");
+
+        return a.protocol === b.protocol && hostA === hostB && a.port === b.port;
+      } catch {
+        return false;
+      }
+    };
+
     let originValid = false;
 
     if (origin) {
       try {
-        const originUrl = new URL(origin);
-        const expectedUrl = new URL(expectedOrigin);
-        originValid = originUrl.origin === expectedUrl.origin;
+        originValid = originsMatch(origin, expectedOrigin);
         if (!originValid && vercelUrl) {
-          originValid = originUrl.origin === new URL(vercelUrl).origin;
+          originValid = originsMatch(origin, vercelUrl);
         }
 
         // Debug logging for production
         if (!originValid) {
           console.error("CSRF check failed:", {
-            origin: originUrl.origin,
-            expected: expectedUrl.origin,
+            origin,
+            expected: expectedOrigin,
             vercelUrl,
             pathname,
             envVar: process.env.NEXT_PUBLIC_APP_URL,
@@ -96,18 +110,16 @@ export async function proxy(request: NextRequest) {
       }
     } else if (referer) {
       try {
-        const refererUrl = new URL(referer);
-        const expectedUrl = new URL(expectedOrigin);
-        originValid = refererUrl.origin === expectedUrl.origin;
+        originValid = originsMatch(referer, expectedOrigin);
         if (!originValid && vercelUrl) {
-          originValid = refererUrl.origin === new URL(vercelUrl).origin;
+          originValid = originsMatch(referer, vercelUrl);
         }
 
         // Debug logging for production
         if (!originValid) {
           console.error("CSRF check failed (referer):", {
-            referer: refererUrl.origin,
-            expected: expectedUrl.origin,
+            referer,
+            expected: expectedOrigin,
             vercelUrl,
             pathname,
             envVar: process.env.NEXT_PUBLIC_APP_URL,
