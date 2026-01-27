@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { TEST_EMAIL_TYPES } from "@/lib/email/types";
+import { TEST_EMAIL_TYPES, type TestEmailType } from "@/lib/email/types";
 
 export default function TestEmailsPage() {
-  const [emailType, setEmailType] = useState(TEST_EMAIL_TYPES[0]);
+  const [emailType, setEmailType] = useState<TestEmailType>(
+    TEST_EMAIL_TYPES[0],
+  );
   const [recipientEmail, setRecipientEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
@@ -38,7 +40,7 @@ export default function TestEmailsPage() {
       } else {
         setResult({
           success: false,
-          message: `❌ Error: ${data.message || "Unknown error"}`,
+          message: `❌ Error: ${data.error?.message || "Unknown error"}`,
         });
       }
     } catch (error) {
@@ -60,7 +62,7 @@ export default function TestEmailsPage() {
           <label className="mb-2 block text-sm font-medium">Email Type</label>
           <select
             value={emailType}
-            onChange={(e) => setEmailType(e.target.value)}
+            onChange={(e) => setEmailType(e.target.value as TestEmailType)}
             className="w-full rounded-md border px-3 py-2"
           >
             {TEST_EMAIL_TYPES.map((type) => (
