@@ -76,7 +76,9 @@ export async function proxy(request: NextRequest) {
         const hostA = a.hostname.replace(/^www\./, "");
         const hostB = b.hostname.replace(/^www\./, "");
 
-        return a.protocol === b.protocol && hostA === hostB && a.port === b.port;
+        return (
+          a.protocol === b.protocol && hostA === hostB && a.port === b.port
+        );
       } catch {
         return false;
       }
