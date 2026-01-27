@@ -61,6 +61,11 @@ export async function proxy(request: NextRequest) {
     const expectedOrigin =
       process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
+    // Also check for Vercel deployment URLs
+    const vercelUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : null;
+
     let originValid = false;
 
     if (origin) {
@@ -68,7 +73,25 @@ export async function proxy(request: NextRequest) {
         const originUrl = new URL(origin);
         const expectedUrl = new URL(expectedOrigin);
         originValid = originUrl.origin === expectedUrl.origin;
-      } catch {
+        if (!originValid && vercelUrl) {
+          originValid = originUrl.origin === new URL(vercelUrl).origin;
+        }
+
+        // Debug logging for production
+        if (!originValid) {
+          console.error("CSRF check failed:", {
+            origin: originUrl.origin,
+            expected: expectedUrl.origin,
+            vercelUrl,
+            pathname,
+            envVar: process.env.NEXT_PUBLIC_APP_URL,
+          });
+        }
+      } catch (error) {
+        console.error("CSRF URL parsing error:", error, {
+          origin,
+          expectedOrigin,
+        });
         originValid = false;
       }
     } else if (referer) {
@@ -76,11 +99,33 @@ export async function proxy(request: NextRequest) {
         const refererUrl = new URL(referer);
         const expectedUrl = new URL(expectedOrigin);
         originValid = refererUrl.origin === expectedUrl.origin;
-      } catch {
+        if (!originValid && vercelUrl) {
+          originValid = refererUrl.origin === new URL(vercelUrl).origin;
+        }
+
+        // Debug logging for production
+        if (!originValid) {
+          console.error("CSRF check failed (referer):", {
+            referer: refererUrl.origin,
+            expected: expectedUrl.origin,
+            vercelUrl,
+            pathname,
+            envVar: process.env.NEXT_PUBLIC_APP_URL,
+          });
+        }
+      } catch (error) {
+        console.error("CSRF URL parsing error (referer):", error, {
+          referer,
+          expectedOrigin,
+        });
         originValid = false;
       }
     } else {
       // No origin or referer - reject for API routes
+      console.error("CSRF check failed: no origin or referer header", {
+        pathname,
+        headers: Object.fromEntries(request.headers.entries()),
+      });
       originValid = false;
     }
 
