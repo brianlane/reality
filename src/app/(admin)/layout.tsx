@@ -11,6 +11,7 @@ const adminLinks = [
   { href: "/admin/questionnaire", label: "Questionnaire" },
   { href: "/admin/preview-application", label: "Preview Flow" },
   { href: "/admin/analytics", label: "Analytics" },
+  { href: "/admin/test-emails", label: "Test Emails" },
 ];
 
 export default function AdminLayout({
