@@ -23,7 +23,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "X-Frame-Options",
-            value: "DENY",
+            value: "SAMEORIGIN",
           },
           {
             key: "X-Content-Type-Options",
@@ -51,8 +51,8 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: https:",
               "font-src 'self' data:",
               "connect-src 'self' https://*.supabase.co https://*.stripe.com",
-              "frame-src https://js.stripe.com https://*.stripe.com",
-              "frame-ancestors 'none'",
+              "frame-src 'self' https://js.stripe.com https://*.stripe.com", // Allow same-origin iframes for email previews
+              "frame-ancestors 'self'", // Allow being framed by same origin
               "base-uri 'self'",
               "form-action 'self'",
             ].join("; "),
