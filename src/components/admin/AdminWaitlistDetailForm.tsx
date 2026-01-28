@@ -105,6 +105,45 @@ export default function AdminWaitlistDetailForm({
     }
   }
 
+  async function handleHardDelete() {
+    if (
+      !window.confirm(
+        "Permanently delete this applicant and all related data? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    setIsSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError("Please sign in again.");
+        setIsSaving(false);
+        return;
+      }
+      const res = await fetch(
+        `/api/admin/waitlist/${applicantId}/hard-delete`,
+        {
+          method: "DELETE",
+          headers,
+        },
+      );
+      const json = await res.json();
+      if (!res.ok || json?.error) {
+        setError("Failed to permanently delete applicant.");
+        setIsSaving(false);
+        return;
+      }
+      setSuccess("Applicant permanently deleted.");
+      setIsSaving(false);
+    } catch {
+      setError("Failed to permanently delete applicant.");
+      setIsSaving(false);
+    }
+  }
+
   if (error) {
     return <Card>{error}</Card>;
   }
@@ -160,6 +199,15 @@ export default function AdminWaitlistDetailForm({
         className="bg-copper hover:bg-copper/90"
       >
         {isSaving ? "Saving..." : "Save Changes"}
+      </Button>
+      <Button
+        type="button"
+        onClick={handleHardDelete}
+        disabled={isSaving}
+        variant="outline"
+        className="border-red-300 text-red-600 hover:bg-red-50"
+      >
+        Hard Delete
       </Button>
     </Card>
   );

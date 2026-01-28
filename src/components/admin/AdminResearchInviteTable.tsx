@@ -110,6 +110,47 @@ export default function AdminResearchInviteTable({
     }
   }
 
+  async function handleHardDelete(applicantId: string) {
+    if (
+      !window.confirm(
+        "Permanently delete this research participant and all related data? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError("Please sign in again.");
+        setIsLoading(false);
+        return;
+      }
+      const res = await fetch(
+        `/api/admin/applications/${applicantId}/hard-delete`,
+        {
+          method: "DELETE",
+          headers,
+        },
+      );
+      const json = await res.json();
+      if (!res.ok || json?.error) {
+        setError("Failed to permanently delete participant.");
+        setIsLoading(false);
+        return;
+      }
+      setSuccess("Participant permanently deleted.");
+      await loadResearchInvites();
+    } catch (err) {
+      console.error("Error deleting research participant:", err);
+      setError("Failed to permanently delete participant.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   function formatDate(dateString: string | null) {
     if (!dateString) {
       return "N/A";
@@ -207,6 +248,7 @@ export default function AdminResearchInviteTable({
                   <th className="py-2 text-left">Invited</th>
                   <th className="py-2 text-left">Started</th>
                   <th className="py-2 text-left">Completed</th>
+                  <th className="py-2 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -228,6 +270,17 @@ export default function AdminResearchInviteTable({
                     </td>
                     <td className="py-2">
                       {formatDate(applicant.researchCompletedAt)}
+                    </td>
+                    <td className="py-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleHardDelete(applicant.id)}
+                        disabled={isLoading}
+                        className="border-red-300 text-red-600 hover:bg-red-50"
+                      >
+                        Hard Delete
+                      </Button>
                     </td>
                   </tr>
                 ))}

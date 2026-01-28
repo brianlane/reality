@@ -227,6 +227,46 @@ export default function AdminApplicationForm({
     }
   }
 
+  async function handleHardDelete() {
+    if (!applicationId) return;
+    if (
+      !window.confirm(
+        "Permanently delete this application and all related data? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError("Please sign in again.");
+        setIsLoading(false);
+        return;
+      }
+      const res = await fetch(
+        `/api/admin/applications/${applicationId}/hard-delete`,
+        {
+          method: "DELETE",
+          headers,
+        },
+      );
+      const json = await res.json();
+      if (!res.ok || json?.error) {
+        setError("Failed to permanently delete application.");
+        setIsLoading(false);
+        return;
+      }
+      setSuccess("Application permanently deleted.");
+      setIsLoading(false);
+    } catch {
+      setError("Failed to permanently delete application.");
+      setIsLoading(false);
+    }
+  }
+
   async function handleRestore() {
     if (!applicationId) return;
     setIsLoading(true);
@@ -529,6 +569,15 @@ export default function AdminApplicationForm({
               disabled={isLoading}
             >
               Soft Delete
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleHardDelete}
+              disabled={isLoading}
+              className="border-red-300 text-red-600 hover:bg-red-50"
+            >
+              Hard Delete
             </Button>
             <Button
               type="button"

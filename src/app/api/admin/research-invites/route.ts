@@ -90,6 +90,7 @@ export async function POST(request: Request) {
     include: { applicant: true },
   });
 
+  // Check if user has a non-research applicant record
   if (
     existingUser?.applicant &&
     existingUser.applicant.deletedAt === null &&
@@ -106,24 +107,37 @@ export async function POST(request: Request) {
     );
   }
 
+  // Prevent overwriting existing user profiles (e.g., admin users)
+  if (existingUser && !existingUser.applicant) {
+    return errorResponse(
+      "CONFLICT",
+      "A user account already exists for this email without an applicant profile.",
+      409,
+    );
+  }
+
   const adminUser = await getOrCreateAdminUser({
     userId: auth.userId,
     email: auth.email,
   });
 
   let inviteCode = "";
+  let foundUniqueCode = false;
   for (let attempt = 0; attempt < 5; attempt += 1) {
     inviteCode = generateInviteCode();
     const exists = await db.applicant.findFirst({
       where: { researchInviteCode: inviteCode },
     });
-    if (!exists) break;
+    if (!exists) {
+      foundUniqueCode = true;
+      break;
+    }
   }
 
-  if (!inviteCode) {
+  if (!foundUniqueCode) {
     return errorResponse(
       "INVITE_FAILED",
-      "Failed to generate invite code.",
+      "Failed to generate unique invite code after 5 attempts.",
       500,
     );
   }
