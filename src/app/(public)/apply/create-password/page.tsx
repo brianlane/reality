@@ -25,6 +25,17 @@ export default async function CreatePasswordPage({ searchParams }: PageProps) {
     redirect("/apply");
   }
 
+  if (
+    applicant.applicationStatus === "RESEARCH_INVITED" ||
+    applicant.applicationStatus === "RESEARCH_IN_PROGRESS"
+  ) {
+    redirect("/research/questionnaire");
+  }
+
+  if (applicant.applicationStatus === "RESEARCH_COMPLETED") {
+    redirect("/research/thank-you");
+  }
+
   // Ensure the application is in the right status (DRAFT)
   if (applicant.applicationStatus !== "DRAFT") {
     redirect(`/apply/waitlist?id=${applicationId}`);

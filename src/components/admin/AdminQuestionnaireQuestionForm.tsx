@@ -299,6 +299,46 @@ export default function AdminQuestionnaireQuestionForm({
     }
   }
 
+  async function handleHardDelete() {
+    if (!questionId) return;
+    if (
+      !window.confirm(
+        "Permanently delete this question and its answers? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError("Please sign in again.");
+        setIsLoading(false);
+        return;
+      }
+      const res = await fetch(
+        `/api/admin/questionnaire/questions/${questionId}/hard-delete`,
+        {
+          method: "DELETE",
+          headers,
+        },
+      );
+      const json = await res.json();
+      if (!res.ok || json?.error) {
+        setError("Failed to permanently delete question.");
+        setIsLoading(false);
+        return;
+      }
+      setSuccess("Question permanently deleted.");
+      setIsLoading(false);
+    } catch {
+      setError("Failed to permanently delete question.");
+      setIsLoading(false);
+    }
+  }
+
   return (
     <Card className="space-y-4">
       {error ? (
@@ -473,6 +513,17 @@ export default function AdminQuestionnaireQuestionForm({
             disabled={isLoading || !!question?.deletedAt}
           >
             Soft Delete
+          </Button>
+        ) : null}
+        {mode === "edit" ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleHardDelete}
+            disabled={isLoading}
+            className="border-red-300 text-red-600 hover:bg-red-50"
+          >
+            Hard Delete
           </Button>
         ) : null}
       </div>

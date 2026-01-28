@@ -57,10 +57,12 @@ export default function QuestionnaireForm({
   previewMode = false,
   mockSections,
   mockAnswers,
+  mode = "application",
 }: {
   previewMode?: boolean;
   mockSections?: Section[];
   mockAnswers?: Record<string, AnswerState>;
+  mode?: "application" | "research";
 }) {
   const router = useRouter();
   const { draft, updateDraft } = useApplicationDraft();
@@ -73,6 +75,7 @@ export default function QuestionnaireForm({
   const [status, setStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [applicationId, setApplicationId] = useState<string | null>(null);
+  const isResearchMode = mode === "research";
 
   useEffect(() => {
     if (!previewMode) return;
@@ -120,7 +123,9 @@ export default function QuestionnaireForm({
         if (!res.ok || json?.error) {
           setStatus(
             json?.error?.message ??
-              "You must be invited off the waitlist to continue.",
+              (isResearchMode
+                ? "Your research invite is not valid."
+                : "You must be invited off the waitlist to continue."),
           );
           setIsLoading(false);
           return;
@@ -182,7 +187,7 @@ export default function QuestionnaireForm({
     loadQuestionnaire();
 
     return () => controller.abort();
-  }, [applicationId, previewMode, draft.currentPageId]);
+  }, [applicationId, previewMode, draft.currentPageId, isResearchMode]);
 
   const questionsBySection = useMemo(
     () => sections.filter((section) => section.questions.length > 0),
@@ -195,7 +200,11 @@ export default function QuestionnaireForm({
       return false;
     }
     if (!applicationId) {
-      setStatus("Please continue your application from your invite link.");
+      setStatus(
+        isResearchMode
+          ? "Please use your research invite link to begin."
+          : "Please continue your application from your invite link.",
+      );
       return false;
     }
 
@@ -253,8 +262,25 @@ export default function QuestionnaireForm({
       pages.length === 0 || currentPageIndex >= pages.length - 1;
 
     if (isLastPage) {
-      // Navigate to photos page
-      router.push("/apply/photos");
+      if (isResearchMode) {
+        const response = await fetch("/api/research/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ applicationId }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data?.error) {
+          setStatus(
+            data?.error?.message ??
+              "Failed to complete the research questionnaire.",
+          );
+          return;
+        }
+        router.push("/research/thank-you");
+      } else {
+        // Navigate to photos page
+        router.push("/apply/photos");
+      }
     } else {
       // Move to next page
       const nextPageIndex = currentPageIndex + 1;
@@ -339,7 +365,9 @@ export default function QuestionnaireForm({
   if (!previewMode && !applicationId) {
     return (
       <p className="text-sm text-navy-soft">
-        Please use your invite link to continue the application.
+        {isResearchMode
+          ? "Please use your research invite link to begin."
+          : "Please use your invite link to continue the application."}
       </p>
     );
   }

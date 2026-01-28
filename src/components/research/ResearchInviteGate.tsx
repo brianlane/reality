@@ -1,0 +1,112 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
+type ResearchInviteGateProps = {
+  code: string;
+};
+
+type ValidationResponse = {
+  valid: boolean;
+  firstName: string;
+  applicationId: string;
+};
+
+export default function ResearchInviteGate({ code }: ResearchInviteGateProps) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function validateCode() {
+      try {
+        const response = await fetch(
+          `/api/research/validate-invite?code=${code}`,
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          setError(
+            errorData?.error?.message ||
+              "Invalid or expired research invitation link.",
+          );
+          setIsLoading(false);
+          return;
+        }
+
+        const data = (await response.json()) as ValidationResponse;
+
+        if (typeof window !== "undefined") {
+          localStorage.setItem("applicationId", data.applicationId);
+          localStorage.setItem("researchMode", "true");
+          localStorage.setItem("researchInviteCode", code);
+          localStorage.removeItem("waitlistInviteToken");
+        }
+
+        router.replace("/research/questionnaire");
+      } catch (err) {
+        console.error("Research invite validation error:", err);
+        setError("Failed to validate invitation. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    validateCode();
+  }, [code, router]);
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-2xl py-12 text-center">
+        <div className="animate-pulse space-y-4">
+          <div className="mx-auto h-16 w-16 rounded-full bg-gray-200" />
+          <div className="h-8 w-64 mx-auto rounded bg-gray-200" />
+          <div className="h-4 w-48 mx-auto rounded bg-gray-200" />
+        </div>
+        <p className="mt-4 text-sm text-gray-500">
+          Validating your research invitation...
+        </p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6 py-12">
+        <div className="text-center">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-100">
+            <svg
+              className="h-12 w-12 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </div>
+        </div>
+        <div className="space-y-2 text-center">
+          <h1 className="text-2xl font-bold text-navy">
+            Invalid Research Invitation
+          </h1>
+          <p className="text-navy-soft">{error}</p>
+        </div>
+        <div className="text-center">
+          <Link href="/">
+            <Button>Return to Homepage</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}

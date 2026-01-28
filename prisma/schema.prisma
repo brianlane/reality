@@ -57,6 +57,9 @@ enum ApplicationStatus {
   REJECTED
   WAITLIST
   WAITLIST_INVITED
+  RESEARCH_INVITED
+  RESEARCH_IN_PROGRESS
+  RESEARCH_COMPLETED
 }
 
 enum Gender {
@@ -104,6 +107,13 @@ model Applicant {
   invitedOffWaitlistAt  DateTime?
   invitedOffWaitlistBy  String?           // Admin user ID
   waitlistInviteToken   String?   @unique // Unique token for invite link
+
+  // Research Invite Flow
+  researchInviteCode    String?   @unique
+  researchInvitedAt     DateTime?
+  researchInvitedBy     String?           // Admin user ID
+  researchInviteUsedAt  DateTime?
+  researchCompletedAt   DateTime?
 
   // Application Status
   applicationStatus     ApplicationStatus @default(DRAFT)
@@ -545,6 +555,7 @@ enum AdminActionType {
   MANUAL_ADJUSTMENT
   INVITE_OFF_WAITLIST
   BATCH_INVITE_WAITLIST
+  INVITE_RESEARCH
 }
 
 model AdminAction {

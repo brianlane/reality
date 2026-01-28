@@ -220,6 +220,43 @@ export default function AdminEventForm({ eventId, mode }: AdminEventFormProps) {
     }
   }
 
+  async function handleHardDelete() {
+    if (!eventId) return;
+    if (
+      !window.confirm(
+        "Permanently delete this event and related invitations, matches, and payments? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError("Please sign in again.");
+        setIsLoading(false);
+        return;
+      }
+      const res = await fetch(`/api/admin/events/${eventId}/hard-delete`, {
+        method: "DELETE",
+        headers,
+      });
+      const json = await res.json();
+      if (!res.ok || json?.error) {
+        setError("Failed to permanently delete event.");
+        setIsLoading(false);
+        return;
+      }
+      setSuccess("Event permanently deleted.");
+      setIsLoading(false);
+    } catch {
+      setError("Failed to permanently delete event.");
+      setIsLoading(false);
+    }
+  }
+
   async function handleRestore() {
     if (!eventId) return;
     setIsLoading(true);
@@ -482,6 +519,15 @@ export default function AdminEventForm({ eventId, mode }: AdminEventFormProps) {
               disabled={isLoading}
             >
               Soft Delete
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleHardDelete}
+              disabled={isLoading}
+              className="border-red-300 text-red-600 hover:bg-red-50"
+            >
+              Hard Delete
             </Button>
             {event?.deletedAt ? (
               <Button

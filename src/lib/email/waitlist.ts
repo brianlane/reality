@@ -13,12 +13,10 @@ type WaitlistConfirmationParams = {
 
 export async function sendWaitlistConfirmationEmail({
   to,
-  firstName,
-  applicationId,
   applicantId,
 }: WaitlistConfirmationParams) {
   const subject = "You're on the Reality Matchmaking Waitlist";
-  const html = getWaitlistConfirmationHTML(firstName, applicationId);
+  const html = getWaitlistConfirmationHTML();
 
   return sendEmail({
     to,

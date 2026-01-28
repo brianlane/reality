@@ -163,6 +163,43 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
     }
   }
 
+  async function handleHardDelete() {
+    if (!userId) return;
+    if (
+      !window.confirm(
+        "Permanently delete this user (and any applicant data)? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError("Please sign in again.");
+        setIsLoading(false);
+        return;
+      }
+      const res = await fetch(`/api/admin/users/${userId}/hard-delete`, {
+        method: "DELETE",
+        headers,
+      });
+      const json = await res.json();
+      if (!res.ok || json?.error) {
+        setError("Failed to permanently delete user.");
+        setIsLoading(false);
+        return;
+      }
+      setSuccess("User permanently deleted.");
+      setIsLoading(false);
+    } catch {
+      setError("Failed to permanently delete user.");
+      setIsLoading(false);
+    }
+  }
+
   async function handleRestore() {
     if (!userId) return;
     setIsLoading(true);
@@ -253,6 +290,15 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
               disabled={isLoading}
             >
               Soft Delete
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleHardDelete}
+              disabled={isLoading}
+              className="border-red-300 text-red-600 hover:bg-red-50"
+            >
+              Hard Delete
             </Button>
             {user?.deletedAt ? (
               <Button

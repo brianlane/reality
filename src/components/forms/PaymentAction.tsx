@@ -18,6 +18,14 @@ export default function PaymentAction({
       return;
     }
 
+    if (typeof window !== "undefined") {
+      const isResearch = localStorage.getItem("researchMode") === "true";
+      if (isResearch) {
+        setStatus("Research participants do not need to pay.");
+        return;
+      }
+    }
+
     if (!draft.applicationId) {
       setStatus("Complete the application first.");
       return;

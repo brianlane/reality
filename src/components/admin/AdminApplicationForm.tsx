@@ -227,6 +227,46 @@ export default function AdminApplicationForm({
     }
   }
 
+  async function handleHardDelete() {
+    if (!applicationId) return;
+    if (
+      !window.confirm(
+        "Permanently delete this application and all related data? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError("Please sign in again.");
+        setIsLoading(false);
+        return;
+      }
+      const res = await fetch(
+        `/api/admin/applications/${applicationId}/hard-delete`,
+        {
+          method: "DELETE",
+          headers,
+        },
+      );
+      const json = await res.json();
+      if (!res.ok || json?.error) {
+        setError("Failed to permanently delete application.");
+        setIsLoading(false);
+        return;
+      }
+      setSuccess("Application permanently deleted.");
+      setIsLoading(false);
+    } catch {
+      setError("Failed to permanently delete application.");
+      setIsLoading(false);
+    }
+  }
+
   async function handleRestore() {
     if (!applicationId) return;
     setIsLoading(true);
@@ -443,6 +483,12 @@ export default function AdminApplicationForm({
           onChange={(event) =>
             updateField("applicationStatus", event.target.value)
           }
+          disabled={form.applicationStatus.startsWith("RESEARCH_")}
+          title={
+            form.applicationStatus.startsWith("RESEARCH_")
+              ? "Research statuses cannot be changed. Use /admin/research to manage research participants."
+              : undefined
+          }
         >
           <option value="DRAFT">Draft</option>
           <option value="SUBMITTED">Submitted</option>
@@ -451,6 +497,12 @@ export default function AdminApplicationForm({
           <option value="APPROVED">Approved</option>
           <option value="WAITLIST">Waitlist</option>
           <option value="WAITLIST_INVITED">Waitlist Invited</option>
+          {/* Research statuses are read-only - use /admin/research to manage */}
+          {form.applicationStatus.startsWith("RESEARCH_") && (
+            <option value={form.applicationStatus}>
+              {form.applicationStatus.replace(/_/g, " ")}
+            </option>
+          )}
         </Select>
         <Select
           value={form.screeningStatus}
@@ -529,6 +581,15 @@ export default function AdminApplicationForm({
               disabled={isLoading}
             >
               Soft Delete
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleHardDelete}
+              disabled={isLoading}
+              className="border-red-300 text-red-600 hover:bg-red-50"
+            >
+              Hard Delete
             </Button>
             <Button
               type="button"
