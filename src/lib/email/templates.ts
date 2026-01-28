@@ -21,12 +21,7 @@ function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (char) => htmlEscapes[char] ?? char);
 }
 
-export function getWaitlistConfirmationHTML(
-  firstName: string,
-  applicationId: string,
-) {
-  const safeFirstName = escapeHtml(firstName);
-
+export function getWaitlistConfirmationHTML() {
   return `
 <!DOCTYPE html>
 <html>

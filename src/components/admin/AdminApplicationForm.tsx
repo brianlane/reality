@@ -483,6 +483,12 @@ export default function AdminApplicationForm({
           onChange={(event) =>
             updateField("applicationStatus", event.target.value)
           }
+          disabled={form.applicationStatus.startsWith("RESEARCH_")}
+          title={
+            form.applicationStatus.startsWith("RESEARCH_")
+              ? "Research statuses cannot be changed. Use /admin/research to manage research participants."
+              : undefined
+          }
         >
           <option value="DRAFT">Draft</option>
           <option value="SUBMITTED">Submitted</option>
@@ -491,10 +497,10 @@ export default function AdminApplicationForm({
           <option value="APPROVED">Approved</option>
           <option value="WAITLIST">Waitlist</option>
           <option value="WAITLIST_INVITED">Waitlist Invited</option>
-          {/* Research statuses are read-only - use /admin/research to create research invites */}
+          {/* Research statuses are read-only - use /admin/research to manage */}
           {form.applicationStatus.startsWith("RESEARCH_") && (
             <option value={form.applicationStatus}>
-              {form.applicationStatus}
+              {form.applicationStatus.replace(/_/g, " ")}
             </option>
           )}
         </Select>

@@ -47,7 +47,7 @@ export async function GET(request: Request) {
   try {
     switch (emailType) {
       case "WAITLIST_CONFIRMATION":
-        html = getWaitlistConfirmationHTML("Test User", "test_app_123");
+        html = getWaitlistConfirmationHTML();
         break;
 
       case "WAITLIST_INVITE":
