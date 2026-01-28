@@ -491,9 +491,12 @@ export default function AdminApplicationForm({
           <option value="APPROVED">Approved</option>
           <option value="WAITLIST">Waitlist</option>
           <option value="WAITLIST_INVITED">Waitlist Invited</option>
-          <option value="RESEARCH_INVITED">Research Invited</option>
-          <option value="RESEARCH_IN_PROGRESS">Research In Progress</option>
-          <option value="RESEARCH_COMPLETED">Research Completed</option>
+          {/* Research statuses are read-only - use /admin/research to create research invites */}
+          {form.applicationStatus.startsWith("RESEARCH_") && (
+            <option value={form.applicationStatus}>
+              {form.applicationStatus}
+            </option>
+          )}
         </Select>
         <Select
           value={form.screeningStatus}

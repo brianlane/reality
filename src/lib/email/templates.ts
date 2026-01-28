@@ -37,43 +37,38 @@ export function getWaitlistConfirmationHTML(
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-    <!-- Header -->
-    <div style="background: linear-gradient(135deg, #1a2332 0%, #2d3e50 100%); padding: 40px 20px; text-align: center;">
-      <div style="width: 60px; height: 60px; margin: 0 auto 16px; background-color: #c8915f; border-radius: 50%; text-align: center; line-height: 60px; font-size: 32px; color: white;">
-        ✓
-      </div>
-      <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">You're on the Waitlist</h1>
-    </div>
-
     <!-- Content -->
     <div style="padding: 40px 32px;">
-      <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-        Hi ${safeFirstName},
-      </p>
+      <!-- Logo and Title -->
+      <div style="text-align: center; margin-bottom: 32px;">
+        <svg width="60" height="60" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; margin-bottom: 16px;">
+          <defs>
+            <linearGradient id="lineGradient" x1="12" y1="24" x2="36" y2="24" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#c9a880"/>
+              <stop offset="0.5" stop-color="#c9a880" stop-opacity="0.3"/>
+              <stop offset="1" stop-color="#c9a880"/>
+            </linearGradient>
+          </defs>
+          <line x1="18" y1="24" x2="30" y2="24" stroke="url(#lineGradient)" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="12" cy="24" r="6" fill="#c9a880"/>
+          <circle cx="36" cy="24" r="6" fill="#c9a880"/>
+        </svg>
+        <h1 style="color: #1a1a2e; margin: 0; font-size: 32px; font-weight: 600;">Reality Matchmaking</h1>
+      </div>
 
-      <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+      <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px; text-align: center;">
         Thank you for your interest in Reality Matchmaking. We've received your qualification and you're now on our waitlist.
       </p>
 
-      <div style="background-color: #f8f9fa; border-left: 4px solid #c8915f; padding: 20px; margin: 32px 0; border-radius: 4px;">
-        <h3 style="color: #1a2332; margin: 0 0 16px; font-size: 18px; font-weight: 600;">What happens next?</h3>
-        <ol style="color: #4a5568; margin: 0; padding-left: 20px; line-height: 1.8;">
-          <li style="margin-bottom: 12px;"><strong>Review:</strong> Our team will carefully review your qualification</li>
-          <li style="margin-bottom: 12px;"><strong>Invitation:</strong> You'll receive an email invitation to continue your application</li>
-        </ol>
-      </div>
-
-      <div style="background-color: #f8f9fa; padding: 16px; border-radius: 4px; margin: 24px 0;">
-        <p style="color: #4a5568; font-size: 14px; margin: 0;">
-          <strong>Application Reference:</strong> ${applicationId}
-        </p>
-      </div>
+      <p style="color: #4a5568; font-size: 16px; line-height: 1.8; margin: 32px 0 0; text-align: center;">
+        We continually review our waitlist and we will send you an email if there are any changes to your application status.
+      </p>
     </div>
 
     <!-- Footer -->
     <div style="background-color: #f8f9fa; padding: 24px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
       <p style="color: #718096; font-size: 12px; margin: 0 0 8px;">
-        Reality Matchmaking
+        <a href="https://www.realitymatchmaking.com" style="color: #718096; text-decoration: none;">Reality Matchmaking</a>
       </p>
       <p style="color: #a0aec0; font-size: 11px; margin: 0;">
         You received this email because you applied to Reality Matchmaking
