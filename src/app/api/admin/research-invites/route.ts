@@ -90,19 +90,22 @@ export async function POST(request: Request) {
     include: { applicant: true },
   });
 
-  // Check if user has a non-research applicant record
+  // Check if user has a non-research applicant record (including soft-deleted)
+  // This prevents converting real application data into research participants
   if (
     existingUser?.applicant &&
-    existingUser.applicant.deletedAt === null &&
     ![
       "RESEARCH_INVITED",
       "RESEARCH_IN_PROGRESS",
       "RESEARCH_COMPLETED",
     ].includes(existingUser.applicant.applicationStatus)
   ) {
+    const isDeleted = existingUser.applicant.deletedAt !== null;
     return errorResponse(
       "CONFLICT",
-      "A non-research application already exists for this email.",
+      isDeleted
+        ? "A deleted application exists for this email. Please use a different email for research."
+        : "A non-research application already exists for this email.",
       409,
     );
   }

@@ -1,76 +1,54 @@
 import { ImageResponse } from "next/og";
 
+// Route segment config
 export const runtime = "edge";
 
+// Image metadata
 export const size = {
   width: 180,
   height: 180,
 };
+
 export const contentType = "image/png";
 
-export default async function Icon() {
+// Image generation
+export default function AppleIcon() {
   return new ImageResponse(
-    <div
-      style={{
-        height: "100%",
-        width: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#fff",
-      }}
-    >
-      {/* Logo Circles */}
+    (
       <div
         style={{
+          width: "100%",
+          height: "100%",
           display: "flex",
           alignItems: "center",
-          position: "relative",
-          width: "120px",
-          height: "100px",
+          justifyContent: "center",
+          background: "white",
         }}
       >
-        {/* Left circle */}
-        <div
-          style={{
-            position: "absolute",
-            left: "15px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            width: "30px",
-            height: "30px",
-            borderRadius: "50%",
-            backgroundColor: "#c9a880",
-          }}
-        />
-        {/* Connecting line */}
-        <div
-          style={{
-            position: "absolute",
-            left: "45px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            width: "30px",
-            height: "3px",
-            background:
-              "linear-gradient(to right, #c9a880, rgba(201, 168, 128, 0.3), #c9a880)",
-          }}
-        />
-        {/* Right circle */}
-        <div
-          style={{
-            position: "absolute",
-            right: "15px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            width: "30px",
-            height: "30px",
-            borderRadius: "50%",
-            backgroundColor: "#c9a880",
-          }}
-        />
+        <svg
+          width="120"
+          height="120"
+          viewBox="0 0 48 48"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {/* Connecting line */}
+          <line
+            x1="18"
+            y1="24"
+            x2="30"
+            y2="24"
+            stroke="#c9a880"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          {/* Left circle */}
+          <circle cx="12" cy="24" r="6" fill="#c9a880" />
+          {/* Right circle */}
+          <circle cx="36" cy="24" r="6" fill="#c9a880" />
+        </svg>
       </div>
-    </div>,
+    ),
     {
       ...size,
     },

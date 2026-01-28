@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    if (!applicant) {
+    if (!applicant || applicant.deletedAt !== null) {
       return errorResponse(
         "INVALID_CODE",
         "Invalid or expired research invitation link",
