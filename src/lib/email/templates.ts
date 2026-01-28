@@ -39,8 +39,8 @@ export function getWaitlistConfirmationHTML(
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #1a2332 0%, #2d3e50 100%); padding: 40px 20px; text-align: center;">
-      <div style="width: 60px; height: 60px; margin: 0 auto 16px; background-color: #c8915f; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-        <span style="font-size: 32px; color: white;">✓</span>
+      <div style="width: 60px; height: 60px; margin: 0 auto 16px; background-color: #c8915f; border-radius: 50%; text-align: center; line-height: 60px; font-size: 32px; color: white;">
+        ✓
       </div>
       <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">You're on the Waitlist</h1>
     </div>
@@ -101,8 +101,8 @@ export function getWaitlistInviteHTML(firstName: string, inviteToken: string) {
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #1a2332 0%, #2d3e50 100%); padding: 40px 20px; text-align: center;">
-      <div style="width: 60px; height: 60px; margin: 0 auto 16px; background-color: #c8915f; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-        <span style="font-size: 32px;">🎉</span>
+      <div style="width: 60px; height: 60px; margin: 0 auto 16px; background-color: #c8915f; border-radius: 50%; text-align: center; line-height: 60px; font-size: 32px;">
+        🎉
       </div>
       <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">A Spot Has Opened Up!</h1>
     </div>
