@@ -51,16 +51,18 @@ export async function hardDeleteApplicant(
     await tx.adminAction.deleteMany({ where: { userId: applicant.userId } });
     await tx.user.delete({ where: { id: applicant.userId } });
 
-    await tx.adminAction.create({
-      data: {
-        userId: adminUserId,
-        type: "MANUAL_ADJUSTMENT",
-        targetId: applicant.id,
-        targetType: "applicant",
-        description: "Hard deleted applicant",
-        metadata: { hardDelete: true },
-      },
-    });
+    if (adminUserId !== applicant.userId) {
+      await tx.adminAction.create({
+        data: {
+          userId: adminUserId,
+          type: "MANUAL_ADJUSTMENT",
+          targetId: applicant.id,
+          targetType: "applicant",
+          description: "Hard deleted applicant",
+          metadata: { hardDelete: true },
+        },
+      });
+    }
 
     return { applicantId: applicant.id, userId: applicant.userId };
   });
@@ -261,16 +263,18 @@ export async function hardDeleteUser(userId: string, adminUserId: string) {
     await tx.adminAction.deleteMany({ where: { userId } });
     await tx.user.delete({ where: { id: userId } });
 
-    await tx.adminAction.create({
-      data: {
-        userId: adminUserId,
-        type: "MANUAL_ADJUSTMENT",
-        targetId: userId,
-        targetType: "user",
-        description: "Hard deleted user",
-        metadata: { hardDelete: true },
-      },
-    });
+    if (adminUserId !== userId) {
+      await tx.adminAction.create({
+        data: {
+          userId: adminUserId,
+          type: "MANUAL_ADJUSTMENT",
+          targetId: userId,
+          targetType: "user",
+          description: "Hard deleted user",
+          metadata: { hardDelete: true },
+        },
+      });
+    }
 
     return { userId };
   });
