@@ -58,7 +58,6 @@ export async function GET(request: Request) {
       case "APPLICATION_APPROVAL":
       case "EVENT_INVITATION":
       case "STATUS_UPDATE_SCREENING":
-      case "STATUS_UPDATE_REJECTED":
       case "STATUS_UPDATE_PAYMENT_PENDING":
         html = "<h1>Template not yet implemented</h1>";
         break;

@@ -135,15 +135,6 @@ export async function POST(request: Request) {
         });
         break;
 
-      case "STATUS_UPDATE_REJECTED":
-        result = await sendApplicationStatusEmail({
-          to: recipientEmail,
-          firstName: "Test User",
-          status: "REJECTED",
-          message: "This is a test rejection message.",
-        });
-        break;
-
       case "STATUS_UPDATE_PAYMENT_PENDING":
         result = await sendApplicationStatusEmail({
           to: recipientEmail,
