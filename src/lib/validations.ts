@@ -14,7 +14,13 @@ export const stage1QualificationSchema = z.object({
   age: z.number().int().min(24, "Must be 24 or older").max(41),
   gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
   location: z.string().min(1, "Location is required"),
-  instagram: z.string().min(1, "Instagram is required"),
+  instagram: z
+    .string()
+    .min(1, "Instagram is required")
+    .transform((val) => {
+      const trimmed = val.trim();
+      return trimmed.startsWith("@") ? trimmed : `@${trimmed}`;
+    }),
 });
 
 export const demographicsSchema = z.object({

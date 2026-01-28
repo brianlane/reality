@@ -129,6 +129,13 @@ export default function Stage1QualificationForm({
       return;
     }
 
+    // Auto-prepend @ for Instagram field
+    if (name === "instagram" && value && !value.startsWith("@")) {
+      const input = e.target as HTMLInputElement;
+      input.value = `@${value}`;
+      return;
+    }
+
     if (touched.has(name)) {
       const error = validateField(name, value);
       setErrors((prev) => ({
@@ -155,6 +162,12 @@ export default function Stage1QualificationForm({
         }));
       }
       return;
+    }
+
+    // Auto-prepend @ for Instagram field on blur
+    if (name === "instagram" && value && !value.startsWith("@")) {
+      const input = e.target as HTMLInputElement;
+      input.value = `@${value}`;
     }
 
     setTouched((prev) => new Set(prev).add(name));
