@@ -12,6 +12,7 @@ const adminLinks = [
   { href: "/admin/preview-application", label: "Preview Flow" },
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/test-emails", label: "Test Emails" },
+  { href: "/admin/preview-emails", label: "Email Previews" },
 ];
 
 export default function AdminLayout({

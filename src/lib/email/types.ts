@@ -17,6 +17,10 @@ export type EmailType =
  *
  * Specific email types available for testing via the admin test endpoint.
  * This is the single source of truth - both frontend and backend import from here.
+ *
+ * Note: STATUS_UPDATE_REJECTED is intentionally excluded because we only use
+ * soft rejections (softRejectedAt) which don't send emails. Hard rejections
+ * (applicationStatus = REJECTED) are not used in the current workflow.
  */
 export type TestEmailType =
   | "WAITLIST_CONFIRMATION"
@@ -25,7 +29,6 @@ export type TestEmailType =
   | "APPLICATION_APPROVAL"
   | "EVENT_INVITATION"
   | "STATUS_UPDATE_SCREENING"
-  | "STATUS_UPDATE_REJECTED"
   | "STATUS_UPDATE_PAYMENT_PENDING";
 
 /**
@@ -38,7 +41,6 @@ export const TEST_EMAIL_TYPES: readonly TestEmailType[] = [
   "APPLICATION_APPROVAL",
   "EVENT_INVITATION",
   "STATUS_UPDATE_SCREENING",
-  "STATUS_UPDATE_REJECTED",
   "STATUS_UPDATE_PAYMENT_PENDING",
 ] as const;
 
