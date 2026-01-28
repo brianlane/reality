@@ -13,8 +13,17 @@ export async function POST(request: NextRequest) {
       where: { id: applicationId },
     });
 
-    if (!applicant) {
+    if (!applicant || applicant.deletedAt !== null) {
       return errorResponse("NOT_FOUND", "Research applicant not found", 404);
+    }
+
+    // Verify this is a properly invited research participant
+    if (!applicant.researchInvitedAt) {
+      return errorResponse(
+        "UNAUTHORIZED",
+        "Not a valid research participant",
+        403,
+      );
     }
 
     if (applicant.applicationStatus !== "RESEARCH_IN_PROGRESS") {
