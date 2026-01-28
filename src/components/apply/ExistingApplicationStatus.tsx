@@ -6,7 +6,8 @@ type Props = {
 };
 
 export default function ExistingApplicationStatus({ application }: Props) {
-  const { applicationStatus, waitlistInviteToken } = application;
+  const { applicationStatus, waitlistInviteToken, researchInviteCode } =
+    application;
   const displayStatus = application.softRejectedAt
     ? (application.softRejectedFromStatus ?? applicationStatus)
     : applicationStatus;
@@ -82,6 +83,34 @@ export default function ExistingApplicationStatus({ application }: Props) {
       actionHref: waitlistInviteToken
         ? `/apply/continue?token=${waitlistInviteToken}`
         : "/dashboard",
+    },
+    RESEARCH_INVITED: {
+      icon: "🧪",
+      title: "Research Invitation Ready",
+      description:
+        "You have been invited to help validate our questionnaire. Click below to begin.",
+      actionText: "Start Research Questionnaire",
+      actionHref: researchInviteCode
+        ? `/research?code=${researchInviteCode}`
+        : "/research",
+    },
+    RESEARCH_IN_PROGRESS: {
+      icon: "🧪",
+      title: "Research Questionnaire in Progress",
+      description:
+        "Thanks for helping with our research. Continue where you left off.",
+      actionText: "Continue Research Questionnaire",
+      actionHref: researchInviteCode
+        ? `/research?code=${researchInviteCode}`
+        : "/research",
+    },
+    RESEARCH_COMPLETED: {
+      icon: "✅",
+      title: "Research Completed",
+      description:
+        "Thank you for completing the research questionnaire. Your responses have been recorded.",
+      actionText: "Return Home",
+      actionHref: "/",
     },
   };
 

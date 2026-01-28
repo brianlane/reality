@@ -9,10 +9,15 @@ import {
 } from "@/lib/questionnaire";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 
+const RESEARCH_STATUSES: ApplicationStatus[] = [
+  "RESEARCH_INVITED",
+  "RESEARCH_IN_PROGRESS",
+];
 const ALLOWED_STATUSES: ApplicationStatus[] = [
   "WAITLIST_INVITED",
   "PAYMENT_PENDING",
   "DRAFT",
+  ...RESEARCH_STATUSES,
 ];
 
 type InvitedApplicantResult = { applicant: Applicant } | { error: string };
@@ -24,11 +29,21 @@ async function requireInvitedApplicant(
     where: {
       id: applicationId,
       deletedAt: null,
-      invitedOffWaitlistAt: { not: null },
     },
   });
 
   if (!applicant) {
+    return { error: "Applicant not found or not invited." };
+  }
+
+  const isResearchApplicant = RESEARCH_STATUSES.includes(
+    applicant.applicationStatus,
+  );
+  const hasInvite = isResearchApplicant
+    ? !!applicant.researchInvitedAt
+    : !!applicant.invitedOffWaitlistAt;
+
+  if (!hasInvite) {
     return { error: "Applicant not found or not invited." };
   }
 

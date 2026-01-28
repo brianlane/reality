@@ -146,6 +146,9 @@ export const adminApplicantCreateSchema = z.object({
       "APPROVED",
       "WAITLIST",
       "WAITLIST_INVITED",
+      "RESEARCH_INVITED",
+      "RESEARCH_IN_PROGRESS",
+      "RESEARCH_COMPLETED",
     ]),
     screeningStatus: z.enum(["PENDING", "IN_PROGRESS", "PASSED", "FAILED"]),
     photos: z.array(z.string()).default([]),
@@ -177,6 +180,9 @@ export const adminApplicantUpdateSchema = z.object({
           "APPROVED",
           "WAITLIST",
           "WAITLIST_INVITED",
+          "RESEARCH_INVITED",
+          "RESEARCH_IN_PROGRESS",
+          "RESEARCH_COMPLETED",
         ])
         .optional(),
       screeningStatus: z
@@ -259,6 +265,15 @@ export const adminPaymentUpdateSchema = adminPaymentCreateSchema.partial();
 export const adminWaitlistUpdateSchema = z.object({
   waitlistReason: z.string().optional().nullable(),
   waitlistPosition: z.number().int().min(1).optional().nullable(),
+});
+
+export const adminResearchInviteCreateSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .regex(EMAIL_REGEX, "Please enter a valid email address"),
 });
 
 export const adminQuestionnairePageCreateSchema = z.object({
