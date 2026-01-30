@@ -14,8 +14,23 @@ const sslConfig =
         rejectUnauthorized: process.env.NODE_ENV === "production",
       };
 
+// Remove sslmode from DATABASE_URL since we configure SSL via the pool options
+// This prevents conflicts between URL sslmode and pool ssl config
+const getDatabaseUrl = (): string => {
+  const url = process.env.DATABASE_URL || "";
+  try {
+    const parsedUrl = new URL(url);
+    // Remove sslmode parameter to avoid conflicts with pool SSL config
+    parsedUrl.searchParams.delete("sslmode");
+    return parsedUrl.toString();
+  } catch {
+    // If URL parsing fails, return as-is
+    return url;
+  }
+};
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: getDatabaseUrl(),
   ssl: sslConfig,
 });
 
