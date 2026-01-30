@@ -7,11 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_DATABASE_URL")
-  // Note: directUrl uses the direct connection (non-pooled) for migrations
-  // Falls back to DATABASE_URL in CI environments where only DATABASE_URL is set
+  provider = "postgresql"
 }
 
 // ============================================
