@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // Exclude server-only packages from client bundle
+  serverExternalPackages: ["pg", "@prisma/adapter-pg"],
   async headers() {
     return [
       {
