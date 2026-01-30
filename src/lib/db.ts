@@ -7,16 +7,15 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 // Configure PostgreSQL connection pool with SSL support
 // SSL can be controlled via environment variables:
 // - DATABASE_SSL=false: Disable SSL entirely (not recommended for remote DBs)
-// - DATABASE_SSL_REJECT_UNAUTHORIZED=true: Require valid certificate chain (strict mode)
-// By default, SSL is enabled but accepts self-signed/unverified certificates
-// This is necessary for many managed DB providers (Supabase, Neon, etc.)
+// - DATABASE_SSL_REJECT_UNAUTHORIZED=false: Accept self-signed certificates
+// By default, SSL is enabled with certificate validation based on environment
 const sslConfig =
   process.env.DATABASE_SSL === "false"
     ? false
     : {
-        // Default to accepting certificates; set DATABASE_SSL_REJECT_UNAUTHORIZED=true for strict mode
         rejectUnauthorized:
-          process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true",
+          process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== "false" &&
+          process.env.NODE_ENV === "production",
       };
 
 // Remove sslmode from DATABASE_URL since we configure SSL via the pool options
