@@ -713,7 +713,9 @@ export default function QuestionnaireForm({
             if (question.type === "RANKING") {
               const options = question.options as RankingOptions | null;
               const items = options?.items ?? [];
-              const rankedItems = (answer.value as string[]) ?? [...items];
+              const rankedItems = Array.isArray(answer.value)
+                ? (answer.value as string[])
+                : [...items];
 
               // Parse helper text into definitions if it contains bullet points
               const definitions: { term: string; definition: string }[] = [];

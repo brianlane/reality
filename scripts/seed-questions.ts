@@ -191,7 +191,6 @@ function parseMarkdown(content: string): ParsedPage[] {
   let currentSection: ParsedSection | null = null;
   let pageOrder = 0;
   let sectionOrder = 0;
-  let helperTextBuffer: string[] = [];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -212,7 +211,6 @@ function parseMarkdown(content: string): ParsedPage[] {
       };
       currentSection = null;
       sectionOrder = 0;
-      helperTextBuffer = [];
       continue;
     }
 
@@ -227,7 +225,6 @@ function parseMarkdown(content: string): ParsedPage[] {
         order: sectionOrder++,
         questions: [],
       };
-      helperTextBuffer = [];
       continue;
     }
 
@@ -242,10 +239,6 @@ function parseMarkdown(content: string): ParsedPage[] {
           questions: [],
         };
       }
-      // Check if there's pending helper text from previous lines
-      const helperText =
-        helperTextBuffer.length > 0 ? helperTextBuffer.join("\n") : null;
-      helperTextBuffer = [];
 
       const questionNum = parseInt(questionMatch[1], 10);
       const questionText = questionMatch[2];
@@ -253,13 +246,13 @@ function parseMarkdown(content: string): ParsedPage[] {
       const { type, options, cleanPrompt } = parseAnnotation(questionText);
 
       // Look ahead for helper text (indented lines starting with -)
-      const nextHelperLines: string[] = [];
+      const helperLines: string[] = [];
       let j = i + 1;
       while (j < lines.length) {
         const nextLine = lines[j];
         if (nextLine.match(/^\s{4}-\s+/)) {
           // Indented list item - this is helper text
-          nextHelperLines.push(nextLine.replace(/^\s{4}-\s+/, "• ").trim());
+          helperLines.push(nextLine.replace(/^\s{4}-\s+/, "• ").trim());
           j++;
         } else if (nextLine.trim() === "") {
           // Empty line, might be more helper text after
@@ -272,15 +265,14 @@ function parseMarkdown(content: string): ParsedPage[] {
         }
       }
 
-      const finalHelperText =
-        nextHelperLines.length > 0 ? nextHelperLines.join("\n") : helperText;
+      const helperText = helperLines.length > 0 ? helperLines.join("\n") : null;
 
       currentSection.questions.push({
         number: questionNum,
         prompt: cleanPrompt,
         type,
         options,
-        helperText: finalHelperText,
+        helperText,
       });
 
       continue;

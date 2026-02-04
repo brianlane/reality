@@ -269,6 +269,14 @@ export async function validateAnswerForQuestion(
       (sum, val) => sum + (Number(val) || 0),
       0,
     );
+    // Always reject over-allocation (even for optional questions)
+    if (total > pointOptions.total) {
+      return {
+        ok: false,
+        message: `Points cannot exceed ${pointOptions.total}. Currently: ${total}.`,
+      };
+    }
+    // For required questions, must total exactly the configured amount
     if (isRequired && total !== pointOptions.total) {
       return {
         ok: false,

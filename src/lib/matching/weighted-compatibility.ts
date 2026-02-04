@@ -183,7 +183,8 @@ function calculateSimilarity(
       const allocB = (valueB as Record<string, number>) || {};
       const allKeys = new Set([...Object.keys(allocA), ...Object.keys(allocB)]);
 
-      if (allKeys.size === 0) return 1.0;
+      // No keys means both empty - return neutral (not perfect match)
+      if (allKeys.size === 0) return 0.5;
 
       let dotProduct = 0;
       let magnitudeA = 0;
@@ -198,7 +199,8 @@ function calculateSimilarity(
       }
 
       const magnitude = Math.sqrt(magnitudeA) * Math.sqrt(magnitudeB);
-      if (magnitude === 0) return 1.0;
+      // If one side has all zeros and the other has values, return neutral (not perfect match)
+      if (magnitude === 0) return 0.5;
 
       return dotProduct / magnitude; // Cosine similarity (0 to 1)
     }
@@ -235,7 +237,8 @@ function calculateSimilarity(
       }
 
       const totalPairs = concordant + discordant;
-      if (totalPairs === 0) return 1.0;
+      // If no pairs could be compared (items don't overlap), return neutral
+      if (totalPairs === 0) return 0.5;
 
       // Kendall tau: (concordant - discordant) / totalPairs ranges from -1 to 1
       // Convert to 0-1 scale
