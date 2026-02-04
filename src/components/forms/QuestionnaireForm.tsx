@@ -16,7 +16,9 @@ type QuestionType =
   | "DROPDOWN"
   | "RADIO_7"
   | "CHECKBOXES"
-  | "NUMBER_SCALE";
+  | "NUMBER_SCALE"
+  | "POINT_ALLOCATION"
+  | "RANKING";
 
 type NumberScaleOptions = {
   min: number;
@@ -26,12 +28,26 @@ type NumberScaleOptions = {
   maxLabel?: string;
 };
 
+type PointAllocationOptions = {
+  items: string[];
+  total: number;
+};
+
+type RankingOptions = {
+  items: string[];
+};
+
 type Question = {
   id: string;
   prompt: string;
   helperText: string | null;
   type: QuestionType;
-  options: string[] | NumberScaleOptions | null;
+  options:
+    | string[]
+    | NumberScaleOptions
+    | PointAllocationOptions
+    | RankingOptions
+    | null;
   isRequired: boolean;
 };
 
@@ -418,7 +434,6 @@ export default function QuestionnaireForm({
                 <div key={question.id} className="space-y-2">
                   <label className="text-sm font-medium text-navy-muted">
                     {question.prompt}
-                    {question.isRequired ? " *" : ""}
                   </label>
                   {question.helperText ? (
                     <p className="text-xs text-navy-soft">
@@ -440,7 +455,6 @@ export default function QuestionnaireForm({
                 <div key={question.id} className="space-y-2">
                   <label className="text-sm font-medium text-navy-muted">
                     {question.prompt}
-                    {question.isRequired ? " *" : ""}
                   </label>
                   {question.helperText ? (
                     <p className="text-xs text-navy-soft">
@@ -463,7 +477,6 @@ export default function QuestionnaireForm({
                 <div key={question.id} className="space-y-2">
                   <label className="text-sm font-medium text-navy-muted">
                     {question.prompt}
-                    {question.isRequired ? " *" : ""}
                   </label>
                   {question.helperText ? (
                     <p className="text-xs text-navy-soft">
@@ -490,7 +503,6 @@ export default function QuestionnaireForm({
                 <div key={question.id} className="space-y-2">
                   <label className="text-sm font-medium text-navy-muted">
                     {question.prompt}
-                    {question.isRequired ? " *" : ""}
                   </label>
                   {question.helperText ? (
                     <p className="text-xs text-navy-soft">
@@ -505,8 +517,8 @@ export default function QuestionnaireForm({
                     }
                   >
                     <option value="">Select...</option>
-                    {options.map((option) => (
-                      <option key={option} value={option}>
+                    {options.map((option, idx) => (
+                      <option key={`${option}-${idx}`} value={option}>
                         {option}
                       </option>
                     ))}
@@ -522,14 +534,13 @@ export default function QuestionnaireForm({
                 <div key={question.id} className="space-y-2">
                   <label className="text-sm font-medium text-navy-muted">
                     {question.prompt}
-                    {question.isRequired ? " *" : ""}
                   </label>
                   {question.helperText ? (
                     <p className="text-xs text-navy-soft">
                       {question.helperText}
                     </p>
                   ) : null}
-                  <div className="space-y-2">
+                  <div className="flex flex-wrap gap-4">
                     {options.map((option) => (
                       <label
                         key={option}
@@ -561,7 +572,6 @@ export default function QuestionnaireForm({
                 <div key={question.id} className="space-y-2">
                   <label className="text-sm font-medium text-navy-muted">
                     {question.prompt}
-                    {question.isRequired ? " *" : ""}
                   </label>
                   {question.helperText ? (
                     <p className="text-xs text-navy-soft">
@@ -599,7 +609,6 @@ export default function QuestionnaireForm({
                 <div key={question.id} className="space-y-2">
                   <label className="text-sm font-medium text-navy-muted">
                     {question.prompt}
-                    {question.isRequired ? " *" : ""}
                   </label>
                   {question.helperText ? (
                     <p className="text-xs text-navy-soft">
@@ -623,6 +632,187 @@ export default function QuestionnaireForm({
                     <div className="flex justify-between text-xs text-navy-soft">
                       <span>{minLabel}</span>
                       <span>{maxLabel}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            if (question.type === "POINT_ALLOCATION") {
+              const options = question.options as PointAllocationOptions | null;
+              const items = options?.items ?? [];
+              const total = options?.total ?? 100;
+              const allocations =
+                (answer.value as Record<string, number>) ?? {};
+              const currentTotal = Object.values(allocations).reduce(
+                (sum, val) => sum + (val || 0),
+                0,
+              );
+              const remaining = total - currentTotal;
+
+              return (
+                <div key={question.id} className="space-y-4">
+                  <label className="text-sm font-medium text-navy-muted">
+                    {question.prompt}
+                  </label>
+                  {question.helperText ? (
+                    <p className="text-xs text-navy-soft">
+                      {question.helperText}
+                    </p>
+                  ) : null}
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <div className="space-y-3">
+                      {items.map((item, idx) => (
+                        <div
+                          key={`${item}-${idx}`}
+                          className="flex items-center justify-between gap-4 rounded-md bg-white px-4 py-3 shadow-sm"
+                        >
+                          <span className="text-sm font-medium text-navy-muted">
+                            {item}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={total}
+                              className="w-20 text-center"
+                              value={allocations[item] ?? ""}
+                              onChange={(event) => {
+                                const newValue = Math.max(
+                                  0,
+                                  Math.min(
+                                    total,
+                                    parseInt(event.target.value) || 0,
+                                  ),
+                                );
+                                updateAnswer(question.id, {
+                                  value: { ...allocations, [item]: newValue },
+                                });
+                              }}
+                            />
+                            <span className="text-sm text-navy-soft">pts</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div
+                      className={`mt-4 flex items-center justify-between border-t border-gray-200 pt-4 ${remaining === 0 ? "text-green-600" : remaining < 0 ? "text-red-500" : "text-navy-soft"}`}
+                    >
+                      <span className="text-sm font-semibold">
+                        Remaining: {remaining} points
+                      </span>
+                      <span
+                        className={`rounded-full px-3 py-1 text-sm font-semibold ${remaining === 0 ? "bg-green-100 text-green-700" : remaining < 0 ? "bg-red-100 text-red-700" : "bg-gray-200 text-gray-700"}`}
+                      >
+                        {currentTotal} / {total}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            if (question.type === "RANKING") {
+              const options = question.options as RankingOptions | null;
+              const items = options?.items ?? [];
+              const rankedItems = (answer.value as string[]) ?? [...items];
+
+              // Parse helper text into definitions if it contains bullet points
+              const definitions: { term: string; definition: string }[] = [];
+              if (question.helperText) {
+                const parts = question.helperText.split("•").filter(Boolean);
+                parts.forEach((part) => {
+                  const colonIndex = part.indexOf(":");
+                  if (colonIndex > 0) {
+                    definitions.push({
+                      term: part.substring(0, colonIndex).trim(),
+                      definition: part.substring(colonIndex + 1).trim(),
+                    });
+                  }
+                });
+              }
+
+              const handleDragStart = (
+                e: React.DragEvent<HTMLDivElement>,
+                index: number,
+              ) => {
+                e.dataTransfer.setData("text/plain", String(index));
+                e.dataTransfer.effectAllowed = "move";
+              };
+
+              const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+              };
+
+              const handleDrop = (
+                e: React.DragEvent<HTMLDivElement>,
+                dropIndex: number,
+              ) => {
+                e.preventDefault();
+                const dragIndex = parseInt(
+                  e.dataTransfer.getData("text/plain"),
+                );
+                if (dragIndex === dropIndex) return;
+
+                const newItems = [...rankedItems];
+                const [draggedItem] = newItems.splice(dragIndex, 1);
+                newItems.splice(dropIndex, 0, draggedItem);
+                updateAnswer(question.id, { value: newItems });
+              };
+
+              return (
+                <div key={question.id} className="space-y-4">
+                  <label className="text-sm font-medium text-navy-muted">
+                    {question.prompt}
+                  </label>
+                  {definitions.length > 0 ? (
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Quality Definitions
+                      </p>
+                      <div className="grid gap-2">
+                        {definitions.map((def, idx) => (
+                          <div
+                            key={`def-${idx}`}
+                            className="flex gap-2 text-xs"
+                          >
+                            <span className="font-semibold text-navy-muted">
+                              {def.term}:
+                            </span>
+                            <span className="text-navy-soft">
+                              {def.definition}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : question.helperText ? (
+                    <p className="text-xs text-navy-soft">
+                      {question.helperText}
+                    </p>
+                  ) : null}
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <p className="mb-3 text-xs font-medium text-gray-500">
+                      Drag and drop to reorder
+                    </p>
+                    <div className="space-y-2">
+                      {rankedItems.map((item, index) => (
+                        <div
+                          key={`rank-${item}-${index}`}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, index)}
+                          onDragOver={handleDragOver}
+                          onDrop={(e) => handleDrop(e, index)}
+                          className="flex cursor-move items-center gap-3 rounded-md bg-white px-4 py-3 shadow-sm transition-all hover:shadow-md active:scale-[0.99]"
+                        >
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-copper text-sm font-bold text-white">
+                            {index + 1}
+                          </span>
+                          <span className="flex-1 text-sm font-medium text-navy-muted">
+                            {item}
+                          </span>
+                          <span className="text-gray-300">⋮⋮</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>

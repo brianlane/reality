@@ -177,6 +177,72 @@ function calculateSimilarity(
       return 0.5;
     }
 
+    case QuestionnaireQuestionType.POINT_ALLOCATION: {
+      // Compare point allocations using normalized dot product similarity
+      const allocA = (valueA as Record<string, number>) || {};
+      const allocB = (valueB as Record<string, number>) || {};
+      const allKeys = new Set([...Object.keys(allocA), ...Object.keys(allocB)]);
+
+      if (allKeys.size === 0) return 1.0;
+
+      let dotProduct = 0;
+      let magnitudeA = 0;
+      let magnitudeB = 0;
+
+      for (const key of allKeys) {
+        const a = allocA[key] || 0;
+        const b = allocB[key] || 0;
+        dotProduct += a * b;
+        magnitudeA += a * a;
+        magnitudeB += b * b;
+      }
+
+      const magnitude = Math.sqrt(magnitudeA) * Math.sqrt(magnitudeB);
+      if (magnitude === 0) return 1.0;
+
+      return dotProduct / magnitude; // Cosine similarity (0 to 1)
+    }
+
+    case QuestionnaireQuestionType.RANKING: {
+      // Compare rankings using normalized Kendall tau distance
+      const rankA = (valueA as string[]) || [];
+      const rankB = (valueB as string[]) || [];
+
+      if (rankA.length === 0 || rankB.length === 0) return 0.5;
+      if (rankA.length !== rankB.length) return 0.5;
+
+      // Count concordant and discordant pairs
+      let concordant = 0;
+      let discordant = 0;
+
+      const posB = new Map(rankB.map((item, idx) => [item, idx]));
+
+      for (let i = 0; i < rankA.length; i++) {
+        for (let j = i + 1; j < rankA.length; j++) {
+          const posBi = posB.get(rankA[i]);
+          const posBj = posB.get(rankA[j]);
+
+          if (posBi === undefined || posBj === undefined) continue;
+
+          // In rankA, i comes before j (i < j always true in this loop)
+          // Check if same order in rankB
+          if (posBi < posBj) {
+            concordant++;
+          } else {
+            discordant++;
+          }
+        }
+      }
+
+      const totalPairs = concordant + discordant;
+      if (totalPairs === 0) return 1.0;
+
+      // Kendall tau: (concordant - discordant) / totalPairs ranges from -1 to 1
+      // Convert to 0-1 scale
+      const tau = (concordant - discordant) / totalPairs;
+      return (tau + 1) / 2;
+    }
+
     default:
       return 0.5; // Neutral for unsupported types
   }

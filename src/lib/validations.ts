@@ -304,6 +304,8 @@ export const questionnaireQuestionTypeSchema = z.enum([
   "RADIO_7",
   "CHECKBOXES",
   "NUMBER_SCALE",
+  "POINT_ALLOCATION",
+  "RANKING",
 ]);
 
 export const adminQuestionnaireQuestionCreateSchema = z

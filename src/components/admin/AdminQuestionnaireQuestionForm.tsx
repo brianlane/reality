@@ -50,6 +50,8 @@ const QUESTION_TYPES = [
   { value: "RADIO_7", label: "Radio (7 options)" },
   { value: "CHECKBOXES", label: "Checkboxes" },
   { value: "NUMBER_SCALE", label: "Number scale" },
+  { value: "POINT_ALLOCATION", label: "Point allocation" },
+  { value: "RANKING", label: "Ranking (drag & drop)" },
 ] as const;
 
 export default function AdminQuestionnaireQuestionForm({
@@ -78,6 +80,8 @@ export default function AdminQuestionnaireQuestionForm({
     minLabel: "",
     maxLabel: "",
   });
+  const [pointAllocationTotal, setPointAllocationTotal] =
+    useState<string>("100");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -88,6 +92,12 @@ export default function AdminQuestionnaireQuestionForm({
     }
     if (form.type === "DROPDOWN" || form.type === "CHECKBOXES") {
       return "Enter one option per line.";
+    }
+    if (form.type === "POINT_ALLOCATION") {
+      return "Enter items to allocate points to (one per line).";
+    }
+    if (form.type === "RANKING") {
+      return "Enter items to rank (one per line).";
     }
     return "";
   }, [form.type]);
@@ -174,6 +184,16 @@ export default function AdminQuestionnaireQuestionForm({
             minLabel: options.minLabel ? String(options.minLabel) : "",
             maxLabel: options.maxLabel ? String(options.maxLabel) : "",
           });
+        } else if (loaded.type === "POINT_ALLOCATION" && loaded.options) {
+          const options = loaded.options as {
+            items?: string[];
+            total?: number;
+          };
+          setOptionLines((options.items ?? []).join("\n"));
+          setPointAllocationTotal(String(options.total ?? 100));
+        } else if (loaded.type === "RANKING" && loaded.options) {
+          const options = loaded.options as { items?: string[] };
+          setOptionLines((options.items ?? []).join("\n"));
         } else if (Array.isArray(loaded.options)) {
           setOptionLines(loaded.options.join("\n"));
         }
@@ -191,6 +211,14 @@ export default function AdminQuestionnaireQuestionForm({
 
   function updateField(name: string, value: string) {
     setForm((prev) => ({ ...prev, [name]: value }));
+    // Set default options when switching to RADIO_7 type
+    if (name === "type" && value === "RADIO_7" && optionLines.trim() === "") {
+      setOptionLines("1\n2\n3\n4\n5\n6\n7");
+    }
+    // Set default total when switching to POINT_ALLOCATION
+    if (name === "type" && value === "POINT_ALLOCATION") {
+      setPointAllocationTotal("100");
+    }
   }
 
   function buildOptionsPayload() {
@@ -208,6 +236,23 @@ export default function AdminQuestionnaireQuestionForm({
         .split("\n")
         .map((line) => line.trim())
         .filter(Boolean);
+    }
+    if (form.type === "POINT_ALLOCATION") {
+      return {
+        items: optionLines
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean),
+        total: Number(pointAllocationTotal || 100),
+      };
+    }
+    if (form.type === "RANKING") {
+      return {
+        items: optionLines
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean),
+      };
     }
     return null;
   }
@@ -424,10 +469,18 @@ export default function AdminQuestionnaireQuestionForm({
           onChange={(event) => updateField("helperText", event.target.value)}
         />
       </div>
-      {["DROPDOWN", "RADIO_7", "CHECKBOXES"].includes(form.type) ? (
+      {[
+        "DROPDOWN",
+        "RADIO_7",
+        "CHECKBOXES",
+        "POINT_ALLOCATION",
+        "RANKING",
+      ].includes(form.type) ? (
         <div className="space-y-2">
           <label className="text-xs font-semibold text-navy-soft">
-            Options
+            {form.type === "POINT_ALLOCATION" || form.type === "RANKING"
+              ? "Items"
+              : "Options"}
           </label>
           {optionHelp ? (
             <p className="text-xs text-navy-soft">{optionHelp}</p>
@@ -436,6 +489,19 @@ export default function AdminQuestionnaireQuestionForm({
             value={optionLines}
             onChange={(event) => setOptionLines(event.target.value)}
             rows={6}
+          />
+        </div>
+      ) : null}
+      {form.type === "POINT_ALLOCATION" ? (
+        <div className="space-y-2">
+          <label className="text-xs font-semibold text-navy-soft">
+            Total points to allocate
+          </label>
+          <Input
+            type="number"
+            min={1}
+            value={pointAllocationTotal}
+            onChange={(event) => setPointAllocationTotal(event.target.value)}
           />
         </div>
       ) : null}

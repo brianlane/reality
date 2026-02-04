@@ -12,7 +12,9 @@ type QuestionType =
   | "DROPDOWN"
   | "RADIO_7"
   | "CHECKBOXES"
-  | "NUMBER_SCALE";
+  | "NUMBER_SCALE"
+  | "POINT_ALLOCATION"
+  | "RANKING";
 
 type NumberScaleOptions = {
   min: number;
@@ -22,12 +24,26 @@ type NumberScaleOptions = {
   maxLabel?: string;
 };
 
+type PointAllocationOptions = {
+  items: string[];
+  total: number;
+};
+
+type RankingOptions = {
+  items: string[];
+};
+
 type Question = {
   id: string;
   prompt: string;
   helperText: string | null;
   type: QuestionType;
-  options: string[] | NumberScaleOptions | null;
+  options:
+    | string[]
+    | NumberScaleOptions
+    | PointAllocationOptions
+    | RankingOptions
+    | null;
   isRequired: boolean;
   order: number;
 };
@@ -291,6 +307,28 @@ export default function PreviewQuestionnaire() {
           // Use value 7 for number scales
           generatedMockAnswers[question.id] = { value: 7 };
           break;
+        case "POINT_ALLOCATION": {
+          // Distribute points roughly equally across items
+          const opts = question.options as PointAllocationOptions | null;
+          if (opts?.items && opts.items.length > 0) {
+            const perItem = Math.floor(opts.total / opts.items.length);
+            const remainder = opts.total % opts.items.length;
+            const allocation: Record<string, number> = {};
+            opts.items.forEach((item, idx) => {
+              allocation[item] = perItem + (idx < remainder ? 1 : 0);
+            });
+            generatedMockAnswers[question.id] = { value: allocation };
+          }
+          break;
+        }
+        case "RANKING": {
+          // Use the items in their original order
+          const rankOpts = question.options as RankingOptions | null;
+          if (rankOpts?.items) {
+            generatedMockAnswers[question.id] = { value: [...rankOpts.items] };
+          }
+          break;
+        }
         default:
           generatedMockAnswers[question.id] = { value: "" };
       }

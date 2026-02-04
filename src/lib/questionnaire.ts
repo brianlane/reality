@@ -11,7 +11,21 @@ type NumberScaleOptions = {
   maxLabel?: string;
 };
 
-export type QuestionnaireOptions = string[] | NumberScaleOptions | null;
+type PointAllocationOptions = {
+  items: string[];
+  total: number;
+};
+
+type RankingOptions = {
+  items: string[];
+};
+
+export type QuestionnaireOptions =
+  | string[]
+  | NumberScaleOptions
+  | PointAllocationOptions
+  | RankingOptions
+  | null;
 
 type QuestionRecord = {
   type: QuestionnaireQuestionType;
@@ -92,6 +106,55 @@ export async function normalizeQuestionOptions(
       };
     }
     return { ok: true, value: normalized };
+  }
+
+  if (type === "POINT_ALLOCATION") {
+    if (!options || typeof options !== "object" || Array.isArray(options)) {
+      return {
+        ok: false,
+        message: "Point allocation questions require items and total options.",
+      };
+    }
+    const raw = options as Record<string, unknown>;
+    const items = Array.isArray(raw.items)
+      ? raw.items.map((item) => String(item).trim()).filter(Boolean)
+      : [];
+    const total = Number(raw.total);
+
+    if (items.length === 0) {
+      return {
+        ok: false,
+        message: "Point allocation questions must include at least one item.",
+      };
+    }
+    if (Number.isNaN(total) || total <= 0) {
+      return {
+        ok: false,
+        message: "Point allocation total must be a positive number.",
+      };
+    }
+    return { ok: true, value: { items, total } };
+  }
+
+  if (type === "RANKING") {
+    if (!options || typeof options !== "object" || Array.isArray(options)) {
+      return {
+        ok: false,
+        message: "Ranking questions require items options.",
+      };
+    }
+    const raw = options as Record<string, unknown>;
+    const items = Array.isArray(raw.items)
+      ? raw.items.map((item) => String(item).trim()).filter(Boolean)
+      : [];
+
+    if (items.length < 2) {
+      return {
+        ok: false,
+        message: "Ranking questions must include at least two items.",
+      };
+    }
+    return { ok: true, value: { items } };
   }
 
   if (options !== undefined && options !== null) {
@@ -188,6 +251,66 @@ export async function validateAnswerForQuestion(
       return { ok: false, message: "Selected option is invalid." };
     }
     return { ok: true, value: selected || null };
+  }
+
+  if (type === "POINT_ALLOCATION") {
+    const pointOptions = options as PointAllocationOptions | null;
+    if (!pointOptions) {
+      return {
+        ok: false,
+        message: "Point allocation options are not configured.",
+      };
+    }
+    const allocations =
+      value && typeof value === "object" && !Array.isArray(value)
+        ? (value as Record<string, number>)
+        : {};
+    const total = Object.values(allocations).reduce(
+      (sum, val) => sum + (Number(val) || 0),
+      0,
+    );
+    if (isRequired && total !== pointOptions.total) {
+      return {
+        ok: false,
+        message: `Points must total exactly ${pointOptions.total}. Currently: ${total}.`,
+      };
+    }
+    // Validate that all allocated items are valid
+    const validItems = new Set(pointOptions.items);
+    for (const key of Object.keys(allocations)) {
+      if (!validItems.has(key)) {
+        return { ok: false, message: `Invalid item: ${key}` };
+      }
+    }
+    return { ok: true, value: allocations };
+  }
+
+  if (type === "RANKING") {
+    const rankingOptions = options as RankingOptions | null;
+    if (!rankingOptions) {
+      return { ok: false, message: "Ranking options are not configured." };
+    }
+    const rankedItems = Array.isArray(value)
+      ? value.map((item) => String(item))
+      : [];
+    if (isRequired && rankedItems.length !== rankingOptions.items.length) {
+      return {
+        ok: false,
+        message: "All items must be ranked.",
+      };
+    }
+    // Validate that ranked items match the configured items
+    const validItems = new Set(rankingOptions.items);
+    const rankedSet = new Set(rankedItems);
+    if (rankedItems.length !== rankedSet.size) {
+      return { ok: false, message: "Each item can only be ranked once." };
+    }
+    for (const item of rankedItems) {
+      if (!validItems.has(item)) {
+        return { ok: false, message: `Invalid item: ${item}` };
+      }
+    }
+    return { ok: true, value: rankedItems };
   }
 
   return { ok: false, message: "Unsupported question type." };
