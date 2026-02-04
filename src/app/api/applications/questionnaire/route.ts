@@ -193,7 +193,11 @@ export async function POST(request: NextRequest) {
       id: { in: questionIds },
       deletedAt: null,
       isActive: true,
-      section: { deletedAt: null, isActive: true },
+      section: {
+        deletedAt: null,
+        isActive: true,
+        forResearch: access.isResearchMode,
+      },
     },
   });
 
@@ -205,6 +209,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Filter required questions by the same forResearch mode to ensure
+  // research participants aren't blocked by application-only required questions
   const requiredQuestions = await db.questionnaireQuestion.findMany({
     where: {
       isRequired: true,
@@ -213,6 +219,7 @@ export async function POST(request: NextRequest) {
       section: {
         deletedAt: null,
         isActive: true,
+        forResearch: access.isResearchMode,
         ...(pageId ? { pageId } : {}),
       },
     },

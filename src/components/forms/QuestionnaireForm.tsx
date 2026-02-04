@@ -666,14 +666,15 @@ export default function QuestionnaireForm({
                       <Select
                         value={String(ageValue.min ?? "")}
                         required={question.isRequired}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          const val = event.target.value;
                           updateAnswer(question.id, {
                             value: {
                               ...ageValue,
-                              min: Number(event.target.value),
+                              min: val === "" ? undefined : Number(val),
                             },
-                          })
-                        }
+                          });
+                        }}
                       >
                         <option value="">Select...</option>
                         {AGE_OPTIONS.map((age) => (
@@ -688,14 +689,15 @@ export default function QuestionnaireForm({
                       <Select
                         value={String(ageValue.max ?? "")}
                         required={question.isRequired}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          const val = event.target.value;
                           updateAnswer(question.id, {
                             value: {
                               ...ageValue,
-                              max: Number(event.target.value),
+                              max: val === "" ? undefined : Number(val),
                             },
-                          })
-                        }
+                          });
+                        }}
                       >
                         <option value="">Select...</option>
                         {AGE_OPTIONS.map((age) => (
