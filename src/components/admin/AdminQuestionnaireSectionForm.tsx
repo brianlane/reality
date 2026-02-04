@@ -19,6 +19,7 @@ type SectionDetail = {
   description: string | null;
   order: number;
   isActive: boolean;
+  forResearch: boolean;
   deletedAt: string | null;
   pageId: string | null;
 };
@@ -39,6 +40,7 @@ export default function AdminQuestionnaireSectionForm({
     description: "",
     order: "0",
     isActive: "true",
+    forResearch: "false",
     pageId: "",
   });
   const [error, setError] = useState<string | null>(null);
@@ -113,6 +115,7 @@ export default function AdminQuestionnaireSectionForm({
           description: loaded.description ?? "",
           order: String(loaded.order ?? 0),
           isActive: loaded.isActive ? "true" : "false",
+          forResearch: loaded.forResearch ? "true" : "false",
           pageId: loaded.pageId ?? "",
         });
       } catch (err) {
@@ -152,6 +155,7 @@ export default function AdminQuestionnaireSectionForm({
         description: form.description || null,
         order: Number(form.order || 0),
         isActive: form.isActive === "true",
+        forResearch: form.forResearch === "true",
         pageId: form.pageId || undefined,
       };
 
@@ -288,6 +292,13 @@ export default function AdminQuestionnaireSectionForm({
         >
           <option value="true">Active</option>
           <option value="false">Inactive</option>
+        </Select>
+        <Select
+          value={form.forResearch}
+          onChange={(event) => updateField("forResearch", event.target.value)}
+        >
+          <option value="false">Application Participants</option>
+          <option value="true">Research Participants Only</option>
         </Select>
         <Select
           value={form.pageId}

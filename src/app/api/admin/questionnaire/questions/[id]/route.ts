@@ -28,7 +28,14 @@ export async function GET(request: Request, { params }: RouteContext) {
   const question = await db.questionnaireQuestion.findFirst({
     where: { id, ...(includeDeleted ? {} : { deletedAt: null }) },
     include: {
-      section: { select: { id: true, title: true } },
+      section: {
+        select: {
+          id: true,
+          title: true,
+          pageId: true,
+          page: { select: { id: true, title: true } },
+        },
+      },
     },
   });
 
@@ -36,11 +43,32 @@ export async function GET(request: Request, { params }: RouteContext) {
     return errorResponse("NOT_FOUND", "Question not found", 404);
   }
 
+  // Fetch all questions in the same section for navigation
+  const sectionQuestions = await db.questionnaireQuestion.findMany({
+    where: {
+      sectionId: question.sectionId,
+      ...(includeDeleted ? {} : { deletedAt: null }),
+    },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    select: { id: true, order: true, prompt: true },
+  });
+
+  // Find previous and next questions
+  const currentIndex = sectionQuestions.findIndex((q) => q.id === id);
+  const prevQuestion =
+    currentIndex > 0 ? sectionQuestions[currentIndex - 1] : null;
+  const nextQuestion =
+    currentIndex < sectionQuestions.length - 1
+      ? sectionQuestions[currentIndex + 1]
+      : null;
+
   return successResponse({
     question: {
       id: question.id,
       sectionId: question.sectionId,
       sectionTitle: question.section.title,
+      pageId: question.section.pageId,
+      pageTitle: question.section.page?.title ?? null,
       prompt: question.prompt,
       helperText: question.helperText,
       type: question.type,
@@ -51,6 +79,16 @@ export async function GET(request: Request, { params }: RouteContext) {
       mlWeight: question.mlWeight,
       isDealbreaker: question.isDealbreaker,
       deletedAt: question.deletedAt,
+    },
+    navigation: {
+      prevQuestion: prevQuestion
+        ? { id: prevQuestion.id, prompt: prevQuestion.prompt }
+        : null,
+      nextQuestion: nextQuestion
+        ? { id: nextQuestion.id, prompt: nextQuestion.prompt }
+        : null,
+      totalInSection: sectionQuestions.length,
+      currentPosition: currentIndex + 1,
     },
   });
 }

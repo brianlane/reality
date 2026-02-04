@@ -17,6 +17,7 @@ type QuestionType =
   | "RADIO_7"
   | "CHECKBOXES"
   | "NUMBER_SCALE"
+  | "AGE_RANGE"
   | "POINT_ALLOCATION"
   | "RANKING";
 
@@ -37,6 +38,14 @@ type RankingOptions = {
   items: string[];
 };
 
+type AgeRangeOptions = {
+  minAge?: number;
+  maxAge?: number;
+};
+
+// Age options for the AGE_RANGE type
+const AGE_OPTIONS = Array.from({ length: 63 }, (_, i) => i + 18); // 18-80
+
 type Question = {
   id: string;
   prompt: string;
@@ -45,6 +54,7 @@ type Question = {
   options:
     | string[]
     | NumberScaleOptions
+    | AgeRangeOptions
     | PointAllocationOptions
     | RankingOptions
     | null;
@@ -632,6 +642,68 @@ export default function QuestionnaireForm({
                     <div className="flex justify-between text-xs text-navy-soft">
                       <span>{minLabel}</span>
                       <span>{maxLabel}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            if (question.type === "AGE_RANGE") {
+              const ageValue =
+                (answer.value as { min?: number; max?: number }) ?? {};
+              return (
+                <div key={question.id} className="space-y-2">
+                  <label className="text-sm font-medium text-navy-muted">
+                    {question.prompt}
+                  </label>
+                  {question.helperText ? (
+                    <p className="text-xs text-navy-soft">
+                      {question.helperText}
+                    </p>
+                  ) : null}
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-navy-soft">From</span>
+                      <Select
+                        value={String(ageValue.min ?? "")}
+                        required={question.isRequired}
+                        onChange={(event) =>
+                          updateAnswer(question.id, {
+                            value: {
+                              ...ageValue,
+                              min: Number(event.target.value),
+                            },
+                          })
+                        }
+                      >
+                        <option value="">Select...</option>
+                        {AGE_OPTIONS.map((age) => (
+                          <option key={age} value={age}>
+                            {age}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-navy-soft">To</span>
+                      <Select
+                        value={String(ageValue.max ?? "")}
+                        required={question.isRequired}
+                        onChange={(event) =>
+                          updateAnswer(question.id, {
+                            value: {
+                              ...ageValue,
+                              max: Number(event.target.value),
+                            },
+                          })
+                        }
+                      >
+                        <option value="">Select...</option>
+                        {AGE_OPTIONS.map((age) => (
+                          <option key={age} value={age}>
+                            {age}
+                          </option>
+                        ))}
+                      </Select>
                     </div>
                   </div>
                 </div>

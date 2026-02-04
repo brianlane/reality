@@ -43,6 +43,7 @@ export async function GET(request: Request, { params }: RouteContext) {
       title: page.title,
       description: page.description,
       order: page.order,
+      forResearch: page.forResearch,
       deletedAt: page.deletedAt,
       sections: page.sections.map((section) => ({
         id: section.id,
@@ -50,6 +51,7 @@ export async function GET(request: Request, { params }: RouteContext) {
         description: section.description,
         order: section.order,
         isActive: section.isActive,
+        forResearch: section.forResearch,
         deletedAt: section.deletedAt,
       })),
     },
@@ -94,6 +96,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       description:
         body.description === undefined ? undefined : body.description,
       order: body.order,
+      forResearch: body.forResearch,
     },
   });
 

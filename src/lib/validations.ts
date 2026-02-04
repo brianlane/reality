@@ -280,6 +280,7 @@ export const adminQuestionnairePageCreateSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional().nullable(),
   order: z.number().int().min(0).optional(),
+  forResearch: z.boolean().optional(),
 });
 
 export const adminQuestionnairePageUpdateSchema =
@@ -290,6 +291,7 @@ export const adminQuestionnaireSectionCreateSchema = z.object({
   description: z.string().optional().nullable(),
   order: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
+  forResearch: z.boolean().optional(),
   pageId: z.string().min(1),
 });
 
@@ -304,6 +306,7 @@ export const questionnaireQuestionTypeSchema = z.enum([
   "RADIO_7",
   "CHECKBOXES",
   "NUMBER_SCALE",
+  "AGE_RANGE",
   "POINT_ALLOCATION",
   "RANKING",
 ]);

@@ -20,9 +20,15 @@ type RankingOptions = {
   items: string[];
 };
 
+type AgeRangeOptions = {
+  minAge?: number;
+  maxAge?: number;
+};
+
 export type QuestionnaireOptions =
   | string[]
   | NumberScaleOptions
+  | AgeRangeOptions
   | PointAllocationOptions
   | RankingOptions
   | null;
@@ -157,6 +163,22 @@ export async function normalizeQuestionOptions(
     return { ok: true, value: { items } };
   }
 
+  if (type === "AGE_RANGE") {
+    // AGE_RANGE type stores default min/max age but allows any configuration
+    if (options && typeof options === "object" && !Array.isArray(options)) {
+      const raw = options as Record<string, unknown>;
+      return {
+        ok: true,
+        value: {
+          minAge: raw.minAge !== undefined ? Number(raw.minAge) : 18,
+          maxAge: raw.maxAge !== undefined ? Number(raw.maxAge) : 80,
+        },
+      };
+    }
+    // Default values if no options provided
+    return { ok: true, value: { minAge: 18, maxAge: 80 } };
+  }
+
   if (options !== undefined && options !== null) {
     return {
       ok: false,
@@ -227,6 +249,33 @@ export async function validateAnswerForQuestion(
       };
     }
     return { ok: true, value: numericValue };
+  }
+
+  if (type === "AGE_RANGE") {
+    const ageValue =
+      value && typeof value === "object" && !Array.isArray(value)
+        ? (value as { min?: number; max?: number })
+        : {};
+    const minAge = ageValue.min;
+    const maxAge = ageValue.max;
+
+    if (isRequired) {
+      if (minAge === undefined || minAge === null) {
+        return { ok: false, message: "Please select a minimum age." };
+      }
+      if (maxAge === undefined || maxAge === null) {
+        return { ok: false, message: "Please select a maximum age." };
+      }
+    }
+
+    if (minAge !== undefined && maxAge !== undefined && minAge > maxAge) {
+      return {
+        ok: false,
+        message: "Minimum age cannot be greater than maximum age.",
+      };
+    }
+
+    return { ok: true, value: { min: minAge, max: maxAge } };
   }
 
   if (type === "CHECKBOXES") {
