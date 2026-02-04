@@ -5,6 +5,10 @@
   "engines": {
     "node": ">=24.0.0"
   },
+  "overrides": {
+    "hono": "^4.7.0",
+    "lodash": "^4.17.21"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -20,7 +24,8 @@
     "db:seed": "npx prisma db seed",
     "db:full": "concurrently \"npm run db:dev\" \"npm run db:studio\"",
     "dev:all": "concurrently \"npm run db:dev\" \"npm run db:studio\" \"npm run dev\" --names \"DB,STUDIO,NEXT\" -c \"blue,magenta,green\"",
-    "db:reset": "npx prisma migrate reset"
+    "db:reset": "npx prisma migrate reset",
+    "seed:questions": "npx tsx scripts/seed-questions.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

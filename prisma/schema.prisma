@@ -162,6 +162,8 @@ enum QuestionnaireQuestionType {
   RADIO_7
   CHECKBOXES
   NUMBER_SCALE
+  POINT_ALLOCATION
+  RANKING
 }
 
 model QuestionnairePage {
