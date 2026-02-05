@@ -320,14 +320,33 @@ export async function POST(request: NextRequest) {
   }
 
   // Check if this is a consent page and validate affirmative consent
+  // Determine the page either from the explicit pageId or from the questions' sections
   let isConsentPage = false;
   if (pageId) {
     const page = await db.questionnairePage.findFirst({
       where: { id: pageId, deletedAt: null },
-      select: { title: true, order: true },
+      select: { title: true },
     });
-    // Only pages with "consent" in the title require consent validation
     isConsentPage = page?.title?.toLowerCase().includes("consent") ?? false;
+  } else if (questions.length > 0) {
+    // If pageId is omitted, look up the pages the submitted questions belong to
+    // This prevents bypassing consent validation by omitting pageId from the request
+    const sectionIds = [...new Set(questions.map((q) => q.sectionId))];
+    const sections = await db.questionnaireSection.findMany({
+      where: { id: { in: sectionIds }, pageId: { not: null } },
+      select: { pageId: true },
+    });
+    const pageIds = [...new Set(sections.map((s) => s.pageId).filter(Boolean))];
+    if (pageIds.length > 0) {
+      const consentPage = await db.questionnairePage.findFirst({
+        where: {
+          id: { in: pageIds as string[] },
+          deletedAt: null,
+          title: { contains: "consent", mode: "insensitive" },
+        },
+      });
+      isConsentPage = !!consentPage;
+    }
   }
 
   if (isConsentPage) {
