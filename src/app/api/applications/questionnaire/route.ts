@@ -113,12 +113,18 @@ export async function GET(request: NextRequest) {
         deletedAt: null,
         isActive: true,
         forResearch: isResearchMode,
-        // Also ensure the parent page matches the forResearch mode
-        // to prevent orphaned sections referencing non-existent pages
-        page: {
-          deletedAt: null,
-          forResearch: isResearchMode,
-        },
+        // Handle both cases:
+        // 1. Sections without pages (pageId is null) - still valid
+        // 2. Sections with pages - ensure parent page matches forResearch mode
+        OR: [
+          { pageId: null },
+          {
+            page: {
+              deletedAt: null,
+              forResearch: isResearchMode,
+            },
+          },
+        ],
         ...(pageId ? { pageId } : {}),
       },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
