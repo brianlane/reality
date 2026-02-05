@@ -162,14 +162,19 @@ export async function GET(request: NextRequest) {
     isResearchMode = access.isResearchMode;
   }
 
-  // Filter pages and sections based on participant mode
+  // Filter pages and sections based on participant mode:
   // - Application participants see pages/sections where forResearch = false
-  // - Research participants see pages/sections where forResearch = true
+  // - Research participants see ALL pages/sections (shared content + research-only)
+  //   This avoids duplicating the entire questionnaire for research participants.
+  //   Use forResearch = true on a page/section to make it research-only.
+  const forResearchFilter = isResearchMode
+    ? {} // Research mode: no filter, see everything
+    : { forResearch: false }; // Application mode: only non-research content
   const [pages, sections, answers] = await Promise.all([
     db.questionnairePage.findMany({
       where: {
         deletedAt: null,
-        forResearch: isResearchMode,
+        ...forResearchFilter,
       },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       select: { id: true, title: true, order: true },
@@ -178,16 +183,16 @@ export async function GET(request: NextRequest) {
       where: {
         deletedAt: null,
         isActive: true,
-        forResearch: isResearchMode,
+        ...forResearchFilter,
         // Handle both cases:
         // 1. Sections without pages (pageId is null) - still valid
-        // 2. Sections with pages - ensure parent page matches forResearch mode
+        // 2. Sections with pages - ensure parent page is not deleted
         OR: [
           { pageId: null },
           {
             page: {
               deletedAt: null,
-              forResearch: isResearchMode,
+              ...forResearchFilter,
             },
           },
         ],
@@ -265,6 +270,12 @@ export async function POST(request: NextRequest) {
     return errorResponse("FORBIDDEN", access.error, 403);
   }
 
+  // Same filtering logic as GET: research participants see all content,
+  // application participants only see non-research content
+  const postForResearchFilter = access.isResearchMode
+    ? {}
+    : { forResearch: false };
+
   const questionIds = body.answers.map((answer) => answer.questionId);
   const questions = await db.questionnaireQuestion.findMany({
     where: {
@@ -274,7 +285,7 @@ export async function POST(request: NextRequest) {
       section: {
         deletedAt: null,
         isActive: true,
-        forResearch: access.isResearchMode,
+        ...postForResearchFilter,
         // Verify submitted questions belong to sections on the declared page
         // This prevents bypassing consent validation by submitting a non-consent pageId
         ...(pageId ? { pageId } : {}),
@@ -290,7 +301,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Filter required questions by the same forResearch mode to ensure
+  // Filter required questions by the same mode to ensure
   // research participants aren't blocked by application-only required questions
   const requiredQuestions = await db.questionnaireQuestion.findMany({
     where: {
@@ -300,7 +311,7 @@ export async function POST(request: NextRequest) {
       section: {
         deletedAt: null,
         isActive: true,
-        forResearch: access.isResearchMode,
+        ...postForResearchFilter,
         ...(pageId ? { pageId } : {}),
       },
     },

@@ -312,9 +312,8 @@ async function clearExistingData() {
   console.log("✓ Cleared existing data");
 }
 
-async function seedPages(pages: ParsedPage[], forResearch: boolean) {
-  const modeLabel = forResearch ? "research" : "application";
-  console.log(`\n📄 Seeding ${pages.length} ${modeLabel} pages...`);
+async function seedPages(pages: ParsedPage[]) {
+  console.log(`\n📄 Seeding ${pages.length} pages...`);
 
   let totalSections = 0;
   let totalQuestions = 0;
@@ -325,11 +324,10 @@ async function seedPages(pages: ParsedPage[], forResearch: boolean) {
       data: {
         title: page.title,
         order: page.order,
-        forResearch,
       },
     });
 
-    console.log(`  ✓ Page ${page.order + 1}: ${page.title} (${modeLabel})`);
+    console.log(`  ✓ Page ${page.order + 1}: ${page.title}`);
 
     // Create sections for this page
     for (const section of page.sections) {
@@ -339,7 +337,6 @@ async function seedPages(pages: ParsedPage[], forResearch: boolean) {
           order: section.order,
           pageId: createdPage.id,
           isActive: true,
-          forResearch,
         },
       });
 
@@ -410,25 +407,15 @@ async function main() {
   // Clear existing data
   await clearExistingData();
 
-  // Seed the database - application mode
-  const appResult = await seedPages(pages, false);
-
-  // Seed the database - research mode (same questions, flagged for research)
-  const researchResult = await seedPages(pages, true);
-
-  const totalPages = pages.length * 2;
-  const totalSections = appResult.totalSections + researchResult.totalSections;
-  const totalQuestions =
-    appResult.totalQuestions + researchResult.totalQuestions;
+  // Seed the database
+  const { totalSections, totalQuestions } = await seedPages(pages);
 
   // Summary
   console.log("\n✅ Seed completed successfully!\n");
   console.log("📊 Summary:");
-  console.log(`   Application pages: ${pages.length}`);
-  console.log(`   Research pages: ${pages.length}`);
-  console.log(`   Total pages: ${totalPages}`);
-  console.log(`   Total sections: ${totalSections}`);
-  console.log(`   Total questions: ${totalQuestions}`);
+  console.log(`   Pages: ${pages.length}`);
+  console.log(`   Sections: ${totalSections}`);
+  console.log(`   Questions: ${totalQuestions}`);
 
   // Verify the data
   const verifyPages = await db.questionnairePage.count();
@@ -441,7 +428,7 @@ async function main() {
   console.log(`   Questions in DB: ${verifyQuestions}`);
 
   if (
-    verifyPages === totalPages &&
+    verifyPages === pages.length &&
     verifySections === totalSections &&
     verifyQuestions === totalQuestions
   ) {
