@@ -136,13 +136,12 @@ function isAffirmativeConsent(value: unknown): boolean {
 }
 
 // Question types that can express consent (checkboxes, dropdowns, radio buttons)
+// These must match QuestionnaireQuestionType enum values in the Prisma schema
 // Other types like TEXT, TEXTAREA, NUMBER_SCALE, AGE_RANGE, POINT_ALLOCATION are
 // data-gathering questions that shouldn't be validated for consent patterns
-const CONSENT_QUESTION_TYPES = [
-  "CHECKBOX",
+const CONSENT_QUESTION_TYPES: QuestionType[] = [
   "CHECKBOXES",
   "DROPDOWN",
-  "RADIO",
   "RADIO_7",
 ];
 
@@ -295,9 +294,7 @@ export default function QuestionnaireForm({
     [sections],
   );
 
-  async function saveCurrentPageAnswers(
-    options: { skipConsentValidation?: boolean } = {},
-  ): Promise<boolean> {
+  async function saveCurrentPageAnswers(): Promise<boolean> {
     if (previewMode) {
       setStatus("Preview mode - form submission is disabled");
       return false;
@@ -329,8 +326,6 @@ export default function QuestionnaireForm({
         applicationId,
         pageId: pages[currentPageIndex]?.id ?? undefined,
         answers: payloadAnswers,
-        // Skip consent validation when navigating backward
-        skipConsentValidation: options.skipConsentValidation ?? false,
       }),
     });
 
@@ -452,22 +447,20 @@ export default function QuestionnaireForm({
   }
 
   async function handlePrevious() {
-    if (currentPageIndex <= 0 || pages.length === 0) return;
+    if (currentPageIndex <= 0 || pages.length === 0 || !applicationId) return;
 
     const prevPageIndex = currentPageIndex - 1;
     const prevPageId = pages[prevPageIndex]?.id;
 
     if (prevPageId) {
-      // Skip consent validation when navigating backward - user should be able to go back
-      const saved = await saveCurrentPageAnswers({
-        skipConsentValidation: true,
-      });
-      if (!saved) {
-        return;
-      }
+      // Navigate backward without saving - this avoids consent validation
+      // blocking backward navigation. Current answers are preserved in
+      // local draft state and will be saved when the user navigates forward.
+      updateDraft({ questionnaire: answers });
 
       // Load previous page sections
       setIsLoading(true);
+      setStatus(null);
       let prevLoaded = false;
       try {
         const res = await fetch(

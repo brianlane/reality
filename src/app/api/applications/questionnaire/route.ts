@@ -310,9 +310,8 @@ export async function POST(request: NextRequest) {
   }
 
   // Check if this is a consent page and validate affirmative consent
-  // Skip consent validation when navigating backward (user should be able to go back)
   let isConsentPage = false;
-  if (pageId && !body.skipConsentValidation) {
+  if (pageId) {
     const page = await db.questionnairePage.findFirst({
       where: { id: pageId, deletedAt: null },
       select: { title: true, order: true },
@@ -323,15 +322,10 @@ export async function POST(request: NextRequest) {
 
   if (isConsentPage) {
     // Question types that can express consent (checkboxes, dropdowns, radio buttons)
+    // These must match QuestionnaireQuestionType enum values in the Prisma schema
     // Other types like TEXT, TEXTAREA, NUMBER_SCALE, AGE_RANGE, POINT_ALLOCATION are
     // data-gathering questions that shouldn't be validated for consent patterns
-    const CONSENT_QUESTION_TYPES = [
-      "CHECKBOX",
-      "CHECKBOXES",
-      "DROPDOWN",
-      "RADIO",
-      "RADIO_7",
-    ];
+    const CONSENT_QUESTION_TYPES = ["CHECKBOXES", "DROPDOWN", "RADIO_7"];
 
     // Validate that required consent-type answers on consent pages are affirmative
     const answerMap = new Map(body.answers.map((a) => [a.questionId, a.value]));
