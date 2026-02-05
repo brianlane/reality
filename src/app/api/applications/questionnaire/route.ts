@@ -268,6 +268,9 @@ export async function POST(request: NextRequest) {
         deletedAt: null,
         isActive: true,
         forResearch: access.isResearchMode,
+        // Verify submitted questions belong to sections on the declared page
+        // This prevents bypassing consent validation by submitting a non-consent pageId
+        ...(pageId ? { pageId } : {}),
       },
     },
   });
