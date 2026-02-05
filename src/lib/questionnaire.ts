@@ -268,16 +268,32 @@ export async function validateAnswerForQuestion(
   if (type === "AGE_RANGE") {
     const ageValue =
       value && typeof value === "object" && !Array.isArray(value)
-        ? (value as { min?: number; max?: number })
+        ? (value as { min?: unknown; max?: unknown })
         : {};
-    const minAge = ageValue.min;
-    const maxAge = ageValue.max;
+
+    // Convert to numbers to handle string inputs from API calls
+    const minAge =
+      ageValue.min !== undefined && ageValue.min !== null
+        ? Number(ageValue.min)
+        : undefined;
+    const maxAge =
+      ageValue.max !== undefined && ageValue.max !== null
+        ? Number(ageValue.max)
+        : undefined;
+
+    // Validate numeric conversion
+    if (minAge !== undefined && Number.isNaN(minAge)) {
+      return { ok: false, message: "Minimum age must be a valid number." };
+    }
+    if (maxAge !== undefined && Number.isNaN(maxAge)) {
+      return { ok: false, message: "Maximum age must be a valid number." };
+    }
 
     if (isRequired) {
-      if (minAge === undefined || minAge === null) {
+      if (minAge === undefined) {
         return { ok: false, message: "Please select a minimum age." };
       }
-      if (maxAge === undefined || maxAge === null) {
+      if (maxAge === undefined) {
         return { ok: false, message: "Please select a maximum age." };
       }
     }

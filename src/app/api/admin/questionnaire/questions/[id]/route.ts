@@ -55,10 +55,11 @@ export async function GET(request: Request, { params }: RouteContext) {
 
   // Find previous and next questions
   const currentIndex = sectionQuestions.findIndex((q) => q.id === id);
+  // Handle edge case where question is not found in section list (e.g., race condition)
   const prevQuestion =
     currentIndex > 0 ? sectionQuestions[currentIndex - 1] : null;
   const nextQuestion =
-    currentIndex < sectionQuestions.length - 1
+    currentIndex >= 0 && currentIndex < sectionQuestions.length - 1
       ? sectionQuestions[currentIndex + 1]
       : null;
 
@@ -88,7 +89,8 @@ export async function GET(request: Request, { params }: RouteContext) {
         ? { id: nextQuestion.id, prompt: nextQuestion.prompt }
         : null,
       totalInSection: sectionQuestions.length,
-      currentPosition: currentIndex + 1,
+      // Ensure valid 1-indexed position (handle -1 case from findIndex)
+      currentPosition: currentIndex >= 0 ? currentIndex + 1 : 1,
     },
   });
 }
