@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
 type ResearchApplicant = {
   id: string;
   user: {
@@ -98,7 +100,10 @@ export default function AdminResearchInviteTable({
         return;
       }
 
-      setSuccess("Research invite created.");
+      const emailNote = json.emailSent
+        ? " Invite email sent."
+        : " Email could not be sent — please share the link manually.";
+      setSuccess(`Research invite created.${emailNote}`);
       setInviteUrl(json.inviteUrl ?? null);
       setForm({ firstName: "", lastName: "", email: "" });
       await loadResearchInvites();
@@ -151,6 +156,8 @@ export default function AdminResearchInviteTable({
     }
   }
 
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
   function formatDate(dateString: string | null) {
     if (!dateString) {
       return "N/A";
@@ -164,6 +171,29 @@ export default function AdminResearchInviteTable({
       day: "numeric",
       year: "numeric",
     });
+  }
+
+  function getInviteUrl(code: string | null) {
+    if (!code) return null;
+    return `${APP_URL}/research?code=${code}`;
+  }
+
+  async function copyToClipboard(text: string, id: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    }
   }
 
   return (
@@ -198,16 +228,26 @@ export default function AdminResearchInviteTable({
             {isLoading ? "Creating..." : "Create Invite"}
           </Button>
           {inviteUrl ? (
-            <span className="text-sm text-navy-soft">
-              Invite link:{" "}
-              <a
-                className="text-copper hover:underline"
-                href={inviteUrl}
-                target="_blank"
-                rel="noreferrer"
+            <span className="flex items-center gap-2 text-sm text-navy-soft">
+              <span className="truncate">
+                Invite link:{" "}
+                <a
+                  className="text-copper hover:underline"
+                  href={inviteUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {inviteUrl}
+                </a>
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                className="shrink-0 text-xs"
+                onClick={() => copyToClipboard(inviteUrl, "new-invite")}
               >
-                {inviteUrl}
-              </a>
+                {copiedId === "new-invite" ? "Copied!" : "Copy"}
+              </Button>
             </span>
           ) : null}
         </div>
@@ -272,15 +312,34 @@ export default function AdminResearchInviteTable({
                       {formatDate(applicant.researchCompletedAt)}
                     </td>
                     <td className="py-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => handleHardDelete(applicant.id)}
-                        disabled={isLoading}
-                        className="border-red-300 text-red-600 hover:bg-red-50"
-                      >
-                        Hard Delete
-                      </Button>
+                      <div className="flex gap-2">
+                        {applicant.researchInviteCode ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() =>
+                              copyToClipboard(
+                                getInviteUrl(applicant.researchInviteCode)!,
+                                applicant.id,
+                              )
+                            }
+                            className="text-xs"
+                          >
+                            {copiedId === applicant.id
+                              ? "Copied!"
+                              : "Copy Link"}
+                          </Button>
+                        ) : null}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => handleHardDelete(applicant.id)}
+                          disabled={isLoading}
+                          className="border-red-300 text-red-600 hover:bg-red-50"
+                        >
+                          Hard Delete
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

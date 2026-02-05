@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { adminResearchInviteCreateSchema } from "@/lib/validations";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
+import { sendResearchInviteEmail } from "@/lib/email/research";
+import { logger } from "@/lib/logger";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -216,6 +218,25 @@ export async function POST(request: Request) {
 
   const inviteUrl = `${APP_URL}/research?code=${inviteCode}`;
 
+  // Send research invite email (non-blocking - don't fail the invite if email fails)
+  let emailSent = false;
+  try {
+    await sendResearchInviteEmail({
+      to: normalizedEmail,
+      firstName: body.firstName,
+      inviteCode,
+      applicantId: result.applicant.id,
+    });
+    emailSent = true;
+  } catch (emailError) {
+    logger.error("Failed to send research invite email", {
+      error:
+        emailError instanceof Error ? emailError.message : String(emailError),
+      applicantId: result.applicant.id,
+      email: normalizedEmail,
+    });
+  }
+
   return successResponse({
     applicant: {
       id: result.applicant.id,
@@ -225,5 +246,6 @@ export async function POST(request: Request) {
       applicationStatus: result.applicant.applicationStatus,
     },
     inviteUrl,
+    emailSent,
   });
 }
