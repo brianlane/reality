@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -313,6 +314,15 @@ export default function AdminResearchInviteTable({
                     </td>
                     <td className="py-2">
                       <div className="flex gap-2">
+                        <Link href={`/admin/research/${applicant.id}`}>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="text-xs"
+                          >
+                            View Responses
+                          </Button>
+                        </Link>
                         {applicant.researchInviteCode ? (
                           <Button
                             type="button"

@@ -459,55 +459,6 @@ export default function QuestionnaireForm({
     }
   }
 
-  async function handlePrevious() {
-    if (currentPageIndex <= 0 || pages.length === 0 || !applicationId) return;
-
-    const prevPageIndex = currentPageIndex - 1;
-    const prevPageId = pages[prevPageIndex]?.id;
-
-    if (prevPageId) {
-      // On non-consent pages, save answers normally before navigating back.
-      // On consent pages, skip saving to avoid server-side consent validation
-      // trapping the user (can't go forward or back). Consent page answers
-      // will be saved when the user navigates forward and passes validation.
-      const currentPage = pages[currentPageIndex];
-      if (!isConsentPage(currentPage)) {
-        const saved = await saveCurrentPageAnswers();
-        if (!saved) {
-          return;
-        }
-      }
-
-      // Load previous page sections
-      setIsLoading(true);
-      setStatus(null);
-      let prevLoaded = false;
-      try {
-        const res = await fetch(
-          `/api/applications/questionnaire?applicationId=${applicationId}&pageId=${prevPageId}`,
-        );
-        const json = await res.json();
-        if (!res.ok || json?.error) {
-          setStatus("Failed to load previous page.");
-          return;
-        }
-        setSections(json.sections ?? []);
-        setCurrentPageIndex(prevPageIndex);
-        updateDraft({ currentPageId: prevPageId });
-        prevLoaded = true;
-      } catch {
-        setStatus("Failed to load previous page.");
-      } finally {
-        setIsLoading(false);
-      }
-
-      if (prevLoaded) {
-        // Scroll to top
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
-    }
-  }
-
   if (isLoading) {
     return <p className="text-sm text-navy-soft">Loading questionnaire...</p>;
   }
@@ -1030,22 +981,9 @@ export default function QuestionnaireForm({
           })}
         </div>
       ))}
-      {previewMode ? (
+      <div className="flex justify-end">
         <Button type="submit">Save and Continue</Button>
-      ) : (
-        <div className="flex items-center justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={currentPageIndex === 0 || pages.length === 0}
-          >
-            Previous
-          </Button>
-
-          <Button type="submit">Save and Continue</Button>
-        </div>
-      )}
+      </div>
       {status && <p className="text-sm text-red-500">{status}</p>}
     </form>
   );
