@@ -266,6 +266,7 @@ export async function validateAnswerForQuestion(
   }
 
   if (type === "AGE_RANGE") {
+    const ageOptions = options as AgeRangeOptions | null;
     const ageValue =
       value && typeof value === "object" && !Array.isArray(value)
         ? (value as { min?: unknown; max?: unknown })
@@ -303,6 +304,37 @@ export async function validateAnswerForQuestion(
         ok: false,
         message: "Minimum age cannot be greater than maximum age.",
       };
+    }
+
+    // Validate against configured bounds (like NUMBER_SCALE does)
+    if (ageOptions) {
+      const configuredMin = ageOptions.minAge ?? 18;
+      const configuredMax = ageOptions.maxAge ?? 80;
+
+      if (minAge !== undefined && minAge < configuredMin) {
+        return {
+          ok: false,
+          message: `Minimum age must be at least ${configuredMin}.`,
+        };
+      }
+      if (minAge !== undefined && minAge > configuredMax) {
+        return {
+          ok: false,
+          message: `Minimum age must be at most ${configuredMax}.`,
+        };
+      }
+      if (maxAge !== undefined && maxAge < configuredMin) {
+        return {
+          ok: false,
+          message: `Maximum age must be at least ${configuredMin}.`,
+        };
+      }
+      if (maxAge !== undefined && maxAge > configuredMax) {
+        return {
+          ok: false,
+          message: `Maximum age must be at most ${configuredMax}.`,
+        };
+      }
     }
 
     return { ok: true, value: { min: minAge, max: maxAge } };
