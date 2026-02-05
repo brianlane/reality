@@ -453,10 +453,17 @@ export default function QuestionnaireForm({
     const prevPageId = pages[prevPageIndex]?.id;
 
     if (prevPageId) {
-      // Navigate backward without saving - this avoids consent validation
-      // blocking backward navigation. Current answers are preserved in
-      // local draft state and will be saved when the user navigates forward.
-      updateDraft({ questionnaire: answers });
+      // On non-consent pages, save answers normally before navigating back.
+      // On consent pages, skip saving to avoid server-side consent validation
+      // trapping the user (can't go forward or back). Consent page answers
+      // will be saved when the user navigates forward and passes validation.
+      const currentPage = pages[currentPageIndex];
+      if (!isConsentPage(currentPage)) {
+        const saved = await saveCurrentPageAnswers();
+        if (!saved) {
+          return;
+        }
+      }
 
       // Load previous page sections
       setIsLoading(true);
