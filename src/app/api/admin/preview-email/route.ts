@@ -13,6 +13,7 @@ import type { TestEmailType } from "@/lib/email/types";
 import {
   getWaitlistConfirmationHTML,
   getWaitlistInviteHTML,
+  getResearchInviteHTML,
 } from "@/lib/email/templates";
 import { NextResponse } from "next/server";
 
@@ -52,6 +53,10 @@ export async function GET(request: Request) {
 
       case "WAITLIST_INVITE":
         html = getWaitlistInviteHTML("Test User", "test_token_123");
+        break;
+
+      case "RESEARCH_INVITE":
+        html = getResearchInviteHTML("Test User", "test_code_abc123");
         break;
 
       case "PAYMENT_CONFIRMATION":
