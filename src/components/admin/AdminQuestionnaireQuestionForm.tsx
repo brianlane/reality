@@ -134,6 +134,8 @@ export default function AdminQuestionnaireQuestionForm({
       setIsDataLoading(true);
       setQuestion(null);
       setNavigation(null);
+      setError(null);
+      setSuccess(null);
 
       try {
         const headers = await getAuthHeaders();
