@@ -118,9 +118,7 @@ export default function AdminQuestionnaireQuestionsTable({
                       {question.sectionTitle}
                     </td>
                   ) : null}
-                  <td className="py-2 px-6 whitespace-nowrap">
-                    {question.prompt}
-                  </td>
+                  <td className="py-2 px-6 max-w-md">{question.prompt}</td>
                   <td className="py-2 px-6 whitespace-nowrap">
                     {question.type}
                   </td>
