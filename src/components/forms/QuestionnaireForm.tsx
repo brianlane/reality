@@ -128,12 +128,24 @@ function isAffirmativeConsent(value: unknown): boolean {
   return false;
 }
 
-// Check if a page is a consent page (first page or contains "Consent" in title)
-function isConsentPage(page: PageInfo | undefined, pageIndex: number): boolean {
+// Question types that can express consent (checkboxes, dropdowns, radio buttons)
+// Other types like TEXT, TEXTAREA, NUMBER_SCALE, AGE_RANGE, POINT_ALLOCATION are
+// data-gathering questions that shouldn't be validated for consent patterns
+const CONSENT_QUESTION_TYPES = [
+  "CHECKBOX",
+  "CHECKBOXES",
+  "DROPDOWN",
+  "RADIO",
+  "RADIO_7",
+];
+
+// Check if a page is a consent page (first page by order or contains "Consent" in title)
+function isConsentPage(page: PageInfo | undefined): boolean {
   // If no page exists (non-paged questionnaire), not a consent page
   if (!page) return false;
-  // First page is always treated as consent page
-  if (pageIndex === 0) return true;
+  // First page (order === 0) is always treated as consent page
+  // This matches the server-side logic using page.order === 0
+  if (page.order === 0) return true;
   // Any page with "consent" in title is a consent page
   return page.title.toLowerCase().includes("consent");
 }
@@ -339,15 +351,20 @@ export default function QuestionnaireForm({
 
     // Validate consent on consent pages before proceeding
     const currentPage = pages[currentPageIndex];
-    if (isConsentPage(currentPage, currentPageIndex)) {
-      // Check all questions on this page for affirmative consent
+    if (isConsentPage(currentPage)) {
+      // Check consent-type questions on this page for affirmative consent
+      // Only CHECKBOX, DROPDOWN, RADIO types can express consent
+      // TEXT, TEXTAREA, NUMBER_SCALE, AGE_RANGE, POINT_ALLOCATION are data questions
       for (const section of sections) {
         for (const question of section.questions) {
-          const answer = answers[question.id];
-          const value = answer?.value;
-
           // Skip questions that are not required
           if (!question.isRequired) continue;
+
+          // Skip non-consent question types (TEXT, TEXTAREA, NUMBER_SCALE, etc.)
+          if (!CONSENT_QUESTION_TYPES.includes(question.type)) continue;
+
+          const answer = answers[question.id];
+          const value = answer?.value;
 
           // Check if the answer is affirmative
           if (!isAffirmativeConsent(value)) {

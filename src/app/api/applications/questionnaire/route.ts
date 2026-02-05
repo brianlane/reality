@@ -316,11 +316,25 @@ export async function POST(request: NextRequest) {
   }
 
   if (isConsentPage) {
-    // Validate that all required answers on consent pages are affirmative
+    // Question types that can express consent (checkboxes, dropdowns, radio buttons)
+    // Other types like TEXT, TEXTAREA, NUMBER_SCALE, AGE_RANGE, POINT_ALLOCATION are
+    // data-gathering questions that shouldn't be validated for consent patterns
+    const CONSENT_QUESTION_TYPES = [
+      "CHECKBOX",
+      "CHECKBOXES",
+      "DROPDOWN",
+      "RADIO",
+      "RADIO_7",
+    ];
+
+    // Validate that required consent-type answers on consent pages are affirmative
     const answerMap = new Map(body.answers.map((a) => [a.questionId, a.value]));
 
     for (const question of questions) {
       if (!question.isRequired) continue;
+
+      // Skip non-consent question types (TEXT, TEXTAREA, NUMBER_SCALE, etc.)
+      if (!CONSENT_QUESTION_TYPES.includes(question.type)) continue;
 
       const answerValue = answerMap.get(question.id);
 
