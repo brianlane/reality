@@ -20,55 +20,63 @@ const ALLOWED_STATUSES: ApplicationStatus[] = [
   ...RESEARCH_STATUSES,
 ];
 
-// Helper function to check if a value represents affirmative consent
-function isAffirmativeConsentValue(value: unknown): boolean {
-  if (!value) return false;
+// Negative patterns for consent validation
+// Use word boundary regex to avoid matching substrings (e.g., "no" in "acknowledge")
+const NEGATIVE_PATTERNS = [
+  /\bno\b/, // Matches "no" as a word, not as part of another word
+  /\bdecline\b/,
+  /\bdo not consent\b/,
+  /\bdo not agree\b/,
+  /\bnot applicable\b/,
+];
 
-  // For checkboxes (arrays), having any selection means consent was given
-  if (Array.isArray(value)) {
-    return value.length > 0;
-  }
+// Affirmative patterns - require explicit consent
+const AFFIRMATIVE_PATTERNS = [
+  "i agree",
+  "i consent",
+  "i understand",
+  "i confirm",
+  "i acknowledge",
+  "yes",
+];
 
-  // For dropdown/text values, check if it's an affirmative response
-  const strValue = String(value).toLowerCase().trim();
-  if (!strValue) return false;
-
-  // Negative responses that should block progression
-  // Use word boundary regex to avoid matching substrings (e.g., "no" in "acknowledge")
-  const negativePatterns = [
-    /\bno\b/, // Matches "no" as a word, not as part of another word
-    /\bdecline\b/,
-    /\bdo not consent\b/,
-    /\bdo not agree\b/,
-    /\bnot applicable\b/,
-  ];
+// Check if a single string value is affirmative consent
+function isAffirmativeString(strValue: string): boolean {
+  const normalized = strValue.toLowerCase().trim();
+  if (!normalized) return false;
 
   // Check if the value matches any negative pattern
-  for (const pattern of negativePatterns) {
-    if (pattern.test(strValue)) {
+  for (const pattern of NEGATIVE_PATTERNS) {
+    if (pattern.test(normalized)) {
       return false;
     }
   }
 
-  // Affirmative patterns - require explicit consent
-  const affirmativePatterns = [
-    "i agree",
-    "i consent",
-    "i understand",
-    "i confirm",
-    "i acknowledge",
-    "yes",
-  ];
-
   // Check if the value matches any affirmative pattern
-  for (const pattern of affirmativePatterns) {
-    if (strValue.includes(pattern)) {
+  for (const pattern of AFFIRMATIVE_PATTERNS) {
+    if (normalized.includes(pattern)) {
       return true;
     }
   }
 
-  // If no explicit affirmative pattern matched, reject for consent pages
+  // If no explicit affirmative pattern matched, reject
   return false;
+}
+
+// Helper function to check if a value represents affirmative consent
+function isAffirmativeConsentValue(value: unknown): boolean {
+  if (!value) return false;
+
+  // For checkboxes (arrays), check EACH selected option for affirmative content
+  // An array with negative options like ["I do not consent"] should fail
+  if (Array.isArray(value)) {
+    if (value.length === 0) return false;
+    // All selected options must be affirmative
+    return value.every((item) => isAffirmativeString(String(item)));
+  }
+
+  // For dropdown/text values, check if it's an affirmative response
+  return isAffirmativeString(String(value));
 }
 
 type InvitedApplicantResult =
@@ -302,17 +310,15 @@ export async function POST(request: NextRequest) {
   }
 
   // Check if this is a consent page and validate affirmative consent
+  // Skip consent validation when navigating backward (user should be able to go back)
   let isConsentPage = false;
-  if (pageId) {
+  if (pageId && !body.skipConsentValidation) {
     const page = await db.questionnairePage.findFirst({
       where: { id: pageId, deletedAt: null },
       select: { title: true, order: true },
     });
-    // Use optional chaining on title to prevent TypeError when page is null
-    // First page (order === 0) or any page with "consent" in title is a consent page
-    isConsentPage =
-      page?.order === 0 ||
-      (page?.title?.toLowerCase().includes("consent") ?? false);
+    // Only pages with "consent" in the title require consent validation
+    isConsentPage = page?.title?.toLowerCase().includes("consent") ?? false;
   }
 
   if (isConsentPage) {

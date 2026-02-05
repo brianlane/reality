@@ -375,4 +375,6 @@ export const applicantQuestionnaireSubmitSchema = z.object({
       }),
     )
     .min(1),
+  // Skip consent validation when navigating backward
+  skipConsentValidation: z.boolean().optional(),
 });

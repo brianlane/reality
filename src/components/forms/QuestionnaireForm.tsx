@@ -77,55 +77,62 @@ type PageInfo = {
 };
 
 // Helper function to check if a value is an affirmative consent response
-function isAffirmativeConsent(value: unknown): boolean {
-  if (!value) return false;
+// Negative patterns for consent validation
+// Use word boundary regex to avoid matching substrings (e.g., "no" in "acknowledge")
+const NEGATIVE_PATTERNS = [
+  /\bno\b/, // Matches "no" as a word, not as part of another word
+  /\bdecline\b/,
+  /\bdo not consent\b/,
+  /\bdo not agree\b/,
+  /\bnot applicable\b/,
+];
 
-  // For checkboxes (arrays), having any selection means consent was given
-  if (Array.isArray(value)) {
-    return value.length > 0;
-  }
+// Affirmative patterns - require explicit consent for consent pages
+const AFFIRMATIVE_PATTERNS = [
+  "i agree",
+  "i consent",
+  "i understand",
+  "i confirm",
+  "i acknowledge",
+  "yes",
+];
 
-  // For dropdown/text values, check if it's an affirmative response
-  const strValue = String(value).toLowerCase().trim();
-  if (!strValue) return false;
-
-  // Negative responses that should block progression
-  // Use word boundary regex to avoid matching substrings (e.g., "no" in "acknowledge")
-  const negativePatterns = [
-    /\bno\b/, // Matches "no" as a word, not as part of another word
-    /\bdecline\b/,
-    /\bdo not consent\b/,
-    /\bdo not agree\b/,
-    /\bnot applicable\b/,
-  ];
+// Check if a single string value is affirmative consent
+function isAffirmativeString(strValue: string): boolean {
+  const normalized = strValue.toLowerCase().trim();
+  if (!normalized) return false;
 
   // Check if the value matches any negative pattern
-  for (const pattern of negativePatterns) {
-    if (pattern.test(strValue)) {
+  for (const pattern of NEGATIVE_PATTERNS) {
+    if (pattern.test(normalized)) {
       return false;
     }
   }
 
-  // Affirmative patterns - require explicit consent for consent pages
-  const affirmativePatterns = [
-    "i agree",
-    "i consent",
-    "i understand",
-    "i confirm",
-    "i acknowledge",
-    "yes",
-  ];
-
   // Check if the value matches any affirmative pattern
-  for (const pattern of affirmativePatterns) {
-    if (strValue.includes(pattern)) {
+  for (const pattern of AFFIRMATIVE_PATTERNS) {
+    if (normalized.includes(pattern)) {
       return true;
     }
   }
 
-  // If no explicit affirmative pattern matched, reject for consent pages
-  // This ensures users must explicitly agree, not just avoid saying "no"
+  // If no explicit affirmative pattern matched, reject
   return false;
+}
+
+function isAffirmativeConsent(value: unknown): boolean {
+  if (!value) return false;
+
+  // For checkboxes (arrays), check EACH selected option for affirmative content
+  // An array with negative options like ["I do not consent"] should fail
+  if (Array.isArray(value)) {
+    if (value.length === 0) return false;
+    // All selected options must be affirmative
+    return value.every((item) => isAffirmativeString(String(item)));
+  }
+
+  // For dropdown/text values, check if it's an affirmative response
+  return isAffirmativeString(String(value));
 }
 
 // Question types that can express consent (checkboxes, dropdowns, radio buttons)
@@ -139,14 +146,11 @@ const CONSENT_QUESTION_TYPES = [
   "RADIO_7",
 ];
 
-// Check if a page is a consent page (first page by order or contains "Consent" in title)
+// Check if a page is a consent page (only pages with "Consent" in the title)
 function isConsentPage(page: PageInfo | undefined): boolean {
   // If no page exists (non-paged questionnaire), not a consent page
   if (!page) return false;
-  // First page (order === 0) is always treated as consent page
-  // This matches the server-side logic using page.order === 0
-  if (page.order === 0) return true;
-  // Any page with "consent" in title is a consent page
+  // Only pages with "consent" in the title require consent validation
   return page.title.toLowerCase().includes("consent");
 }
 
@@ -291,7 +295,9 @@ export default function QuestionnaireForm({
     [sections],
   );
 
-  async function saveCurrentPageAnswers(): Promise<boolean> {
+  async function saveCurrentPageAnswers(
+    options: { skipConsentValidation?: boolean } = {},
+  ): Promise<boolean> {
     if (previewMode) {
       setStatus("Preview mode - form submission is disabled");
       return false;
@@ -323,6 +329,8 @@ export default function QuestionnaireForm({
         applicationId,
         pageId: pages[currentPageIndex]?.id ?? undefined,
         answers: payloadAnswers,
+        // Skip consent validation when navigating backward
+        skipConsentValidation: options.skipConsentValidation ?? false,
       }),
     });
 
@@ -450,7 +458,10 @@ export default function QuestionnaireForm({
     const prevPageId = pages[prevPageIndex]?.id;
 
     if (prevPageId) {
-      const saved = await saveCurrentPageAnswers();
+      // Skip consent validation when navigating backward - user should be able to go back
+      const saved = await saveCurrentPageAnswers({
+        skipConsentValidation: true,
+      });
       if (!saved) {
         return;
       }
