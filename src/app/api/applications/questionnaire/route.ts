@@ -25,8 +25,7 @@ const ALLOWED_STATUSES: ApplicationStatus[] = [
 const NEGATIVE_PATTERNS = [
   /\bno\b/, // Matches "no" as a word, not as part of another word
   /\bdecline\b/,
-  /\bdo not consent\b/,
-  /\bdo not agree\b/,
+  /\bdo not\b/, // General catch-all for "I do not [verb]" negations
   /\bnot applicable\b/,
 ];
 
