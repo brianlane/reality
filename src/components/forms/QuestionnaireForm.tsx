@@ -43,9 +43,6 @@ type AgeRangeOptions = {
   maxAge?: number;
 };
 
-// Age options for the AGE_RANGE type
-const AGE_OPTIONS = Array.from({ length: 63 }, (_, i) => i + 18); // 18-80
-
 type Question = {
   id: string;
   prompt: string;
@@ -648,6 +645,14 @@ export default function QuestionnaireForm({
               );
             }
             if (question.type === "AGE_RANGE") {
+              const ageOptions = question.options as AgeRangeOptions | null;
+              const minAge = ageOptions?.minAge ?? 18;
+              const maxAge = ageOptions?.maxAge ?? 80;
+              // Generate age options based on configured range
+              const ageChoices = Array.from(
+                { length: maxAge - minAge + 1 },
+                (_, i) => i + minAge,
+              );
               const ageValue =
                 (answer.value as { min?: number; max?: number }) ?? {};
               return (
@@ -677,7 +682,7 @@ export default function QuestionnaireForm({
                         }}
                       >
                         <option value="">Select...</option>
-                        {AGE_OPTIONS.map((age) => (
+                        {ageChoices.map((age) => (
                           <option key={age} value={age}>
                             {age}
                           </option>
@@ -700,7 +705,7 @@ export default function QuestionnaireForm({
                         }}
                       >
                         <option value="">Select...</option>
-                        {AGE_OPTIONS.map((age) => (
+                        {ageChoices.map((age) => (
                           <option key={age} value={age}>
                             {age}
                           </option>
