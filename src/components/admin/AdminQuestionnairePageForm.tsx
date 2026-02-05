@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
@@ -17,6 +18,7 @@ type PageDetail = {
   title: string;
   description: string | null;
   order: number;
+  forResearch: boolean;
   deletedAt: string | null;
 };
 
@@ -29,6 +31,7 @@ export default function AdminQuestionnairePageForm({
     title: "",
     description: "",
     order: "0",
+    forResearch: "false",
   });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -63,6 +66,7 @@ export default function AdminQuestionnairePageForm({
           title: loaded.title ?? "",
           description: loaded.description ?? "",
           order: String(loaded.order ?? 0),
+          forResearch: loaded.forResearch ? "true" : "false",
         });
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
@@ -95,6 +99,7 @@ export default function AdminQuestionnairePageForm({
         title: form.title,
         description: form.description || null,
         order: Number(form.order || 0),
+        forResearch: form.forResearch === "true",
       };
 
       const res = await fetch(
@@ -221,6 +226,13 @@ export default function AdminQuestionnairePageForm({
           value={form.order}
           onChange={(event) => updateField("order", event.target.value)}
         />
+        <Select
+          value={form.forResearch}
+          onChange={(event) => updateField("forResearch", event.target.value)}
+        >
+          <option value="false">Application Participants</option>
+          <option value="true">Research Participants Only</option>
+        </Select>
       </div>
       <div className="space-y-2">
         <label className="text-xs font-semibold text-navy-soft">

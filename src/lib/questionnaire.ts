@@ -20,9 +20,15 @@ type RankingOptions = {
   items: string[];
 };
 
+type AgeRangeOptions = {
+  minAge?: number;
+  maxAge?: number;
+};
+
 export type QuestionnaireOptions =
   | string[]
   | NumberScaleOptions
+  | AgeRangeOptions
   | PointAllocationOptions
   | RankingOptions
   | null;
@@ -157,6 +163,36 @@ export async function normalizeQuestionOptions(
     return { ok: true, value: { items } };
   }
 
+  if (type === "AGE_RANGE") {
+    // AGE_RANGE type stores default min/max age but allows any configuration
+    if (options && typeof options === "object" && !Array.isArray(options)) {
+      const raw = options as Record<string, unknown>;
+      const minAge = raw.minAge !== undefined ? Number(raw.minAge) : 18;
+      const maxAge = raw.maxAge !== undefined ? Number(raw.maxAge) : 80;
+
+      if (Number.isNaN(minAge) || Number.isNaN(maxAge)) {
+        return {
+          ok: false,
+          message:
+            "Age range options must include numeric minAge/maxAge values.",
+        };
+      }
+      if (minAge >= maxAge) {
+        return {
+          ok: false,
+          message: "Age range minAge must be less than maxAge.",
+        };
+      }
+
+      return {
+        ok: true,
+        value: { minAge, maxAge },
+      };
+    }
+    // Default values if no options provided
+    return { ok: true, value: { minAge: 18, maxAge: 80 } };
+  }
+
   if (options !== undefined && options !== null) {
     return {
       ok: false,
@@ -229,6 +265,81 @@ export async function validateAnswerForQuestion(
     return { ok: true, value: numericValue };
   }
 
+  if (type === "AGE_RANGE") {
+    const ageOptions = options as AgeRangeOptions | null;
+    const ageValue =
+      value && typeof value === "object" && !Array.isArray(value)
+        ? (value as { min?: unknown; max?: unknown })
+        : {};
+
+    // Convert to numbers to handle string inputs from API calls
+    const minAge =
+      ageValue.min !== undefined && ageValue.min !== null
+        ? Number(ageValue.min)
+        : undefined;
+    const maxAge =
+      ageValue.max !== undefined && ageValue.max !== null
+        ? Number(ageValue.max)
+        : undefined;
+
+    // Validate numeric conversion
+    if (minAge !== undefined && Number.isNaN(minAge)) {
+      return { ok: false, message: "Minimum age must be a valid number." };
+    }
+    if (maxAge !== undefined && Number.isNaN(maxAge)) {
+      return { ok: false, message: "Maximum age must be a valid number." };
+    }
+
+    if (isRequired) {
+      if (minAge === undefined) {
+        return { ok: false, message: "Please select a minimum age." };
+      }
+      if (maxAge === undefined) {
+        return { ok: false, message: "Please select a maximum age." };
+      }
+    }
+
+    if (minAge !== undefined && maxAge !== undefined && minAge > maxAge) {
+      return {
+        ok: false,
+        message: "Minimum age cannot be greater than maximum age.",
+      };
+    }
+
+    // Validate against configured bounds (like NUMBER_SCALE does)
+    if (ageOptions) {
+      const configuredMin = ageOptions.minAge ?? 18;
+      const configuredMax = ageOptions.maxAge ?? 80;
+
+      if (minAge !== undefined && minAge < configuredMin) {
+        return {
+          ok: false,
+          message: `Minimum age must be at least ${configuredMin}.`,
+        };
+      }
+      if (minAge !== undefined && minAge > configuredMax) {
+        return {
+          ok: false,
+          message: `Minimum age must be at most ${configuredMax}.`,
+        };
+      }
+      if (maxAge !== undefined && maxAge < configuredMin) {
+        return {
+          ok: false,
+          message: `Maximum age must be at least ${configuredMin}.`,
+        };
+      }
+      if (maxAge !== undefined && maxAge > configuredMax) {
+        return {
+          ok: false,
+          message: `Maximum age must be at most ${configuredMax}.`,
+        };
+      }
+    }
+
+    return { ok: true, value: { min: minAge, max: maxAge } };
+  }
+
   if (type === "CHECKBOXES") {
     const optionsArray = Array.isArray(options) ? options : [];
     const values = Array.isArray(value)
@@ -263,10 +374,27 @@ export async function validateAnswerForQuestion(
     }
     const allocations =
       value && typeof value === "object" && !Array.isArray(value)
-        ? (value as Record<string, number>)
+        ? (value as Record<string, unknown>)
         : {};
-    const total = Object.values(allocations).reduce(
-      (sum, val) => sum + (Number(val) || 0),
+
+    // Convert values to numbers and validate
+    const normalizedAllocations: Record<string, number> = {};
+    for (const [key, val] of Object.entries(allocations)) {
+      const numVal = Number(val);
+      if (Number.isNaN(numVal)) {
+        return { ok: false, message: `Invalid allocation value for ${key}.` };
+      }
+      if (numVal < 0) {
+        return {
+          ok: false,
+          message: "Point allocations cannot be negative.",
+        };
+      }
+      normalizedAllocations[key] = numVal;
+    }
+
+    const total = Object.values(normalizedAllocations).reduce(
+      (sum, val) => sum + val,
       0,
     );
     // Always reject over-allocation (even for optional questions)
@@ -285,12 +413,12 @@ export async function validateAnswerForQuestion(
     }
     // Validate that all allocated items are valid
     const validItems = new Set(pointOptions.items);
-    for (const key of Object.keys(allocations)) {
+    for (const key of Object.keys(normalizedAllocations)) {
       if (!validItems.has(key)) {
         return { ok: false, message: `Invalid item: ${key}` };
       }
     }
-    return { ok: true, value: allocations };
+    return { ok: true, value: normalizedAllocations };
   }
 
   if (type === "RANKING") {

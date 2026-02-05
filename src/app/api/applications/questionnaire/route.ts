@@ -20,7 +20,9 @@ const ALLOWED_STATUSES: ApplicationStatus[] = [
   ...RESEARCH_STATUSES,
 ];
 
-type InvitedApplicantResult = { applicant: Applicant } | { error: string };
+type InvitedApplicantResult =
+  | { applicant: Applicant; isResearchMode: boolean }
+  | { error: string };
 
 async function requireInvitedApplicant(
   applicationId: string,
@@ -51,12 +53,14 @@ async function requireInvitedApplicant(
     return { error: "Questionnaire access is not available for this status." };
   }
 
-  return { applicant };
+  return { applicant, isResearchMode: isResearchApplicant };
 }
 
 export async function GET(request: NextRequest) {
   const applicationId = request.nextUrl.searchParams.get("applicationId") ?? "";
   const pageId = request.nextUrl.searchParams.get("pageId");
+  // Preview mode can specify which mode to preview
+  const previewModeParam = request.nextUrl.searchParams.get("previewMode");
 
   if (!applicationId) {
     return errorResponse(
@@ -68,6 +72,7 @@ export async function GET(request: NextRequest) {
 
   // Allow preview mode to bypass applicant validation, but require admin auth
   const isPreviewMode = applicationId === "preview-mock-id";
+  let isResearchMode = false;
 
   if (isPreviewMode) {
     // Preview mode requires admin authentication
@@ -80,17 +85,26 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       return errorResponse("FORBIDDEN", (error as Error).message, 403);
     }
+    // Allow previewing either mode
+    isResearchMode = previewModeParam === "research";
   } else {
     // Regular mode requires invited applicant validation
     const access = await requireInvitedApplicant(applicationId);
     if ("error" in access) {
       return errorResponse("FORBIDDEN", access.error, 403);
     }
+    isResearchMode = access.isResearchMode;
   }
 
+  // Filter pages and sections based on participant mode
+  // - Application participants see pages/sections where forResearch = false
+  // - Research participants see pages/sections where forResearch = true
   const [pages, sections, answers] = await Promise.all([
     db.questionnairePage.findMany({
-      where: { deletedAt: null },
+      where: {
+        deletedAt: null,
+        forResearch: isResearchMode,
+      },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       select: { id: true, title: true, order: true },
     }),
@@ -98,6 +112,19 @@ export async function GET(request: NextRequest) {
       where: {
         deletedAt: null,
         isActive: true,
+        forResearch: isResearchMode,
+        // Handle both cases:
+        // 1. Sections without pages (pageId is null) - still valid
+        // 2. Sections with pages - ensure parent page matches forResearch mode
+        OR: [
+          { pageId: null },
+          {
+            page: {
+              deletedAt: null,
+              forResearch: isResearchMode,
+            },
+          },
+        ],
         ...(pageId ? { pageId } : {}),
       },
       orderBy: [{ order: "asc" }, { createdAt: "asc" }],
@@ -178,7 +205,11 @@ export async function POST(request: NextRequest) {
       id: { in: questionIds },
       deletedAt: null,
       isActive: true,
-      section: { deletedAt: null, isActive: true },
+      section: {
+        deletedAt: null,
+        isActive: true,
+        forResearch: access.isResearchMode,
+      },
     },
   });
 
@@ -190,6 +221,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Filter required questions by the same forResearch mode to ensure
+  // research participants aren't blocked by application-only required questions
   const requiredQuestions = await db.questionnaireQuestion.findMany({
     where: {
       isRequired: true,
@@ -198,6 +231,7 @@ export async function POST(request: NextRequest) {
       section: {
         deletedAt: null,
         isActive: true,
+        forResearch: access.isResearchMode,
         ...(pageId ? { pageId } : {}),
       },
     },

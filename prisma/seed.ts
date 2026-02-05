@@ -1,10 +1,38 @@
 // prisma/seed.ts
 // Seed script for Reality Matchmaking development environment
 
+import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 import type { JsonValue } from "../src/lib/json";
 
-const prisma = new PrismaClient();
+// Remove sslmode from DATABASE_URL to prevent conflicts with pool ssl config (same as src/lib/db.ts)
+const getDatabaseUrl = (): string => {
+  const url = process.env.DATABASE_URL || "";
+  return url
+    .replace(/[?&]sslmode=[^&]*/g, (match, offset) => {
+      if (match.startsWith("?")) {
+        const remaining = url.slice(offset + match.length);
+        return remaining.startsWith("&") ? "?" : "";
+      }
+      return "";
+    })
+    .replace(/\?&/, "?");
+};
+
+// Configure PostgreSQL connection pool for seeding
+// Always allow self-signed certificates since seeding only runs in development
+const pool = new Pool({
+  connectionString: getDatabaseUrl(),
+  ssl:
+    process.env.DATABASE_SSL === "false"
+      ? false
+      : { rejectUnauthorized: false },
+});
+
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log("🌱 Starting seed...");
@@ -762,4 +790,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });
