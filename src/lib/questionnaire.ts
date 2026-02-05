@@ -374,10 +374,27 @@ export async function validateAnswerForQuestion(
     }
     const allocations =
       value && typeof value === "object" && !Array.isArray(value)
-        ? (value as Record<string, number>)
+        ? (value as Record<string, unknown>)
         : {};
-    const total = Object.values(allocations).reduce(
-      (sum, val) => sum + (Number(val) || 0),
+
+    // Convert values to numbers and validate
+    const normalizedAllocations: Record<string, number> = {};
+    for (const [key, val] of Object.entries(allocations)) {
+      const numVal = Number(val);
+      if (Number.isNaN(numVal)) {
+        return { ok: false, message: `Invalid allocation value for ${key}.` };
+      }
+      if (numVal < 0) {
+        return {
+          ok: false,
+          message: "Point allocations cannot be negative.",
+        };
+      }
+      normalizedAllocations[key] = numVal;
+    }
+
+    const total = Object.values(normalizedAllocations).reduce(
+      (sum, val) => sum + val,
       0,
     );
     // Always reject over-allocation (even for optional questions)
@@ -396,12 +413,12 @@ export async function validateAnswerForQuestion(
     }
     // Validate that all allocated items are valid
     const validItems = new Set(pointOptions.items);
-    for (const key of Object.keys(allocations)) {
+    for (const key of Object.keys(normalizedAllocations)) {
       if (!validItems.has(key)) {
         return { ok: false, message: `Invalid item: ${key}` };
       }
     }
-    return { ok: true, value: allocations };
+    return { ok: true, value: normalizedAllocations };
   }
 
   if (type === "RANKING") {
