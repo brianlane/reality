@@ -408,17 +408,26 @@ async function upsertPages(pages: ParsedPage[]) {
         orderBy: { order: "asc" },
       });
 
+      // Track which existing questions have been consumed to prevent
+      // the same question from matching multiple new questions
+      const consumedIds = new Set<string>();
+
       for (let i = 0; i < section.questions.length; i++) {
         const question = section.questions[i];
 
         // Match by order position first, then by prompt text as fallback
-        const matchByOrder = existingQuestions.find((q) => q.order === i);
+        // Only consider questions not already consumed by a prior match
+        const matchByOrder = existingQuestions.find(
+          (q) => q.order === i && !consumedIds.has(q.id),
+        );
         const matchByPrompt = existingQuestions.find(
-          (q) => q.prompt === question.prompt,
+          (q) => q.prompt === question.prompt && !consumedIds.has(q.id),
         );
         const existing = matchByOrder ?? matchByPrompt;
 
         if (existing) {
+          // Mark as consumed so no other new question can match it
+          consumedIds.add(existing.id);
           // Update existing question (preserves ID so answers stay linked)
           await db.questionnaireQuestion.update({
             where: { id: existing.id },

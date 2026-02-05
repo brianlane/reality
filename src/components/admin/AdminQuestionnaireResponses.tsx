@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import sanitizeHtml from "sanitize-html";
 import { Card } from "@/components/ui/card";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 
@@ -43,13 +44,17 @@ type ResponseData = {
 function formatValue(value: unknown, type: string): string {
   if (value === null || value === undefined) return "—";
 
-  // Checkboxes / arrays
+  // Arrays: Checkboxes (string[]) and Rankings (string[] in ranked order)
   if (Array.isArray(value)) {
     if (value.length === 0) return "—";
+    if (type === "RANKING") {
+      // Rankings are stored as ordered string arrays
+      return value.map((item, i) => `${i + 1}. ${item}`).join(", ");
+    }
     return value.map(String).join(", ");
   }
 
-  // Age range
+  // Age range: stored as { min, max }
   if (type === "AGE_RANGE" && typeof value === "object") {
     const range = value as { min?: number; max?: number };
     if (range.min !== undefined && range.max !== undefined) {
@@ -60,20 +65,11 @@ function formatValue(value: unknown, type: string): string {
     return "—";
   }
 
-  // Point allocation
+  // Point allocation: stored as { key: number }
   if (type === "POINT_ALLOCATION" && typeof value === "object") {
     const allocations = value as Record<string, number>;
     return Object.entries(allocations)
       .map(([key, val]) => `${key}: ${val}`)
-      .join(", ");
-  }
-
-  // Ranking
-  if (type === "RANKING" && typeof value === "object") {
-    const items = value as Record<string, number>;
-    return Object.entries(items)
-      .sort(([, a], [, b]) => a - b)
-      .map(([key, rank]) => `${rank}. ${key}`)
       .join(", ");
   }
 
@@ -210,7 +206,13 @@ export default function AdminQuestionnaireResponses({
                     {question.richText ? (
                       <div
                         className="prose prose-sm mt-1 max-w-none text-navy-soft"
-                        dangerouslySetInnerHTML={{ __html: question.richText }}
+                        dangerouslySetInnerHTML={{
+                          __html: sanitizeHtml(question.richText, {
+                            allowedTags: sanitizeHtml.defaults.allowedTags,
+                            allowedAttributes:
+                              sanitizeHtml.defaults.allowedAttributes,
+                          }),
+                        }}
                       />
                     ) : (
                       <p className="mt-1 text-sm text-navy-soft">
