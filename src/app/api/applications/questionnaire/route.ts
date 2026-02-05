@@ -20,6 +20,72 @@ const ALLOWED_STATUSES: ApplicationStatus[] = [
   ...RESEARCH_STATUSES,
 ];
 
+// Negative patterns for consent validation
+// Use word boundary regex to avoid matching substrings (e.g., "no" in "acknowledge")
+const NEGATIVE_PATTERNS = [
+  /\bno\b/, // Matches "no" as a word, not as part of another word
+  /\bdecline\b/,
+  /\bdo not\b/, // General catch-all for "I do not [verb]" negations
+  /\bnot applicable\b/,
+];
+
+// Affirmative patterns - require explicit consent
+const AFFIRMATIVE_PATTERNS = [
+  "i agree",
+  "i consent",
+  "i understand",
+  "i confirm",
+  "i acknowledge",
+  "yes",
+];
+
+// Check if a single string value is affirmative consent
+function isAffirmativeString(strValue: string): boolean {
+  const normalized = strValue.toLowerCase().trim();
+  if (!normalized) return false;
+
+  // Check if the value matches any negative pattern
+  for (const pattern of NEGATIVE_PATTERNS) {
+    if (pattern.test(normalized)) {
+      return false;
+    }
+  }
+
+  // Check if the value matches any affirmative pattern
+  for (const pattern of AFFIRMATIVE_PATTERNS) {
+    if (normalized.includes(pattern)) {
+      return true;
+    }
+  }
+
+  // If no explicit affirmative pattern matched, reject
+  return false;
+}
+
+// Helper function to check if a value represents affirmative consent
+// For CHECKBOXES questions, pass availableOptions to ensure ALL options are checked
+function isAffirmativeConsentValue(
+  value: unknown,
+  availableOptions?: unknown[],
+): boolean {
+  if (!value) return false;
+
+  // For checkboxes (arrays), check EACH selected option for affirmative content
+  // An array with negative options like ["I do not consent"] should fail
+  if (Array.isArray(value)) {
+    if (value.length === 0) return false;
+    // If available options are provided, ALL must be selected
+    if (availableOptions && value.length !== availableOptions.length) {
+      return false;
+    }
+    // All selected options must be affirmative
+    return value.every((item) => isAffirmativeString(String(item)));
+  }
+
+  // For dropdown/text values, check if it's an affirmative response
+  return isAffirmativeString(String(value));
+}
+
 type InvitedApplicantResult =
   | { applicant: Applicant; isResearchMode: boolean }
   | { error: string };
@@ -209,6 +275,9 @@ export async function POST(request: NextRequest) {
         deletedAt: null,
         isActive: true,
         forResearch: access.isResearchMode,
+        // Verify submitted questions belong to sections on the declared page
+        // This prevents bypassing consent validation by submitting a non-consent pageId
+        ...(pageId ? { pageId } : {}),
       },
     },
   });
@@ -248,6 +317,75 @@ export async function POST(request: NextRequest) {
       "Please answer all required questions.",
       400,
     );
+  }
+
+  // Check if this is a consent page and validate affirmative consent
+  // Determine the page either from the explicit pageId or from the questions' sections
+  let isConsentPage = false;
+  if (pageId) {
+    const page = await db.questionnairePage.findFirst({
+      where: { id: pageId, deletedAt: null },
+      select: { title: true },
+    });
+    isConsentPage = page?.title?.toLowerCase().includes("consent") ?? false;
+  } else if (questions.length > 0) {
+    // If pageId is omitted, look up the pages the submitted questions belong to
+    // This prevents bypassing consent validation by omitting pageId from the request
+    const sectionIds = [...new Set(questions.map((q) => q.sectionId))];
+    const sections = await db.questionnaireSection.findMany({
+      where: { id: { in: sectionIds }, pageId: { not: null } },
+      select: { pageId: true },
+    });
+    const pageIds = [...new Set(sections.map((s) => s.pageId).filter(Boolean))];
+    if (pageIds.length > 0) {
+      const consentPage = await db.questionnairePage.findFirst({
+        where: {
+          id: { in: pageIds as string[] },
+          deletedAt: null,
+          title: { contains: "consent", mode: "insensitive" },
+        },
+      });
+      isConsentPage = !!consentPage;
+    }
+  }
+
+  if (isConsentPage) {
+    // Question types that can express consent (checkboxes, dropdowns, radio buttons)
+    // These must match QuestionnaireQuestionType enum values in the Prisma schema
+    // Other types like TEXT, TEXTAREA, NUMBER_SCALE, AGE_RANGE, POINT_ALLOCATION are
+    // data-gathering questions that shouldn't be validated for consent patterns
+    const CONSENT_QUESTION_TYPES = ["CHECKBOXES", "DROPDOWN", "RADIO_7"];
+
+    // Validate that required consent-type answers on consent pages are affirmative
+    const answerMap = new Map(body.answers.map((a) => [a.questionId, a.value]));
+
+    for (const question of questions) {
+      if (!question.isRequired) continue;
+
+      // Skip non-consent question types (TEXT, TEXTAREA, NUMBER_SCALE, etc.)
+      if (!CONSENT_QUESTION_TYPES.includes(question.type)) continue;
+
+      const answerValue = answerMap.get(question.id);
+
+      // For CHECKBOXES, pass available options so ALL must be checked
+      const checkboxOptions =
+        question.type === "CHECKBOXES" && Array.isArray(question.options)
+          ? (question.options as unknown[])
+          : undefined;
+
+      // Check if the answer is affirmative consent
+      const isAffirmative = isAffirmativeConsentValue(
+        answerValue,
+        checkboxOptions,
+      );
+      if (!isAffirmative) {
+        return errorResponse(
+          "CONSENT_REQUIRED",
+          "All consent items require affirmative agreement. Please check all boxes and select agreement options to continue.",
+          400,
+        );
+      }
+    }
   }
 
   const questionMap = new Map(

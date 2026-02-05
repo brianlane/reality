@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -262,96 +263,128 @@ export default function AdminQuestionnaireSectionForm({
     }
   }
 
+  // Get the saved page info for breadcrumb (use section.pageId, not form.pageId)
+  // This ensures breadcrumb reflects actual saved state, not unsaved form selections
+  const savedPage = pages.find((p) => p.id === section?.pageId);
+
   return (
-    <Card className="space-y-4">
-      {error ? (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
-          {error}
-        </div>
-      ) : null}
-      {success ? (
-        <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">
-          {success}
-        </div>
-      ) : null}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Input
-          placeholder="Section title"
-          value={form.title}
-          onChange={(event) => updateField("title", event.target.value)}
-        />
-        <Input
-          type="number"
-          placeholder="Order"
-          value={form.order}
-          onChange={(event) => updateField("order", event.target.value)}
-        />
-        <Select
-          value={form.isActive}
-          onChange={(event) => updateField("isActive", event.target.value)}
-        >
-          <option value="true">Active</option>
-          <option value="false">Inactive</option>
-        </Select>
-        <Select
-          value={form.forResearch}
-          onChange={(event) => updateField("forResearch", event.target.value)}
-        >
-          <option value="false">Application Participants</option>
-          <option value="true">Research Participants Only</option>
-        </Select>
-        <Select
-          value={form.pageId}
-          onChange={(event) => updateField("pageId", event.target.value)}
-        >
-          <option value="">Select a page</option>
-          {pages.map((page) => (
-            <option key={page.id} value={page.id}>
-              {page.title}
-            </option>
-          ))}
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs font-semibold text-navy-soft">
-          Description
-        </label>
-        <Textarea
-          value={form.description}
-          onChange={(event) => updateField("description", event.target.value)}
-        />
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          onClick={handleSave}
-          disabled={isLoading}
-          className="bg-copper hover:bg-copper/90"
-        >
-          {isLoading ? "Saving..." : "Save"}
-        </Button>
-        {mode === "edit" ? (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleDelete}
-            disabled={isLoading || !!section?.deletedAt}
+    <div className="space-y-4">
+      {/* Breadcrumb navigation for edit mode */}
+      {mode === "edit" && (
+        <nav className="flex items-center gap-2 text-sm text-navy-soft">
+          <Link
+            href="/admin/questionnaire"
+            className="text-copper hover:underline"
           >
-            Soft Delete
-          </Button>
+            Questionnaire
+          </Link>
+          <span>/</span>
+          {savedPage ? (
+            <>
+              <Link
+                href={`/admin/questionnaire/pages/${savedPage.id}`}
+                className="text-copper hover:underline"
+              >
+                {savedPage.title}
+              </Link>
+              <span>/</span>
+            </>
+          ) : null}
+          <span className="text-navy">
+            {section?.title ?? "Section Detail"}
+          </span>
+        </nav>
+      )}
+      <Card className="space-y-4">
+        {error ? (
+          <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+            {error}
+          </div>
         ) : null}
-        {mode === "edit" ? (
+        {success ? (
+          <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">
+            {success}
+          </div>
+        ) : null}
+        <div className="grid gap-4 md:grid-cols-2">
+          <Input
+            placeholder="Section title"
+            value={form.title}
+            onChange={(event) => updateField("title", event.target.value)}
+          />
+          <Input
+            type="number"
+            placeholder="Order"
+            value={form.order}
+            onChange={(event) => updateField("order", event.target.value)}
+          />
+          <Select
+            value={form.isActive}
+            onChange={(event) => updateField("isActive", event.target.value)}
+          >
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+          </Select>
+          <Select
+            value={form.forResearch}
+            onChange={(event) => updateField("forResearch", event.target.value)}
+          >
+            <option value="false">Application Participants</option>
+            <option value="true">Research Participants Only</option>
+          </Select>
+          <Select
+            value={form.pageId}
+            onChange={(event) => updateField("pageId", event.target.value)}
+          >
+            <option value="">Select a page</option>
+            {pages.map((page) => (
+              <option key={page.id} value={page.id}>
+                {page.title}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-xs font-semibold text-navy-soft">
+            Description
+          </label>
+          <Textarea
+            value={form.description}
+            onChange={(event) => updateField("description", event.target.value)}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
           <Button
             type="button"
-            variant="outline"
-            onClick={handleHardDelete}
+            onClick={handleSave}
             disabled={isLoading}
-            className="border-red-300 text-red-600 hover:bg-red-50"
+            className="bg-copper hover:bg-copper/90"
           >
-            Hard Delete
+            {isLoading ? "Saving..." : "Save"}
           </Button>
-        ) : null}
-      </div>
-    </Card>
+          {mode === "edit" ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDelete}
+              disabled={isLoading || !!section?.deletedAt}
+            >
+              Soft Delete
+            </Button>
+          ) : null}
+          {mode === "edit" ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleHardDelete}
+              disabled={isLoading}
+              className="border-red-300 text-red-600 hover:bg-red-50"
+            >
+              Hard Delete
+            </Button>
+          ) : null}
+        </div>
+      </Card>
+    </div>
   );
 }
