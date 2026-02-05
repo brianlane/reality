@@ -130,6 +130,9 @@ export default function AdminQuestionnaireQuestionForm({
     const controller = new AbortController();
 
     const loadData = async () => {
+      // Reset loading state when navigating between questions
+      setIsDataLoading(true);
+
       try {
         const headers = await getAuthHeaders();
         if (!headers) {

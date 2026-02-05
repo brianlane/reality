@@ -167,12 +167,26 @@ export async function normalizeQuestionOptions(
     // AGE_RANGE type stores default min/max age but allows any configuration
     if (options && typeof options === "object" && !Array.isArray(options)) {
       const raw = options as Record<string, unknown>;
+      const minAge = raw.minAge !== undefined ? Number(raw.minAge) : 18;
+      const maxAge = raw.maxAge !== undefined ? Number(raw.maxAge) : 80;
+
+      if (Number.isNaN(minAge) || Number.isNaN(maxAge)) {
+        return {
+          ok: false,
+          message:
+            "Age range options must include numeric minAge/maxAge values.",
+        };
+      }
+      if (minAge >= maxAge) {
+        return {
+          ok: false,
+          message: "Age range minAge must be less than maxAge.",
+        };
+      }
+
       return {
         ok: true,
-        value: {
-          minAge: raw.minAge !== undefined ? Number(raw.minAge) : 18,
-          maxAge: raw.maxAge !== undefined ? Number(raw.maxAge) : 80,
-        },
+        value: { minAge, maxAge },
       };
     }
     // Default values if no options provided
