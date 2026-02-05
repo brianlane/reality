@@ -76,6 +76,64 @@ type PageInfo = {
   order: number;
 };
 
+// Helper function to check if a value is an affirmative consent response
+function isAffirmativeConsent(value: unknown): boolean {
+  if (!value) return false;
+
+  // For checkboxes (arrays), having any selection means consent was given
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+
+  // For dropdown/text values, check if it's an affirmative response
+  const strValue = String(value).toLowerCase().trim();
+  if (!strValue) return false;
+
+  // Negative responses that should block progression
+  const negativePatterns = [
+    "no",
+    "decline",
+    "do not consent",
+    "do not agree",
+    "not applicable",
+  ];
+
+  // Check if the value matches any negative pattern
+  for (const pattern of negativePatterns) {
+    if (strValue.includes(pattern)) {
+      return false;
+    }
+  }
+
+  // Affirmative patterns
+  const affirmativePatterns = [
+    "i agree",
+    "i consent",
+    "i understand",
+    "i confirm",
+    "i acknowledge",
+    "yes",
+  ];
+
+  // Check if the value matches any affirmative pattern
+  for (const pattern of affirmativePatterns) {
+    if (strValue.includes(pattern)) {
+      return true;
+    }
+  }
+
+  // If it's a non-empty value that doesn't match negative patterns,
+  // and it's not on a consent page, allow it
+  return true;
+}
+
+// Check if a page is a consent page (first page or contains "Consent" in title)
+function isConsentPage(page: PageInfo | undefined, pageIndex: number): boolean {
+  if (pageIndex === 0) return true;
+  if (!page) return false;
+  return page.title.toLowerCase().includes("consent");
+}
+
 export default function QuestionnaireForm({
   previewMode = false,
   mockSections,
@@ -274,6 +332,30 @@ export default function QuestionnaireForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus(null);
+
+    // Validate consent on consent pages before proceeding
+    const currentPage = pages[currentPageIndex];
+    if (isConsentPage(currentPage, currentPageIndex)) {
+      // Check all questions on this page for affirmative consent
+      for (const section of sections) {
+        for (const question of section.questions) {
+          const answer = answers[question.id];
+          const value = answer?.value;
+
+          // Skip questions that are not required
+          if (!question.isRequired) continue;
+
+          // Check if the answer is affirmative
+          if (!isAffirmativeConsent(value)) {
+            setStatus(
+              "Please provide affirmative consent for all required items to continue. " +
+                "All checkboxes must be checked and all dropdown selections must indicate agreement.",
+            );
+            return;
+          }
+        }
+      }
+    }
 
     const saved = await saveCurrentPageAnswers();
     if (!saved) {

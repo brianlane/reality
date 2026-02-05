@@ -20,6 +20,56 @@ const ALLOWED_STATUSES: ApplicationStatus[] = [
   ...RESEARCH_STATUSES,
 ];
 
+// Helper function to check if a value represents affirmative consent
+function isAffirmativeConsentValue(value: unknown): boolean {
+  if (!value) return false;
+
+  // For checkboxes (arrays), having any selection means consent was given
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+
+  // For dropdown/text values, check if it's an affirmative response
+  const strValue = String(value).toLowerCase().trim();
+  if (!strValue) return false;
+
+  // Negative responses that should block progression
+  const negativePatterns = [
+    "no",
+    "decline",
+    "do not consent",
+    "do not agree",
+    "not applicable",
+  ];
+
+  // Check if the value matches any negative pattern
+  for (const pattern of negativePatterns) {
+    if (strValue.includes(pattern)) {
+      return false;
+    }
+  }
+
+  // Affirmative patterns
+  const affirmativePatterns = [
+    "i agree",
+    "i consent",
+    "i understand",
+    "i confirm",
+    "i acknowledge",
+    "yes",
+  ];
+
+  // Check if the value matches any affirmative pattern
+  for (const pattern of affirmativePatterns) {
+    if (strValue.includes(pattern)) {
+      return true;
+    }
+  }
+
+  // If no pattern matched, consider it non-affirmative for consent pages
+  return false;
+}
+
 type InvitedApplicantResult =
   | { applicant: Applicant; isResearchMode: boolean }
   | { error: string };
@@ -248,6 +298,40 @@ export async function POST(request: NextRequest) {
       "Please answer all required questions.",
       400,
     );
+  }
+
+  // Check if this is a consent page and validate affirmative consent
+  let isConsentPage = false;
+  if (pageId) {
+    const page = await db.questionnairePage.findFirst({
+      where: { id: pageId, deletedAt: null },
+      select: { title: true, order: true },
+    });
+    isConsentPage =
+      page?.order === 0 ||
+      page?.title.toLowerCase().includes("consent") ||
+      false;
+  }
+
+  if (isConsentPage) {
+    // Validate that all required answers on consent pages are affirmative
+    const answerMap = new Map(body.answers.map((a) => [a.questionId, a.value]));
+
+    for (const question of questions) {
+      if (!question.isRequired) continue;
+
+      const answerValue = answerMap.get(question.id);
+
+      // Check if the answer is affirmative consent
+      const isAffirmative = isAffirmativeConsentValue(answerValue);
+      if (!isAffirmative) {
+        return errorResponse(
+          "CONSENT_REQUIRED",
+          "All consent items require affirmative agreement. Please check all boxes and select agreement options to continue.",
+          400,
+        );
+      }
+    }
   }
 
   const questionMap = new Map(

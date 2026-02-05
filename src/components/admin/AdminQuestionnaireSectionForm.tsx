@@ -263,8 +263,9 @@ export default function AdminQuestionnaireSectionForm({
     }
   }
 
-  // Get the current page info for breadcrumb
-  const currentPage = pages.find((p) => p.id === form.pageId);
+  // Get the saved page info for breadcrumb (use section.pageId, not form.pageId)
+  // This ensures breadcrumb reflects actual saved state, not unsaved form selections
+  const savedPage = pages.find((p) => p.id === section?.pageId);
 
   return (
     <div className="space-y-4">
@@ -278,13 +279,13 @@ export default function AdminQuestionnaireSectionForm({
             Questionnaire
           </Link>
           <span>/</span>
-          {currentPage ? (
+          {savedPage ? (
             <>
               <Link
-                href={`/admin/questionnaire/pages/${currentPage.id}`}
+                href={`/admin/questionnaire/pages/${savedPage.id}`}
                 className="text-copper hover:underline"
               >
-                {currentPage.title}
+                {savedPage.title}
               </Link>
               <span>/</span>
             </>
