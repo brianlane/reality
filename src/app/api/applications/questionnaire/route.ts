@@ -34,22 +34,23 @@ function isAffirmativeConsentValue(value: unknown): boolean {
   if (!strValue) return false;
 
   // Negative responses that should block progression
+  // Use word boundary regex to avoid matching substrings (e.g., "no" in "acknowledge")
   const negativePatterns = [
-    "no",
-    "decline",
-    "do not consent",
-    "do not agree",
-    "not applicable",
+    /\bno\b/, // Matches "no" as a word, not as part of another word
+    /\bdecline\b/,
+    /\bdo not consent\b/,
+    /\bdo not agree\b/,
+    /\bnot applicable\b/,
   ];
 
   // Check if the value matches any negative pattern
   for (const pattern of negativePatterns) {
-    if (strValue.includes(pattern)) {
+    if (pattern.test(strValue)) {
       return false;
     }
   }
 
-  // Affirmative patterns
+  // Affirmative patterns - require explicit consent
   const affirmativePatterns = [
     "i agree",
     "i consent",
@@ -66,7 +67,7 @@ function isAffirmativeConsentValue(value: unknown): boolean {
     }
   }
 
-  // If no pattern matched, consider it non-affirmative for consent pages
+  // If no explicit affirmative pattern matched, reject for consent pages
   return false;
 }
 
@@ -307,10 +308,11 @@ export async function POST(request: NextRequest) {
       where: { id: pageId, deletedAt: null },
       select: { title: true, order: true },
     });
+    // Use optional chaining on title to prevent TypeError when page is null
+    // First page (order === 0) or any page with "consent" in title is a consent page
     isConsentPage =
       page?.order === 0 ||
-      page?.title.toLowerCase().includes("consent") ||
-      false;
+      (page?.title?.toLowerCase().includes("consent") ?? false);
   }
 
   if (isConsentPage) {

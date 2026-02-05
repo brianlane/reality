@@ -90,22 +90,23 @@ function isAffirmativeConsent(value: unknown): boolean {
   if (!strValue) return false;
 
   // Negative responses that should block progression
+  // Use word boundary regex to avoid matching substrings (e.g., "no" in "acknowledge")
   const negativePatterns = [
-    "no",
-    "decline",
-    "do not consent",
-    "do not agree",
-    "not applicable",
+    /\bno\b/, // Matches "no" as a word, not as part of another word
+    /\bdecline\b/,
+    /\bdo not consent\b/,
+    /\bdo not agree\b/,
+    /\bnot applicable\b/,
   ];
 
   // Check if the value matches any negative pattern
   for (const pattern of negativePatterns) {
-    if (strValue.includes(pattern)) {
+    if (pattern.test(strValue)) {
       return false;
     }
   }
 
-  // Affirmative patterns
+  // Affirmative patterns - require explicit consent for consent pages
   const affirmativePatterns = [
     "i agree",
     "i consent",
@@ -122,15 +123,18 @@ function isAffirmativeConsent(value: unknown): boolean {
     }
   }
 
-  // If it's a non-empty value that doesn't match negative patterns,
-  // and it's not on a consent page, allow it
-  return true;
+  // If no explicit affirmative pattern matched, reject for consent pages
+  // This ensures users must explicitly agree, not just avoid saying "no"
+  return false;
 }
 
 // Check if a page is a consent page (first page or contains "Consent" in title)
 function isConsentPage(page: PageInfo | undefined, pageIndex: number): boolean {
-  if (pageIndex === 0) return true;
+  // If no page exists (non-paged questionnaire), not a consent page
   if (!page) return false;
+  // First page is always treated as consent page
+  if (pageIndex === 0) return true;
+  // Any page with "consent" in title is a consent page
   return page.title.toLowerCase().includes("consent");
 }
 
