@@ -63,13 +63,21 @@ function isAffirmativeString(strValue: string): boolean {
 }
 
 // Helper function to check if a value represents affirmative consent
-function isAffirmativeConsentValue(value: unknown): boolean {
+// For CHECKBOXES questions, pass availableOptions to ensure ALL options are checked
+function isAffirmativeConsentValue(
+  value: unknown,
+  availableOptions?: unknown[],
+): boolean {
   if (!value) return false;
 
   // For checkboxes (arrays), check EACH selected option for affirmative content
   // An array with negative options like ["I do not consent"] should fail
   if (Array.isArray(value)) {
     if (value.length === 0) return false;
+    // If available options are provided, ALL must be selected
+    if (availableOptions && value.length !== availableOptions.length) {
+      return false;
+    }
     // All selected options must be affirmative
     return value.every((item) => isAffirmativeString(String(item)));
   }
@@ -340,8 +348,17 @@ export async function POST(request: NextRequest) {
 
       const answerValue = answerMap.get(question.id);
 
+      // For CHECKBOXES, pass available options so ALL must be checked
+      const checkboxOptions =
+        question.type === "CHECKBOXES" && Array.isArray(question.options)
+          ? (question.options as unknown[])
+          : undefined;
+
       // Check if the answer is affirmative consent
-      const isAffirmative = isAffirmativeConsentValue(answerValue);
+      const isAffirmative = isAffirmativeConsentValue(
+        answerValue,
+        checkboxOptions,
+      );
       if (!isAffirmative) {
         return errorResponse(
           "CONSENT_REQUIRED",

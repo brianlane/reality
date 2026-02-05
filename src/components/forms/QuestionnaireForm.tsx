@@ -119,13 +119,21 @@ function isAffirmativeString(strValue: string): boolean {
   return false;
 }
 
-function isAffirmativeConsent(value: unknown): boolean {
+// For CHECKBOXES questions, pass availableOptions to ensure ALL options are checked
+function isAffirmativeConsent(
+  value: unknown,
+  availableOptions?: unknown[],
+): boolean {
   if (!value) return false;
 
   // For checkboxes (arrays), check EACH selected option for affirmative content
   // An array with negative options like ["I do not consent"] should fail
   if (Array.isArray(value)) {
     if (value.length === 0) return false;
+    // If available options are provided, ALL must be selected
+    if (availableOptions && value.length !== availableOptions.length) {
+      return false;
+    }
     // All selected options must be affirmative
     return value.every((item) => isAffirmativeString(String(item)));
   }
@@ -368,8 +376,14 @@ export default function QuestionnaireForm({
           const answer = answers[question.id];
           const value = answer?.value;
 
+          // For CHECKBOXES, pass available options so ALL must be checked
+          const checkboxOptions =
+            question.type === "CHECKBOXES" && Array.isArray(question.options)
+              ? (question.options as unknown[])
+              : undefined;
+
           // Check if the answer is affirmative
-          if (!isAffirmativeConsent(value)) {
+          if (!isAffirmativeConsent(value, checkboxOptions)) {
             setStatus(
               "Please provide affirmative consent for all required items to continue. " +
                 "All checkboxes must be checked and all dropdown selections must indicate agreement.",
