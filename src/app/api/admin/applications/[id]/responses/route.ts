@@ -1,3 +1,4 @@
+import sanitizeHtml from "sanitize-html";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
@@ -107,7 +108,12 @@ export async function GET(_request: Request, { params }: RouteContext) {
       type: question.type,
       order: question.order,
       value: answer.value,
-      richText: answer.richText,
+      richText: answer.richText
+        ? sanitizeHtml(answer.richText, {
+            allowedTags: sanitizeHtml.defaults.allowedTags,
+            allowedAttributes: sanitizeHtml.defaults.allowedAttributes,
+          })
+        : null,
       answeredAt: answer.updatedAt.toISOString(),
     });
   }

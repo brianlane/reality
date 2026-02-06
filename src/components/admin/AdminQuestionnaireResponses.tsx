@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import sanitizeHtml from "sanitize-html";
 import { Card } from "@/components/ui/card";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 
@@ -207,11 +206,7 @@ export default function AdminQuestionnaireResponses({
                       <div
                         className="prose prose-sm mt-1 max-w-none text-navy-soft"
                         dangerouslySetInnerHTML={{
-                          __html: sanitizeHtml(question.richText, {
-                            allowedTags: sanitizeHtml.defaults.allowedTags,
-                            allowedAttributes:
-                              sanitizeHtml.defaults.allowedAttributes,
-                          }),
+                          __html: question.richText,
                         }}
                       />
                     ) : (
