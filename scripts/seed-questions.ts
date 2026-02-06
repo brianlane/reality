@@ -314,7 +314,9 @@ function parseMarkdown(content: string): ParsedPage[] {
 /**
  * Upsert pages, sections, and questions from parsed markdown.
  * This preserves existing data (applicant answers, research responses)
- * by matching on page order, section title+pageId, and question prompt+sectionId.
+ * by matching on title first (pages by title, sections by title+pageId,
+ * questions by prompt+sectionId), falling back to order position.
+ * Title-first matching ensures answer linkages survive reordering.
  *
  * - Existing pages/sections/questions are updated in place (IDs preserved)
  * - New pages/sections/questions are created
@@ -338,18 +340,31 @@ async function upsertPages(pages: ParsedPage[]) {
   const activeSectionIds: string[] = [];
   const activePageIds: string[] = [];
 
+  // Get all existing pages for title-first matching
+  const existingPages = await db.questionnairePage.findMany({
+    where: { deletedAt: null },
+    orderBy: { order: "asc" },
+  });
+  const consumedPageIds = new Set<string>();
+
   for (const page of pages) {
-    // Find existing page by order
-    const existingPage = await db.questionnairePage.findFirst({
-      where: { order: page.order, deletedAt: null },
-    });
+    // Match by title first (preserves linkage when pages are reordered),
+    // then fall back to order position
+    const matchByTitle = existingPages.find(
+      (p) => p.title === page.title && !consumedPageIds.has(p.id),
+    );
+    const matchByOrder = existingPages.find(
+      (p) => p.order === page.order && !consumedPageIds.has(p.id),
+    );
+    const existingPage = matchByTitle ?? matchByOrder;
 
     let pageId: string;
     if (existingPage) {
+      consumedPageIds.add(existingPage.id);
       // Update existing page
       await db.questionnairePage.update({
         where: { id: existingPage.id },
-        data: { title: page.title },
+        data: { title: page.title, order: page.order },
       });
       pageId = existingPage.id;
       updatedPages++;
@@ -368,21 +383,32 @@ async function upsertPages(pages: ParsedPage[]) {
     );
 
     // Upsert sections for this page
+    // Get all existing sections for this page so we can match them
+    const existingSections = await db.questionnaireSection.findMany({
+      where: { pageId, deletedAt: null },
+      orderBy: { order: "asc" },
+    });
+
+    // Track consumed sections to prevent double-matching
+    const consumedSectionIds = new Set<string>();
+
     for (const section of page.sections) {
-      // Find existing section by title and page
-      const existingSection = await db.questionnaireSection.findFirst({
-        where: {
-          pageId,
-          order: section.order,
-          deletedAt: null,
-        },
-      });
+      // Match by title first (preserves answer linkage when sections are
+      // reordered), then fall back to order position
+      const matchByTitle = existingSections.find(
+        (s) => s.title === section.title && !consumedSectionIds.has(s.id),
+      );
+      const matchByOrder = existingSections.find(
+        (s) => s.order === section.order && !consumedSectionIds.has(s.id),
+      );
+      const existingSection = matchByTitle ?? matchByOrder;
 
       let sectionId: string;
       if (existingSection) {
+        consumedSectionIds.add(existingSection.id);
         await db.questionnaireSection.update({
           where: { id: existingSection.id },
-          data: { title: section.title, isActive: true },
+          data: { title: section.title, order: section.order, isActive: true },
         });
         sectionId = existingSection.id;
         updatedSections++;
