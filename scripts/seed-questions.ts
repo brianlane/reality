@@ -340,28 +340,47 @@ async function upsertPages(pages: ParsedPage[]) {
   const activeSectionIds: string[] = [];
   const activePageIds: string[] = [];
 
-  // Get all existing pages for title-first matching
-  // Include soft-deleted pages so they can be restored if re-added to markdown
+  // Get all existing pages (including soft-deleted for restoration)
   const existingPages = await db.questionnairePage.findMany({
-    orderBy: [{ deletedAt: "asc" }, { order: "asc" }], // Active first, then soft-deleted
+    orderBy: [{ deletedAt: "asc" }, { order: "asc" }],
   });
   const consumedPageIds = new Set<string>();
 
-  for (const page of pages) {
-    // Match by title first (preserves linkage when pages are reordered),
-    // then fall back to order position. Prefer active over soft-deleted.
-    const matchByTitle = existingPages.find(
-      (p) => p.title === page.title && !consumedPageIds.has(p.id),
+  // Two-pass matching: title matches first, then order fallback.
+  // This prevents order-based fallback from "stealing" records that would
+  // correctly match by title in a later iteration.
+  // Pass 1: Assign all title matches
+  const pageMatches = new Map<number, (typeof existingPages)[number]>();
+  for (let idx = 0; idx < pages.length; idx++) {
+    const match = existingPages.find(
+      (p) => p.title === pages[idx].title && !consumedPageIds.has(p.id),
     );
-    const matchByOrder = existingPages.find(
+    if (match) {
+      pageMatches.set(idx, match);
+      consumedPageIds.add(match.id);
+    }
+  }
+  // Pass 2: Order-based fallback for unmatched pages (active only)
+  for (let idx = 0; idx < pages.length; idx++) {
+    if (pageMatches.has(idx)) continue;
+    const match = existingPages.find(
       (p) =>
-        p.order === page.order && !p.deletedAt && !consumedPageIds.has(p.id),
+        p.order === pages[idx].order &&
+        !p.deletedAt &&
+        !consumedPageIds.has(p.id),
     );
-    const existingPage = matchByTitle ?? matchByOrder;
+    if (match) {
+      pageMatches.set(idx, match);
+      consumedPageIds.add(match.id);
+    }
+  }
+
+  for (let pageIdx = 0; pageIdx < pages.length; pageIdx++) {
+    const page = pages[pageIdx];
+    const existingPage = pageMatches.get(pageIdx);
 
     let pageId: string;
     if (existingPage) {
-      consumedPageIds.add(existingPage.id);
       // Update existing page (restore if previously soft-deleted)
       await db.questionnairePage.update({
         where: { id: existingPage.id },
@@ -383,33 +402,47 @@ async function upsertPages(pages: ParsedPage[]) {
       `  ${existingPage ? "↻" : "✓"} Page ${page.order + 1}: ${page.title}`,
     );
 
-    // Upsert sections for this page
-    // Include soft-deleted sections so they can be restored if re-added
+    // Upsert sections for this page (including soft-deleted for restoration)
     const existingSections = await db.questionnaireSection.findMany({
       where: { pageId },
-      orderBy: [{ deletedAt: "asc" }, { order: "asc" }], // Active first
+      orderBy: [{ deletedAt: "asc" }, { order: "asc" }],
     });
 
-    // Track consumed sections to prevent double-matching
+    // Two-pass matching for sections: title first, then order fallback
     const consumedSectionIds = new Set<string>();
-
-    for (const section of page.sections) {
-      // Match by title first (preserves answer linkage when sections are
-      // reordered), then fall back to order position. Prefer active over soft-deleted.
-      const matchByTitle = existingSections.find(
-        (s) => s.title === section.title && !consumedSectionIds.has(s.id),
-      );
-      const matchByOrder = existingSections.find(
+    const sectionMatches = new Map<number, (typeof existingSections)[number]>();
+    // Pass 1: title matches
+    for (let idx = 0; idx < page.sections.length; idx++) {
+      const match = existingSections.find(
         (s) =>
-          s.order === section.order &&
+          s.title === page.sections[idx].title && !consumedSectionIds.has(s.id),
+      );
+      if (match) {
+        sectionMatches.set(idx, match);
+        consumedSectionIds.add(match.id);
+      }
+    }
+    // Pass 2: order fallback for unmatched sections (active only)
+    for (let idx = 0; idx < page.sections.length; idx++) {
+      if (sectionMatches.has(idx)) continue;
+      const match = existingSections.find(
+        (s) =>
+          s.order === page.sections[idx].order &&
           !s.deletedAt &&
           !consumedSectionIds.has(s.id),
       );
-      const existingSection = matchByTitle ?? matchByOrder;
+      if (match) {
+        sectionMatches.set(idx, match);
+        consumedSectionIds.add(match.id);
+      }
+    }
+
+    for (let secIdx = 0; secIdx < page.sections.length; secIdx++) {
+      const section = page.sections[secIdx];
+      const existingSection = sectionMatches.get(secIdx);
 
       let sectionId: string;
       if (existingSection) {
-        consumedSectionIds.add(existingSection.id);
         await db.questionnaireSection.update({
           where: { id: existingSection.id },
           data: {
@@ -436,34 +469,46 @@ async function upsertPages(pages: ParsedPage[]) {
       activeSectionIds.push(sectionId);
       totalSections++;
 
-      // Upsert questions for this section
-      // Include soft-deleted questions so they can be restored if re-added
+      // Upsert questions (including soft-deleted for restoration)
       const existingQuestions = await db.questionnaireQuestion.findMany({
         where: { sectionId },
-        orderBy: [{ deletedAt: "asc" }, { order: "asc" }], // Active first
+        orderBy: [{ deletedAt: "asc" }, { order: "asc" }],
       });
 
-      // Track which existing questions have been consumed to prevent
-      // the same question from matching multiple new questions
+      // Two-pass matching for questions: prompt first, then order fallback
       const consumedIds = new Set<string>();
+      const questionMatches = new Map<
+        number,
+        (typeof existingQuestions)[number]
+      >();
+      // Pass 1: prompt matches
+      for (let i = 0; i < section.questions.length; i++) {
+        const match = existingQuestions.find(
+          (q) =>
+            q.prompt === section.questions[i].prompt && !consumedIds.has(q.id),
+        );
+        if (match) {
+          questionMatches.set(i, match);
+          consumedIds.add(match.id);
+        }
+      }
+      // Pass 2: order fallback for unmatched questions (active only)
+      for (let i = 0; i < section.questions.length; i++) {
+        if (questionMatches.has(i)) continue;
+        const match = existingQuestions.find(
+          (q) => q.order === i && !q.deletedAt && !consumedIds.has(q.id),
+        );
+        if (match) {
+          questionMatches.set(i, match);
+          consumedIds.add(match.id);
+        }
+      }
 
       for (let i = 0; i < section.questions.length; i++) {
         const question = section.questions[i];
-
-        // Match by prompt text first (preserves answer linkage even when
-        // questions are reordered or restored after soft-deletion),
-        // then fall back to order position (active only).
-        const matchByPrompt = existingQuestions.find(
-          (q) => q.prompt === question.prompt && !consumedIds.has(q.id),
-        );
-        const matchByOrder = existingQuestions.find(
-          (q) => q.order === i && !q.deletedAt && !consumedIds.has(q.id),
-        );
-        const existing = matchByPrompt ?? matchByOrder;
+        const existing = questionMatches.get(i);
 
         if (existing) {
-          // Mark as consumed so no other new question can match it
-          consumedIds.add(existing.id);
           // Update existing question (preserves ID so answers stay linked)
           await db.questionnaireQuestion.update({
             where: { id: existing.id },
