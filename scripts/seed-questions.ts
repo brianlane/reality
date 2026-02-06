@@ -415,15 +415,16 @@ async function upsertPages(pages: ParsedPage[]) {
       for (let i = 0; i < section.questions.length; i++) {
         const question = section.questions[i];
 
-        // Match by order position first, then by prompt text as fallback
+        // Match by prompt text first (preserves answer linkage even when
+        // questions are reordered), then fall back to order position
         // Only consider questions not already consumed by a prior match
-        const matchByOrder = existingQuestions.find(
-          (q) => q.order === i && !consumedIds.has(q.id),
-        );
         const matchByPrompt = existingQuestions.find(
           (q) => q.prompt === question.prompt && !consumedIds.has(q.id),
         );
-        const existing = matchByOrder ?? matchByPrompt;
+        const matchByOrder = existingQuestions.find(
+          (q) => q.order === i && !consumedIds.has(q.id),
+        );
+        const existing = matchByPrompt ?? matchByOrder;
 
         if (existing) {
           // Mark as consumed so no other new question can match it
