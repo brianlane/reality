@@ -324,6 +324,16 @@ function parseMarkdown(content: string): ParsedPage[] {
  * - Answers are NEVER deleted
  */
 async function upsertPages(pages: ParsedPage[]) {
+  // Guard: refuse to proceed with empty input to prevent accidental
+  // soft-deletion of the entire questionnaire structure
+  if (pages.length === 0) {
+    throw new Error(
+      "Parsed markdown produced 0 pages. Aborting to prevent " +
+        "soft-deleting all existing questionnaire data. Check that the " +
+        "markdown file exists and is correctly formatted.",
+    );
+  }
+
   console.log(`\n📄 Upserting ${pages.length} pages...`);
 
   let totalSections = 0;
