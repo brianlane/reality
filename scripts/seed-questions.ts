@@ -26,6 +26,7 @@ interface ParsedQuestion {
   options:
     | string[]
     | { min: number; max: number; step: number }
+    | { minAge: number; maxAge: number }
     | { items: string[]; total: number }
     | { items: string[] }
     | null;
@@ -63,6 +64,7 @@ function parseAnnotation(line: string): {
   options:
     | string[]
     | { min: number; max: number; step: number }
+    | { minAge: number; maxAge: number }
     | { items: string[]; total: number }
     | { items: string[] }
     | null;
@@ -158,6 +160,15 @@ function parseAnnotation(line: string): {
     return {
       type: "RANKING",
       options: { items },
+      cleanPrompt,
+    };
+  }
+
+  // AGE_RANGE type with default min/max options
+  if (annotation === "AGE_RANGE") {
+    return {
+      type: "AGE_RANGE",
+      options: { minAge: 18, maxAge: 80 },
       cleanPrompt,
     };
   }
@@ -300,73 +311,311 @@ function parseMarkdown(content: string): ParsedPage[] {
 // DATABASE OPERATIONS
 // ============================================
 
-async function clearExistingData() {
-  console.log("🗑️  Clearing existing questionnaire data...");
+/**
+ * Upsert pages, sections, and questions from parsed markdown.
+ * This preserves existing data (applicant answers, research responses)
+ * by matching on title first (pages by title, sections by title+pageId,
+ * questions by prompt+sectionId), falling back to order position.
+ * Title-first matching ensures answer linkages survive reordering.
+ *
+ * - Existing pages/sections/questions are updated in place (IDs preserved)
+ * - New pages/sections/questions are created
+ * - Questions that no longer exist in the markdown are soft-deleted
+ * - Answers are NEVER deleted
+ */
+async function upsertPages(pages: ParsedPage[]) {
+  // Guard: refuse to proceed with empty input to prevent accidental
+  // soft-deletion of the entire questionnaire structure
+  if (pages.length === 0) {
+    throw new Error(
+      "Parsed markdown produced 0 pages. Aborting to prevent " +
+        "soft-deleting all existing questionnaire data. Check that the " +
+        "markdown file exists and is correctly formatted.",
+    );
+  }
 
-  // Delete in order due to foreign key constraints
-  await db.questionnaireAnswer.deleteMany();
-  await db.questionnaireQuestion.deleteMany();
-  await db.questionnaireSection.deleteMany();
-  await db.questionnairePage.deleteMany();
-
-  console.log("✓ Cleared existing data");
-}
-
-async function seedPages(pages: ParsedPage[]) {
-  console.log(`\n📄 Seeding ${pages.length} pages...`);
+  console.log(`\n📄 Upserting ${pages.length} pages...`);
 
   let totalSections = 0;
   let totalQuestions = 0;
+  let updatedPages = 0;
+  let createdPages = 0;
+  let updatedSections = 0;
+  let createdSections = 0;
+  let updatedQuestions = 0;
+  let createdQuestions = 0;
 
-  for (const page of pages) {
-    // Create the page
-    const createdPage = await db.questionnairePage.create({
-      data: {
-        title: page.title,
-        order: page.order,
-      },
+  // Track all active question IDs so we can soft-delete removed ones
+  const activeQuestionIds: string[] = [];
+  const activeSectionIds: string[] = [];
+  const activePageIds: string[] = [];
+
+  // Get all existing pages (including soft-deleted for restoration)
+  const existingPages = await db.questionnairePage.findMany({
+    orderBy: [{ deletedAt: "asc" }, { order: "asc" }],
+  });
+  const consumedPageIds = new Set<string>();
+
+  // Two-pass matching: title matches first, then order fallback.
+  // This prevents order-based fallback from "stealing" records that would
+  // correctly match by title in a later iteration.
+  // Pass 1: Assign all title matches
+  const pageMatches = new Map<number, (typeof existingPages)[number]>();
+  for (let idx = 0; idx < pages.length; idx++) {
+    const match = existingPages.find(
+      (p) => p.title === pages[idx].title && !consumedPageIds.has(p.id),
+    );
+    if (match) {
+      pageMatches.set(idx, match);
+      consumedPageIds.add(match.id);
+    }
+  }
+  // Pass 2: Order-based fallback for unmatched pages (active only)
+  for (let idx = 0; idx < pages.length; idx++) {
+    if (pageMatches.has(idx)) continue;
+    const match = existingPages.find(
+      (p) =>
+        p.order === pages[idx].order &&
+        !p.deletedAt &&
+        !consumedPageIds.has(p.id),
+    );
+    if (match) {
+      pageMatches.set(idx, match);
+      consumedPageIds.add(match.id);
+    }
+  }
+
+  for (let pageIdx = 0; pageIdx < pages.length; pageIdx++) {
+    const page = pages[pageIdx];
+    const existingPage = pageMatches.get(pageIdx);
+
+    let pageId: string;
+    if (existingPage) {
+      // Update existing page (restore if previously soft-deleted)
+      await db.questionnairePage.update({
+        where: { id: existingPage.id },
+        data: { title: page.title, order: page.order, deletedAt: null },
+      });
+      pageId = existingPage.id;
+      updatedPages++;
+    } else {
+      // Create new page
+      const created = await db.questionnairePage.create({
+        data: { title: page.title, order: page.order },
+      });
+      pageId = created.id;
+      createdPages++;
+    }
+    activePageIds.push(pageId);
+
+    console.log(
+      `  ${existingPage ? "↻" : "✓"} Page ${page.order + 1}: ${page.title}`,
+    );
+
+    // Upsert sections for this page (including soft-deleted for restoration)
+    const existingSections = await db.questionnaireSection.findMany({
+      where: { pageId },
+      orderBy: [{ deletedAt: "asc" }, { order: "asc" }],
     });
 
-    console.log(`  ✓ Page ${page.order + 1}: ${page.title}`);
+    // Two-pass matching for sections: title first, then order fallback
+    const consumedSectionIds = new Set<string>();
+    const sectionMatches = new Map<number, (typeof existingSections)[number]>();
+    // Pass 1: title matches
+    for (let idx = 0; idx < page.sections.length; idx++) {
+      const match = existingSections.find(
+        (s) =>
+          s.title === page.sections[idx].title && !consumedSectionIds.has(s.id),
+      );
+      if (match) {
+        sectionMatches.set(idx, match);
+        consumedSectionIds.add(match.id);
+      }
+    }
+    // Pass 2: order fallback for unmatched sections (active only)
+    for (let idx = 0; idx < page.sections.length; idx++) {
+      if (sectionMatches.has(idx)) continue;
+      const match = existingSections.find(
+        (s) =>
+          s.order === page.sections[idx].order &&
+          !s.deletedAt &&
+          !consumedSectionIds.has(s.id),
+      );
+      if (match) {
+        sectionMatches.set(idx, match);
+        consumedSectionIds.add(match.id);
+      }
+    }
 
-    // Create sections for this page
-    for (const section of page.sections) {
-      const createdSection = await db.questionnaireSection.create({
-        data: {
-          title: section.title,
-          order: section.order,
-          pageId: createdPage.id,
-          isActive: true,
-        },
-      });
+    for (let secIdx = 0; secIdx < page.sections.length; secIdx++) {
+      const section = page.sections[secIdx];
+      const existingSection = sectionMatches.get(secIdx);
 
-      totalSections++;
-
-      // Create questions for this section
-      for (let i = 0; i < section.questions.length; i++) {
-        const question = section.questions[i];
-
-        await db.questionnaireQuestion.create({
+      let sectionId: string;
+      if (existingSection) {
+        await db.questionnaireSection.update({
+          where: { id: existingSection.id },
           data: {
-            sectionId: createdSection.id,
-            prompt: question.prompt,
-            helperText: question.helperText,
-            type: question.type,
-            options: question.options ?? undefined,
-            isRequired: true,
-            order: i,
+            title: section.title,
+            order: section.order,
             isActive: true,
-            mlWeight: 1.0,
-            isDealbreaker: false,
+            deletedAt: null,
           },
         });
+        sectionId = existingSection.id;
+        updatedSections++;
+      } else {
+        const created = await db.questionnaireSection.create({
+          data: {
+            title: section.title,
+            order: section.order,
+            pageId,
+            isActive: true,
+          },
+        });
+        sectionId = created.id;
+        createdSections++;
+      }
+      activeSectionIds.push(sectionId);
+      totalSections++;
+
+      // Upsert questions (including soft-deleted for restoration)
+      const existingQuestions = await db.questionnaireQuestion.findMany({
+        where: { sectionId },
+        orderBy: [{ deletedAt: "asc" }, { order: "asc" }],
+      });
+
+      // Two-pass matching for questions: prompt first, then order fallback
+      const consumedIds = new Set<string>();
+      const questionMatches = new Map<
+        number,
+        (typeof existingQuestions)[number]
+      >();
+      // Pass 1: prompt matches
+      for (let i = 0; i < section.questions.length; i++) {
+        const match = existingQuestions.find(
+          (q) =>
+            q.prompt === section.questions[i].prompt && !consumedIds.has(q.id),
+        );
+        if (match) {
+          questionMatches.set(i, match);
+          consumedIds.add(match.id);
+        }
+      }
+      // Pass 2: order fallback for unmatched questions (active only)
+      for (let i = 0; i < section.questions.length; i++) {
+        if (questionMatches.has(i)) continue;
+        const match = existingQuestions.find(
+          (q) => q.order === i && !q.deletedAt && !consumedIds.has(q.id),
+        );
+        if (match) {
+          questionMatches.set(i, match);
+          consumedIds.add(match.id);
+        }
+      }
+
+      for (let i = 0; i < section.questions.length; i++) {
+        const question = section.questions[i];
+        const existing = questionMatches.get(i);
+
+        if (existing) {
+          // Update existing question (preserves ID so answers stay linked)
+          await db.questionnaireQuestion.update({
+            where: { id: existing.id },
+            data: {
+              prompt: question.prompt,
+              helperText: question.helperText,
+              type: question.type,
+              options: question.options ?? undefined,
+              isRequired: true,
+              order: i,
+              isActive: true,
+              deletedAt: null, // Restore if previously soft-deleted
+            },
+          });
+          activeQuestionIds.push(existing.id);
+          updatedQuestions++;
+        } else {
+          // Create new question
+          const created = await db.questionnaireQuestion.create({
+            data: {
+              sectionId,
+              prompt: question.prompt,
+              helperText: question.helperText,
+              type: question.type,
+              options: question.options ?? undefined,
+              isRequired: true,
+              order: i,
+              isActive: true,
+              mlWeight: 1.0,
+              isDealbreaker: false,
+            },
+          });
+          activeQuestionIds.push(created.id);
+          createdQuestions++;
+        }
 
         totalQuestions++;
       }
     }
   }
 
-  return { totalSections, totalQuestions };
+  // Soft-delete questions that are no longer in the markdown
+  // (but preserve them and their answers in the database)
+  const removedQuestions = await db.questionnaireQuestion.updateMany({
+    where: {
+      id: { notIn: activeQuestionIds },
+      deletedAt: null,
+    },
+    data: {
+      deletedAt: new Date(),
+      isActive: false,
+    },
+  });
+
+  // Soft-delete sections that are no longer in the markdown
+  const removedSections = await db.questionnaireSection.updateMany({
+    where: {
+      id: { notIn: activeSectionIds },
+      deletedAt: null,
+    },
+    data: {
+      deletedAt: new Date(),
+      isActive: false,
+    },
+  });
+
+  // Soft-delete pages that are no longer in the markdown
+  const removedPages = await db.questionnairePage.updateMany({
+    where: {
+      id: { notIn: activePageIds },
+      deletedAt: null,
+    },
+    data: {
+      deletedAt: new Date(),
+    },
+  });
+
+  if (
+    removedQuestions.count > 0 ||
+    removedSections.count > 0 ||
+    removedPages.count > 0
+  ) {
+    console.log(
+      `\n🗑️  Soft-deleted: ${removedPages.count} pages, ${removedSections.count} sections, ${removedQuestions.count} questions`,
+    );
+  }
+
+  return {
+    totalSections,
+    totalQuestions,
+    updatedPages,
+    createdPages,
+    updatedSections,
+    createdSections,
+    updatedQuestions,
+    createdQuestions,
+  };
 }
 
 // ============================================
@@ -404,33 +653,44 @@ async function main() {
   const pages = parseMarkdown(markdownContent);
   console.log(`✓ Parsed ${pages.length} pages from markdown`);
 
-  // Clear existing data
-  await clearExistingData();
-
-  // Seed the database
-  const { totalSections, totalQuestions } = await seedPages(pages);
+  // Upsert pages, sections, and questions (preserves existing answers)
+  const result = await upsertPages(pages);
 
   // Summary
   console.log("\n✅ Seed completed successfully!\n");
   console.log("📊 Summary:");
-  console.log(`   Pages: ${pages.length}`);
-  console.log(`   Sections: ${totalSections}`);
-  console.log(`   Questions: ${totalQuestions}`);
+  console.log(
+    `   Pages: ${pages.length} (${result.createdPages} new, ${result.updatedPages} updated)`,
+  );
+  console.log(
+    `   Sections: ${result.totalSections} (${result.createdSections} new, ${result.updatedSections} updated)`,
+  );
+  console.log(
+    `   Questions: ${result.totalQuestions} (${result.createdQuestions} new, ${result.updatedQuestions} updated)`,
+  );
 
   // Verify the data
-  const verifyPages = await db.questionnairePage.count();
-  const verifySections = await db.questionnaireSection.count();
-  const verifyQuestions = await db.questionnaireQuestion.count();
+  const verifyPages = await db.questionnairePage.count({
+    where: { deletedAt: null },
+  });
+  const verifySections = await db.questionnaireSection.count({
+    where: { deletedAt: null },
+  });
+  const verifyQuestions = await db.questionnaireQuestion.count({
+    where: { deletedAt: null },
+  });
+  const verifyAnswers = await db.questionnaireAnswer.count();
 
   console.log("\n🔍 Verification:");
-  console.log(`   Pages in DB: ${verifyPages}`);
-  console.log(`   Sections in DB: ${verifySections}`);
-  console.log(`   Questions in DB: ${verifyQuestions}`);
+  console.log(`   Active pages in DB: ${verifyPages}`);
+  console.log(`   Active sections in DB: ${verifySections}`);
+  console.log(`   Active questions in DB: ${verifyQuestions}`);
+  console.log(`   Answers preserved: ${verifyAnswers}`);
 
   if (
     verifyPages === pages.length &&
-    verifySections === totalSections &&
-    verifyQuestions === totalQuestions
+    verifySections === result.totalSections &&
+    verifyQuestions === result.totalQuestions
   ) {
     console.log("\n✓ All data verified successfully!");
   } else {
