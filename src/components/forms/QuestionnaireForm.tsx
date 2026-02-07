@@ -43,6 +43,12 @@ type AgeRangeOptions = {
   maxAge?: number;
 };
 
+type TextOptions = {
+  validation: "number";
+  min?: number;
+  max?: number;
+};
+
 type Question = {
   id: string;
   prompt: string;
@@ -54,6 +60,7 @@ type Question = {
     | AgeRangeOptions
     | PointAllocationOptions
     | RankingOptions
+    | TextOptions
     | null;
   isRequired: boolean;
 };
@@ -180,6 +187,7 @@ export default function QuestionnaireForm({
   const [pages, setPages] = useState<PageInfo[]>([]);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [status, setStatus] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const isResearchMode = mode === "research";
@@ -355,6 +363,59 @@ export default function QuestionnaireForm({
     }));
   }
 
+  function getTextOptions(question: Question): TextOptions | null {
+    if (
+      question.type === "TEXT" &&
+      question.options &&
+      typeof question.options === "object" &&
+      !Array.isArray(question.options) &&
+      "validation" in question.options &&
+      question.options.validation === "number"
+    ) {
+      return question.options as TextOptions;
+    }
+    return null;
+  }
+
+  function validateNumericFields(): boolean {
+    const errors: Record<string, string> = {};
+
+    for (const section of sections) {
+      for (const question of section.questions) {
+        const textOpts = getTextOptions(question);
+        if (!textOpts) continue;
+
+        const answer = answers[question.id];
+        const value = String(answer?.value ?? "").trim();
+
+        // Skip empty non-required fields
+        if (!value && !question.isRequired) continue;
+        if (!value && question.isRequired) {
+          errors[question.id] = "This field is required.";
+          continue;
+        }
+
+        const num = Number(value);
+        if (isNaN(num)) {
+          errors[question.id] = "Please enter a valid number.";
+          continue;
+        }
+
+        if (textOpts.min !== undefined && num < textOpts.min) {
+          errors[question.id] = `Value must be at least ${textOpts.min}.`;
+          continue;
+        }
+
+        if (textOpts.max !== undefined && num > textOpts.max) {
+          errors[question.id] = `Value must be at most ${textOpts.max}.`;
+        }
+      }
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus(null);
@@ -392,6 +453,12 @@ export default function QuestionnaireForm({
           }
         }
       }
+    }
+
+    // Validate numeric TEXT fields before saving
+    if (!validateNumericFields()) {
+      setStatus("Please fix the highlighted errors before continuing.");
+      return;
     }
 
     const saved = await saveCurrentPageAnswers();
@@ -444,6 +511,7 @@ export default function QuestionnaireForm({
           setSections(json.sections ?? []);
           setCurrentPageIndex(nextPageIndex);
           updateDraft({ currentPageId: nextPageId });
+          setFieldErrors({});
           nextLoaded = true;
         } catch {
           setStatus("Failed to load next page.");
@@ -515,6 +583,8 @@ export default function QuestionnaireForm({
               richText: null,
             };
             if (question.type === "TEXT") {
+              const textOpts = getTextOptions(question);
+              const isNumeric = !!textOpts;
               return (
                 <div key={question.id} className="space-y-2">
                   <label className="text-sm font-medium text-navy-muted">
@@ -526,12 +596,39 @@ export default function QuestionnaireForm({
                     </p>
                   ) : null}
                   <Input
+                    type={isNumeric ? "number" : "text"}
+                    inputMode={isNumeric ? "decimal" : undefined}
+                    min={
+                      isNumeric && textOpts?.min !== undefined
+                        ? textOpts.min
+                        : undefined
+                    }
+                    max={
+                      isNumeric && textOpts?.max !== undefined
+                        ? textOpts.max
+                        : undefined
+                    }
+                    step={isNumeric ? "any" : undefined}
                     value={String(answer.value ?? "")}
                     required={question.isRequired}
-                    onChange={(event) =>
-                      updateAnswer(question.id, { value: event.target.value })
-                    }
+                    onChange={(event) => {
+                      updateAnswer(question.id, {
+                        value: event.target.value,
+                      });
+                      if (fieldErrors[question.id]) {
+                        setFieldErrors((prev) => {
+                          const next = { ...prev };
+                          delete next[question.id];
+                          return next;
+                        });
+                      }
+                    }}
                   />
+                  {fieldErrors[question.id] ? (
+                    <p className="text-xs text-red-500">
+                      {fieldErrors[question.id]}
+                    </p>
+                  ) : null}
                 </div>
               );
             }
@@ -826,12 +923,12 @@ export default function QuestionnaireForm({
                           <span className="text-sm font-medium text-navy-muted">
                             {item}
                           </span>
-                          <div className="flex items-center gap-2">
+                          <div className="flex shrink-0 items-center gap-2">
                             <Input
                               type="number"
                               min={0}
                               max={total}
-                              className="w-20 text-center"
+                              className="w-20 min-w-[5rem] text-center"
                               value={allocations[item] ?? ""}
                               onChange={(event) => {
                                 const newValue = Math.max(

@@ -4,6 +4,7 @@ import { submitApplicationSchema } from "@/lib/validations";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { ensureApplicantAccount } from "@/lib/account-init";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { notifyApplicationSubmitted } from "@/lib/email/admin-notifications";
 
 const APPLICATION_FEE_AMOUNT = 19900;
 
@@ -102,6 +103,16 @@ export async function POST(request: NextRequest) {
           invitedOffWaitlistAt: null,
           invitedOffWaitlistBy: null,
         },
+      });
+
+      // Notify admin that an application was submitted (non-blocking)
+      notifyApplicationSubmitted({
+        applicantId: applicant.id,
+        firstName: applicant.user.firstName,
+        lastName: applicant.user.lastName,
+        email: applicant.user.email,
+      }).catch(() => {
+        // Silently ignore - notification failure shouldn't affect the response
       });
 
       return successResponse({

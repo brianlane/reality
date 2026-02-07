@@ -25,12 +25,19 @@ type AgeRangeOptions = {
   maxAge?: number;
 };
 
+export type TextOptions = {
+  validation: "number";
+  min?: number;
+  max?: number;
+};
+
 export type QuestionnaireOptions =
   | string[]
   | NumberScaleOptions
   | AgeRangeOptions
   | PointAllocationOptions
   | RankingOptions
+  | TextOptions
   | null;
 
 type QuestionRecord = {
@@ -193,6 +200,50 @@ export async function normalizeQuestionOptions(
     return { ok: true, value: { minAge: 18, maxAge: 80 } };
   }
 
+  // TEXT questions may have validation options (e.g., { validation: "number" })
+  if (
+    type === "TEXT" &&
+    options &&
+    typeof options === "object" &&
+    !Array.isArray(options)
+  ) {
+    const raw = options as Record<string, unknown>;
+    if (raw.validation === "number") {
+      const result: TextOptions = { validation: "number" };
+      if (raw.min !== undefined) {
+        const min = Number(raw.min);
+        if (Number.isNaN(min)) {
+          return {
+            ok: false,
+            message: "Text validation min must be a number.",
+          };
+        }
+        result.min = min;
+      }
+      if (raw.max !== undefined) {
+        const max = Number(raw.max);
+        if (Number.isNaN(max)) {
+          return {
+            ok: false,
+            message: "Text validation max must be a number.",
+          };
+        }
+        result.max = max;
+      }
+      if (
+        result.min !== undefined &&
+        result.max !== undefined &&
+        result.min >= result.max
+      ) {
+        return {
+          ok: false,
+          message: "Text validation min must be less than max.",
+        };
+      }
+      return { ok: true, value: result };
+    }
+  }
+
   if (options !== undefined && options !== null) {
     return {
       ok: false,
@@ -228,6 +279,36 @@ export async function validateAnswerForQuestion(
     if (isRequired && !textValue) {
       return { ok: false, message: "This field is required." };
     }
+
+    // Validate numeric TEXT fields
+    if (
+      type === "TEXT" &&
+      textValue &&
+      options &&
+      typeof options === "object" &&
+      !Array.isArray(options) &&
+      "validation" in options &&
+      (options as TextOptions).validation === "number"
+    ) {
+      const textOpts = options as TextOptions;
+      const numericValue = Number(textValue);
+      if (Number.isNaN(numericValue)) {
+        return { ok: false, message: "Please enter a valid number." };
+      }
+      if (textOpts.min !== undefined && numericValue < textOpts.min) {
+        return {
+          ok: false,
+          message: `Value must be at least ${textOpts.min}.`,
+        };
+      }
+      if (textOpts.max !== undefined && numericValue > textOpts.max) {
+        return {
+          ok: false,
+          message: `Value must be at most ${textOpts.max}.`,
+        };
+      }
+    }
+
     return { ok: true, value: textValue };
   }
 
