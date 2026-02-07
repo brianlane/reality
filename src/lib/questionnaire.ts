@@ -230,6 +230,16 @@ export async function normalizeQuestionOptions(
         }
         result.max = max;
       }
+      if (
+        result.min !== undefined &&
+        result.max !== undefined &&
+        result.min >= result.max
+      ) {
+        return {
+          ok: false,
+          message: "Text validation min must be less than max.",
+        };
+      }
       return { ok: true, value: result };
     }
   }
