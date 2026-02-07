@@ -9,8 +9,6 @@
 
 import { sendEmail } from "./client";
 
-const CONTACT_EMAIL = "contact@realitymatchmaking.com";
-
 // Escape HTML to prevent injection when interpolating user data into email templates
 const escapeHtml = (str: string) => {
   const htmlEscapes: Record<string, string> = {
@@ -61,7 +59,7 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
     ? escapeHtml(params.applicantId)
     : null;
 
-  const subject = `⚠️ Email Delivery Failure: ${safeEmailType}`;
+  const subject = `⚠️ Email Delivery Failure: ${params.emailType}`;
 
   const html = `
 <!DOCTYPE html>
@@ -69,7 +67,7 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${subject}</title>
+  <title>${safeEmailType}</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
@@ -160,6 +158,15 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
 export async function notifyQuestionnaireCompleted(
   params: QuestionnaireCompletedParams,
 ) {
+  const notificationEmail = process.env.NOTIFICATION_EMAIL;
+
+  if (!notificationEmail) {
+    console.warn(
+      "NOTIFICATION_EMAIL not configured - skipping questionnaire completion notification",
+    );
+    return;
+  }
+
   const safeFirstName = escapeHtml(params.firstName);
   const safeLastName = escapeHtml(params.lastName);
   const safeEmail = escapeHtml(params.email);
@@ -224,13 +231,16 @@ export async function notifyQuestionnaireCompleted(
 
   try {
     await sendEmail({
-      to: CONTACT_EMAIL,
+      to: notificationEmail,
       subject,
       html,
       emailType: "STATUS_UPDATE",
       applicantId: params.applicantId,
     });
-    console.log("Questionnaire completion notification sent to", CONTACT_EMAIL);
+    console.log(
+      "Questionnaire completion notification sent to",
+      notificationEmail,
+    );
   } catch (error) {
     console.error(
       "Failed to send questionnaire completion notification:",
@@ -243,6 +253,15 @@ export async function notifyQuestionnaireCompleted(
 export async function notifyApplicationSubmitted(
   params: ApplicationSubmittedParams,
 ) {
+  const notificationEmail = process.env.NOTIFICATION_EMAIL;
+
+  if (!notificationEmail) {
+    console.warn(
+      "NOTIFICATION_EMAIL not configured - skipping application submission notification",
+    );
+    return;
+  }
+
   const safeFirstName = escapeHtml(params.firstName);
   const safeLastName = escapeHtml(params.lastName);
   const safeEmail = escapeHtml(params.email);
@@ -313,13 +332,16 @@ export async function notifyApplicationSubmitted(
 
   try {
     await sendEmail({
-      to: CONTACT_EMAIL,
+      to: notificationEmail,
       subject,
       html,
       emailType: "STATUS_UPDATE",
       applicantId: params.applicantId,
     });
-    console.log("Application submission notification sent to", CONTACT_EMAIL);
+    console.log(
+      "Application submission notification sent to",
+      notificationEmail,
+    );
   } catch (error) {
     console.error("Failed to send application submission notification:", error);
     // Don't throw - notification failure shouldn't block the user flow
