@@ -7,38 +7,38 @@
 ### Section A: Service Consent
 
 1. I acknowledge that I have read and understand the Privacy Policy, and I consent to the collection, processing, and storage of my personal data as described therein. `[CHECKBOXES: I agree]`
-    - Your personal data includes profile information, questionnaire responses, photos, and communication history
-    - Data is stored securely and processed in accordance with applicable data protection laws
+   - Your personal data includes profile information, questionnaire responses, photos, and communication history
+   - Data is stored securely and processed in accordance with applicable data protection laws
 
 2. I consent to Reality Matchmaking using my questionnaire responses and profile data to generate compatibility assessments and match recommendations through our matching algorithms. `[CHECKBOXES: I agree]`
-    - Our matching system analyzes your responses to find compatible partners
-    - You can request information about how your data influences match recommendations
+   - Our matching system analyzes your responses to find compatible partners
+   - You can request information about how your data influences match recommendations
 
 3. I consent to undergo identity verification and background screening as part of the application process, and I authorize the release of relevant records for this purpose. `[CHECKBOXES: I agree]`
-    - Background checks are conducted by third-party providers (Checkr/iDenfy)
-    - Checks may include identity verification, criminal history, and other relevant screening
+   - Background checks are conducted by third-party providers (Checkr/iDenfy)
+   - Checks may include identity verification, criminal history, and other relevant screening
 
 4. I consent to my photos being stored and displayed to potential matches within the Reality Matchmaking platform. `[CHECKBOXES: I agree]`
-    - Photos will only be visible to other verified members
-    - You maintain ownership of your photos and can request deletion at any time
+   - Photos will only be visible to other verified members
+   - You maintain ownership of your photos and can request deletion at any time
 
 5. I consent to receiving communications from Reality Matchmaking regarding my application status, matches, events, and service updates via email and/or SMS. `[CHECKBOXES: I agree]`
-    - You can manage communication preferences in your account settings
-    - You may unsubscribe from non-essential communications at any time
+   - You can manage communication preferences in your account settings
+   - You may unsubscribe from non-essential communications at any time
 
 ### Section B: Research Participation Consent
 
 6. I understand that Reality Matchmaking conducts research to improve matchmaking outcomes and relationship science. My participation in research activities is voluntary and separate from my membership in the service. `[DROPDOWN: I understand, No I decline]`
-    - Research participation is optional and does not affect your membership status
+   - Research participation is optional and does not affect your membership status
 
 7. Do you consent to your anonymized and de-identified data being used for research purposes to advance the science of compatibility and relationship success? `[DROPDOWN: Yes I consent, No I do not consent]`
-    - All research data is anonymized - your identity will never be disclosed
-    - Research may be published in academic journals or presented at conferences
-    - You may withdraw research consent at any time without affecting your membership
+   - All research data is anonymized - your identity will never be disclosed
+   - Research may be published in academic journals or presented at conferences
+   - You may withdraw research consent at any time without affecting your membership
 
 8. If you consented to research participation above, please acknowledge the following: I understand that (a) my participation is voluntary, (b) I may withdraw at any time without penalty, (c) there are no direct risks from participating, (d) the potential benefits include contributing to relationship science, and (e) I can contact contact@realitymatchmaking.com with any questions. `[DROPDOWN: I acknowledge and understand, Not applicable - I declined research participation]`
-    - This acknowledgment is required per federal regulations (45 CFR 46) for human subjects research
-    - Your rights as a research participant are protected under these regulations
+   - This acknowledgment is required per federal regulations (45 CFR 46) for human subjects research
+   - Your rights as a research participant are protected under these regulations
 
 ### Section C: Terms of Service
 
@@ -244,7 +244,6 @@
 91. If your partner is having a difficult day or is in a bad mood, do you try to fix it and make them feel better, or do you provide them space to process while being stable and supportive? `[DROPDOWN: Try to fix it and make them feel better, Provide them space to process while being stable and supportive, A mix of both]`
 92. How easy do you think it is to skip on some your single lifesytle tasks/hobbies in order to spend more time with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 
-
 ---
 
 ## Page 9: Household & Domestic Life
@@ -261,7 +260,7 @@
 97. Do you prefer a "divided responsibility" model (e.g., I cook, you clean) or a "fluid teamwork" model where whoever is free handles whatever needs doing? `[DROPDOWN: Divided responsibility model, Fluid teamwork model, A mix of both]`
 98. Are you naturally the "Social Secretary" (tracking birthdays, friend meetups, and grocery lists), or do you prefer to have your schedule managed by someone else? `[DROPDOWN: I am the Social Secretary, I prefer someone else manages, We share equally]`
 99. When it comes to family or couple coordination (e.g., tracking a social calendar, planning a trip, or noticing supplies are low), do you naturally identify as the organizing everything or do you prefer to be the "Task Executor" who helps when asked? `[DROPDOWN: Organizer, Task Executor, Both equally]`
-100. In your ideal partnership, how is the "invisible work" of anticipating needs shared? `[DROPDOWN: One person leads in exchange for fewer physical chores, Both monitor and research equally, Flexible based on capacity]`
+100.  In your ideal partnership, how is the "invisible work" of anticipating needs shared? `[DROPDOWN: One person leads in exchange for fewer physical chores, Both monitor and research equally, Flexible based on capacity]`
 
 ---
 

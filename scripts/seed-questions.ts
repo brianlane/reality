@@ -671,11 +671,7 @@ async function main() {
   }
 
   // Read the markdown file
-  const markdownPath = path.join(
-    __dirname,
-    "..",
-    "finalDraftQuestions.md",
-  );
+  const markdownPath = path.join(__dirname, "..", "finalDraftQuestions.md");
 
   if (!fs.existsSync(markdownPath)) {
     console.error(`❌ Markdown file not found: ${markdownPath}`);
