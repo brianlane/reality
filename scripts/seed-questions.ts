@@ -37,12 +37,14 @@ interface ParsedQuestion {
 interface ParsedSection {
   title: string;
   order: number;
+  forResearch: boolean;
   questions: ParsedQuestion[];
 }
 
 interface ParsedPage {
   title: string;
   order: number;
+  forResearch: boolean;
   sections: ParsedSection[];
 }
 
@@ -220,6 +222,8 @@ function parseMarkdown(content: string): ParsedPage[] {
     const line = lines[i];
 
     // Match page header: ## Page X: Title
+    // Detects "(Research Participants Only)" suffix to set forResearch = true
+    // and strips it from the stored title.
     const pageMatch = line.match(/^## Page \d+:\s*(.+)$/);
     if (pageMatch) {
       if (currentPage) {
@@ -228,9 +232,15 @@ function parseMarkdown(content: string): ParsedPage[] {
         }
         pages.push(currentPage);
       }
+      const rawTitle = pageMatch[1].trim();
+      const researchOnly = /\(Research Participants Only\)\s*$/i.test(rawTitle);
+      const cleanTitle = rawTitle
+        .replace(/\s*\(Research Participants Only\)\s*$/i, "")
+        .trim();
       currentPage = {
-        title: pageMatch[1].trim(),
+        title: cleanTitle,
         order: pageOrder++,
+        forResearch: researchOnly,
         sections: [],
       };
       currentSection = null;
@@ -239,6 +249,7 @@ function parseMarkdown(content: string): ParsedPage[] {
     }
 
     // Match section header: ### Section X: Title
+    // Sections inherit forResearch from their parent page
     const sectionMatch = line.match(/^### Section [A-Z]:\s*(.+)$/);
     if (sectionMatch && currentPage) {
       if (currentSection) {
@@ -247,6 +258,7 @@ function parseMarkdown(content: string): ParsedPage[] {
       currentSection = {
         title: sectionMatch[1].trim(),
         order: sectionOrder++,
+        forResearch: currentPage.forResearch,
         questions: [],
       };
       continue;
@@ -260,6 +272,7 @@ function parseMarkdown(content: string): ParsedPage[] {
         currentSection = {
           title: "Questions",
           order: sectionOrder++,
+          forResearch: currentPage?.forResearch ?? false,
           questions: [],
         };
       }
@@ -407,14 +420,23 @@ async function upsertPages(pages: ParsedPage[]) {
       // Update existing page (restore if previously soft-deleted)
       await db.questionnairePage.update({
         where: { id: existingPage.id },
-        data: { title: page.title, order: page.order, deletedAt: null },
+        data: {
+          title: page.title,
+          order: page.order,
+          forResearch: page.forResearch,
+          deletedAt: null,
+        },
       });
       pageId = existingPage.id;
       updatedPages++;
     } else {
       // Create new page
       const created = await db.questionnairePage.create({
-        data: { title: page.title, order: page.order },
+        data: {
+          title: page.title,
+          order: page.order,
+          forResearch: page.forResearch,
+        },
       });
       pageId = created.id;
       createdPages++;
@@ -422,7 +444,7 @@ async function upsertPages(pages: ParsedPage[]) {
     activePageIds.push(pageId);
 
     console.log(
-      `  ${existingPage ? "↻" : "✓"} Page ${page.order + 1}: ${page.title}`,
+      `  ${existingPage ? "↻" : "✓"} Page ${page.order + 1}: ${page.title}${page.forResearch ? " [RESEARCH ONLY]" : ""}`,
     );
 
     // Upsert sections for this page (including soft-deleted for restoration)
@@ -471,6 +493,7 @@ async function upsertPages(pages: ParsedPage[]) {
           data: {
             title: section.title,
             order: section.order,
+            forResearch: section.forResearch,
             isActive: true,
             deletedAt: null,
           },
@@ -482,6 +505,7 @@ async function upsertPages(pages: ParsedPage[]) {
           data: {
             title: section.title,
             order: section.order,
+            forResearch: section.forResearch,
             pageId,
             isActive: true,
           },
@@ -650,7 +674,6 @@ async function main() {
   const markdownPath = path.join(
     __dirname,
     "..",
-    "docs",
     "finalDraftQuestions.md",
   );
 
