@@ -598,7 +598,11 @@ export default function QuestionnaireForm({
                   <Input
                     type={isNumeric ? "number" : "text"}
                     inputMode={isNumeric ? "decimal" : undefined}
-                    min={isNumeric ? (textOpts?.min ?? 0) : undefined}
+                    min={
+                      isNumeric && textOpts?.min !== undefined
+                        ? textOpts.min
+                        : undefined
+                    }
                     max={
                       isNumeric && textOpts?.max !== undefined
                         ? textOpts.max

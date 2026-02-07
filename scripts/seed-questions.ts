@@ -29,7 +29,7 @@ interface ParsedQuestion {
     | { minAge: number; maxAge: number }
     | { items: string[]; total: number }
     | { items: string[] }
-    | { validation: string }
+    | { validation: string; min?: number; max?: number }
     | null;
   helperText: string | null;
 }
@@ -68,7 +68,7 @@ function parseAnnotation(line: string): {
     | { minAge: number; maxAge: number }
     | { items: string[]; total: number }
     | { items: string[] }
-    | { validation: string }
+    | { validation: string; min?: number; max?: number }
     | null;
   cleanPrompt: string;
 } {
@@ -176,10 +176,12 @@ function parseAnnotation(line: string): {
   }
 
   // Parse TEXT:number - a text field with numeric validation
+  // Explicitly sets min: 0 so all layers (HTML, client validation, server
+  // validation) consistently prevent negative values.
   if (annotation === "TEXT:number") {
     return {
       type: "TEXT",
-      options: { validation: "number" },
+      options: { validation: "number", min: 0 },
       cleanPrompt,
     };
   }

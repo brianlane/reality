@@ -11,6 +11,18 @@ import { sendEmail } from "./client";
 
 const CONTACT_EMAIL = "contact@realitymatchmaking.com";
 
+// Escape HTML to prevent injection when interpolating user data into email templates
+const escapeHtml = (str: string) => {
+  const htmlEscapes: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  };
+  return str.replace(/[&<>"']/g, (char) => htmlEscapes[char] ?? char);
+};
+
 interface EmailFailureParams {
   recipientEmail: string;
   emailType: string;
@@ -42,7 +54,14 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
     return;
   }
 
-  const subject = `⚠️ Email Delivery Failure: ${params.emailType}`;
+  const safeEmailType = escapeHtml(params.emailType);
+  const safeRecipientEmail = escapeHtml(params.recipientEmail);
+  const safeErrorMessage = escapeHtml(params.errorMessage);
+  const safeApplicantId = params.applicantId
+    ? escapeHtml(params.applicantId)
+    : null;
+
+  const subject = `⚠️ Email Delivery Failure: ${safeEmailType}`;
 
   const html = `
 <!DOCTYPE html>
@@ -73,25 +92,25 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
         <table style="width: 100%; border-collapse: collapse;">
           <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600; width: 140px;">Email Type:</td>
-            <td style="padding: 8px 0; color: #1a2332;">${params.emailType}</td>
+            <td style="padding: 8px 0; color: #1a2332;">${safeEmailType}</td>
           </tr>
           <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Recipient:</td>
-            <td style="padding: 8px 0; color: #1a2332;">${params.recipientEmail}</td>
+            <td style="padding: 8px 0; color: #1a2332;">${safeRecipientEmail}</td>
           </tr>
           ${
-            params.applicantId
+            safeApplicantId
               ? `
           <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Applicant ID:</td>
-            <td style="padding: 8px 0; color: #1a2332; font-family: monospace; font-size: 14px;">${params.applicantId}</td>
+            <td style="padding: 8px 0; color: #1a2332; font-family: monospace; font-size: 14px;">${safeApplicantId}</td>
           </tr>
           `
               : ""
           }
           <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Error:</td>
-            <td style="padding: 8px 0; color: #991b1b; word-break: break-word;">${params.errorMessage}</td>
+            <td style="padding: 8px 0; color: #991b1b; word-break: break-word;">${safeErrorMessage}</td>
           </tr>
           <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Time:</td>
@@ -141,6 +160,11 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
 export async function notifyQuestionnaireCompleted(
   params: QuestionnaireCompletedParams,
 ) {
+  const safeFirstName = escapeHtml(params.firstName);
+  const safeLastName = escapeHtml(params.lastName);
+  const safeEmail = escapeHtml(params.email);
+  const safeApplicantId = escapeHtml(params.applicantId);
+
   const subject = "Research Questionnaire Completed";
 
   const html = `
@@ -169,15 +193,15 @@ export async function notifyQuestionnaireCompleted(
         <table style="width: 100%; border-collapse: collapse;">
           <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600; width: 140px;">Name:</td>
-            <td style="padding: 8px 0; color: #1a2332;">${params.firstName} ${params.lastName}</td>
+            <td style="padding: 8px 0; color: #1a2332;">${safeFirstName} ${safeLastName}</td>
           </tr>
           <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Email:</td>
-            <td style="padding: 8px 0; color: #1a2332;">${params.email}</td>
+            <td style="padding: 8px 0; color: #1a2332;">${safeEmail}</td>
           </tr>
           <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Applicant ID:</td>
-            <td style="padding: 8px 0; color: #1a2332; font-family: monospace; font-size: 14px;">${params.applicantId}</td>
+            <td style="padding: 8px 0; color: #1a2332; font-family: monospace; font-size: 14px;">${safeApplicantId}</td>
           </tr>
           <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Completed At:</td>
@@ -219,6 +243,11 @@ export async function notifyQuestionnaireCompleted(
 export async function notifyApplicationSubmitted(
   params: ApplicationSubmittedParams,
 ) {
+  const safeFirstName = escapeHtml(params.firstName);
+  const safeLastName = escapeHtml(params.lastName);
+  const safeEmail = escapeHtml(params.email);
+  const safeApplicantId = escapeHtml(params.applicantId);
+
   const subject = "New Application Submitted";
 
   const html = `
@@ -247,15 +276,15 @@ export async function notifyApplicationSubmitted(
         <table style="width: 100%; border-collapse: collapse;">
           <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600; width: 140px;">Name:</td>
-            <td style="padding: 8px 0; color: #1a2332;">${params.firstName} ${params.lastName}</td>
+            <td style="padding: 8px 0; color: #1a2332;">${safeFirstName} ${safeLastName}</td>
           </tr>
           <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Email:</td>
-            <td style="padding: 8px 0; color: #1a2332;">${params.email}</td>
+            <td style="padding: 8px 0; color: #1a2332;">${safeEmail}</td>
           </tr>
           <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Applicant ID:</td>
-            <td style="padding: 8px 0; color: #1a2332; font-family: monospace; font-size: 14px;">${params.applicantId}</td>
+            <td style="padding: 8px 0; color: #1a2332; font-family: monospace; font-size: 14px;">${safeApplicantId}</td>
           </tr>
           <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Submitted At:</td>
