@@ -29,6 +29,7 @@ interface ParsedQuestion {
     | { minAge: number; maxAge: number }
     | { items: string[]; total: number }
     | { items: string[] }
+    | { validation: string }
     | null;
   helperText: string | null;
 }
@@ -67,6 +68,7 @@ function parseAnnotation(line: string): {
     | { minAge: number; maxAge: number }
     | { items: string[]; total: number }
     | { items: string[] }
+    | { validation: string }
     | null;
   cleanPrompt: string;
 } {
@@ -169,6 +171,15 @@ function parseAnnotation(line: string): {
     return {
       type: "AGE_RANGE",
       options: { minAge: 18, maxAge: 80 },
+      cleanPrompt,
+    };
+  }
+
+  // Parse TEXT:number - a text field with numeric validation
+  if (annotation === "TEXT:number") {
+    return {
+      type: "TEXT",
+      options: { validation: "number" },
       cleanPrompt,
     };
   }
