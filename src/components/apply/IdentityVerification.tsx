@@ -76,6 +76,10 @@ export default function IdentityVerification({
             "Verification is still processing. Please try again in a few minutes, or contact support if this persists.",
           );
         }
+      } else {
+        setError(
+          "Unable to check verification status. Please try again later.",
+        );
       }
     } catch {
       setError("Unable to check status. Please try again.");

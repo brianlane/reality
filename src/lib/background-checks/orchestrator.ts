@@ -278,6 +278,13 @@ export async function onCheckrComplete(
     throw new Error(`Applicant not found: ${applicantId}`);
   }
 
+  if (applicant.deletedAt) {
+    logger.info("Skipping Checkr completion for soft-deleted applicant", {
+      applicantId,
+    });
+    return;
+  }
+
   logger.info("Checkr complete, orchestrating next step", {
     applicantId,
     checkrStatus: status,

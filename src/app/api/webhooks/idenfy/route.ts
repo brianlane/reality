@@ -67,22 +67,7 @@ export async function POST(request: Request) {
 
   const screeningStatus = mapIdenfyStatus(overallStatus);
 
-  // Update the iDenfy status
-  applicant = await db.applicant.update({
-    where: { id: applicant.id },
-    data: {
-      idenfyStatus: screeningStatus,
-      idenfyVerificationId: scanRef,
-    },
-  });
-
-  logger.info("iDenfy webhook processed", {
-    applicantId: applicant.id,
-    overallStatus,
-    mappedStatus: screeningStatus,
-  });
-
-  // Log to screening audit
+  // Log to screening audit (always, even for soft-deleted — compliance requirement)
   await db.screeningAuditLog
     .create({
       data: {
@@ -101,6 +86,30 @@ export async function POST(request: Request) {
         error: err instanceof Error ? err.message : String(err),
       });
     });
+
+  // Skip status updates and orchestration for soft-deleted applicants
+  if (applicant.deletedAt) {
+    logger.info("iDenfy webhook for soft-deleted applicant, skipping update", {
+      applicantId: applicant.id,
+      scanRef,
+    });
+    return successResponse({ received: true, processed: false });
+  }
+
+  // Update the iDenfy status
+  applicant = await db.applicant.update({
+    where: { id: applicant.id },
+    data: {
+      idenfyStatus: screeningStatus,
+      idenfyVerificationId: scanRef,
+    },
+  });
+
+  logger.info("iDenfy webhook processed", {
+    applicantId: applicant.id,
+    overallStatus,
+    mappedStatus: screeningStatus,
+  });
 
   // Trigger orchestrator for next steps (non-blocking)
   onIdenfyComplete(applicant.id, screeningStatus).catch((err: unknown) => {

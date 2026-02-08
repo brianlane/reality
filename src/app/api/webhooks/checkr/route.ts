@@ -114,16 +114,7 @@ async function handleReportCompleted(data: {
 
   const screeningStatus = mapCheckrResult(result);
 
-  // Update the Checkr status and store report ID
-  await db.applicant.update({
-    where: { id: applicant.id },
-    data: {
-      checkrStatus: screeningStatus,
-      checkrReportId: reportId,
-    },
-  });
-
-  // Audit log
+  // Audit log (always, even for soft-deleted — compliance requirement)
   await db.screeningAuditLog
     .create({
       data: {
@@ -143,6 +134,24 @@ async function handleReportCompleted(data: {
         error: err instanceof Error ? err.message : String(err),
       });
     });
+
+  // Skip status updates and orchestration for soft-deleted applicants
+  if (applicant.deletedAt) {
+    logger.info(
+      "Checkr report.completed for soft-deleted applicant, skipping update",
+      { applicantId: applicant.id, reportId },
+    );
+    return successResponse({ received: true, processed: false });
+  }
+
+  // Update the Checkr status and store report ID
+  await db.applicant.update({
+    where: { id: applicant.id },
+    data: {
+      checkrStatus: screeningStatus,
+      checkrReportId: reportId,
+    },
+  });
 
   logger.info("Checkr report completed", {
     applicantId: applicant.id,
