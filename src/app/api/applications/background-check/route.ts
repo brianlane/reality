@@ -103,8 +103,14 @@ export async function POST(request: Request) {
       });
     }
 
-    // Step 1: Create Checkr candidate
-    let candidateId = applicant.checkrCandidateId;
+    // Re-read checkrCandidateId from DB after the atomic claim, since the
+    // value from the initial fetch (line 42) may be stale if the orchestrator
+    // created a candidate between the fetch and the claim.
+    const freshApplicant = await db.applicant.findUnique({
+      where: { id: applicant.id },
+      select: { checkrCandidateId: true },
+    });
+    let candidateId = freshApplicant?.checkrCandidateId ?? null;
 
     try {
       if (!candidateId) {

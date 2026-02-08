@@ -182,8 +182,14 @@ export async function onIdenfyComplete(
   }
 
   try {
-    // Create Checkr candidate if not already created
-    let candidateId = applicant.checkrCandidateId;
+    // Re-read checkrCandidateId from DB after the atomic claim, since the
+    // value from the initial fetch may be stale if the admin route created
+    // a candidate between the fetch and the claim.
+    const freshApplicant = await db.applicant.findUnique({
+      where: { id: applicantId },
+      select: { checkrCandidateId: true },
+    });
+    let candidateId = freshApplicant?.checkrCandidateId ?? null;
 
     if (!candidateId) {
       const candidate = await createCandidate({
@@ -310,6 +316,17 @@ export async function finalizeScreening(applicantId: string): Promise<void> {
     throw new Error(`Applicant not found: ${applicantId}`);
   }
 
+  // Do not process soft-deleted applicants. A Checkr webhook may arrive
+  // after an admin has soft-deleted the applicant; enrolling them in
+  // continuous monitoring would incur ongoing costs and contradict the
+  // admin's explicit deletion intent.
+  if (applicant.deletedAt) {
+    logger.info("Skipping finalization for soft-deleted applicant", {
+      applicantId,
+    });
+    return;
+  }
+
   const idenfyPassed = applicant.idenfyStatus === "PASSED";
   const checkrPassed = applicant.checkrStatus === "PASSED";
 
@@ -337,6 +354,7 @@ export async function finalizeScreening(applicantId: string): Promise<void> {
           id: applicantId,
           continuousMonitoringId: null,
           checkrCandidateId: { not: null },
+          deletedAt: null,
         },
         // Set a unique placeholder to claim the slot; replaced with real ID below.
         // Must be unique per applicant since continuousMonitoringId has @unique.
