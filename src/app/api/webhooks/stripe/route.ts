@@ -79,35 +79,41 @@ export async function POST(request: Request) {
     }
 
     if (paymentId && status) {
-      // Idempotency / terminal-state check.
-      // REFUNDED and SUCCEEDED are terminal states:
-      //  - REFUNDED must never regress to SUCCEEDED (delayed webhook replay)
-      //  - SUCCEEDED must never regress to FAILED (stale failure from an
-      //    earlier declined attempt arriving after the successful retry)
-      // Only PENDING is freely transitional to any other status.
-      const existingPayment = await db.payment.findUnique({
-        where: { id: paymentId },
-        select: { status: true },
-      });
-
-      if (
-        existingPayment &&
-        (existingPayment.status === status ||
-          existingPayment.status === "REFUNDED" ||
-          (existingPayment.status === "SUCCEEDED" && status === "FAILED"))
-      ) {
-        return successResponse({ received: true, eventId: event.id });
+      // Atomic conditional update: use updateMany with a WHERE clause on
+      // the current status so the database enforces that only ONE concurrent
+      // webhook handler can transition the payment. The loser gets count=0.
+      //
+      // Blocked statuses (update will be skipped if current status is):
+      //  - Same as target (idempotent, already processed)
+      //  - REFUNDED (terminal, must never regress)
+      //  - SUCCEEDED when target is FAILED (stale failure from earlier attempt)
+      const blockedStatuses: string[] = [status, "REFUNDED"];
+      if (status === "FAILED") {
+        blockedStatuses.push("SUCCEEDED");
       }
 
-      const payment = await db.payment.update({
-        where: { id: paymentId },
+      const updated = await db.payment.updateMany({
+        where: {
+          id: paymentId,
+          status: { notIn: blockedStatuses as never },
+        },
         data: {
           status,
-          // Store the Stripe Payment Intent ID for future refunds
           ...(stripePaymentIntentId
             ? { stripePaymentId: stripePaymentIntentId }
             : {}),
         },
+      });
+
+      // If no rows were updated, another handler already processed this
+      // event or the payment is in a terminal state — exit early.
+      if (updated.count === 0) {
+        return successResponse({ received: true, eventId: event.id });
+      }
+
+      // Fetch the payment data needed for post-processing (email, status update)
+      const payment = await db.payment.findUnique({
+        where: { id: paymentId },
         select: {
           applicantId: true,
           type: true,
@@ -125,6 +131,10 @@ export async function POST(request: Request) {
           },
         },
       });
+
+      if (!payment) {
+        return successResponse({ received: true, eventId: event.id });
+      }
 
       if (status === "SUCCEEDED") {
         // Application-specific: advance applicant status after application fee
