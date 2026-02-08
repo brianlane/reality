@@ -22,6 +22,10 @@ const SENSITIVE_FIELDS = [
   "ssn",
   "email", // Optionally redact email in logs
   "phone",
+  "dob",
+  "dateOfBirth",
+  "authToken", // iDenfy auth tokens
+  "scanRef", // iDenfy scan references
 ];
 
 function redactSensitiveData(

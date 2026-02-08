@@ -5,6 +5,8 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { ensureApplicantAccount } from "@/lib/account-init";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notifyApplicationSubmitted } from "@/lib/email/admin-notifications";
+import { initiateScreening } from "@/lib/background-checks/orchestrator";
+import { logger } from "@/lib/logger";
 
 const APPLICATION_FEE_AMOUNT = 19900;
 
@@ -114,6 +116,16 @@ export async function POST(request: NextRequest) {
       }).catch(() => {
         // Silently ignore - notification failure shouldn't affect the response
       });
+
+      // If FCRA consent has already been given, auto-initiate screening (non-blocking)
+      if (applicant.backgroundCheckConsentAt) {
+        initiateScreening(applicant.id).catch((err: unknown) => {
+          logger.error("Failed to auto-initiate screening after submission", {
+            applicantId: applicant.id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
+      }
 
       return successResponse({
         applicationId: applicant.id,

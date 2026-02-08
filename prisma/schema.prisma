@@ -34,6 +34,7 @@ model User {
   
   applicant     Applicant?
   adminActions  AdminAction[]
+  screeningAuditLogs ScreeningAuditLog[]
   
   @@index([email])
   @@index([clerkId])
@@ -127,6 +128,14 @@ model Applicant {
   checkrStatus          ScreeningStatus   @default(PENDING)
   checkrReportId        String?           @unique
   backgroundCheckNotes  String?           // General notes, NOT sensitive data
+
+  // FCRA Consent tracking
+  backgroundCheckConsentAt DateTime?      // When standalone FCRA disclosure was signed
+  backgroundCheckConsentIp String?        // IP address at time of consent
+
+  // Checkr integration IDs
+  checkrCandidateId     String?           @unique // Checkr's candidate UUID
+  continuousMonitoringId String?          @unique // Checkr continuous monitoring subscription ID
   
   // Compatibility & Matching
   compatibilityScore    Float?            // 0-100 calculated score
@@ -146,6 +155,7 @@ model Applicant {
   matches               Match[]           @relation("ApplicantMatches")
   matchesAsPartner      Match[]           @relation("PartnerMatches")
   emailLogs             EmailLog[]
+  screeningAuditLogs    ScreeningAuditLog[]
 
   @@index([applicationStatus])
   @@index([gender])
@@ -613,4 +623,24 @@ model EmailLog {
   @@index([status])
   @@index([sentAt])
   @@index([recipientEmail])
+}
+
+// ============================================
+// SCREENING AUDIT LOG
+// ============================================
+
+model ScreeningAuditLog {
+  id          String   @id @default(cuid())
+  userId      String   // Admin who performed the action
+  applicantId String   // Target applicant
+  action      String   // VIEW_REPORT, TRIGGER_CHECK, ADVERSE_ACTION, etc.
+  metadata    Json?    // Additional context (report type, IP, etc.)
+  createdAt   DateTime @default(now())
+
+  user        User      @relation(fields: [userId], references: [id])
+  applicant   Applicant @relation(fields: [applicantId], references: [id])
+
+  @@index([applicantId])
+  @@index([userId])
+  @@index([createdAt])
 }

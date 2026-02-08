@@ -60,6 +60,17 @@ export async function GET(request: Request, { params }: RouteContext) {
       applicationStatus: applicant.applicationStatus,
       submittedAt: applicant.submittedAt,
       photos: applicant.photos,
+      // Screening fields (flattened for admin form)
+      screeningStatus: applicant.screeningStatus,
+      idenfyStatus: applicant.idenfyStatus,
+      idenfyVerificationId: applicant.idenfyVerificationId,
+      checkrStatus: applicant.checkrStatus,
+      checkrReportId: applicant.checkrReportId,
+      checkrCandidateId: applicant.checkrCandidateId,
+      backgroundCheckNotes: applicant.backgroundCheckNotes,
+      backgroundCheckConsentAt: applicant.backgroundCheckConsentAt,
+      backgroundCheckConsentIp: applicant.backgroundCheckConsentIp,
+      continuousMonitoringId: applicant.continuousMonitoringId,
     },
     questionnaire: applicant.questionnaire,
     screening: {

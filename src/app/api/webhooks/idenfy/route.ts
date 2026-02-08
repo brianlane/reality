@@ -4,16 +4,21 @@ import {
   mapIdenfyStatus,
   verifyIdenfySignature,
 } from "@/lib/background-checks/idenfy";
+import { onIdenfyComplete } from "@/lib/background-checks/orchestrator";
+import { logger } from "@/lib/logger";
+
+import type { IdenfyWebhookPayload } from "@/lib/background-checks/idenfy";
 
 export async function POST(request: Request) {
   const signature = request.headers.get("x-idenfy-signature") ?? "";
   const payload = await request.text();
 
   if (!verifyIdenfySignature(signature, payload)) {
+    logger.warn("iDenfy webhook signature verification failed");
     return errorResponse("FORBIDDEN", "Invalid signature", 403);
   }
 
-  let body: { clientId?: string; status?: string };
+  let body: IdenfyWebhookPayload;
   try {
     body = JSON.parse(payload);
   } catch (error) {
@@ -21,31 +26,89 @@ export async function POST(request: Request) {
       { message: (error as Error).message },
     ]);
   }
-  const applicantId = body.clientId;
 
-  if (!applicantId) {
-    return errorResponse("VALIDATION_ERROR", "Missing applicantId", 400);
+  // iDenfy sends interim and final callbacks; only process final results
+  if (!body.final) {
+    logger.info("iDenfy interim webhook received, skipping", {
+      scanRef: body.scanRef,
+    });
+    return successResponse({ received: true, processed: false });
   }
 
-  if (!body.status) {
-    return errorResponse("VALIDATION_ERROR", "Missing status", 400);
+  const overallStatus = body.status?.overall;
+  const scanRef = body.scanRef;
+  const clientId = body.clientId;
+
+  if (!overallStatus || !scanRef) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "Missing status.overall or scanRef",
+      400,
+    );
   }
 
-  const status = mapIdenfyStatus(body.status);
-  const applicant = await db.applicant.findUnique({
-    where: { id: applicantId },
-  });
-
-  if (!applicant) {
-    return errorResponse("NOT_FOUND", "Applicant not found", 404);
-  }
-
-  await db.applicant.update({
-    where: { id: applicantId },
-    data: {
-      idenfyStatus: status as never,
+  // Look up applicant by scanRef (idenfyVerificationId) or clientId (our applicant ID)
+  let applicant = await db.applicant.findFirst({
+    where: {
+      OR: [
+        { idenfyVerificationId: scanRef },
+        ...(clientId ? [{ id: clientId }] : []),
+      ],
     },
   });
 
-  return successResponse({ received: true });
+  if (!applicant) {
+    logger.warn("iDenfy webhook: applicant not found", {
+      scanRef,
+      clientId,
+    });
+    return errorResponse("NOT_FOUND", "Applicant not found", 404);
+  }
+
+  const screeningStatus = mapIdenfyStatus(overallStatus);
+
+  // Update the iDenfy status
+  applicant = await db.applicant.update({
+    where: { id: applicant.id },
+    data: {
+      idenfyStatus: screeningStatus,
+      idenfyVerificationId: scanRef,
+    },
+  });
+
+  logger.info("iDenfy webhook processed", {
+    applicantId: applicant.id,
+    overallStatus,
+    mappedStatus: screeningStatus,
+  });
+
+  // Log to screening audit
+  await db.screeningAuditLog
+    .create({
+      data: {
+        userId: "system",
+        applicantId: applicant.id,
+        action: "IDENFY_WEBHOOK",
+        metadata: {
+          scanRef,
+          overallStatus,
+          mappedStatus: screeningStatus,
+        },
+      },
+    })
+    .catch((err: unknown) => {
+      logger.warn("Failed to create screening audit log", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+
+  // Trigger orchestrator for next steps (non-blocking)
+  onIdenfyComplete(applicant.id, screeningStatus).catch((err: unknown) => {
+    logger.error("Orchestrator onIdenfyComplete failed", {
+      applicantId: applicant.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
+
+  return successResponse({ received: true, processed: true });
 }
