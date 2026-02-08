@@ -52,14 +52,15 @@ export default function PaymentAction({
 
       if (data.checkoutUrl) {
         setStatus("Redirecting to secure checkout...");
+        // Keep loading=true so the button stays disabled until the page unloads
         window.location.href = data.checkoutUrl;
         return;
       }
 
       setStatus("Unable to create checkout session. Please try again.");
+      setLoading(false);
     } catch {
       setStatus("An error occurred. Please try again.");
-    } finally {
       setLoading(false);
     }
   }
