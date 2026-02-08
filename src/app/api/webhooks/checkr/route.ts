@@ -83,6 +83,11 @@ async function handleReportCompleted(data: {
   const result = data.result ?? null;
   const candidateId = data.candidate_id;
 
+  if (!reportId) {
+    logger.warn("Checkr report.completed missing report id");
+    return errorResponse("VALIDATION_ERROR", "Missing report id", 400);
+  }
+
   if (!candidateId) {
     logger.warn("Checkr report.completed missing candidate_id", { reportId });
     return errorResponse("VALIDATION_ERROR", "Missing candidate_id", 400);

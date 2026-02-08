@@ -364,17 +364,32 @@ export async function finalizeScreening(applicantId: string): Promise<void> {
       if (monitorClaimed.count > 0) {
         enrollContinuousMonitoring(applicant.checkrCandidateId)
           .then(async (monitor) => {
-            await db.applicant.update({
-              where: { id: applicantId },
-              data: { continuousMonitoringId: monitor.id },
-            });
-            logger.info("Continuous monitoring enrolled", {
-              applicantId,
-              monitorId: monitor.id,
-            });
+            try {
+              await db.applicant.update({
+                where: { id: applicantId },
+                data: { continuousMonitoringId: monitor.id },
+              });
+              logger.info("Continuous monitoring enrolled", {
+                applicantId,
+                monitorId: monitor.id,
+              });
+            } catch (dbErr: unknown) {
+              // DB update failed AFTER the Checkr API succeeded.
+              // Do NOT clear the placeholder -- it prevents duplicate enrollments.
+              // Log the real monitoring ID at error level so it can be recovered manually.
+              logger.error(
+                "Failed to store monitoring ID after successful enrollment — manual recovery required",
+                {
+                  applicantId,
+                  monitorId: monitor.id, // CRITICAL: real Checkr subscription ID
+                  error: dbErr instanceof Error ? dbErr.message : String(dbErr),
+                },
+              );
+            }
           })
           .catch(async (err: unknown) => {
-            // Clear the placeholder so it can be retried
+            // API call failed — no Checkr subscription was created.
+            // Clear the placeholder so enrollment can be retried.
             await db.applicant.update({
               where: { id: applicantId },
               data: { continuousMonitoringId: null },

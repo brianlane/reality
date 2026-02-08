@@ -104,6 +104,20 @@ export async function createVerificationSession(applicant: {
 
   const data = await response.json();
 
+  if (!data.authToken || !data.scanRef) {
+    logger.error(
+      "iDenfy returned 200 but response is missing required fields",
+      {
+        applicantId: applicant.id,
+        hasAuthToken: !!data.authToken,
+        hasScanRef: !!data.scanRef,
+      },
+    );
+    throw new Error(
+      "iDenfy response missing required fields (authToken or scanRef)",
+    );
+  }
+
   return {
     authToken: data.authToken,
     scanRef: data.scanRef,
