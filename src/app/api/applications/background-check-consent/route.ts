@@ -128,7 +128,7 @@ export async function POST(request: Request) {
 
     return successResponse({
       status: "consent_recorded",
-      consentedAt: new Date().toISOString(),
+      consentedAt: consentTimestamp.toISOString(),
       message: "Background check consent has been recorded successfully.",
     });
   } catch (error) {

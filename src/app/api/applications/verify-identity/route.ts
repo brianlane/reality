@@ -72,10 +72,11 @@ export async function POST(request: Request) {
       });
     }
 
-    // Atomically claim the PENDING -> IN_PROGRESS transition to prevent
-    // duplicate iDenfy sessions from concurrent requests.
+    // Atomically claim the PENDING/FAILED -> IN_PROGRESS transition to prevent
+    // duplicate iDenfy sessions from concurrent requests. Matching FAILED allows
+    // users to retry after a failed verification attempt.
     const claimed = await db.applicant.updateMany({
-      where: { id: applicant.id, idenfyStatus: "PENDING" },
+      where: { id: applicant.id, idenfyStatus: { in: ["PENDING", "FAILED"] } },
       data: { idenfyStatus: "IN_PROGRESS" },
     });
 
