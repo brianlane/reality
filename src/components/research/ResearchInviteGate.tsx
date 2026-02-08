@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { CopperIcon } from "@/components/ui/copper-icon";
 
 type ResearchInviteGateProps = {
   code: string;
@@ -77,21 +78,7 @@ export default function ResearchInviteGate({ code }: ResearchInviteGateProps) {
     return (
       <div className="mx-auto max-w-2xl space-y-6 py-12">
         <div className="text-center">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-copper/10">
-            <svg
-              className="h-10 w-10 text-copper"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18 18 6M6 6l12 12"
-              />
-            </svg>
-          </div>
+          <CopperIcon d="M6 18 18 6M6 6l12 12" />
         </div>
         <div className="space-y-2 text-center">
           <h1 className="text-2xl font-bold text-navy">

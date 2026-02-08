@@ -1,26 +1,11 @@
 import Link from "next/link";
 import type { Applicant } from "@prisma/client";
 import type { ReactNode } from "react";
+import { CopperIcon } from "@/components/ui/copper-icon";
 
 type Props = {
   application: Applicant;
 };
-
-function CopperIcon({ d }: { d: string }) {
-  return (
-    <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-copper/10">
-      <svg
-        className="h-10 w-10 text-copper"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        strokeWidth={1.5}
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d={d} />
-      </svg>
-    </div>
-  );
-}
 
 export default function ExistingApplicationStatus({ application }: Props) {
   const { applicationStatus, waitlistInviteToken, researchInviteCode } =
