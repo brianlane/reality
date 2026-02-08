@@ -68,19 +68,27 @@ export default function PreviewQuestionnaire() {
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState<"application" | "research">(
+    "application",
+  );
   const sectionsCache = useRef<Map<string, Section[]>>(new Map());
 
   useEffect(() => {
     const controller = new AbortController();
     let isMounted = true;
 
+    // Clear cache when preview mode changes so pages are re-fetched
+    sectionsCache.current.clear();
+
     const loadQuestionnaire = async () => {
       try {
         if (isMounted) {
           setLoading(true);
         }
+        const modeParam =
+          previewMode === "research" ? "&previewMode=research" : "";
         const res = await fetch(
-          `/api/applications/questionnaire?applicationId=${MOCK_APPLICATION_ID}`,
+          `/api/applications/questionnaire?applicationId=${MOCK_APPLICATION_ID}${modeParam}`,
           { signal: controller.signal },
         );
         const json = await res.json();
@@ -96,6 +104,7 @@ export default function PreviewQuestionnaire() {
         const pagesData = json.pages ?? [];
         if (isMounted) {
           setPages(pagesData);
+          setCurrentPageIndex(0);
         }
 
         if (pagesData.length === 0) {
@@ -109,7 +118,7 @@ export default function PreviewQuestionnaire() {
         const pageResults = await Promise.all(
           pagesData.map(async (page: PageInfo) => {
             const res = await fetch(
-              `/api/applications/questionnaire?applicationId=${MOCK_APPLICATION_ID}&pageId=${page.id}`,
+              `/api/applications/questionnaire?applicationId=${MOCK_APPLICATION_ID}&pageId=${page.id}${modeParam}`,
               { signal: controller.signal },
             );
             const pageJson = await res.json();
@@ -151,7 +160,7 @@ export default function PreviewQuestionnaire() {
       isMounted = false;
       controller.abort();
     };
-  }, []);
+  }, [previewMode]);
 
   // Load sections when page changes
   useEffect(() => {
@@ -170,8 +179,10 @@ export default function PreviewQuestionnaire() {
           }
           return;
         }
+        const modeParam =
+          previewMode === "research" ? "&previewMode=research" : "";
         const res = await fetch(
-          `/api/applications/questionnaire?applicationId=${MOCK_APPLICATION_ID}&pageId=${pageId}`,
+          `/api/applications/questionnaire?applicationId=${MOCK_APPLICATION_ID}&pageId=${pageId}${modeParam}`,
           { signal: controller.signal },
         );
         const json = await res.json();
@@ -196,7 +207,7 @@ export default function PreviewQuestionnaire() {
       isMounted = false;
       controller.abort();
     };
-  }, [currentPageIndex, pages]);
+  }, [currentPageIndex, pages, previewMode]);
 
   if (loading) {
     return (
@@ -338,15 +349,42 @@ export default function PreviewQuestionnaire() {
   return (
     <div className="space-y-4">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-800">
-          <strong>Preview Mode:</strong> This shows the actual questionnaire
-          configuration from the database with sample answers. Changes you make
-          in the Admin Questionnaire editor will appear here and in the real
-          application.
-        </p>
-        <p className="text-xs text-blue-600 mt-2">
-          Showing {sections.length} section(s) with {totalQuestions} question(s)
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm text-blue-800">
+              <strong>Preview Mode:</strong> This shows the actual questionnaire
+              configuration from the database with sample answers. Changes you
+              make in the Admin Questionnaire editor will appear here and in the
+              real application.
+            </p>
+            <p className="text-xs text-blue-600 mt-2">
+              Showing {sections.length} section(s) with {totalQuestions}{" "}
+              question(s)
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setPreviewMode("application")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                previewMode === "application"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-blue-700 border border-blue-300 hover:bg-blue-50"
+              }`}
+            >
+              Application
+            </button>
+            <button
+              onClick={() => setPreviewMode("research")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                previewMode === "research"
+                  ? "bg-purple-600 text-white"
+                  : "bg-white text-purple-700 border border-purple-300 hover:bg-purple-50"
+              }`}
+            >
+              Research
+            </button>
+          </div>
+        </div>
       </div>
 
       {pages.length > 0 && (
