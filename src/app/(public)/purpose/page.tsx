@@ -474,7 +474,7 @@ export default function PurposePage() {
       {/* Works Cited */}
       <section className="mx-auto max-w-3xl px-6 py-16">
         <h2 className="text-2xl font-semibold text-navy">Works Cited</h2>
-        <div className="mt-6 space-y-0 text-sm text-navy-soft">
+        <div className="mt-6 text-sm text-navy-soft">
           <p className="works-cited">
             Aron, A., Norman, C. C., Aron, E. N., McKenna, C., &amp; Heyman, R.
             E. (2000). Couples&rsquo; shared participation in novel and arousing
