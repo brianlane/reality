@@ -66,34 +66,45 @@ export async function initiateScreening(applicantId: string): Promise<void> {
     });
   });
 
-  // Create iDenfy verification session if not already started
-  if (applicant.idenfyStatus === "PENDING") {
-    try {
-      const session = await createVerificationSession({
-        id: applicant.id,
-        firstName: applicant.user.firstName,
-        lastName: applicant.user.lastName,
-      });
+  // Atomically claim the PENDING -> IN_PROGRESS transition to prevent
+  // duplicate iDenfy sessions from concurrent calls (e.g. consent + submit).
+  const claimed = await db.applicant.updateMany({
+    where: { id: applicantId, idenfyStatus: "PENDING" },
+    data: { idenfyStatus: "IN_PROGRESS" },
+  });
 
-      await db.applicant.update({
-        where: { id: applicantId },
-        data: {
-          idenfyVerificationId: session.scanRef,
-          idenfyStatus: "IN_PROGRESS",
-        },
-      });
+  if (claimed.count === 0) {
+    logger.info("iDenfy session already initiated, skipping", { applicantId });
+    return;
+  }
 
-      logger.info("iDenfy verification session created by orchestrator", {
-        applicantId,
-        scanRef: session.scanRef,
-      });
-    } catch (err: unknown) {
-      logger.error("Failed to create iDenfy session in orchestrator", {
-        applicantId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      // Don't fail the entire pipeline -- admin can retry manually
-    }
+  try {
+    const session = await createVerificationSession({
+      id: applicant.id,
+      firstName: applicant.user.firstName,
+      lastName: applicant.user.lastName,
+    });
+
+    await db.applicant.update({
+      where: { id: applicantId },
+      data: { idenfyVerificationId: session.scanRef },
+    });
+
+    logger.info("iDenfy verification session created by orchestrator", {
+      applicantId,
+      scanRef: session.scanRef,
+    });
+  } catch (err: unknown) {
+    // Roll back the status so it can be retried
+    await db.applicant.update({
+      where: { id: applicantId },
+      data: { idenfyStatus: "PENDING" },
+    });
+    logger.error("Failed to create iDenfy session in orchestrator", {
+      applicantId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    // Don't fail the entire pipeline -- admin can retry manually
   }
 }
 
@@ -148,60 +159,69 @@ export async function onIdenfyComplete(
     return;
   }
 
-  // PASSED -- trigger Checkr background check
-  if (applicant.checkrStatus === "PENDING") {
-    try {
-      // Create Checkr candidate if not already created
-      let candidateId = applicant.checkrCandidateId;
+  // PASSED -- atomically claim PENDING -> IN_PROGRESS to prevent duplicate
+  // Checkr invitations from concurrent/duplicate iDenfy webhooks.
+  const claimed = await db.applicant.updateMany({
+    where: { id: applicantId, checkrStatus: "PENDING" },
+    data: { checkrStatus: "IN_PROGRESS" },
+  });
 
-      if (!candidateId) {
-        const candidate = await createCandidate({
-          firstName: applicant.user.firstName,
-          lastName: applicant.user.lastName,
-          email: applicant.user.email,
-        });
-        candidateId = candidate.id;
+  if (claimed.count === 0) {
+    logger.info("Checkr already initiated, skipping", { applicantId });
+    return;
+  }
 
-        await db.applicant.update({
-          where: { id: applicantId },
-          data: { checkrCandidateId: candidateId },
-        });
-      }
+  try {
+    // Create Checkr candidate if not already created
+    let candidateId = applicant.checkrCandidateId;
 
-      // Send Checkr invitation
-      const invitation = await createInvitation(candidateId);
+    if (!candidateId) {
+      const candidate = await createCandidate({
+        firstName: applicant.user.firstName,
+        lastName: applicant.user.lastName,
+        email: applicant.user.email,
+      });
+      candidateId = candidate.id;
 
       await db.applicant.update({
         where: { id: applicantId },
-        data: { checkrStatus: "IN_PROGRESS" },
+        data: { checkrCandidateId: candidateId },
       });
-
-      // Audit log
-      await db.screeningAuditLog.create({
-        data: {
-          userId: null,
-          applicantId,
-          action: "CHECKR_AUTO_TRIGGERED",
-          metadata: {
-            candidateId,
-            invitationId: invitation.id,
-            triggeredBy: "idenfy_pass",
-          },
-        },
-      });
-
-      logger.info("Checkr background check auto-triggered after iDenfy pass", {
-        applicantId,
-        candidateId,
-        invitationId: invitation.id,
-      });
-    } catch (err: unknown) {
-      logger.error("Failed to auto-trigger Checkr after iDenfy pass", {
-        applicantId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      // Don't fail -- admin can trigger manually
     }
+
+    // Send Checkr invitation
+    const invitation = await createInvitation(candidateId);
+
+    // Audit log
+    await db.screeningAuditLog.create({
+      data: {
+        userId: null,
+        applicantId,
+        action: "CHECKR_AUTO_TRIGGERED",
+        metadata: {
+          candidateId,
+          invitationId: invitation.id,
+          triggeredBy: "idenfy_pass",
+        },
+      },
+    });
+
+    logger.info("Checkr background check auto-triggered after iDenfy pass", {
+      applicantId,
+      candidateId,
+      invitationId: invitation.id,
+    });
+  } catch (err: unknown) {
+    // Roll back so it can be retried
+    await db.applicant.update({
+      where: { id: applicantId },
+      data: { checkrStatus: "PENDING" },
+    });
+    logger.error("Failed to auto-trigger Checkr after iDenfy pass", {
+      applicantId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    // Don't fail -- admin can trigger manually
   }
 }
 
@@ -298,25 +318,44 @@ export async function finalizeScreening(applicantId: string): Promise<void> {
 
     logger.info("Screening finalized: PASSED", { applicantId });
 
-    // Enroll in continuous monitoring (non-blocking)
-    if (applicant.checkrCandidateId && !applicant.continuousMonitoringId) {
-      enrollContinuousMonitoring(applicant.checkrCandidateId)
-        .then(async (monitor) => {
-          await db.applicant.update({
-            where: { id: applicantId },
-            data: { continuousMonitoringId: monitor.id },
+    // Enroll in continuous monitoring (non-blocking).
+    // Use atomic conditional update to prevent duplicate enrollments from
+    // concurrent webhook deliveries.
+    if (applicant.checkrCandidateId) {
+      const monitorClaimed = await db.applicant.updateMany({
+        where: {
+          id: applicantId,
+          continuousMonitoringId: null,
+          checkrCandidateId: { not: null },
+        },
+        // Set a placeholder to claim the slot; replaced with real ID below
+        data: { continuousMonitoringId: "enrolling" },
+      });
+
+      if (monitorClaimed.count > 0) {
+        enrollContinuousMonitoring(applicant.checkrCandidateId)
+          .then(async (monitor) => {
+            await db.applicant.update({
+              where: { id: applicantId },
+              data: { continuousMonitoringId: monitor.id },
+            });
+            logger.info("Continuous monitoring enrolled", {
+              applicantId,
+              monitorId: monitor.id,
+            });
+          })
+          .catch(async (err: unknown) => {
+            // Clear the placeholder so it can be retried
+            await db.applicant.update({
+              where: { id: applicantId },
+              data: { continuousMonitoringId: null },
+            });
+            logger.error("Failed to enroll continuous monitoring", {
+              applicantId,
+              error: err instanceof Error ? err.message : String(err),
+            });
           });
-          logger.info("Continuous monitoring enrolled", {
-            applicantId,
-            monitorId: monitor.id,
-          });
-        })
-        .catch((err: unknown) => {
-          logger.error("Failed to enroll continuous monitoring", {
-            applicantId,
-            error: err instanceof Error ? err.message : String(err),
-          });
-        });
+      }
     }
   } else {
     // At least one failed
