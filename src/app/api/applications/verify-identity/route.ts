@@ -89,13 +89,22 @@ export async function POST(request: Request) {
       });
     }
 
-    // Create iDenfy verification session
+    // Create iDenfy verification session and store the verification ID.
+    // Both steps are covered by the same try-catch so that if either fails,
+    // the status rolls back and the user can retry. An orphaned iDenfy session
+    // (created but not stored) is acceptable -- sessions expire automatically.
     let session;
     try {
       session = await createVerificationSession({
         id: applicant.id,
         firstName: applicant.user.firstName,
         lastName: applicant.user.lastName,
+      });
+
+      // Store the verification ID (status already IN_PROGRESS from atomic claim)
+      await db.applicant.update({
+        where: { id: applicant.id },
+        data: { idenfyVerificationId: session.scanRef },
       });
     } catch (err) {
       // Roll back the status so it can be retried
@@ -105,12 +114,6 @@ export async function POST(request: Request) {
       });
       throw err;
     }
-
-    // Store the verification ID (status already IN_PROGRESS from atomic claim)
-    await db.applicant.update({
-      where: { id: applicant.id },
-      data: { idenfyVerificationId: session.scanRef },
-    });
 
     logger.info("iDenfy verification session created", {
       applicantId: applicant.id,

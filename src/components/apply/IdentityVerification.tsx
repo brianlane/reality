@@ -22,10 +22,12 @@ export default function IdentityVerification({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pollCount, setPollCount] = useState(0);
+  const [pollTimedOut, setPollTimedOut] = useState(false);
 
   const updateStatus = useCallback(
     (newStatus: VerificationStatus) => {
       setStatus(newStatus);
+      setPollTimedOut(false);
       onStatusChange?.(newStatus);
     },
     [onStatusChange],
@@ -33,7 +35,13 @@ export default function IdentityVerification({
 
   // Poll for status updates when verification is in progress
   useEffect(() => {
-    if (status !== "IN_PROGRESS") return;
+    if (status !== "IN_PROGRESS" || pollTimedOut) return;
+
+    // Stop polling after 10 minutes (120 polls) and show timeout UI
+    if (pollCount >= 120) {
+      setPollTimedOut(true);
+      return;
+    }
 
     const interval = setInterval(async () => {
       try {
@@ -52,13 +60,29 @@ export default function IdentityVerification({
       }
     }, 5000); // Poll every 5 seconds
 
-    // Stop polling after 10 minutes (120 polls)
-    if (pollCount >= 120) {
-      clearInterval(interval);
-    }
-
     return () => clearInterval(interval);
-  }, [status, applicationId, pollCount, updateStatus]);
+  }, [status, applicationId, pollCount, pollTimedOut, updateStatus]);
+
+  const checkStatusManually = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/applications/status/${applicationId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.idenfyStatus && data.idenfyStatus !== "IN_PROGRESS") {
+          updateStatus(data.idenfyStatus);
+        } else {
+          setError(
+            "Verification is still processing. Please try again in a few minutes, or contact support if this persists.",
+          );
+        }
+      }
+    } catch {
+      setError("Unable to check status. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const initiateVerification = async () => {
     setIsLoading(true);
@@ -170,12 +194,32 @@ export default function IdentityVerification({
         </div>
       )}
 
-      {status === "IN_PROGRESS" && !verificationUrl && (
+      {status === "IN_PROGRESS" && !verificationUrl && !pollTimedOut && (
         <div className="flex items-center justify-center gap-2 py-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-copper border-t-transparent" />
           <span className="text-sm text-navy-soft">
             Waiting for verification result...
           </span>
+        </div>
+      )}
+
+      {status === "IN_PROGRESS" && pollTimedOut && (
+        <div className="space-y-3">
+          <div className="rounded-md bg-amber-50 border border-amber-200 p-3">
+            <p className="text-sm text-amber-800">
+              Verification is taking longer than expected. It may still be
+              processing. You can check the status or contact support if the
+              issue persists.
+            </p>
+          </div>
+          <Button
+            onClick={checkStatusManually}
+            disabled={isLoading}
+            variant="outline"
+            className="w-full"
+          >
+            {isLoading ? "Checking..." : "Check Status"}
+          </Button>
         </div>
       )}
 
