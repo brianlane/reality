@@ -73,6 +73,8 @@ export default function PreviewQuestionnaire() {
   );
   const sectionsCache = useRef<Map<string, Section[]>>(new Map());
   const previewModeRef = useRef(previewMode);
+  // Shared ref so the first effect can abort in-flight page-section fetches
+  const pageFetchControllerRef = useRef<AbortController | null>(null);
 
   // Keep the ref in sync so the page-navigation effect always reads the latest mode
   useEffect(() => {
@@ -83,8 +85,10 @@ export default function PreviewQuestionnaire() {
     const controller = new AbortController();
     let isMounted = true;
 
-    // Clear cache when preview mode changes so pages are re-fetched
+    // Clear cache and abort any in-flight page-section fetch from the second effect
     sectionsCache.current.clear();
+    pageFetchControllerRef.current?.abort();
+    pageFetchControllerRef.current = null;
 
     const loadQuestionnaire = async () => {
       try {
@@ -174,6 +178,7 @@ export default function PreviewQuestionnaire() {
     if (pages.length === 0 || currentPageIndex >= pages.length) return;
 
     const controller = new AbortController();
+    pageFetchControllerRef.current = controller;
     let isMounted = true;
 
     const loadPageSections = async () => {
@@ -195,8 +200,8 @@ export default function PreviewQuestionnaire() {
         const json = await res.json();
         if (res.ok && !json?.error) {
           const nextSections = json.sections ?? [];
-          sectionsCache.current.set(pageId, nextSections);
           if (isMounted) {
+            sectionsCache.current.set(pageId, nextSections);
             setAllSections(nextSections);
           }
         }
@@ -213,6 +218,7 @@ export default function PreviewQuestionnaire() {
     return () => {
       isMounted = false;
       controller.abort();
+      pageFetchControllerRef.current = null;
     };
   }, [currentPageIndex, pages]);
 
