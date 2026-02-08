@@ -40,28 +40,6 @@ export type IdenfyVerificationSession = {
   url: string;
 };
 
-export type IdenfyVerificationResult = {
-  scanRef: string;
-  clientId: string;
-  status: {
-    overall: string; // APPROVED, DENIED, SUSPECTED, REVIEWING
-    autoDocument: string;
-    autoFace: string;
-    manualDocument: string;
-    manualFace: string;
-  };
-  data?: {
-    docFirstName?: string;
-    docLastName?: string;
-    docNumber?: string;
-    docExpiry?: string;
-    docDob?: string;
-    docNationality?: string;
-    docType?: string;
-    selectedCountry?: string;
-  };
-};
-
 export type IdenfyWebhookPayload = {
   final: boolean;
   status: {
@@ -132,34 +110,6 @@ export async function createVerificationSession(applicant: {
     clientId: applicant.id,
     url: `https://ivs.idenfy.com/api/v2/redirect?authToken=${data.authToken}`,
   };
-}
-
-/**
- * Fetch the status of a verification session from iDenfy.
- */
-export async function getVerificationStatus(
-  scanRef: string,
-): Promise<IdenfyVerificationResult> {
-  const config = requireConfig();
-  const authHeader = Buffer.from(
-    `${config.apiKey}:${config.apiSecret}`,
-  ).toString("base64");
-
-  const response = await fetch(`${config.baseUrl}/api/v2/status/${scanRef}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Basic ${authHeader}`,
-    },
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `iDenfy status fetch failed: ${response.status} ${errorText}`,
-    );
-  }
-
-  return response.json();
 }
 
 // ============================================

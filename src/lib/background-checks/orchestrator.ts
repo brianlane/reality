@@ -44,9 +44,14 @@ export async function initiateScreening(applicantId: string): Promise<void> {
     currentStatus: applicant.applicationStatus,
   });
 
-  // Update application status to screening in progress
-  await db.applicant.update({
-    where: { id: applicantId },
+  // Only transition to SCREENING_IN_PROGRESS from SUBMITTED to avoid
+  // regressing later states (APPROVED, WAITLIST, etc.) if an admin acts
+  // before this async function executes.
+  await db.applicant.updateMany({
+    where: {
+      id: applicantId,
+      applicationStatus: { in: ["SUBMITTED", "SCREENING_IN_PROGRESS"] },
+    },
     data: {
       applicationStatus: "SCREENING_IN_PROGRESS",
       screeningStatus: "IN_PROGRESS",
@@ -328,8 +333,9 @@ export async function finalizeScreening(applicantId: string): Promise<void> {
           continuousMonitoringId: null,
           checkrCandidateId: { not: null },
         },
-        // Set a placeholder to claim the slot; replaced with real ID below
-        data: { continuousMonitoringId: "enrolling" },
+        // Set a unique placeholder to claim the slot; replaced with real ID below.
+        // Must be unique per applicant since continuousMonitoringId has @unique.
+        data: { continuousMonitoringId: `enrolling-${applicantId}` },
       });
 
       if (monitorClaimed.count > 0) {
