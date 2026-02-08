@@ -126,17 +126,19 @@ export async function POST(request: Request) {
         },
       });
 
-      if (status === "SUCCEEDED" && payment.type === "APPLICATION_FEE") {
-        await db.applicant.update({
-          where: { id: payment.applicantId },
-          data: {
-            applicationStatus: "DRAFT",
-          },
-        });
+      if (status === "SUCCEEDED") {
+        // Application-specific: advance applicant status after application fee
+        if (payment.type === "APPLICATION_FEE") {
+          await db.applicant.update({
+            where: { id: payment.applicantId },
+            data: {
+              applicationStatus: "DRAFT",
+            },
+          });
+        }
 
-        // Send payment confirmation email
+        // Send payment confirmation email for all successful payments
         try {
-          // Use dashboard/payments URL for receipt access
           const receiptUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/payments`;
 
           await sendPaymentConfirmationEmail({
