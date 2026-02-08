@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 
-const getStripe = () => {
+export const getStripe = () => {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
     throw new Error("STRIPE_SECRET_KEY is not configured");
@@ -10,10 +10,33 @@ const getStripe = () => {
   });
 };
 
+/**
+ * Resolves a PaymentType to the corresponding Stripe Price ID from env vars.
+ */
+export function resolveStripePriceId(
+  type: "APPLICATION_FEE" | "EVENT_FEE",
+): string {
+  const mapping: Record<string, string | undefined> = {
+    APPLICATION_FEE: process.env.STRIPE_APPLICATION_FEE_PRICE_ID,
+    EVENT_FEE: process.env.STRIPE_EVENT_FEE_PRICE_ID,
+  };
+
+  const priceId = mapping[type];
+  if (!priceId) {
+    throw new Error(
+      `Stripe Price ID not configured for payment type: ${type}. ` +
+        `Set STRIPE_${type}_PRICE_ID in your environment variables.`,
+    );
+  }
+
+  return priceId;
+}
+
 type CheckoutParams = {
   priceId: string;
   successUrl: string;
   cancelUrl: string;
+  customerEmail?: string;
   metadata?: Record<string, string>;
 };
 
@@ -30,6 +53,7 @@ export async function createCheckoutSession(params: CheckoutParams) {
     ],
     success_url: params.successUrl,
     cancel_url: params.cancelUrl,
+    customer_email: params.customerEmail,
     metadata: params.metadata ?? {},
   });
 
@@ -42,6 +66,20 @@ export async function createCheckoutSession(params: CheckoutParams) {
     url: session.url,
     metadata: session.metadata ?? {},
   };
+}
+
+/**
+ * Creates a refund for a Stripe Payment Intent.
+ * Returns the Stripe Refund object.
+ */
+export async function createRefund(paymentIntentId: string) {
+  const stripe = getStripe();
+
+  const refund = await stripe.refunds.create({
+    payment_intent: paymentIntentId,
+  });
+
+  return refund;
 }
 
 export function verifyStripeWebhook(

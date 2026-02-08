@@ -25,17 +25,47 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Extract metadata based on event type
+    // Extract metadata and Stripe Payment Intent ID based on event type
     let paymentId: string | undefined;
+    let stripePaymentIntentId: string | undefined;
+
     if (
       event.type === "payment_intent.succeeded" ||
       event.type === "payment_intent.payment_failed"
     ) {
-      paymentId = (event.data.object as { metadata?: { paymentId?: string } })
-        .metadata?.paymentId;
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      paymentId = paymentIntent.metadata?.paymentId;
+      stripePaymentIntentId = paymentIntent.id;
     } else if (event.type === "checkout.session.completed") {
-      paymentId = (event.data.object as { metadata?: { paymentId?: string } })
-        .metadata?.paymentId;
+      const session = event.data.object as Stripe.Checkout.Session;
+      paymentId = session.metadata?.paymentId;
+      // Extract the Payment Intent ID from the checkout session
+      stripePaymentIntentId =
+        typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : session.payment_intent?.id;
+    } else if (event.type === "charge.refunded") {
+      // Handle refunds initiated from Stripe Dashboard
+      const charge = event.data.object as Stripe.Charge;
+      const refundedPaymentIntentId =
+        typeof charge.payment_intent === "string"
+          ? charge.payment_intent
+          : charge.payment_intent?.id;
+
+      if (refundedPaymentIntentId) {
+        const existingPayment = await db.payment.findUnique({
+          where: { stripePaymentId: refundedPaymentIntentId },
+        });
+
+        if (existingPayment && existingPayment.status !== "REFUNDED") {
+          await db.payment.update({
+            where: { id: existingPayment.id },
+            data: { status: "REFUNDED" },
+          });
+        }
+      }
+
+      return successResponse({ received: true, eventId: event.id });
     }
 
     let status: "SUCCEEDED" | "FAILED" | null = null;
@@ -49,9 +79,25 @@ export async function POST(request: Request) {
     }
 
     if (paymentId && status) {
+      // Idempotency check: skip if payment is already in the target status
+      const existingPayment = await db.payment.findUnique({
+        where: { id: paymentId },
+        select: { status: true },
+      });
+
+      if (existingPayment && existingPayment.status === status) {
+        return successResponse({ received: true, eventId: event.id });
+      }
+
       const payment = await db.payment.update({
         where: { id: paymentId },
-        data: { status },
+        data: {
+          status,
+          // Store the Stripe Payment Intent ID for future refunds
+          ...(stripePaymentIntentId
+            ? { stripePaymentId: stripePaymentIntentId }
+            : {}),
+        },
         select: {
           applicantId: true,
           type: true,
