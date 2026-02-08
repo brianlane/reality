@@ -140,13 +140,15 @@ export function verifyCheckrSignature(
 
 /**
  * Map Checkr report result to our ScreeningStatus.
- * "clear" = passed, "consider" = needs review (flagged as failed for admin review),
- * null = still pending.
+ * "clear" = passed, everything else (including null) = needs admin review.
+ *
+ * This function is called exclusively from the report.completed webhook, so the
+ * report is already finished. A null/missing result on a completed report is
+ * anomalous and must be flagged for review — returning "IN_PROGRESS" would leave
+ * the applicant in a permanent limbo state since onCheckrComplete exits early for
+ * that status.
  */
-export function mapCheckrResult(
-  result: string | null,
-): "PASSED" | "FAILED" | "IN_PROGRESS" {
-  if (!result) return "IN_PROGRESS";
+export function mapCheckrResult(result: string | null): "PASSED" | "FAILED" {
   return result === "clear" ? "PASSED" : "FAILED";
 }
 

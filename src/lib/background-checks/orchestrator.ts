@@ -266,13 +266,9 @@ export async function onIdenfyComplete(
  */
 export async function onCheckrComplete(
   applicantId: string,
-  status: "PASSED" | "FAILED" | "IN_PROGRESS",
+  status: "PASSED" | "FAILED",
   result: string | null,
 ): Promise<void> {
-  if (status === "IN_PROGRESS") {
-    return;
-  }
-
   const applicant = await db.applicant.findUnique({
     where: { id: applicantId },
     include: { user: true },
