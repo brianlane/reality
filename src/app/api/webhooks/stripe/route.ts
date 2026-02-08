@@ -79,13 +79,19 @@ export async function POST(request: Request) {
     }
 
     if (paymentId && status) {
-      // Idempotency check: skip if payment is already in the target status
+      // Idempotency / terminal-state check: skip if payment is already in
+      // the target status, or if it has reached REFUNDED (a terminal state
+      // that must never regress back to SUCCEEDED via a delayed webhook).
       const existingPayment = await db.payment.findUnique({
         where: { id: paymentId },
         select: { status: true },
       });
 
-      if (existingPayment && existingPayment.status === status) {
+      if (
+        existingPayment &&
+        (existingPayment.status === status ||
+          existingPayment.status === "REFUNDED")
+      ) {
         return successResponse({ received: true, eventId: event.id });
       }
 
