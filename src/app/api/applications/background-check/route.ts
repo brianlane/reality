@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { getAuthUser, requireAdminRole } from "@/lib/auth";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import {
   createCandidate,
@@ -10,12 +11,23 @@ import { logger } from "@/lib/logger";
  * POST /api/applications/background-check
  *
  * Triggers a Checkr background check for an applicant.
- * Can be called by the orchestrator (auto) or by an admin (manual).
- * Creates a Checkr candidate and sends them an invitation to complete
- * the background check via Checkr's hosted form.
+ * Admin-only endpoint. The orchestrator triggers Checkr directly via internal
+ * function calls, not through this HTTP route.
  */
 export async function POST(request: Request) {
   try {
+    const auth = await getAuthUser();
+    if (!auth) {
+      return errorResponse("UNAUTHORIZED", "Authentication required", 401);
+    }
+
+    let adminUser;
+    try {
+      adminUser = await requireAdminRole(auth.email);
+    } catch (error) {
+      return errorResponse("FORBIDDEN", (error as Error).message, 403);
+    }
+
     const body = await request.json();
     const { applicationId } = body;
 
@@ -105,7 +117,7 @@ export async function POST(request: Request) {
     await db.screeningAuditLog
       .create({
         data: {
-          userId: "system",
+          userId: adminUser.userId,
           applicantId: applicant.id,
           action: "CHECKR_INVITATION_SENT",
           metadata: {

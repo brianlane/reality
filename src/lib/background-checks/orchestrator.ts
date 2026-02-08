@@ -179,7 +179,7 @@ export async function onIdenfyComplete(
       // Audit log
       await db.screeningAuditLog.create({
         data: {
-          userId: "system",
+          userId: null,
           applicantId,
           action: "CHECKR_AUTO_TRIGGERED",
           metadata: {

@@ -631,13 +631,13 @@ model EmailLog {
 
 model ScreeningAuditLog {
   id          String   @id @default(cuid())
-  userId      String   // Admin who performed the action
+  userId      String?  // User who performed the action (null for system/webhook events)
   applicantId String   // Target applicant
-  action      String   // VIEW_REPORT, TRIGGER_CHECK, ADVERSE_ACTION, etc.
+  action      String   // VIEW_REPORT, TRIGGER_CHECK, IDENFY_WEBHOOK, etc.
   metadata    Json?    // Additional context (report type, IP, etc.)
   createdAt   DateTime @default(now())
 
-  user        User      @relation(fields: [userId], references: [id])
+  user        User?     @relation(fields: [userId], references: [id])
   applicant   Applicant @relation(fields: [applicantId], references: [id])
 
   @@index([applicantId])

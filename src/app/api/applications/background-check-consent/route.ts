@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
+import { getAuthUser } from "@/lib/auth";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { initiateScreening } from "@/lib/background-checks/orchestrator";
 import { logger } from "@/lib/logger";
@@ -9,9 +10,15 @@ import { logger } from "@/lib/logger";
  *
  * Records FCRA-compliant background check consent for an applicant.
  * This is the legally required standalone disclosure + authorization.
+ * Requires authenticated user who owns the application.
  */
 export async function POST(request: Request) {
   try {
+    const auth = await getAuthUser();
+    if (!auth) {
+      return errorResponse("UNAUTHORIZED", "Authentication required", 401);
+    }
+
     const body = await request.json();
     const { applicationId, fullName, consentGiven } = body;
 
@@ -52,6 +59,11 @@ export async function POST(request: Request) {
       return errorResponse("NOT_FOUND", "Application not found", 404);
     }
 
+    // Verify the authenticated user owns this application
+    if (applicant.user.email.toLowerCase() !== auth.email?.toLowerCase()) {
+      return errorResponse("FORBIDDEN", "Access denied", 403);
+    }
+
     // Already consented
     if (applicant.backgroundCheckConsentAt) {
       return successResponse({
@@ -79,7 +91,7 @@ export async function POST(request: Request) {
     // Audit log
     await db.screeningAuditLog.create({
       data: {
-        userId: "applicant",
+        userId: applicant.userId,
         applicantId: applicant.id,
         action: "FCRA_CONSENT_GIVEN",
         metadata: {

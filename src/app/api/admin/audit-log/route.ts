@@ -51,13 +51,12 @@ export async function GET(request: Request) {
       action: log.action,
       metadata: log.metadata,
       createdAt: log.createdAt,
-      admin:
-        log.userId === "system" || log.userId === "applicant"
-          ? { name: log.userId, email: null }
-          : {
-              name: `${log.user.firstName} ${log.user.lastName}`,
-              email: log.user.email,
-            },
+      admin: log.user
+        ? {
+            name: `${log.user.firstName} ${log.user.lastName}`,
+            email: log.user.email,
+          }
+        : { name: "System", email: null },
       applicant: {
         id: log.applicant.id,
         name: `${log.applicant.user.firstName} ${log.applicant.user.lastName}`,

@@ -1,10 +1,22 @@
 import { db } from "@/lib/db";
+import { getAuthUser } from "@/lib/auth";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { createVerificationSession } from "@/lib/background-checks/idenfy";
 import { logger } from "@/lib/logger";
 
+/**
+ * POST /api/applications/verify-identity
+ *
+ * Initiates an iDenfy identity verification session for an applicant.
+ * Requires authenticated user who owns the application.
+ */
 export async function POST(request: Request) {
   try {
+    const auth = await getAuthUser();
+    if (!auth) {
+      return errorResponse("UNAUTHORIZED", "Authentication required", 401);
+    }
+
     const body = await request.json();
     const { applicationId } = body;
 
@@ -23,6 +35,11 @@ export async function POST(request: Request) {
 
     if (!applicant) {
       return errorResponse("NOT_FOUND", "Application not found", 404);
+    }
+
+    // Verify the authenticated user owns this application
+    if (applicant.user.email.toLowerCase() !== auth.email?.toLowerCase()) {
+      return errorResponse("FORBIDDEN", "Access denied", 403);
     }
 
     // Must have FCRA consent before starting identity verification

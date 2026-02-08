@@ -86,7 +86,7 @@ export async function POST(request: Request) {
   await db.screeningAuditLog
     .create({
       data: {
-        userId: "system",
+        userId: null,
         applicantId: applicant.id,
         action: "IDENFY_WEBHOOK",
         metadata: {

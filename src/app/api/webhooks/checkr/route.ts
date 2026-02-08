@@ -122,7 +122,7 @@ async function handleReportCompleted(data: {
   await db.screeningAuditLog
     .create({
       data: {
-        userId: "system",
+        userId: null,
         applicantId: applicant.id,
         action: "CHECKR_REPORT_COMPLETED",
         metadata: {
@@ -184,7 +184,7 @@ async function handleInvitationCompleted(data: {
   await db.screeningAuditLog
     .create({
       data: {
-        userId: "system",
+        userId: null,
         applicantId: applicant.id,
         action: "CHECKR_INVITATION_COMPLETED",
         metadata: {
@@ -233,7 +233,7 @@ async function handleContinuousMonitorUpdated(data: {
   await db.screeningAuditLog
     .create({
       data: {
-        userId: "system",
+        userId: null,
         applicantId: applicant.id,
         action: "CONTINUOUS_MONITOR_ALERT",
         metadata: {
