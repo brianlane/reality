@@ -47,7 +47,7 @@ export async function initiateScreening(applicantId: string): Promise<void> {
   // Only transition to SCREENING_IN_PROGRESS from SUBMITTED to avoid
   // regressing later states (APPROVED, WAITLIST, etc.) if an admin acts
   // before this async function executes.
-  await db.applicant.updateMany({
+  const statusUpdate = await db.applicant.updateMany({
     where: {
       id: applicantId,
       applicationStatus: { in: ["SUBMITTED", "SCREENING_IN_PROGRESS"] },
@@ -58,18 +58,22 @@ export async function initiateScreening(applicantId: string): Promise<void> {
     },
   });
 
-  // Send screening-in-progress email (non-blocking)
-  sendApplicationStatusEmail({
-    to: applicant.user.email,
-    firstName: applicant.user.firstName,
-    status: "SCREENING_IN_PROGRESS",
-    applicantId: applicant.id,
-  }).catch((err: unknown) => {
-    logger.warn("Failed to send screening status email", {
-      applicantId,
-      error: err instanceof Error ? err.message : String(err),
+  // Only send the email if the status actually transitioned. If updateMany
+  // matched 0 rows, the application is already in a later state (e.g. APPROVED)
+  // and sending a "screening in progress" email would confuse the applicant.
+  if (statusUpdate.count > 0) {
+    sendApplicationStatusEmail({
+      to: applicant.user.email,
+      firstName: applicant.user.firstName,
+      status: "SCREENING_IN_PROGRESS",
+      applicantId: applicant.id,
+    }).catch((err: unknown) => {
+      logger.warn("Failed to send screening status email", {
+        applicantId,
+        error: err instanceof Error ? err.message : String(err),
+      });
     });
-  });
+  }
 
   // Atomically claim the PENDING/FAILED -> IN_PROGRESS transition to prevent
   // duplicate iDenfy sessions from concurrent calls. Matching FAILED allows

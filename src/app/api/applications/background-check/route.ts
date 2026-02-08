@@ -66,7 +66,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Don't re-initiate if already in progress or completed
+    // Already completed
+    if (applicant.checkrStatus === "PASSED") {
+      return successResponse({
+        status: "already_passed",
+        message: "Background check has already been completed successfully.",
+      });
+    }
+
+    // Already in progress with a candidate
     if (
       applicant.checkrStatus === "IN_PROGRESS" &&
       applicant.checkrCandidateId
@@ -78,74 +86,85 @@ export async function POST(request: Request) {
       });
     }
 
-    if (applicant.checkrStatus === "PASSED") {
+    // Atomically claim the PENDING/FAILED -> IN_PROGRESS transition to prevent
+    // duplicate Checkr candidates/invitations from concurrent admin requests.
+    const claimed = await db.applicant.updateMany({
+      where: {
+        id: applicant.id,
+        checkrStatus: { in: ["PENDING", "FAILED"] },
+      },
+      data: { checkrStatus: "IN_PROGRESS" },
+    });
+
+    if (claimed.count === 0) {
       return successResponse({
-        status: "already_passed",
-        message: "Background check has already been completed successfully.",
+        status: "already_in_progress",
+        message: "Background check is already being initiated. Please wait.",
       });
     }
 
     // Step 1: Create Checkr candidate
     let candidateId = applicant.checkrCandidateId;
 
-    if (!candidateId) {
-      const candidate = await createCandidate({
-        firstName: applicant.user.firstName,
-        lastName: applicant.user.lastName,
-        email: applicant.user.email,
-      });
-      candidateId = candidate.id;
+    try {
+      if (!candidateId) {
+        const candidate = await createCandidate({
+          firstName: applicant.user.firstName,
+          lastName: applicant.user.lastName,
+          email: applicant.user.email,
+        });
+        candidateId = candidate.id;
 
+        await db.applicant.update({
+          where: { id: applicant.id },
+          data: { checkrCandidateId: candidateId },
+        });
+      }
+
+      // Step 2: Create invitation (Checkr sends email to candidate)
+      const invitation = await createInvitation(candidateId);
+
+      // Log to audit
+      await db.screeningAuditLog
+        .create({
+          data: {
+            userId: adminUser.userId,
+            applicantId: applicant.id,
+            action: "CHECKR_INVITATION_SENT",
+            metadata: {
+              candidateId,
+              invitationId: invitation.id,
+              package: invitation.package,
+            },
+          },
+        })
+        .catch((err: unknown) => {
+          logger.warn("Failed to create screening audit log", {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
+
+      logger.info("Checkr background check initiated", {
+        applicantId: applicant.id,
+        candidateId,
+        invitationId: invitation.id,
+      });
+
+      return successResponse({
+        status: "invitation_sent",
+        candidateId,
+        invitationId: invitation.id,
+        message:
+          "Background check invitation has been sent. The applicant will receive an email from Checkr.",
+      });
+    } catch (err) {
+      // Roll back so admin can retry
       await db.applicant.update({
         where: { id: applicant.id },
-        data: { checkrCandidateId: candidateId },
+        data: { checkrStatus: "PENDING" },
       });
+      throw err;
     }
-
-    // Step 2: Create invitation (Checkr sends email to candidate)
-    const invitation = await createInvitation(candidateId);
-
-    // Update status to in progress
-    await db.applicant.update({
-      where: { id: applicant.id },
-      data: {
-        checkrStatus: "IN_PROGRESS",
-      },
-    });
-
-    // Log to audit
-    await db.screeningAuditLog
-      .create({
-        data: {
-          userId: adminUser.userId,
-          applicantId: applicant.id,
-          action: "CHECKR_INVITATION_SENT",
-          metadata: {
-            candidateId,
-            invitationId: invitation.id,
-            package: invitation.package,
-          },
-        },
-      })
-      .catch((err: unknown) => {
-        logger.warn("Failed to create screening audit log", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-
-    logger.info("Checkr background check initiated", {
-      applicantId: applicant.id,
-      candidateId,
-      invitationId: invitation.id,
-    });
-
-    return successResponse({
-      status: "invitation_sent",
-      candidateId,
-      invitationId: invitation.id,
-      message:
-        "Background check invitation has been sent. The applicant will receive an email from Checkr.",
-    });
   } catch (error) {
     logger.error("Failed to initiate background check", {
       error: error instanceof Error ? error.message : String(error),
