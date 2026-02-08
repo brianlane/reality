@@ -35,6 +35,13 @@ export async function initiateScreening(applicantId: string): Promise<void> {
     throw new Error(`Applicant not found: ${applicantId}`);
   }
 
+  if (applicant.deletedAt) {
+    logger.info("Skipping screening initiation for soft-deleted applicant", {
+      applicantId,
+    });
+    return;
+  }
+
   if (!applicant.backgroundCheckConsentAt) {
     throw new Error(`FCRA consent not provided for applicant: ${applicantId}`);
   }
@@ -143,6 +150,13 @@ export async function onIdenfyComplete(
 
   if (!applicant) {
     throw new Error(`Applicant not found: ${applicantId}`);
+  }
+
+  if (applicant.deletedAt) {
+    logger.info("Skipping iDenfy completion for soft-deleted applicant", {
+      applicantId,
+    });
+    return;
   }
 
   logger.info("iDenfy complete, orchestrating next step", {
@@ -365,14 +379,36 @@ export async function finalizeScreening(applicantId: string): Promise<void> {
         enrollContinuousMonitoring(applicant.checkrCandidateId)
           .then(async (monitor) => {
             try {
-              await db.applicant.update({
-                where: { id: applicantId },
+              // Use updateMany with deletedAt guard so we don't overwrite
+              // the null set by soft-delete. If the applicant was deleted
+              // while enrollment was in-flight, we must NOT store the ID
+              // (the subscription should be canceled manually).
+              const stored = await db.applicant.updateMany({
+                where: {
+                  id: applicantId,
+                  deletedAt: null,
+                  continuousMonitoringId: `enrolling-${applicantId}`,
+                },
                 data: { continuousMonitoringId: monitor.id },
               });
-              logger.info("Continuous monitoring enrolled", {
-                applicantId,
-                monitorId: monitor.id,
-              });
+
+              if (stored.count > 0) {
+                logger.info("Continuous monitoring enrolled", {
+                  applicantId,
+                  monitorId: monitor.id,
+                });
+              } else {
+                // Applicant was soft-deleted (or placeholder was already
+                // replaced) during enrollment. Log the orphaned subscription
+                // so it can be canceled manually.
+                logger.error(
+                  "Applicant deleted or placeholder changed during monitoring enrollment — orphaned subscription requires manual cancellation",
+                  {
+                    applicantId,
+                    monitorId: monitor.id, // CRITICAL: real Checkr subscription ID
+                  },
+                );
+              }
             } catch (dbErr: unknown) {
               // DB update failed AFTER the Checkr API succeeded.
               // Do NOT clear the placeholder -- it prevents duplicate enrollments.
