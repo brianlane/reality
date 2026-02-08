@@ -574,8 +574,11 @@ export default function PurposePage() {
             19061&ndash;19071.
           </p>
           <p className="works-cited">
-            <em>Journal of Personality and Social Psychology</em>.
-            Relationship-contingent self-esteem.
+            Knee, C. R., Canevello, A., Bush, A. L., &amp; Cook, A. (2008).
+            Relationship-contingent self-esteem and the ups and downs of
+            romantic relationships.{" "}
+            <em>Journal of Personality and Social Psychology</em>, 95(3),
+            608&ndash;627.
           </p>
           <p className="works-cited">
             Klohnen, E. C., &amp; Luo, S. (2003). Interpersonal attraction and
@@ -587,7 +590,7 @@ export default function PurposePage() {
           <p className="works-cited">
             Lenton, A. P., &amp; Francesconi, M. (2011). Too much of a good
             thing? Variety is confusing in mate choice. <em>Biology Letters</em>
-            , 7(4), 528&ndash;531.
+            {", 7(4), 528\u2013531."}
           </p>
           <p className="works-cited">
             Malouff, J. M., Thorsteinsson, E. B., Schutte, N. S., Bhullar, N.,
