@@ -3,9 +3,11 @@ import Link from "next/link";
 export default function EventPaymentPage() {
   return (
     <section className="mx-auto w-full max-w-3xl px-6 py-16">
-      <h1 className="text-3xl font-semibold text-navy">Event Fee</h1>
+      <h1 className="text-3xl font-semibold text-navy">
+        Event Payment Cancelled
+      </h1>
       <p className="mt-2 text-navy-soft">
-        Complete your event fee payment to confirm your spot.
+        Your checkout was not completed. No charges have been made.
       </p>
       <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
         <div className="space-y-4">
@@ -29,15 +31,16 @@ export default function EventPaymentPage() {
             </ul>
           </div>
 
-          <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
-            <p>
-              It looks like your checkout was cancelled. If you&apos;d like to
-              try again, you can initiate payment from your{" "}
-              <Link href="/dashboard" className="font-medium underline">
-                dashboard
-              </Link>
-              .
+          <div className="border-t border-slate-100 pt-4 text-center">
+            <p className="mb-4 text-sm text-navy-soft">
+              Ready to try again? You can initiate payment from your dashboard.
             </p>
+            <Link
+              href="/dashboard"
+              className="inline-block rounded-lg bg-navy px-6 py-3 font-medium text-white transition-colors hover:bg-navy/90"
+            >
+              Go to Dashboard
+            </Link>
           </div>
 
           <p className="text-center text-xs text-slate-400">
