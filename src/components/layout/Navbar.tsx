@@ -2,7 +2,10 @@ import Link from "next/link";
 import Logo from "./Logo";
 import NavAuthActions from "./NavAuthActions";
 
-const navLinks = [{ href: "/", label: "Home" }];
+const navLinks = [
+  { href: "/", label: "Home" },
+  { href: "/purpose", label: "Purpose" },
+];
 
 export default function Navbar() {
   return (

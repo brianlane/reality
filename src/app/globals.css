@@ -37,3 +37,10 @@ button {
 button:disabled {
   cursor: not-allowed;
 }
+
+.works-cited {
+  padding-left: 2em;
+  text-indent: -2em;
+  line-height: 1.6;
+  margin-bottom: 1em;
+}
