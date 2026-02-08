@@ -72,6 +72,12 @@ export default function PreviewQuestionnaire() {
     "application",
   );
   const sectionsCache = useRef<Map<string, Section[]>>(new Map());
+  const previewModeRef = useRef(previewMode);
+
+  // Keep the ref in sync so the page-navigation effect always reads the latest mode
+  useEffect(() => {
+    previewModeRef.current = previewMode;
+  }, [previewMode]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -181,7 +187,7 @@ export default function PreviewQuestionnaire() {
           return;
         }
         const modeParam =
-          previewMode === "research" ? "&previewMode=research" : "";
+          previewModeRef.current === "research" ? "&previewMode=research" : "";
         const res = await fetch(
           `/api/applications/questionnaire?applicationId=${MOCK_APPLICATION_ID}&pageId=${pageId}${modeParam}`,
           { signal: controller.signal },
@@ -208,7 +214,7 @@ export default function PreviewQuestionnaire() {
       isMounted = false;
       controller.abort();
     };
-  }, [currentPageIndex, pages, previewMode]);
+  }, [currentPageIndex, pages]);
 
   const modeToggle = (
     <div className="flex items-center gap-2 shrink-0">
