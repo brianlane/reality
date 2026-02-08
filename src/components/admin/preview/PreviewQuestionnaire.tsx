@@ -210,6 +210,31 @@ export default function PreviewQuestionnaire() {
     };
   }, [currentPageIndex, pages, previewMode]);
 
+  const modeToggle = (
+    <div className="flex items-center gap-2 shrink-0">
+      <button
+        onClick={() => setPreviewMode("application")}
+        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+          previewMode === "application"
+            ? "bg-blue-600 text-white"
+            : "bg-white text-blue-700 border border-blue-300 hover:bg-blue-50"
+        }`}
+      >
+        Application
+      </button>
+      <button
+        onClick={() => setPreviewMode("research")}
+        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+          previewMode === "research"
+            ? "bg-purple-600 text-white"
+            : "bg-white text-purple-700 border border-purple-300 hover:bg-purple-50"
+        }`}
+      >
+        Research
+      </button>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -234,28 +259,7 @@ export default function PreviewQuestionnaire() {
               <strong>Preview Mode:</strong> This is Stage 6 - Questionnaire.
               Applicants answer custom questions configured by the admin.
             </p>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => setPreviewMode("application")}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  previewMode === "application"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-blue-700 border border-blue-300 hover:bg-blue-50"
-                }`}
-              >
-                Application
-              </button>
-              <button
-                onClick={() => setPreviewMode("research")}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  previewMode === "research"
-                    ? "bg-purple-600 text-white"
-                    : "bg-white text-purple-700 border border-purple-300 hover:bg-purple-50"
-                }`}
-              >
-                Research
-              </button>
-            </div>
+            {modeToggle}
           </div>
         </div>
 
@@ -387,28 +391,7 @@ export default function PreviewQuestionnaire() {
               question(s)
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setPreviewMode("application")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                previewMode === "application"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-blue-700 border border-blue-300 hover:bg-blue-50"
-              }`}
-            >
-              Application
-            </button>
-            <button
-              onClick={() => setPreviewMode("research")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                previewMode === "research"
-                  ? "bg-purple-600 text-white"
-                  : "bg-white text-purple-700 border border-purple-300 hover:bg-purple-50"
-              }`}
-            >
-              Research
-            </button>
-          </div>
+          {modeToggle}
         </div>
       </div>
 
