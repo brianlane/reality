@@ -55,6 +55,12 @@ export async function createCheckoutSession(params: CheckoutParams) {
     cancel_url: params.cancelUrl,
     customer_email: params.customerEmail,
     metadata: params.metadata ?? {},
+    // Propagate metadata to the PaymentIntent so payment_intent.succeeded
+    // and payment_intent.payment_failed webhooks can also resolve the
+    // internal paymentId. Stripe does NOT copy session metadata automatically.
+    payment_intent_data: {
+      metadata: params.metadata ?? {},
+    },
   });
 
   if (!session.url) {
