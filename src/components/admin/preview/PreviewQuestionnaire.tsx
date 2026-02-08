@@ -84,6 +84,7 @@ export default function PreviewQuestionnaire() {
       try {
         if (isMounted) {
           setLoading(true);
+          setError(null);
         }
         const modeParam =
           previewMode === "research" ? "&previewMode=research" : "";
