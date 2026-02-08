@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export default function ApplicationPaymentSuccessPage() {
+export default function EventPaymentSuccessPage() {
   return (
     <section className="mx-auto w-full max-w-3xl px-6 py-16">
       <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
@@ -20,46 +20,44 @@ export default function ApplicationPaymentSuccessPage() {
           </svg>
         </div>
 
-        <h1 className="text-3xl font-semibold text-navy">Payment Successful</h1>
+        <h1 className="text-3xl font-semibold text-navy">
+          Event Payment Confirmed
+        </h1>
         <p className="mx-auto mt-3 max-w-md text-navy-soft">
-          Thank you! Your application fee has been received. You can now
-          continue with your application.
+          Thank you! Your event fee has been received. You&apos;re all set for
+          the upcoming matchmaking event.
         </p>
 
         <div className="mt-8 rounded-lg bg-slate-50 p-6 text-left">
-          <h2 className="font-medium text-navy">Next Steps</h2>
+          <h2 className="font-medium text-navy">What Happens Next</h2>
           <ol className="mt-3 list-inside list-decimal space-y-2 text-sm text-navy-soft">
             <li>
-              <strong>Set up your account</strong> &mdash; Create your password
-              to access your dashboard
+              <strong>Event details</strong> &mdash; Check your email for venue,
+              date, and preparation information
             </li>
             <li>
-              <strong>Complete the questionnaire</strong> &mdash; Help us
-              understand your preferences and personality
+              <strong>Your matches</strong> &mdash; View your compatibility
+              matches in your dashboard before the event
             </li>
             <li>
-              <strong>Background verification</strong> &mdash; Complete your
-              identity and background check
-            </li>
-            <li>
-              <strong>Application review</strong> &mdash; Our team will review
-              your complete profile
+              <strong>Attend the event</strong> &mdash; Meet your matches in
+              person at the scheduled event
             </li>
           </ol>
         </div>
 
         <div className="mt-8">
           <Link
-            href="/apply"
+            href="/dashboard"
             className="inline-block rounded-lg bg-navy px-6 py-3 font-medium text-white transition-colors hover:bg-navy/90"
           >
-            Continue Application
+            Go to Dashboard
           </Link>
         </div>
 
         <p className="mt-6 text-xs text-slate-400">
           A confirmation email has been sent to your email address with payment
-          details.
+          and event details.
         </p>
       </div>
     </section>

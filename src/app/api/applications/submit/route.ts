@@ -5,10 +5,7 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { ensureApplicantAccount } from "@/lib/account-init";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notifyApplicationSubmitted } from "@/lib/email/admin-notifications";
-import { createCheckoutSession, resolveStripePriceId } from "@/lib/stripe";
-
-const APPLICATION_FEE_AMOUNT = 19900;
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+import { createPaymentCheckout } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,26 +47,14 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const payment = await db.payment.create({
-        data: {
-          applicantId: applicant.id,
+      const { session } = await createPaymentCheckout(
+        {
           type: "APPLICATION_FEE",
-          amount: APPLICATION_FEE_AMOUNT,
-          status: "PENDING",
-        },
-      });
-
-      const priceId = resolveStripePriceId("APPLICATION_FEE");
-      const session = await createCheckoutSession({
-        priceId,
-        successUrl: `${APP_URL}/apply/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancelUrl: `${APP_URL}/apply/payment`,
-        customerEmail: applicant.user.email,
-        metadata: {
-          paymentId: payment.id,
           applicantId: applicant.id,
+          customerEmail: applicant.user.email,
         },
-      });
+        db,
+      );
 
       return successResponse({
         checkoutUrl: session.url,

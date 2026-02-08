@@ -68,6 +68,79 @@ export async function createCheckoutSession(params: CheckoutParams) {
   };
 }
 
+export type PaymentType = "APPLICATION_FEE" | "EVENT_FEE";
+
+const PAYMENT_AMOUNTS: Record<PaymentType, number> = {
+  APPLICATION_FEE: 19900,
+  EVENT_FEE: 74900,
+};
+
+const SUCCESS_PATHS: Record<PaymentType, string> = {
+  APPLICATION_FEE: "/apply/payment/success",
+  EVENT_FEE: "/events/payment/success",
+};
+
+const CANCEL_PATHS: Record<PaymentType, string> = {
+  APPLICATION_FEE: "/apply/payment",
+  EVENT_FEE: "/events/payment",
+};
+
+type CreatePaymentCheckoutParams = {
+  type: PaymentType;
+  applicantId: string;
+  customerEmail: string;
+  eventId?: string;
+};
+
+/**
+ * Shared helper: creates a Payment record in the DB and a Stripe Checkout
+ * session. Used by both the application submit route and the generic
+ * create-checkout route so the logic stays in one place.
+ */
+export async function createPaymentCheckout(
+  params: CreatePaymentCheckoutParams,
+  db: {
+    payment: {
+      create: (args: {
+        data: {
+          applicantId: string;
+          type: PaymentType;
+          amount: number;
+          status: "PENDING";
+          eventId?: string;
+        };
+      }) => Promise<{ id: string }>;
+    };
+  },
+) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  const payment = await db.payment.create({
+    data: {
+      applicantId: params.applicantId,
+      type: params.type,
+      amount: PAYMENT_AMOUNTS[params.type],
+      status: "PENDING",
+      eventId: params.eventId,
+    },
+  });
+
+  const priceId = resolveStripePriceId(params.type);
+  const session = await createCheckoutSession({
+    priceId,
+    successUrl: `${appUrl}${SUCCESS_PATHS[params.type]}?session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl: `${appUrl}${CANCEL_PATHS[params.type]}`,
+    customerEmail: params.customerEmail,
+    metadata: {
+      paymentId: payment.id,
+      applicantId: params.applicantId,
+      paymentType: params.type,
+    },
+  });
+
+  return { payment, session };
+}
+
 /**
  * Creates a refund for a Stripe Payment Intent.
  * Returns the Stripe Refund object.
