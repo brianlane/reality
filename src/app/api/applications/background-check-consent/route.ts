@@ -79,29 +79,34 @@ export async function POST(request: Request) {
     const realIp = headerList.get("x-real-ip");
     const clientIp = forwardedFor?.split(",")[0]?.trim() || realIp || "unknown";
 
-    // Record consent
-    await db.applicant.update({
-      where: { id: applicant.id },
-      data: {
-        backgroundCheckConsentAt: new Date(),
-        backgroundCheckConsentIp: clientIp,
-      },
-    });
-
-    // Audit log
-    await db.screeningAuditLog.create({
-      data: {
-        userId: applicant.userId,
-        applicantId: applicant.id,
-        action: "FCRA_CONSENT_GIVEN",
-        metadata: {
-          fullName: fullName.trim(),
-          ip: clientIp,
-          consentTimestamp: new Date().toISOString(),
-          userAgent: headerList.get("user-agent") || "unknown",
+    // Record consent AND audit log atomically in a transaction.
+    // Both must succeed together -- the audit log contains the digital signature
+    // (fullName) which is FCRA-critical legal evidence. If the audit log fails
+    // after consent is recorded, the digital signature would be permanently lost
+    // since retries would hit the "already_consented" guard.
+    const consentTimestamp = new Date();
+    await db.$transaction([
+      db.applicant.update({
+        where: { id: applicant.id },
+        data: {
+          backgroundCheckConsentAt: consentTimestamp,
+          backgroundCheckConsentIp: clientIp,
         },
-      },
-    });
+      }),
+      db.screeningAuditLog.create({
+        data: {
+          userId: applicant.userId,
+          applicantId: applicant.id,
+          action: "FCRA_CONSENT_GIVEN",
+          metadata: {
+            fullName: fullName.trim(),
+            ip: clientIp,
+            consentTimestamp: consentTimestamp.toISOString(),
+            userAgent: headerList.get("user-agent") || "unknown",
+          },
+        },
+      }),
+    ]);
 
     logger.info("FCRA background check consent recorded", {
       applicantId: applicant.id,

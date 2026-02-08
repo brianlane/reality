@@ -637,7 +637,7 @@ model ScreeningAuditLog {
   metadata    Json?    // Additional context (report type, IP, etc.)
   createdAt   DateTime @default(now())
 
-  user        User?     @relation(fields: [userId], references: [id])
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   applicant   Applicant @relation(fields: [applicantId], references: [id])
 
   @@index([applicantId])

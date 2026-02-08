@@ -51,7 +51,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Don't re-initiate if already in progress or completed
+    // Already completed
+    if (applicant.idenfyStatus === "PASSED") {
+      return successResponse({
+        status: "already_passed",
+        message: "Identity verification has already been completed.",
+      });
+    }
+
+    // Already in progress with a session
     if (
       applicant.idenfyStatus === "IN_PROGRESS" &&
       applicant.idenfyVerificationId
@@ -64,27 +72,43 @@ export async function POST(request: Request) {
       });
     }
 
-    if (applicant.idenfyStatus === "PASSED") {
+    // Atomically claim the PENDING -> IN_PROGRESS transition to prevent
+    // duplicate iDenfy sessions from concurrent requests.
+    const claimed = await db.applicant.updateMany({
+      where: { id: applicant.id, idenfyStatus: "PENDING" },
+      data: { idenfyStatus: "IN_PROGRESS" },
+    });
+
+    if (claimed.count === 0) {
+      // Another request already claimed the transition
       return successResponse({
-        status: "already_passed",
-        message: "Identity verification has already been completed.",
+        status: "already_in_progress",
+        message:
+          "Identity verification is already being initiated. Please wait.",
       });
     }
 
     // Create iDenfy verification session
-    const session = await createVerificationSession({
-      id: applicant.id,
-      firstName: applicant.user.firstName,
-      lastName: applicant.user.lastName,
-    });
+    let session;
+    try {
+      session = await createVerificationSession({
+        id: applicant.id,
+        firstName: applicant.user.firstName,
+        lastName: applicant.user.lastName,
+      });
+    } catch (err) {
+      // Roll back the status so it can be retried
+      await db.applicant.update({
+        where: { id: applicant.id },
+        data: { idenfyStatus: "PENDING" },
+      });
+      throw err;
+    }
 
-    // Store the verification ID and update status
+    // Store the verification ID (status already IN_PROGRESS from atomic claim)
     await db.applicant.update({
       where: { id: applicant.id },
-      data: {
-        idenfyVerificationId: session.scanRef,
-        idenfyStatus: "IN_PROGRESS",
-      },
+      data: { idenfyVerificationId: session.scanRef },
     });
 
     logger.info("iDenfy verification session created", {
