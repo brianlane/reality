@@ -169,7 +169,8 @@ export default function ScreeningDetail({
       {/* Admin Actions */}
       <div className="border-t border-slate-100 pt-3 space-y-3">
         {/* Trigger Screening */}
-        {screening.checkrStatus === "PENDING" &&
+        {(screening.checkrStatus === "PENDING" ||
+          screening.checkrStatus === "FAILED") &&
           screening.idenfyStatus === "PASSED" &&
           screening.backgroundCheckConsentAt && (
             <Button
@@ -177,7 +178,11 @@ export default function ScreeningDetail({
               disabled={isTriggering}
               className="bg-copper hover:bg-copper/90 text-sm"
             >
-              {isTriggering ? "Triggering..." : "Trigger Background Check"}
+              {isTriggering
+                ? "Triggering..."
+                : screening.checkrStatus === "FAILED"
+                  ? "Retry Background Check"
+                  : "Trigger Background Check"}
             </Button>
           )}
 
