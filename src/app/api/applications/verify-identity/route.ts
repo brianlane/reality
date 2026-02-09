@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   try {
     const auth = await getAuthUser();
     if (!auth) {
-      return errorResponse("UNAUTHORIZED", "Authentication required", 401);
+      return errorResponse("UNAUTHORIZED", "Authentication Required", 401);
     }
 
     const body = await request.json();
