@@ -567,73 +567,112 @@ export default function AdminQuestionnaireQuestionForm({
                 />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <Select
-                  value={form.sectionId}
-                  onChange={(event) =>
-                    updateField("sectionId", event.target.value)
-                  }
-                >
-                  <option value="">Select section</option>
-                  {sections.map((section) => (
-                    <option key={section.id} value={section.id}>
-                      {section.title}
-                    </option>
-                  ))}
-                </Select>
-                <Select
-                  value={form.type}
-                  onChange={(event) => updateField("type", event.target.value)}
-                >
-                  {QUESTION_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </Select>
-                <Input
-                  placeholder="Order"
-                  type="number"
-                  value={form.order}
-                  onChange={(event) => updateField("order", event.target.value)}
-                />
-                <Select
-                  value={form.isRequired}
-                  onChange={(event) =>
-                    updateField("isRequired", event.target.value)
-                  }
-                >
-                  <option value="false">Optional</option>
-                  <option value="true">Required</option>
-                </Select>
-                <Select
-                  value={form.isActive}
-                  onChange={(event) =>
-                    updateField("isActive", event.target.value)
-                  }
-                >
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
-                </Select>
-                <Input
-                  placeholder="Weight (0-1)"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="1"
-                  value={form.mlWeight}
-                  onChange={(event) =>
-                    updateField("mlWeight", event.target.value)
-                  }
-                />
-                <Select
-                  value={form.isDealbreaker}
-                  onChange={(event) =>
-                    updateField("isDealbreaker", event.target.value)
-                  }
-                >
-                  <option value="false">Not a dealbreaker</option>
-                  <option value="true">Dealbreaker</option>
-                </Select>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-navy-soft">
+                    Section
+                  </label>
+                  <Select
+                    value={form.sectionId}
+                    onChange={(event) =>
+                      updateField("sectionId", event.target.value)
+                    }
+                  >
+                    <option value="">Select section</option>
+                    {sections.map((section) => (
+                      <option key={section.id} value={section.id}>
+                        {section.title}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-navy-soft">
+                    Question type
+                  </label>
+                  <Select
+                    value={form.type}
+                    onChange={(event) =>
+                      updateField("type", event.target.value)
+                    }
+                  >
+                    {QUESTION_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-navy-soft">
+                    Display order
+                  </label>
+                  <Input
+                    placeholder="0"
+                    type="number"
+                    value={form.order}
+                    onChange={(event) =>
+                      updateField("order", event.target.value)
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-navy-soft">
+                    Required
+                  </label>
+                  <Select
+                    value={form.isRequired}
+                    onChange={(event) =>
+                      updateField("isRequired", event.target.value)
+                    }
+                  >
+                    <option value="false">Optional</option>
+                    <option value="true">Required</option>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-navy-soft">
+                    Status
+                  </label>
+                  <Select
+                    value={form.isActive}
+                    onChange={(event) =>
+                      updateField("isActive", event.target.value)
+                    }
+                  >
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-navy-soft">
+                    ML weight
+                  </label>
+                  <Input
+                    placeholder="0-1"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="1"
+                    value={form.mlWeight}
+                    onChange={(event) =>
+                      updateField("mlWeight", event.target.value)
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-navy-soft">
+                    Dealbreaker
+                  </label>
+                  <Select
+                    value={form.isDealbreaker}
+                    onChange={(event) =>
+                      updateField("isDealbreaker", event.target.value)
+                    }
+                  >
+                    <option value="false">Not a dealbreaker</option>
+                    <option value="true">Dealbreaker</option>
+                  </Select>
+                </div>
               </div>
             </div>
             <div className="space-y-2">
@@ -687,59 +726,84 @@ export default function AdminQuestionnaireQuestionForm({
             ) : null}
             {form.type === "NUMBER_SCALE" ? (
               <div className="grid gap-4 md:grid-cols-2">
-                <Input
-                  type="number"
-                  placeholder="Min"
-                  value={scaleOptions.min}
-                  onChange={(event) =>
-                    setScaleOptions((prev) => ({
-                      ...prev,
-                      min: event.target.value,
-                    }))
-                  }
-                />
-                <Input
-                  type="number"
-                  placeholder="Max"
-                  value={scaleOptions.max}
-                  onChange={(event) =>
-                    setScaleOptions((prev) => ({
-                      ...prev,
-                      max: event.target.value,
-                    }))
-                  }
-                />
-                <Input
-                  type="number"
-                  placeholder="Step"
-                  value={scaleOptions.step}
-                  onChange={(event) =>
-                    setScaleOptions((prev) => ({
-                      ...prev,
-                      step: event.target.value,
-                    }))
-                  }
-                />
-                <Input
-                  placeholder="Min label"
-                  value={scaleOptions.minLabel}
-                  onChange={(event) =>
-                    setScaleOptions((prev) => ({
-                      ...prev,
-                      minLabel: event.target.value,
-                    }))
-                  }
-                />
-                <Input
-                  placeholder="Max label"
-                  value={scaleOptions.maxLabel}
-                  onChange={(event) =>
-                    setScaleOptions((prev) => ({
-                      ...prev,
-                      maxLabel: event.target.value,
-                    }))
-                  }
-                />
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-navy-soft">
+                    Min value
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="1"
+                    value={scaleOptions.min}
+                    onChange={(event) =>
+                      setScaleOptions((prev) => ({
+                        ...prev,
+                        min: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-navy-soft">
+                    Max value
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="10"
+                    value={scaleOptions.max}
+                    onChange={(event) =>
+                      setScaleOptions((prev) => ({
+                        ...prev,
+                        max: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-navy-soft">
+                    Step
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="1"
+                    value={scaleOptions.step}
+                    onChange={(event) =>
+                      setScaleOptions((prev) => ({
+                        ...prev,
+                        step: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-navy-soft">
+                    Min label
+                  </label>
+                  <Input
+                    placeholder="e.g. Strongly disagree"
+                    value={scaleOptions.minLabel}
+                    onChange={(event) =>
+                      setScaleOptions((prev) => ({
+                        ...prev,
+                        minLabel: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-navy-soft">
+                    Max label
+                  </label>
+                  <Input
+                    placeholder="e.g. Strongly agree"
+                    value={scaleOptions.maxLabel}
+                    onChange={(event) =>
+                      setScaleOptions((prev) => ({
+                        ...prev,
+                        maxLabel: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
               </div>
             ) : null}
             {form.type === "AGE_RANGE" ? (
