@@ -553,10 +553,14 @@ export default function AdminQuestionnaireQuestionForm({
             ) : null}
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-navy-soft">
+                <label
+                  htmlFor="question-prompt"
+                  className="text-xs font-semibold text-navy-soft"
+                >
                   Question prompt
                 </label>
                 <Textarea
+                  id="question-prompt"
                   placeholder="Enter the question prompt..."
                   value={form.prompt}
                   onChange={(event) =>
@@ -568,10 +572,14 @@ export default function AdminQuestionnaireQuestionForm({
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-navy-soft">
+                  <label
+                    htmlFor="question-section"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
                     Section
                   </label>
                   <Select
+                    id="question-section"
                     value={form.sectionId}
                     onChange={(event) =>
                       updateField("sectionId", event.target.value)
@@ -586,10 +594,14 @@ export default function AdminQuestionnaireQuestionForm({
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-navy-soft">
+                  <label
+                    htmlFor="question-type"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
                     Question type
                   </label>
                   <Select
+                    id="question-type"
                     value={form.type}
                     onChange={(event) =>
                       updateField("type", event.target.value)
@@ -603,10 +615,14 @@ export default function AdminQuestionnaireQuestionForm({
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-navy-soft">
+                  <label
+                    htmlFor="question-order"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
                     Display order
                   </label>
                   <Input
+                    id="question-order"
                     placeholder="0"
                     type="number"
                     value={form.order}
@@ -616,10 +632,14 @@ export default function AdminQuestionnaireQuestionForm({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-navy-soft">
+                  <label
+                    htmlFor="question-required"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
                     Required
                   </label>
                   <Select
+                    id="question-required"
                     value={form.isRequired}
                     onChange={(event) =>
                       updateField("isRequired", event.target.value)
@@ -630,10 +650,14 @@ export default function AdminQuestionnaireQuestionForm({
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-navy-soft">
+                  <label
+                    htmlFor="question-status"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
                     Status
                   </label>
                   <Select
+                    id="question-status"
                     value={form.isActive}
                     onChange={(event) =>
                       updateField("isActive", event.target.value)
@@ -644,10 +668,14 @@ export default function AdminQuestionnaireQuestionForm({
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-navy-soft">
+                  <label
+                    htmlFor="question-ml-weight"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
                     ML weight
                   </label>
                   <Input
+                    id="question-ml-weight"
                     placeholder="0-1"
                     type="number"
                     step="0.1"
@@ -660,10 +688,14 @@ export default function AdminQuestionnaireQuestionForm({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-navy-soft">
+                  <label
+                    htmlFor="question-dealbreaker"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
                     Dealbreaker
                   </label>
                   <Select
+                    id="question-dealbreaker"
                     value={form.isDealbreaker}
                     onChange={(event) =>
                       updateField("isDealbreaker", event.target.value)
@@ -676,10 +708,14 @@ export default function AdminQuestionnaireQuestionForm({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-navy-soft">
+              <label
+                htmlFor="question-helper-text"
+                className="text-xs font-semibold text-navy-soft"
+              >
                 Helper text
               </label>
               <Textarea
+                id="question-helper-text"
                 value={form.helperText}
                 onChange={(event) =>
                   updateField("helperText", event.target.value)
@@ -694,7 +730,10 @@ export default function AdminQuestionnaireQuestionForm({
               "RANKING",
             ].includes(form.type) ? (
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-navy-soft">
+                <label
+                  htmlFor="question-options"
+                  className="text-xs font-semibold text-navy-soft"
+                >
                   {form.type === "POINT_ALLOCATION" || form.type === "RANKING"
                     ? "Items"
                     : "Options"}
@@ -703,6 +742,7 @@ export default function AdminQuestionnaireQuestionForm({
                   <p className="text-xs text-navy-soft">{optionHelp}</p>
                 ) : null}
                 <Textarea
+                  id="question-options"
                   value={optionLines}
                   onChange={(event) => setOptionLines(event.target.value)}
                   rows={6}
@@ -711,10 +751,14 @@ export default function AdminQuestionnaireQuestionForm({
             ) : null}
             {form.type === "POINT_ALLOCATION" ? (
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-navy-soft">
+                <label
+                  htmlFor="question-point-total"
+                  className="text-xs font-semibold text-navy-soft"
+                >
                   Total points to allocate
                 </label>
                 <Input
+                  id="question-point-total"
                   type="number"
                   min={1}
                   value={pointAllocationTotal}
@@ -727,10 +771,14 @@ export default function AdminQuestionnaireQuestionForm({
             {form.type === "NUMBER_SCALE" ? (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-navy-soft">
+                  <label
+                    htmlFor="scale-min"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
                     Min value
                   </label>
                   <Input
+                    id="scale-min"
                     type="number"
                     placeholder="1"
                     value={scaleOptions.min}
@@ -743,10 +791,14 @@ export default function AdminQuestionnaireQuestionForm({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-navy-soft">
+                  <label
+                    htmlFor="scale-max"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
                     Max value
                   </label>
                   <Input
+                    id="scale-max"
                     type="number"
                     placeholder="10"
                     value={scaleOptions.max}
@@ -759,10 +811,14 @@ export default function AdminQuestionnaireQuestionForm({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-navy-soft">
+                  <label
+                    htmlFor="scale-step"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
                     Step
                   </label>
                   <Input
+                    id="scale-step"
                     type="number"
                     placeholder="1"
                     value={scaleOptions.step}
@@ -775,10 +831,14 @@ export default function AdminQuestionnaireQuestionForm({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-navy-soft">
+                  <label
+                    htmlFor="scale-min-label"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
                     Min label
                   </label>
                   <Input
+                    id="scale-min-label"
                     placeholder="e.g. Strongly disagree"
                     value={scaleOptions.minLabel}
                     onChange={(event) =>
@@ -790,10 +850,14 @@ export default function AdminQuestionnaireQuestionForm({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-navy-soft">
+                  <label
+                    htmlFor="scale-max-label"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
                     Max label
                   </label>
                   <Input
+                    id="scale-max-label"
                     placeholder="e.g. Strongly agree"
                     value={scaleOptions.maxLabel}
                     onChange={(event) =>
@@ -814,10 +878,11 @@ export default function AdminQuestionnaireQuestionForm({
                 </label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1">
-                    <label className="text-xs text-navy-soft">
+                    <label htmlFor="age-min" className="text-xs text-navy-soft">
                       Default minimum age
                     </label>
                     <Select
+                      id="age-min"
                       value={ageRangeOptions.minAge}
                       onChange={(event) =>
                         setAgeRangeOptions((prev) => ({
@@ -834,10 +899,11 @@ export default function AdminQuestionnaireQuestionForm({
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-navy-soft">
+                    <label htmlFor="age-max" className="text-xs text-navy-soft">
                       Default maximum age
                     </label>
                     <Select
+                      id="age-max"
                       value={ageRangeOptions.maxAge}
                       onChange={(event) =>
                         setAgeRangeOptions((prev) => ({
