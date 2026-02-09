@@ -75,14 +75,6 @@ export async function GET(request: Request, { params }: RouteContext) {
       continuousMonitoringId: applicant.continuousMonitoringId,
     },
     questionnaire: applicant.questionnaire,
-    screening: {
-      screeningStatus: applicant.screeningStatus,
-      idenfyStatus: applicant.idenfyStatus,
-      idenfyVerificationId: applicant.idenfyVerificationId,
-      checkrStatus: applicant.checkrStatus,
-      checkrReportId: applicant.checkrReportId,
-      backgroundCheckNotes: applicant.backgroundCheckNotes,
-    },
     payments: applicant.payments,
   });
 }

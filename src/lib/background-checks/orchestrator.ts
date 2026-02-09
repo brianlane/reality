@@ -183,10 +183,12 @@ export async function onIdenfyComplete(
     return;
   }
 
-  // PASSED -- atomically claim PENDING -> IN_PROGRESS to prevent duplicate
-  // Checkr invitations from concurrent/duplicate iDenfy webhooks.
+  // PASSED -- atomically claim PENDING/FAILED -> IN_PROGRESS to prevent
+  // duplicate Checkr invitations from concurrent/duplicate iDenfy webhooks.
+  // Matching FAILED allows automatic re-triggering after a previous Checkr
+  // failure (e.g., when the user retries identity verification).
   const claimed = await db.applicant.updateMany({
-    where: { id: applicantId, checkrStatus: "PENDING" },
+    where: { id: applicantId, checkrStatus: { in: ["PENDING", "FAILED"] } },
     data: { checkrStatus: "IN_PROGRESS" },
   });
 
