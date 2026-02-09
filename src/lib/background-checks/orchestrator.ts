@@ -336,7 +336,7 @@ export async function onCheckrComplete(
  * Both iDenfy and Checkr must pass for overall screening to pass.
  * Enrolls in continuous monitoring if both pass.
  */
-export async function finalizeScreening(applicantId: string): Promise<void> {
+async function finalizeScreening(applicantId: string): Promise<void> {
   const applicant = await db.applicant.findUnique({
     where: { id: applicantId },
     include: { user: true },

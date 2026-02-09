@@ -122,7 +122,7 @@ export async function createVerificationSession(applicant: {
     authToken: data.authToken,
     scanRef: data.scanRef,
     clientId: applicant.id,
-    url: `https://ivs.idenfy.com/api/v2/redirect?authToken=${data.authToken}`,
+    url: `${config.baseUrl}/api/v2/redirect?authToken=${data.authToken}`,
   };
 }
 
