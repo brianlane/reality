@@ -6,9 +6,13 @@ import Logo from "./Logo";
 import NavAuthActions from "./NavAuthActions";
 
 const navLinks = [
-  { href: "/apply", label: "Join Now" },
-  { href: "/purpose", label: "Purpose" },
-  { href: "mailto:contact@realitymatchmaking.com", label: "Contact" },
+  { href: "/apply", label: "Join Now", external: false },
+  { href: "/purpose", label: "Purpose", external: false },
+  {
+    href: "mailto:contact@realitymatchmaking.com",
+    label: "Contact",
+    external: true,
+  },
 ];
 
 export default function Navbar() {
@@ -21,6 +25,18 @@ export default function Navbar() {
           <Logo size="icon" />
         </Link>
         {navLinks.map((link) => {
+          if (link.external) {
+            return (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-navy-soft transition-colors hover:text-copper"
+              >
+                {link.label}
+              </a>
+            );
+          }
+
           const isActive = pathname.startsWith(link.href);
 
           return (
