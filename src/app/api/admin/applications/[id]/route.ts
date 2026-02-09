@@ -195,6 +195,7 @@ export async function DELETE(_: Request, { params }: RouteContext) {
     } catch (err: unknown) {
       logger.warn("Failed to cancel continuous monitoring during soft delete", {
         applicantId: id,
+        monitoringId: existing.continuousMonitoringId, // Log before it's nulled
         error: err instanceof Error ? err.message : String(err),
       });
       // Continue with deletion even if cancellation fails

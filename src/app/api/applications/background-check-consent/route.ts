@@ -113,10 +113,18 @@ export async function POST(request: Request) {
       ip: clientIp,
     });
 
+    // Re-read the applicant to get the latest applicationStatus.
+    // The initial fetch (top of handler) may be stale if the submit route
+    // ran concurrently and committed between our fetch and this point.
+    const freshApplicant = await db.applicant.findUnique({
+      where: { id: applicant.id },
+      select: { applicationStatus: true },
+    });
+
     // If the application is already submitted, auto-initiate screening
     if (
-      applicant.applicationStatus === "SUBMITTED" ||
-      applicant.applicationStatus === "SCREENING_IN_PROGRESS"
+      freshApplicant?.applicationStatus === "SUBMITTED" ||
+      freshApplicant?.applicationStatus === "SCREENING_IN_PROGRESS"
     ) {
       initiateScreening(applicant.id).catch((err: unknown) => {
         logger.error("Failed to auto-initiate screening after consent", {

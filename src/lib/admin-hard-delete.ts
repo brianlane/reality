@@ -62,6 +62,7 @@ export async function hardDeleteApplicant(
     } catch (err: unknown) {
       logger.warn("Failed to cancel continuous monitoring during hard delete", {
         applicantId,
+        monitoringId: applicantForMonitoring.continuousMonitoringId, // Log before record is deleted
         error: err instanceof Error ? err.message : String(err),
       });
       // Continue with deletion even if cancellation fails
@@ -288,6 +289,7 @@ export async function hardDeleteUser(userId: string, adminUserId: string) {
         "Failed to cancel continuous monitoring during user hard delete",
         {
           userId,
+          monitoringId: applicantForMonitoring.continuousMonitoringId, // Log before record is deleted
           error: err instanceof Error ? err.message : String(err),
         },
       );
