@@ -58,11 +58,13 @@ export async function POST(request: Request) {
   });
 
   if (!applicant) {
+    // Return 200 so iDenfy does not retry indefinitely for a genuinely
+    // missing applicant. The warning log alerts the team for investigation.
     logger.warn("iDenfy webhook: applicant not found", {
       scanRef,
       clientId,
     });
-    return errorResponse("NOT_FOUND", "Applicant not found", 404);
+    return successResponse({ received: true, processed: false });
   }
 
   const screeningStatus = mapIdenfyStatus(overallStatus);
