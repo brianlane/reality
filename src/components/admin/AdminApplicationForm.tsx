@@ -113,6 +113,7 @@ export default function AdminApplicationForm({
             compatibilityScore: json.applicant.compatibilityScore
               ? String(json.applicant.compatibilityScore)
               : "",
+            notes: json.applicant.backgroundCheckNotes ?? "",
           }));
           initialLoadDone.current = true;
         } else {
