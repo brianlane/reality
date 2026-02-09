@@ -294,10 +294,14 @@ export async function onCheckrComplete(
   if (status === "PASSED") {
     await finalizeScreening(applicantId);
   } else {
-    // "consider" result -- flag for admin review, do NOT auto-reject
+    // Non-clear result (e.g. "consider") -- mark screening as FAILED and flag
+    // for admin review. Setting screeningStatus ensures dashboards accurately
+    // reflect that the pipeline is complete and the applicant needs attention,
+    // rather than appearing stuck in IN_PROGRESS indefinitely.
     await db.applicant.update({
       where: { id: applicantId },
       data: {
+        screeningStatus: "FAILED",
         backgroundCheckNotes: appendNote(
           applicant.backgroundCheckNotes,
           `Checkr result: ${result || "consider"} -- requires admin review`,

@@ -105,11 +105,13 @@ async function handleReportCompleted(data: {
   });
 
   if (!applicant) {
+    // Return 200 so Checkr does not retry indefinitely for a genuinely
+    // missing applicant. The warning log alerts the team for investigation.
     logger.warn("Checkr webhook: applicant not found", {
       candidateId,
       reportId,
     });
-    return errorResponse("NOT_FOUND", "Applicant not found", 404);
+    return successResponse({ received: true, processed: false });
   }
 
   const screeningStatus = mapCheckrResult(result);
