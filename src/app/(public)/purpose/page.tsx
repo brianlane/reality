@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function PurposePage() {
   return (
-    <article className="bg-slate-50">
+    <article className="overflow-x-hidden bg-slate-50">
       {/* Hero */}
       <section className="bg-white border-b border-slate-200">
         <div className="mx-auto max-w-3xl px-6 py-20 text-center">
@@ -48,10 +48,9 @@ export default function PurposePage() {
             <p className="mt-2 text-sm leading-relaxed text-navy-soft">
               Users believe someone better is always one swipe away. There is no
               cost to waiting, no pressure to decide, and no reason to commit to
-              a conversation — let alone a date. The paradox of choice
-              (Lenton&nbsp;&amp;&nbsp;Francesconi,&nbsp;2011) ensures that more
-              options lead to less satisfaction and greater confusion in mate
-              selection.
+              a conversation — let alone a date. The paradox of choice (Lenton
+              &amp; Francesconi, 2011) ensures that more options lead to less
+              satisfaction and greater confusion in mate selection.
             </p>
           </div>
 
@@ -64,8 +63,7 @@ export default function PurposePage() {
               This hidden market distorts expectations and creates a
               seller&rsquo;s market where standards detach from reality. Online
               platforms enable sorting by superficial traits while masking the
-              true competitive landscape
-              (Hitsch,&nbsp;Hortaçsu,&nbsp;&amp;&nbsp;Ariely,&nbsp;2010).
+              true competitive landscape (Hitsch, Hortaçsu, &amp; Ariely, 2010).
             </p>
           </div>
 
@@ -79,8 +77,7 @@ export default function PurposePage() {
               you&rsquo;re being passed by. Without feedback, people
               miscalibrate their expectations and stagnate. Research confirms
               that initial romantic desire is notoriously difficult to predict
-              from profile data alone
-              (Joel,&nbsp;Eastwick,&nbsp;&amp;&nbsp;Finkel,&nbsp;2017).
+              from profile data alone (Joel, Eastwick, &amp; Finkel, 2017).
             </p>
           </div>
 
@@ -92,9 +89,8 @@ export default function PurposePage() {
               The disillusionment from mismatched expectations means most app
               interactions never convert into real dates. Critical analysis of
               online dating reveals fundamental limitations of digital
-              mate-selection
-              (Finkel,&nbsp;Eastwick,&nbsp;Karney,&nbsp;Reis,&nbsp;&amp;&nbsp;Sprecher,&nbsp;2012)
-              — the very information that matters most for attraction is
+              mate-selection (Finkel, Eastwick, Karney, Reis, &amp; Sprecher,
+              2012) — the very information that matters most for attraction is
               inaccessible through a screen.
             </p>
           </div>
@@ -144,9 +140,8 @@ export default function PurposePage() {
               <p className="mt-1 text-sm leading-relaxed text-navy-soft">
                 Participants see exactly who else is in the market. First
                 impressions at zero acquaintance carry substantial weight in
-                interpersonal attraction
-                (Back,&nbsp;Schmukle,&nbsp;&amp;&nbsp;Egloff,&nbsp;2011), and
-                physical co-presence makes those impressions genuine.
+                interpersonal attraction (Back, Schmukle, &amp; Egloff, 2011),
+                and physical co-presence makes those impressions genuine.
               </p>
             </div>
           </div>
@@ -177,10 +172,9 @@ export default function PurposePage() {
               <p className="mt-1 text-sm leading-relaxed text-navy-soft">
                 You know instantly if someone is interested or if they pair off
                 with someone else. Social signals — the kind that drive real
-                human bonding — are restored. As
-                Gottman,&nbsp;Coan,&nbsp;Carrere,&nbsp;and&nbsp;Swanson (1998)
-                demonstrated, observable interaction patterns are powerful
-                predictors of relationship outcomes.
+                human bonding — are restored. As Gottman, Coan, Carrere, and
+                Swanson (1998) demonstrated, observable interaction patterns are
+                powerful predictors of relationship outcomes.
               </p>
             </div>
           </div>
@@ -199,8 +193,8 @@ export default function PurposePage() {
                 appearance. Research consistently shows that personality traits
                 — particularly agreeableness, conscientiousness, and emotional
                 stability — are among the most robust predictors of relationship
-                quality
-                (Joel&nbsp;et&nbsp;al.,&nbsp;2020;&nbsp;Malouff&nbsp;et&nbsp;al.,&nbsp;2010;&nbsp;Donnellan,&nbsp;Conger,&nbsp;&amp;&nbsp;Bryant,&nbsp;2004).
+                quality (Joel et al., 2020; Malouff et al., 2010; Donnellan,
+                Conger, &amp; Bryant, 2004).
               </p>
             </div>
           </div>
@@ -240,9 +234,9 @@ export default function PurposePage() {
                 financial vetting helps confirm honesty and lifestyle stability.
                 Socially desirable responding — the tendency to present an
                 unrealistically positive self-image — is a known challenge in
-                self-report assessments
-                (Paulhus&nbsp;&amp;&nbsp;Reid,&nbsp;1991). Our multi-layered
-                verification process is designed to cut through it.
+                self-report assessments (Paulhus &amp; Reid, 1991). Our
+                multi-layered verification process is designed to cut through
+                it.
               </p>
             </div>
 
@@ -262,10 +256,11 @@ export default function PurposePage() {
                 invitations are sent. Curation draws on research into
                 assortative mating and ideal-partner standards — similarity in
                 values, warmth, and attractiveness predicts satisfaction
-                (Gonzaga,&nbsp;Carter,&nbsp;&amp;&nbsp;Buckwalter,&nbsp;2010;&nbsp;Fletcher,&nbsp;Simpson,&nbsp;Thomas,&nbsp;&amp;&nbsp;Giles,&nbsp;1999).
-                Attachment styles are also considered, as secure attachment is
-                strongly linked to relationship success
-                (Hazan&nbsp;&amp;&nbsp;Shaver,&nbsp;1987;&nbsp;Simpson,&nbsp;Rholes,&nbsp;&amp;&nbsp;Phillips,&nbsp;1996).
+                (Gonzaga, Carter, &amp; Buckwalter, 2010; Fletcher, Simpson,
+                Thomas, &amp; Giles, 1999). Attachment styles are also
+                considered, as secure attachment is strongly linked to
+                relationship success (Hazan &amp; Shaver, 1987; Simpson, Rholes,
+                &amp; Phillips, 1996).
               </p>
             </div>
 
@@ -298,8 +293,7 @@ export default function PurposePage() {
                     match, focusing entirely on personality, humor,
                     communication style, and values. Speed-dating research
                     confirms these rapid interactions generate meaningful
-                    attraction signals
-                    (Finkel&nbsp;&amp;&nbsp;Eastwick,&nbsp;2008).
+                    attraction signals (Finkel &amp; Eastwick, 2008).
                   </p>
                 </div>
 
@@ -315,8 +309,8 @@ export default function PurposePage() {
                     face-to-face. Participants can validate or revise their
                     blind impressions, testing whether personality connection
                     translates to physical chemistry. Actual similarity in
-                    personality matters for attraction
-                    (Montoya,&nbsp;Horton,&nbsp;&amp;&nbsp;Kirchner,&nbsp;2008;&nbsp;Klohnen&nbsp;&amp;&nbsp;Luo,&nbsp;2003).
+                    personality matters for attraction (Montoya, Horton, &amp;
+                    Kirchner, 2008; Klohnen &amp; Luo, 2003).
                   </p>
                 </div>
 
@@ -333,8 +327,8 @@ export default function PurposePage() {
                     deeper conversations. Visible pairing dynamics create the
                     urgency and competition that drive real-world
                     decision-making. Shared novel and arousing activities
-                    strengthen connection
-                    (Aron,&nbsp;Norman,&nbsp;Aron,&nbsp;McKenna,&nbsp;&amp;&nbsp;Heyman,&nbsp;2000).
+                    strengthen connection (Aron, Norman, Aron, McKenna, &amp;
+                    Heyman, 2000).
                   </p>
                 </div>
               </div>
@@ -405,14 +399,13 @@ export default function PurposePage() {
         <p className="mt-6 text-sm leading-relaxed text-navy-soft">
           Financial screening is not about wealth — it&rsquo;s about honesty.
           Research shows that financial issues are a leading predictor of
-          relationship dissolution
-          (Dew,&nbsp;Britt,&nbsp;&amp;&nbsp;Huston,&nbsp;2012), and that
+          relationship dissolution (Dew, Britt, &amp; Huston, 2012), and that
           financial transparency strengthens relationship satisfaction
-          (Gladstone,&nbsp;Garbinsky,&nbsp;&amp;&nbsp;Mogilner,&nbsp;2022). By
-          verifying financial standing upfront, we help ensure that participants
-          are building connections on a foundation of truthfulness. All
-          screening processes adhere to applicable privacy regulations,
-          including the principles outlined in HHS 45&nbsp;CFR&nbsp;46.
+          (Gladstone, Garbinsky, &amp; Mogilner, 2022). By verifying financial
+          standing upfront, we help ensure that participants are building
+          connections on a foundation of truthfulness. All screening processes
+          adhere to applicable privacy regulations, including the principles
+          outlined in HHS 45 CFR 46.
         </p>
       </section>
 
@@ -426,23 +419,20 @@ export default function PurposePage() {
             Our approach is informed by decades of peer-reviewed research in
             psychology, interpersonal attraction, and relationship science. From
             Gottman&rsquo;s work on interaction patterns that predict marital
-            stability
-            (Gottman&nbsp;&amp;&nbsp;Gottman,&nbsp;2015;&nbsp;Navarra&nbsp;&amp;&nbsp;Gottman,&nbsp;2018)
+            stability (Gottman &amp; Gottman, 2015; Navarra &amp; Gottman, 2018)
             to large-scale machine-learning analyses identifying the most robust
-            predictors of relationship quality
-            (Joel&nbsp;et&nbsp;al.,&nbsp;2020), our methodology draws on the
-            best available evidence.
+            predictors of relationship quality (Joel et al., 2020), our
+            methodology draws on the best available evidence.
           </p>
           <p className="mt-4 text-base leading-relaxed text-navy-soft">
             We know that personality traits carry remarkable predictive power
-            for important life outcomes
-            (Roberts,&nbsp;Kuncel,&nbsp;Shiner,&nbsp;Caspi,&nbsp;&amp;&nbsp;Goldberg,&nbsp;2007;&nbsp;Heller,&nbsp;Watson,&nbsp;&amp;&nbsp;Ilies,&nbsp;2004),
-            that love styles and attachment patterns shape relationship dynamics
-            (Hendrick&nbsp;&amp;&nbsp;Hendrick,&nbsp;1986;&nbsp;Hazan&nbsp;&amp;&nbsp;Shaver,&nbsp;1987),
-            and that relationship-contingent self-esteem can influence how
-            people show up in partnerships. We incorporate these insights into
-            every layer of our process — from the questions we ask to the
-            matches we curate.
+            for important life outcomes (Roberts, Kuncel, Shiner, Caspi, &amp;
+            Goldberg, 2007; Heller, Watson, &amp; Ilies, 2004), that love styles
+            and attachment patterns shape relationship dynamics (Hendrick &amp;
+            Hendrick, 1986; Hazan &amp; Shaver, 1987), and that
+            relationship-contingent self-esteem can influence how people show up
+            in partnerships. We incorporate these insights into every layer of
+            our process — from the questions we ask to the matches we curate.
           </p>
         </div>
       </section>

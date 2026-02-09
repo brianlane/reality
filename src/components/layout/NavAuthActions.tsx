@@ -45,7 +45,7 @@ export default function NavAuthActions() {
   return (
     <Link
       href="/sign-in"
-      className={`transition-colors text-base ${
+      className={`text-center transition-colors text-base ${
         isActive ? "text-copper" : "text-navy-soft hover:text-copper"
       }`}
     >
