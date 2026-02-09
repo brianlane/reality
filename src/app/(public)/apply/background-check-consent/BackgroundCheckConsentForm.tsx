@@ -59,7 +59,7 @@ export default function BackgroundCheckConsentForm({
 
       // Redirect after a brief delay to show success
       setTimeout(() => {
-        window.location.href = `/apply/waitlist?id=${applicationId}`;
+        window.location.href = `/apply/verify-identity?id=${applicationId}`;
       }, 2000);
     } catch {
       setError("An unexpected error occurred. Please try again.");
