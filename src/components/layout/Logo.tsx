@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 type LogoProps = {
-  size?: "small" | "large";
+  size?: "small" | "large" | "icon";
 };
 
 export default function Logo({ size = "small" }: LogoProps) {
@@ -28,26 +28,39 @@ export default function Logo({ size = "small" }: LogoProps) {
   }, [isHovering]);
 
   // Size configurations
-  const config =
-    size === "large"
-      ? {
-          canvasWidth: 96,
-          canvasHeight: 80,
-          baseDistance: 24,
-          radius: 12,
-          textSize: "text-5xl",
-          subtextSize: "text-sm",
-          gap: "gap-6",
-        }
-      : {
-          canvasWidth: 48,
-          canvasHeight: 40,
-          baseDistance: 12,
-          radius: 6,
-          textSize: "text-2xl",
-          subtextSize: "text-[10px]",
-          gap: "gap-3",
-        };
+  const configs = {
+    large: {
+      canvasWidth: 96,
+      canvasHeight: 80,
+      baseDistance: 24,
+      radius: 12,
+      textSize: "text-5xl",
+      subtextSize: "text-sm",
+      gap: "gap-6",
+      showText: true,
+    },
+    small: {
+      canvasWidth: 48,
+      canvasHeight: 40,
+      baseDistance: 12,
+      radius: 6,
+      textSize: "text-2xl",
+      subtextSize: "text-[10px]",
+      gap: "gap-3",
+      showText: true,
+    },
+    icon: {
+      canvasWidth: 48,
+      canvasHeight: 40,
+      baseDistance: 12,
+      radius: 6,
+      textSize: "",
+      subtextSize: "",
+      gap: "",
+      showText: false,
+    },
+  };
+  const config = configs[size];
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -239,18 +252,20 @@ export default function Logo({ size = "small" }: LogoProps) {
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
-      <div className="flex flex-col leading-none">
-        <span
-          className={`${config.textSize} font-bold text-copper tracking-tight`}
-        >
-          REALITY
-        </span>
-        <span
-          className={`${config.subtextSize} uppercase tracking-wider text-navy-soft font-medium`}
-        >
-          Matchmaking
-        </span>
-      </div>
+      {config.showText && (
+        <div className="flex flex-col leading-none">
+          <span
+            className={`${config.textSize} font-bold text-copper tracking-tight`}
+          >
+            REALITY
+          </span>
+          <span
+            className={`${config.subtextSize} uppercase tracking-wider text-navy-soft font-medium`}
+          >
+            Matchmaking
+          </span>
+        </div>
+      )}
       <canvas
         ref={canvasRef}
         width={config.canvasWidth}
