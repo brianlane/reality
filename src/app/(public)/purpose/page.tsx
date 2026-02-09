@@ -105,7 +105,7 @@ export default function PurposePage() {
       <section className="bg-navy">
         <div className="mx-auto max-w-3xl px-6 py-16 text-center">
           <h2 className="text-3xl font-semibold text-white">
-            Then You Walk Into a Real Room
+            Then You Walk Into the Real World
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-copper-light">
             And the illusion breaks. You&rsquo;re not alone in the market. What

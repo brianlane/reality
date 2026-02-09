@@ -1,32 +1,45 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import Logo from "./Logo";
 import NavAuthActions from "./NavAuthActions";
 
 const navLinks = [
-  { href: "/", label: "Home" },
+  { href: "/apply", label: "Join Now" },
   { href: "/purpose", label: "Purpose" },
+  { href: "mailto:contact@realitymatchmaking.com", label: "Contact" },
 ];
 
 export default function Navbar() {
+  const pathname = usePathname();
+
   return (
     <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
+      <nav className="mx-auto flex w-full max-w-6xl items-center justify-center gap-10 px-6 py-6 text-base font-semibold">
         <Link href="/">
-          <Logo />
+          <Logo size="icon" />
         </Link>
-        <nav className="flex items-center gap-4 text-sm text-navy-soft">
-          {navLinks.map((link) => (
+        {navLinks.map((link) => {
+          const isActive =
+            link.href === "/"
+              ? pathname === "/"
+              : pathname.startsWith(link.href);
+
+          return (
             <Link
               key={link.href}
               href={link.href}
-              className="hover:text-copper transition-colors"
+              className={`transition-colors ${
+                isActive ? "text-copper" : "text-navy-soft hover:text-copper"
+              }`}
             >
               {link.label}
             </Link>
-          ))}
-          <NavAuthActions />
-        </nav>
-      </div>
+          );
+        })}
+        <NavAuthActions />
+      </nav>
     </header>
   );
 }
