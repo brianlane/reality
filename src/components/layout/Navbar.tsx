@@ -21,10 +21,7 @@ export default function Navbar() {
           <Logo size="icon" />
         </Link>
         {navLinks.map((link) => {
-          const isActive =
-            link.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(link.href);
+          const isActive = pathname.startsWith(link.href);
 
           return (
             <Link
