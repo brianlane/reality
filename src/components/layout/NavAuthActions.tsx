@@ -35,20 +35,19 @@ export default function NavAuthActions() {
     return (
       <SignOutButton
         redirectTo="/"
-        className="rounded-md border border-slate-300 px-3 py-1 text-sm text-navy hover:border-copper hover:text-copper transition-colors"
+        className="text-base font-semibold text-navy-soft hover:text-copper transition-colors"
       />
     );
   }
 
-  // Hide sign in button on sign-in and admin login pages
-  if (pathname === "/sign-in" || pathname === "/admin/login") {
-    return null;
-  }
+  const isActive = pathname === "/sign-in" || pathname === "/admin/login";
 
   return (
     <Link
       href="/sign-in"
-      className="rounded-md border border-slate-300 px-3 py-1 text-sm text-navy hover:border-copper hover:text-copper transition-colors"
+      className={`text-center transition-colors text-base ${
+        isActive ? "text-copper" : "text-navy-soft hover:text-copper"
+      }`}
     >
       Sign in
     </Link>

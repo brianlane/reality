@@ -553,10 +553,14 @@ export default function AdminQuestionnaireQuestionForm({
             ) : null}
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-navy-soft">
+                <label
+                  htmlFor="question-prompt"
+                  className="text-xs font-semibold text-navy-soft"
+                >
                   Question prompt
                 </label>
                 <Textarea
+                  id="question-prompt"
                   placeholder="Enter the question prompt..."
                   value={form.prompt}
                   onChange={(event) =>
@@ -567,80 +571,151 @@ export default function AdminQuestionnaireQuestionForm({
                 />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <Select
-                  value={form.sectionId}
-                  onChange={(event) =>
-                    updateField("sectionId", event.target.value)
-                  }
-                >
-                  <option value="">Select section</option>
-                  {sections.map((section) => (
-                    <option key={section.id} value={section.id}>
-                      {section.title}
-                    </option>
-                  ))}
-                </Select>
-                <Select
-                  value={form.type}
-                  onChange={(event) => updateField("type", event.target.value)}
-                >
-                  {QUESTION_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </Select>
-                <Input
-                  placeholder="Order"
-                  type="number"
-                  value={form.order}
-                  onChange={(event) => updateField("order", event.target.value)}
-                />
-                <Select
-                  value={form.isRequired}
-                  onChange={(event) =>
-                    updateField("isRequired", event.target.value)
-                  }
-                >
-                  <option value="false">Optional</option>
-                  <option value="true">Required</option>
-                </Select>
-                <Select
-                  value={form.isActive}
-                  onChange={(event) =>
-                    updateField("isActive", event.target.value)
-                  }
-                >
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
-                </Select>
-                <Input
-                  placeholder="Weight (0-1)"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="1"
-                  value={form.mlWeight}
-                  onChange={(event) =>
-                    updateField("mlWeight", event.target.value)
-                  }
-                />
-                <Select
-                  value={form.isDealbreaker}
-                  onChange={(event) =>
-                    updateField("isDealbreaker", event.target.value)
-                  }
-                >
-                  <option value="false">Not a dealbreaker</option>
-                  <option value="true">Dealbreaker</option>
-                </Select>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="question-section"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
+                    Section
+                  </label>
+                  <Select
+                    id="question-section"
+                    value={form.sectionId}
+                    onChange={(event) =>
+                      updateField("sectionId", event.target.value)
+                    }
+                  >
+                    <option value="">Select section</option>
+                    {sections.map((section) => (
+                      <option key={section.id} value={section.id}>
+                        {section.title}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="question-type"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
+                    Question type
+                  </label>
+                  <Select
+                    id="question-type"
+                    value={form.type}
+                    onChange={(event) =>
+                      updateField("type", event.target.value)
+                    }
+                  >
+                    {QUESTION_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="question-order"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
+                    Display order
+                  </label>
+                  <Input
+                    id="question-order"
+                    placeholder="0"
+                    type="number"
+                    value={form.order}
+                    onChange={(event) =>
+                      updateField("order", event.target.value)
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="question-required"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
+                    Required
+                  </label>
+                  <Select
+                    id="question-required"
+                    value={form.isRequired}
+                    onChange={(event) =>
+                      updateField("isRequired", event.target.value)
+                    }
+                  >
+                    <option value="false">Optional</option>
+                    <option value="true">Required</option>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="question-status"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
+                    Status
+                  </label>
+                  <Select
+                    id="question-status"
+                    value={form.isActive}
+                    onChange={(event) =>
+                      updateField("isActive", event.target.value)
+                    }
+                  >
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="question-ml-weight"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
+                    ML weight
+                  </label>
+                  <Input
+                    id="question-ml-weight"
+                    placeholder="0-1"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="1"
+                    value={form.mlWeight}
+                    onChange={(event) =>
+                      updateField("mlWeight", event.target.value)
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="question-dealbreaker"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
+                    Dealbreaker
+                  </label>
+                  <Select
+                    id="question-dealbreaker"
+                    value={form.isDealbreaker}
+                    onChange={(event) =>
+                      updateField("isDealbreaker", event.target.value)
+                    }
+                  >
+                    <option value="false">Not a dealbreaker</option>
+                    <option value="true">Dealbreaker</option>
+                  </Select>
+                </div>
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-navy-soft">
+              <label
+                htmlFor="question-helper-text"
+                className="text-xs font-semibold text-navy-soft"
+              >
                 Helper text
               </label>
               <Textarea
+                id="question-helper-text"
                 value={form.helperText}
                 onChange={(event) =>
                   updateField("helperText", event.target.value)
@@ -655,7 +730,10 @@ export default function AdminQuestionnaireQuestionForm({
               "RANKING",
             ].includes(form.type) ? (
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-navy-soft">
+                <label
+                  htmlFor="question-options"
+                  className="text-xs font-semibold text-navy-soft"
+                >
                   {form.type === "POINT_ALLOCATION" || form.type === "RANKING"
                     ? "Items"
                     : "Options"}
@@ -664,6 +742,7 @@ export default function AdminQuestionnaireQuestionForm({
                   <p className="text-xs text-navy-soft">{optionHelp}</p>
                 ) : null}
                 <Textarea
+                  id="question-options"
                   value={optionLines}
                   onChange={(event) => setOptionLines(event.target.value)}
                   rows={6}
@@ -672,10 +751,14 @@ export default function AdminQuestionnaireQuestionForm({
             ) : null}
             {form.type === "POINT_ALLOCATION" ? (
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-navy-soft">
+                <label
+                  htmlFor="question-point-total"
+                  className="text-xs font-semibold text-navy-soft"
+                >
                   Total points to allocate
                 </label>
                 <Input
+                  id="question-point-total"
                   type="number"
                   min={1}
                   value={pointAllocationTotal}
@@ -687,59 +770,104 @@ export default function AdminQuestionnaireQuestionForm({
             ) : null}
             {form.type === "NUMBER_SCALE" ? (
               <div className="grid gap-4 md:grid-cols-2">
-                <Input
-                  type="number"
-                  placeholder="Min"
-                  value={scaleOptions.min}
-                  onChange={(event) =>
-                    setScaleOptions((prev) => ({
-                      ...prev,
-                      min: event.target.value,
-                    }))
-                  }
-                />
-                <Input
-                  type="number"
-                  placeholder="Max"
-                  value={scaleOptions.max}
-                  onChange={(event) =>
-                    setScaleOptions((prev) => ({
-                      ...prev,
-                      max: event.target.value,
-                    }))
-                  }
-                />
-                <Input
-                  type="number"
-                  placeholder="Step"
-                  value={scaleOptions.step}
-                  onChange={(event) =>
-                    setScaleOptions((prev) => ({
-                      ...prev,
-                      step: event.target.value,
-                    }))
-                  }
-                />
-                <Input
-                  placeholder="Min label"
-                  value={scaleOptions.minLabel}
-                  onChange={(event) =>
-                    setScaleOptions((prev) => ({
-                      ...prev,
-                      minLabel: event.target.value,
-                    }))
-                  }
-                />
-                <Input
-                  placeholder="Max label"
-                  value={scaleOptions.maxLabel}
-                  onChange={(event) =>
-                    setScaleOptions((prev) => ({
-                      ...prev,
-                      maxLabel: event.target.value,
-                    }))
-                  }
-                />
+                <div className="space-y-1">
+                  <label
+                    htmlFor="scale-min"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
+                    Min value
+                  </label>
+                  <Input
+                    id="scale-min"
+                    type="number"
+                    placeholder="1"
+                    value={scaleOptions.min}
+                    onChange={(event) =>
+                      setScaleOptions((prev) => ({
+                        ...prev,
+                        min: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="scale-max"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
+                    Max value
+                  </label>
+                  <Input
+                    id="scale-max"
+                    type="number"
+                    placeholder="10"
+                    value={scaleOptions.max}
+                    onChange={(event) =>
+                      setScaleOptions((prev) => ({
+                        ...prev,
+                        max: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="scale-step"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
+                    Step
+                  </label>
+                  <Input
+                    id="scale-step"
+                    type="number"
+                    placeholder="1"
+                    value={scaleOptions.step}
+                    onChange={(event) =>
+                      setScaleOptions((prev) => ({
+                        ...prev,
+                        step: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="scale-min-label"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
+                    Min label
+                  </label>
+                  <Input
+                    id="scale-min-label"
+                    placeholder="e.g. Strongly disagree"
+                    value={scaleOptions.minLabel}
+                    onChange={(event) =>
+                      setScaleOptions((prev) => ({
+                        ...prev,
+                        minLabel: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="scale-max-label"
+                    className="text-xs font-semibold text-navy-soft"
+                  >
+                    Max label
+                  </label>
+                  <Input
+                    id="scale-max-label"
+                    placeholder="e.g. Strongly agree"
+                    value={scaleOptions.maxLabel}
+                    onChange={(event) =>
+                      setScaleOptions((prev) => ({
+                        ...prev,
+                        maxLabel: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
               </div>
             ) : null}
             {form.type === "AGE_RANGE" ? (
@@ -750,10 +878,11 @@ export default function AdminQuestionnaireQuestionForm({
                 </label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1">
-                    <label className="text-xs text-navy-soft">
+                    <label htmlFor="age-min" className="text-xs text-navy-soft">
                       Default minimum age
                     </label>
                     <Select
+                      id="age-min"
                       value={ageRangeOptions.minAge}
                       onChange={(event) =>
                         setAgeRangeOptions((prev) => ({
@@ -770,10 +899,11 @@ export default function AdminQuestionnaireQuestionForm({
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-navy-soft">
+                    <label htmlFor="age-max" className="text-xs text-navy-soft">
                       Default maximum age
                     </label>
                     <Select
+                      id="age-max"
                       value={ageRangeOptions.maxAge}
                       onChange={(event) =>
                         setAgeRangeOptions((prev) => ({
