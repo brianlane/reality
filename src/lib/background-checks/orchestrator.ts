@@ -222,19 +222,28 @@ export async function onIdenfyComplete(
     // Send Checkr invitation
     const invitation = await createInvitation(candidateId);
 
-    // Audit log
-    await db.screeningAuditLog.create({
-      data: {
-        userId: null,
-        applicantId,
-        action: "CHECKR_AUTO_TRIGGERED",
-        metadata: {
-          candidateId,
-          invitationId: invitation.id,
-          triggeredBy: "idenfy_pass",
+    // Audit log — wrapped in .catch() so a DB failure here does NOT
+    // propagate to the outer catch block, which would roll back
+    // checkrStatus to PENDING and cause duplicate invitations on retry.
+    await db.screeningAuditLog
+      .create({
+        data: {
+          userId: null,
+          applicantId,
+          action: "CHECKR_AUTO_TRIGGERED",
+          metadata: {
+            candidateId,
+            invitationId: invitation.id,
+            triggeredBy: "idenfy_pass",
+          },
         },
-      },
-    });
+      })
+      .catch((err: unknown) => {
+        logger.warn("Failed to create screening audit log", {
+          applicantId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
 
     logger.info("Checkr background check auto-triggered after iDenfy pass", {
       applicantId,

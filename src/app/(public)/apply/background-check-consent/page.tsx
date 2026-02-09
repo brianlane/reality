@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
+import { getAuthUser } from "@/lib/auth";
 import BackgroundCheckConsentForm from "./BackgroundCheckConsentForm";
 
 type PageProps = {
@@ -16,12 +17,24 @@ export default async function BackgroundCheckConsentPage({
     redirect("/apply");
   }
 
+  // Require authentication — this page displays PII (name) and is reached
+  // after password creation, so the user should be logged in.
+  const auth = await getAuthUser();
+  if (!auth) {
+    redirect("/apply");
+  }
+
   const applicant = await db.applicant.findUnique({
     where: { id: applicationId },
     include: { user: true },
   });
 
   if (!applicant) {
+    redirect("/apply");
+  }
+
+  // Verify ownership — the authenticated user must own this application
+  if (applicant.user.email.toLowerCase() !== auth.email?.toLowerCase()) {
     redirect("/apply");
   }
 
