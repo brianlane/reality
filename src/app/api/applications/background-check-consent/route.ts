@@ -50,8 +50,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const applicant = await db.applicant.findUnique({
-      where: { id: applicationId },
+    const applicant = await db.applicant.findFirst({
+      where: { id: applicationId, deletedAt: null },
       include: { user: true },
     });
 

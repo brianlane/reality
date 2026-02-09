@@ -24,8 +24,8 @@ export default async function BackgroundCheckConsentPage({
     redirect("/apply");
   }
 
-  const applicant = await db.applicant.findUnique({
-    where: { id: applicationId },
+  const applicant = await db.applicant.findFirst({
+    where: { id: applicationId, deletedAt: null },
     include: { user: true },
   });
 
