@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     return successResponse({ received: true, processed: false });
   }
 
-  const screeningStatus = mapIdenfyStatus(overallStatus);
+  const screeningStatus = mapIdenfyStatus(overallStatus, { final: body.final });
 
   // Log to screening audit (always, even for soft-deleted — compliance requirement)
   await db.screeningAuditLog

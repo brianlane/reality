@@ -10,11 +10,8 @@
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { createVerificationSession } from "@/lib/background-checks/idenfy";
-import {
-  createCandidate,
-  createInvitation,
-  enrollContinuousMonitoring,
-} from "@/lib/background-checks/checkr";
+import { enrollContinuousMonitoring } from "@/lib/background-checks/checkr";
+import { triggerCheckrInvitation } from "@/lib/background-checks/checkr-trigger";
 import { sendApplicationStatusEmail } from "@/lib/email/status";
 
 // ============================================
@@ -183,81 +180,32 @@ export async function onIdenfyComplete(
     return;
   }
 
-  // PASSED -- atomically claim PENDING/FAILED -> IN_PROGRESS to prevent
-  // duplicate Checkr invitations from concurrent/duplicate iDenfy webhooks.
-  // Matching FAILED allows automatic re-triggering after a previous Checkr
-  // failure (e.g., when the user retries identity verification).
-  const claimed = await db.applicant.updateMany({
-    where: { id: applicantId, checkrStatus: { in: ["PENDING", "FAILED"] } },
-    data: { checkrStatus: "IN_PROGRESS" },
-  });
-
-  if (claimed.count === 0) {
-    logger.info("Checkr already initiated, skipping", { applicantId });
-    return;
-  }
-
   try {
-    // Re-read checkrCandidateId from DB after the atomic claim, since the
-    // value from the initial fetch may be stale if the admin route created
-    // a candidate between the fetch and the claim.
-    const freshApplicant = await db.applicant.findUnique({
-      where: { id: applicantId },
-      select: { checkrCandidateId: true },
-    });
-    let candidateId = freshApplicant?.checkrCandidateId ?? null;
-
-    if (!candidateId) {
-      const candidate = await createCandidate({
+    const result = await triggerCheckrInvitation({
+      applicantId,
+      applicantIdentity: {
         firstName: applicant.user.firstName,
         lastName: applicant.user.lastName,
         email: applicant.user.email,
-      });
-      candidateId = candidate.id;
+      },
+      audit: {
+        userId: null,
+        action: "CHECKR_AUTO_TRIGGERED",
+        metadata: { triggeredBy: "idenfy_pass" },
+      },
+    });
 
-      await db.applicant.update({
-        where: { id: applicantId },
-        data: { checkrCandidateId: candidateId },
-      });
+    if (result.status === "already_in_progress") {
+      logger.info("Checkr already initiated, skipping", { applicantId });
+      return;
     }
-
-    // Send Checkr invitation
-    const invitation = await createInvitation(candidateId);
-
-    // Audit log — wrapped in .catch() so a DB failure here does NOT
-    // propagate to the outer catch block, which would roll back
-    // checkrStatus to PENDING and cause duplicate invitations on retry.
-    await db.screeningAuditLog
-      .create({
-        data: {
-          userId: null,
-          applicantId,
-          action: "CHECKR_AUTO_TRIGGERED",
-          metadata: {
-            candidateId,
-            invitationId: invitation.id,
-            triggeredBy: "idenfy_pass",
-          },
-        },
-      })
-      .catch((err: unknown) => {
-        logger.warn("Failed to create screening audit log", {
-          applicantId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
 
     logger.info("Checkr background check auto-triggered after iDenfy pass", {
       applicantId,
-      candidateId,
-      invitationId: invitation.id,
+      candidateId: result.candidateId,
+      invitationId: result.invitationId,
     });
   } catch (err: unknown) {
-    // Roll back so it can be retried
-    await db.applicant.update({
-      where: { id: applicantId },
-      data: { checkrStatus: "PENDING" },
-    });
     logger.error("Failed to auto-trigger Checkr after iDenfy pass", {
       applicantId,
       error: err instanceof Error ? err.message : String(err),

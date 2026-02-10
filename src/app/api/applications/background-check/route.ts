@@ -1,10 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthUser, requireAdminRole } from "@/lib/auth";
 import { errorResponse, successResponse } from "@/lib/api-response";
-import {
-  createCandidate,
-  createInvitation,
-} from "@/lib/background-checks/checkr";
+import { triggerCheckrInvitation } from "@/lib/background-checks/checkr-trigger";
 import { logger } from "@/lib/logger";
 
 /**
@@ -86,91 +83,39 @@ export async function POST(request: Request) {
       });
     }
 
-    // Atomically claim the PENDING/FAILED -> IN_PROGRESS transition to prevent
-    // duplicate Checkr candidates/invitations from concurrent admin requests.
-    const claimed = await db.applicant.updateMany({
-      where: {
-        id: applicant.id,
-        checkrStatus: { in: ["PENDING", "FAILED"] },
+    const result = await triggerCheckrInvitation({
+      applicantId: applicant.id,
+      applicantIdentity: {
+        firstName: applicant.user.firstName,
+        lastName: applicant.user.lastName,
+        email: applicant.user.email,
       },
-      data: { checkrStatus: "IN_PROGRESS" },
+      audit: {
+        userId: adminUser.userId,
+        action: "CHECKR_INVITATION_SENT",
+      },
     });
 
-    if (claimed.count === 0) {
+    if (result.status === "already_in_progress") {
       return successResponse({
         status: "already_in_progress",
         message: "Background check is already being initiated. Please wait.",
       });
     }
 
-    // Re-read checkrCandidateId from DB after the atomic claim, since the
-    // value from the initial fetch (line 42) may be stale if the orchestrator
-    // created a candidate between the fetch and the claim.
-    const freshApplicant = await db.applicant.findUnique({
-      where: { id: applicant.id },
-      select: { checkrCandidateId: true },
+    logger.info("Checkr background check initiated", {
+      applicantId: applicant.id,
+      candidateId: result.candidateId,
+      invitationId: result.invitationId,
     });
-    let candidateId = freshApplicant?.checkrCandidateId ?? null;
 
-    try {
-      if (!candidateId) {
-        const candidate = await createCandidate({
-          firstName: applicant.user.firstName,
-          lastName: applicant.user.lastName,
-          email: applicant.user.email,
-        });
-        candidateId = candidate.id;
-
-        await db.applicant.update({
-          where: { id: applicant.id },
-          data: { checkrCandidateId: candidateId },
-        });
-      }
-
-      // Step 2: Create invitation (Checkr sends email to candidate)
-      const invitation = await createInvitation(candidateId);
-
-      // Log to audit
-      await db.screeningAuditLog
-        .create({
-          data: {
-            userId: adminUser.userId,
-            applicantId: applicant.id,
-            action: "CHECKR_INVITATION_SENT",
-            metadata: {
-              candidateId,
-              invitationId: invitation.id,
-              package: invitation.package,
-            },
-          },
-        })
-        .catch((err: unknown) => {
-          logger.warn("Failed to create screening audit log", {
-            error: err instanceof Error ? err.message : String(err),
-          });
-        });
-
-      logger.info("Checkr background check initiated", {
-        applicantId: applicant.id,
-        candidateId,
-        invitationId: invitation.id,
-      });
-
-      return successResponse({
-        status: "invitation_sent",
-        candidateId,
-        invitationId: invitation.id,
-        message:
-          "Background check invitation has been sent. The applicant will receive an email from Checkr.",
-      });
-    } catch (err) {
-      // Roll back so admin can retry
-      await db.applicant.update({
-        where: { id: applicant.id },
-        data: { checkrStatus: "PENDING" },
-      });
-      throw err;
-    }
+    return successResponse({
+      status: "invitation_sent",
+      candidateId: result.candidateId,
+      invitationId: result.invitationId,
+      message:
+        "Background check invitation has been sent. The applicant will receive an email from Checkr.",
+    });
   } catch (error) {
     logger.error("Failed to initiate background check", {
       error: error instanceof Error ? error.message : String(error),

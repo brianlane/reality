@@ -171,6 +171,7 @@ export function verifyIdenfySignature(
  */
 export function mapIdenfyStatus(
   status: string,
+  options?: { final?: boolean },
 ): "PASSED" | "FAILED" | "IN_PROGRESS" {
   switch (status.toUpperCase()) {
     case "APPROVED":
@@ -179,7 +180,9 @@ export function mapIdenfyStatus(
     case "SUSPECTED":
       return "FAILED";
     case "REVIEWING":
-      return "IN_PROGRESS";
+      // REVIEWING is a non-terminal state. If a webhook is marked final, treat
+      // REVIEWING as FAILED so the applicant does not remain permanently stuck.
+      return options?.final ? "FAILED" : "IN_PROGRESS";
     default:
       return "FAILED";
   }
