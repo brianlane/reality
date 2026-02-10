@@ -9,7 +9,6 @@
 
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { createVerificationSession } from "@/lib/background-checks/idenfy";
 import { enrollContinuousMonitoring } from "@/lib/background-checks/checkr";
 import { triggerCheckrInvitation } from "@/lib/background-checks/checkr-trigger";
 import { sendApplicationStatusEmail } from "@/lib/email/status";
@@ -79,47 +78,13 @@ export async function initiateScreening(applicantId: string): Promise<void> {
     });
   }
 
-  // Atomically claim the PENDING/FAILED -> IN_PROGRESS transition to prevent
-  // duplicate iDenfy sessions from concurrent calls. Matching FAILED allows
-  // retries after a failed verification attempt.
-  const claimed = await db.applicant.updateMany({
-    where: { id: applicantId, idenfyStatus: { in: ["PENDING", "FAILED"] } },
-    data: { idenfyStatus: "IN_PROGRESS" },
-  });
-
-  if (claimed.count === 0) {
-    logger.info("iDenfy session already initiated, skipping", { applicantId });
-    return;
-  }
-
-  try {
-    const session = await createVerificationSession({
-      id: applicant.id,
-      firstName: applicant.user.firstName,
-      lastName: applicant.user.lastName,
-    });
-
-    await db.applicant.update({
-      where: { id: applicantId },
-      data: { idenfyVerificationId: session.scanRef },
-    });
-
-    logger.info("iDenfy verification session created by orchestrator", {
-      applicantId,
-      scanRef: session.scanRef,
-    });
-  } catch (err: unknown) {
-    // Roll back the status so it can be retried
-    await db.applicant.update({
-      where: { id: applicantId },
-      data: { idenfyStatus: "PENDING" },
-    });
-    logger.error("Failed to create iDenfy session in orchestrator", {
-      applicantId,
-      error: err instanceof Error ? err.message : String(err),
-    });
-    // Don't fail the entire pipeline -- admin can retry manually
-  }
+  // Do NOT create iDenfy sessions here. The authToken/redirect URL is
+  // short-lived and must be delivered directly to the applicant UI.
+  // Session creation happens only in /api/applications/verify-identity.
+  logger.info(
+    "Screening initiated; waiting for applicant to start identity verification",
+    { applicantId },
+  );
 }
 
 // ============================================

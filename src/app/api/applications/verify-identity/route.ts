@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { applicationId } = body;
+    const { applicationId, forceNewSession } = body;
 
     if (!applicationId) {
       return errorResponse(
@@ -62,21 +62,27 @@ export async function POST(request: Request) {
     // Already in progress with a session
     if (
       applicant.idenfyStatus === "IN_PROGRESS" &&
-      applicant.idenfyVerificationId
+      applicant.idenfyVerificationId &&
+      forceNewSession !== true
     ) {
       return successResponse({
         status: "already_in_progress",
         verificationId: applicant.idenfyVerificationId,
+        canRetry: true,
         message:
           "Identity verification is already in progress. Please complete the existing session.",
       });
     }
 
-    // Atomically claim the PENDING/FAILED -> IN_PROGRESS transition to prevent
-    // duplicate iDenfy sessions from concurrent requests. Matching FAILED allows
-    // users to retry after a failed verification attempt.
+    // Atomically claim transition to IN_PROGRESS to prevent duplicate iDenfy
+    // sessions from concurrent requests. We allow forceNewSession on IN_PROGRESS
+    // so users can recover if they lost the original browser window/URL.
+    const claimableStatuses: ("PENDING" | "FAILED" | "IN_PROGRESS")[] =
+      forceNewSession === true
+        ? ["PENDING", "FAILED", "IN_PROGRESS"]
+        : ["PENDING", "FAILED"];
     const claimed = await db.applicant.updateMany({
-      where: { id: applicant.id, idenfyStatus: { in: ["PENDING", "FAILED"] } },
+      where: { id: applicant.id, idenfyStatus: { in: claimableStatuses } },
       data: { idenfyStatus: "IN_PROGRESS" },
     });
 

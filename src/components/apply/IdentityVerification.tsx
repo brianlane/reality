@@ -88,7 +88,7 @@ export default function IdentityVerification({
     }
   };
 
-  const initiateVerification = async () => {
+  const initiateVerification = async (forceNewSession = false) => {
     setIsLoading(true);
     setError(null);
 
@@ -96,7 +96,7 @@ export default function IdentityVerification({
       const response = await fetch("/api/applications/verify-identity", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ applicationId }),
+        body: JSON.stringify({ applicationId, forceNewSession }),
       });
 
       const data = await response.json();
@@ -121,6 +121,11 @@ export default function IdentityVerification({
 
       if (data.status === "already_in_progress") {
         updateStatus("IN_PROGRESS");
+        if (forceNewSession) {
+          setError(
+            "Verification is already being initiated. Please wait a moment and try again.",
+          );
+        }
         return;
       }
 
@@ -174,7 +179,7 @@ export default function IdentityVerification({
 
       {status === "PENDING" && (
         <Button
-          onClick={initiateVerification}
+          onClick={() => initiateVerification()}
           disabled={isLoading}
           className="w-full bg-copper hover:bg-copper/90"
         >
@@ -199,11 +204,21 @@ export default function IdentityVerification({
       )}
 
       {status === "IN_PROGRESS" && !verificationUrl && !pollTimedOut && (
-        <div className="flex items-center justify-center gap-2 py-2">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-copper border-t-transparent" />
-          <span className="text-sm text-navy-soft">
-            Waiting for verification result...
-          </span>
+        <div className="space-y-3">
+          <Button
+            onClick={() => initiateVerification(true)}
+            disabled={isLoading}
+            variant="outline"
+            className="w-full"
+          >
+            {isLoading ? "Starting..." : "Start / Restart Verification"}
+          </Button>
+          <div className="flex items-center justify-center gap-2 py-2">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-copper border-t-transparent" />
+            <span className="text-sm text-navy-soft">
+              Waiting for verification result...
+            </span>
+          </div>
         </div>
       )}
 
@@ -229,7 +244,7 @@ export default function IdentityVerification({
 
       {status === "FAILED" && (
         <Button
-          onClick={initiateVerification}
+          onClick={() => initiateVerification()}
           disabled={isLoading}
           variant="outline"
           className="w-full"
