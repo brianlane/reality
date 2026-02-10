@@ -357,10 +357,28 @@ async function finalizeScreening(applicantId: string): Promise<void> {
           .catch(async (err: unknown) => {
             // API call failed — no Checkr subscription was created.
             // Clear the placeholder so enrollment can be retried.
-            await db.applicant.update({
-              where: { id: applicantId },
-              data: { continuousMonitoringId: null },
-            });
+            try {
+              await db.applicant.update({
+                where: { id: applicantId },
+                data: { continuousMonitoringId: null },
+              });
+            } catch (rollbackErr: unknown) {
+              // Never throw from this background catch handler; otherwise we'd
+              // surface an unhandled rejection from a non-awaited promise chain.
+              logger.error(
+                "Failed to clear monitoring placeholder after enrollment API failure",
+                {
+                  applicantId,
+                  enrollmentError:
+                    err instanceof Error ? err.message : String(err),
+                  rollbackError:
+                    rollbackErr instanceof Error
+                      ? rollbackErr.message
+                      : String(rollbackErr),
+                },
+              );
+              return;
+            }
             logger.error("Failed to enroll continuous monitoring", {
               applicantId,
               error: err instanceof Error ? err.message : String(err),
