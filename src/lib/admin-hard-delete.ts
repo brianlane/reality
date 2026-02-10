@@ -1,5 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { cancelContinuousMonitoring } from "@/lib/background-checks/checkr";
+import { logger } from "@/lib/logger";
 
 type Transaction = Prisma.TransactionClient;
 
@@ -13,6 +15,9 @@ async function deleteApplicantRelations(tx: Transaction, applicantId: string) {
       OR: [{ applicantId }, { partnerId: applicantId }],
     },
   });
+
+  // Delete screening audit logs
+  await tx.screeningAuditLog.deleteMany({ where: { applicantId } });
 }
 
 async function deleteQuestionnaireBySectionIds(
@@ -39,6 +44,31 @@ export async function hardDeleteApplicant(
   applicantId: string,
   adminUserId: string,
 ) {
+  // Cancel continuous monitoring BEFORE the transaction (external API call)
+  const applicantForMonitoring = await db.applicant.findUnique({
+    where: { id: applicantId },
+    select: { continuousMonitoringId: true },
+  });
+
+  if (applicantForMonitoring?.continuousMonitoringId) {
+    try {
+      await cancelContinuousMonitoring(
+        applicantForMonitoring.continuousMonitoringId,
+      );
+      logger.info("Canceled continuous monitoring during hard delete", {
+        applicantId,
+        monitoringId: applicantForMonitoring.continuousMonitoringId,
+      });
+    } catch (err: unknown) {
+      logger.warn("Failed to cancel continuous monitoring during hard delete", {
+        applicantId,
+        monitoringId: applicantForMonitoring.continuousMonitoringId, // Log before record is deleted
+        error: err instanceof Error ? err.message : String(err),
+      });
+      // Continue with deletion even if cancellation fails
+    }
+  }
+
   return db.$transaction(async (tx) => {
     const applicant = await tx.applicant.findUnique({
       where: { id: applicantId },
@@ -243,6 +273,29 @@ export async function hardDeleteQuestionnaireQuestion(
 }
 
 export async function hardDeleteUser(userId: string, adminUserId: string) {
+  // Cancel continuous monitoring BEFORE the transaction (external API call)
+  const applicantForMonitoring = await db.applicant.findUnique({
+    where: { userId },
+    select: { continuousMonitoringId: true },
+  });
+
+  if (applicantForMonitoring?.continuousMonitoringId) {
+    try {
+      await cancelContinuousMonitoring(
+        applicantForMonitoring.continuousMonitoringId,
+      );
+    } catch (err: unknown) {
+      logger.warn(
+        "Failed to cancel continuous monitoring during user hard delete",
+        {
+          userId,
+          monitoringId: applicantForMonitoring.continuousMonitoringId, // Log before record is deleted
+          error: err instanceof Error ? err.message : String(err),
+        },
+      );
+    }
+  }
+
   return db.$transaction(async (tx) => {
     const user = await tx.user.findUnique({
       where: { id: userId },

@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { adminApplicantUpdateSchema } from "@/lib/validations";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
+import { cancelContinuousMonitoring } from "@/lib/background-checks/checkr";
+import { logger } from "@/lib/logger";
 import { Prisma } from "@prisma/client";
 
 type RouteContext = {
@@ -60,16 +62,19 @@ export async function GET(request: Request, { params }: RouteContext) {
       applicationStatus: applicant.applicationStatus,
       submittedAt: applicant.submittedAt,
       photos: applicant.photos,
-    },
-    questionnaire: applicant.questionnaire,
-    screening: {
+      // Screening fields (flattened for admin form)
       screeningStatus: applicant.screeningStatus,
       idenfyStatus: applicant.idenfyStatus,
       idenfyVerificationId: applicant.idenfyVerificationId,
       checkrStatus: applicant.checkrStatus,
       checkrReportId: applicant.checkrReportId,
+      checkrCandidateId: applicant.checkrCandidateId,
       backgroundCheckNotes: applicant.backgroundCheckNotes,
+      backgroundCheckConsentAt: applicant.backgroundCheckConsentAt,
+      backgroundCheckConsentIp: applicant.backgroundCheckConsentIp,
+      continuousMonitoringId: applicant.continuousMonitoringId,
     },
+    questionnaire: applicant.questionnaire,
     payments: applicant.payments,
   });
 }
@@ -170,6 +175,25 @@ export async function DELETE(_: Request, { params }: RouteContext) {
     return errorResponse("NOT_FOUND", "Applicant not found", 404);
   }
 
+  // Cancel continuous monitoring before soft-delete to avoid ongoing
+  // Checkr subscription costs for a removed user.
+  if (existing.continuousMonitoringId) {
+    try {
+      await cancelContinuousMonitoring(existing.continuousMonitoringId);
+      logger.info("Canceled continuous monitoring during soft delete", {
+        applicantId: id,
+        monitoringId: existing.continuousMonitoringId,
+      });
+    } catch (err: unknown) {
+      logger.warn("Failed to cancel continuous monitoring during soft delete", {
+        applicantId: id,
+        monitoringId: existing.continuousMonitoringId, // Log before it's nulled
+        error: err instanceof Error ? err.message : String(err),
+      });
+      // Continue with deletion even if cancellation fails
+    }
+  }
+
   const adminUser = await getOrCreateAdminUser({
     userId: auth.userId,
     email: auth.email,
@@ -180,6 +204,7 @@ export async function DELETE(_: Request, { params }: RouteContext) {
     data: {
       deletedAt: new Date(),
       deletedBy: adminUser.id,
+      continuousMonitoringId: null,
     },
   });
 

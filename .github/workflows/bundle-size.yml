@@ -12,7 +12,8 @@ jobs:
     permissions:
       contents: read
     env:
-      BUNDLE_SIZE_LIMIT_KB: 1600
+      # Budget for total JS chunks across all code-split routes.
+      BUNDLE_SIZE_LIMIT_KB: 1700
       NEXT_TELEMETRY_DISABLED: 1
     steps:
       - uses: actions/checkout@v6

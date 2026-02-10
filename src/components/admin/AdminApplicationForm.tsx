@@ -1,12 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useReducer, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import ScreeningDetail from "@/components/admin/ScreeningDetail";
+
+type ScreeningData = {
+  screeningStatus: "PENDING" | "IN_PROGRESS" | "PASSED" | "FAILED";
+  idenfyStatus: "PENDING" | "IN_PROGRESS" | "PASSED" | "FAILED";
+  idenfyVerificationId: string | null;
+  checkrStatus: "PENDING" | "IN_PROGRESS" | "PASSED" | "FAILED";
+  checkrReportId: string | null;
+  checkrCandidateId: string | null;
+  backgroundCheckConsentAt: string | null;
+  backgroundCheckConsentIp: string | null;
+  backgroundCheckNotes: string | null;
+  continuousMonitoringId: string | null;
+};
 
 type AdminApplicationFormProps = {
   applicationId?: string;
@@ -43,10 +57,20 @@ export default function AdminApplicationForm({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [screeningData, setScreeningData] = useState<ScreeningData | null>(
+    null,
+  );
+  // Counter to trigger re-fetching application data from the screening detail panel
+  const [refreshKey, incrementRefreshKey] = useReducer((c: number) => c + 1, 0);
+  // Track whether the initial load has completed. On subsequent refreshes
+  // (triggered by screening actions), we only update screening data to avoid
+  // silently overwriting unsaved form edits the admin may have made.
+  const initialLoadDone = useRef(false);
 
   useEffect(() => {
     if (mode !== "edit" || !applicationId) return;
     const controller = new AbortController();
+    const isRefresh = initialLoadDone.current;
 
     const loadApplication = async () => {
       try {
@@ -64,28 +88,61 @@ export default function AdminApplicationForm({
           setError("Failed to load application.");
           return;
         }
-        setForm((prev) => ({
-          ...prev,
-          email: json.applicant.email ?? "",
-          firstName: json.applicant.firstName ?? "",
-          lastName: json.applicant.lastName ?? "",
-          age: String(json.applicant.age ?? ""),
-          gender: json.applicant.gender ?? "MALE",
-          location: json.applicant.location ?? "",
-          cityFrom: json.applicant.cityFrom ?? "",
-          industry: json.applicant.industry ?? "",
-          occupation: json.applicant.occupation ?? "",
-          employer: json.applicant.employer ?? "",
-          education: json.applicant.education ?? "",
-          incomeRange: json.applicant.incomeRange ?? "",
-          referredBy: json.applicant.referredBy ?? "",
-          aboutYourself: json.applicant.aboutYourself ?? "",
-          applicationStatus: json.applicant.applicationStatus ?? "SUBMITTED",
+
+        // Only populate editable form fields on initial load, not on
+        // screening-triggered refreshes (which would discard unsaved edits).
+        if (!isRefresh) {
+          setForm((prev) => ({
+            ...prev,
+            email: json.applicant.email ?? "",
+            firstName: json.applicant.firstName ?? "",
+            lastName: json.applicant.lastName ?? "",
+            age: String(json.applicant.age ?? ""),
+            gender: json.applicant.gender ?? "MALE",
+            location: json.applicant.location ?? "",
+            cityFrom: json.applicant.cityFrom ?? "",
+            industry: json.applicant.industry ?? "",
+            occupation: json.applicant.occupation ?? "",
+            employer: json.applicant.employer ?? "",
+            education: json.applicant.education ?? "",
+            incomeRange: json.applicant.incomeRange ?? "",
+            referredBy: json.applicant.referredBy ?? "",
+            aboutYourself: json.applicant.aboutYourself ?? "",
+            applicationStatus: json.applicant.applicationStatus ?? "SUBMITTED",
+            screeningStatus: json.applicant.screeningStatus ?? "PENDING",
+            compatibilityScore: json.applicant.compatibilityScore
+              ? String(json.applicant.compatibilityScore)
+              : "",
+            notes: json.applicant.backgroundCheckNotes ?? "",
+          }));
+          initialLoadDone.current = true;
+        } else {
+          // On refresh, only update read-only status fields that may have
+          // changed due to the screening action.
+          setForm((prev) => ({
+            ...prev,
+            applicationStatus:
+              json.applicant.applicationStatus ?? prev.applicationStatus,
+            screeningStatus:
+              json.applicant.screeningStatus ?? prev.screeningStatus,
+          }));
+        }
+
+        // Always update screening data (read-only panel, no editable fields)
+        setScreeningData({
           screeningStatus: json.applicant.screeningStatus ?? "PENDING",
-          compatibilityScore: json.applicant.compatibilityScore
-            ? String(json.applicant.compatibilityScore)
-            : "",
-        }));
+          idenfyStatus: json.applicant.idenfyStatus ?? "PENDING",
+          idenfyVerificationId: json.applicant.idenfyVerificationId ?? null,
+          checkrStatus: json.applicant.checkrStatus ?? "PENDING",
+          checkrReportId: json.applicant.checkrReportId ?? null,
+          checkrCandidateId: json.applicant.checkrCandidateId ?? null,
+          backgroundCheckConsentAt:
+            json.applicant.backgroundCheckConsentAt ?? null,
+          backgroundCheckConsentIp:
+            json.applicant.backgroundCheckConsentIp ?? null,
+          backgroundCheckNotes: json.applicant.backgroundCheckNotes ?? null,
+          continuousMonitoringId: json.applicant.continuousMonitoringId ?? null,
+        });
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
           setError("Failed to load application.");
@@ -96,7 +153,7 @@ export default function AdminApplicationForm({
     loadApplication();
 
     return () => controller.abort();
-  }, [mode, applicationId]);
+  }, [mode, applicationId, refreshKey]);
 
   function updateField(name: string, value: string) {
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -547,6 +604,15 @@ export default function AdminApplicationForm({
           onChange={(event) => updateField("notes", event.target.value)}
         />
       </div>
+      {/* Screening Detail Panel */}
+      {mode === "edit" && applicationId && screeningData && (
+        <ScreeningDetail
+          applicationId={applicationId}
+          screening={screeningData}
+          onRefresh={incrementRefreshKey}
+        />
+      )}
+
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"

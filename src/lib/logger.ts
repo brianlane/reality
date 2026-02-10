@@ -22,6 +22,11 @@ const SENSITIVE_FIELDS = [
   "ssn",
   "email", // Optionally redact email in logs
   "phone",
+  "dob",
+  "dateOfBirth",
+  "authToken", // iDenfy auth tokens
+  // Note: scanRef is intentionally NOT redacted -- it's an opaque session
+  // identifier (not PII) needed to correlate iDenfy events across the pipeline.
 ];
 
 function redactSensitiveData(
