@@ -35,19 +35,33 @@ type TriggerCheckrInvitationResult =
  * - candidate creation/reuse
  * - invitation creation
  * - audit logging (non-blocking)
- * - rollback to PENDING on failure
+ * - rollback to the pre-claim status on failure
  */
 export async function triggerCheckrInvitation(
   params: TriggerCheckrInvitationParams,
 ): Promise<TriggerCheckrInvitationResult> {
   const { applicantId, applicantIdentity, audit } = params;
 
-  const claimed = await db.applicant.updateMany({
-    where: { id: applicantId, checkrStatus: { in: ["PENDING", "FAILED"] } },
+  // Claim FAILED first, then PENDING, so we can safely restore the original
+  // status on failure without erasing historical failure state.
+  let rollbackStatus: "PENDING" | "FAILED" | null = null;
+  const claimedFromFailed = await db.applicant.updateMany({
+    where: { id: applicantId, checkrStatus: "FAILED" },
     data: { checkrStatus: "IN_PROGRESS" },
   });
+  if (claimedFromFailed.count > 0) {
+    rollbackStatus = "FAILED";
+  } else {
+    const claimedFromPending = await db.applicant.updateMany({
+      where: { id: applicantId, checkrStatus: "PENDING" },
+      data: { checkrStatus: "IN_PROGRESS" },
+    });
+    if (claimedFromPending.count > 0) {
+      rollbackStatus = "PENDING";
+    }
+  }
 
-  if (claimed.count === 0) {
+  if (!rollbackStatus) {
     return { status: "already_in_progress" };
   }
 
@@ -104,9 +118,9 @@ export async function triggerCheckrInvitation(
         typeof invitation.package === "string" ? invitation.package : null,
     };
   } catch (err: unknown) {
-    await db.applicant.update({
-      where: { id: applicantId },
-      data: { checkrStatus: "PENDING" },
+    await db.applicant.updateMany({
+      where: { id: applicantId, checkrStatus: "IN_PROGRESS" },
+      data: { checkrStatus: rollbackStatus },
     });
     throw err;
   }

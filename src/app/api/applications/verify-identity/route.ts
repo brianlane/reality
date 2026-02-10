@@ -74,19 +74,35 @@ export async function POST(request: Request) {
       });
     }
 
-    // Atomically claim transition to IN_PROGRESS to prevent duplicate iDenfy
-    // sessions from concurrent requests. We allow forceNewSession on IN_PROGRESS
-    // so users can recover if they lost the original browser window/URL.
-    const claimableStatuses: ("PENDING" | "FAILED" | "IN_PROGRESS")[] =
-      forceNewSession === true
-        ? ["PENDING", "FAILED", "IN_PROGRESS"]
-        : ["PENDING", "FAILED"];
-    const claimed = await db.applicant.updateMany({
-      where: { id: applicant.id, idenfyStatus: { in: claimableStatuses } },
+    // Claim status in a deterministic order so failures can roll back to the
+    // pre-claim state instead of always resetting to PENDING.
+    let rollbackStatus: "PENDING" | "FAILED" | "IN_PROGRESS" | null = null;
+
+    const claimedFromFailed = await db.applicant.updateMany({
+      where: { id: applicant.id, idenfyStatus: "FAILED" },
       data: { idenfyStatus: "IN_PROGRESS" },
     });
+    if (claimedFromFailed.count > 0) {
+      rollbackStatus = "FAILED";
+    } else {
+      const claimedFromPending = await db.applicant.updateMany({
+        where: { id: applicant.id, idenfyStatus: "PENDING" },
+        data: { idenfyStatus: "IN_PROGRESS" },
+      });
+      if (claimedFromPending.count > 0) {
+        rollbackStatus = "PENDING";
+      } else if (forceNewSession === true) {
+        const claimedFromInProgress = await db.applicant.updateMany({
+          where: { id: applicant.id, idenfyStatus: "IN_PROGRESS" },
+          data: { idenfyStatus: "IN_PROGRESS" },
+        });
+        if (claimedFromInProgress.count > 0) {
+          rollbackStatus = "IN_PROGRESS";
+        }
+      }
+    }
 
-    if (claimed.count === 0) {
+    if (!rollbackStatus) {
       // Another request already claimed the transition
       return successResponse({
         status: "already_in_progress",
@@ -113,10 +129,10 @@ export async function POST(request: Request) {
         data: { idenfyVerificationId: session.scanRef },
       });
     } catch (err) {
-      // Roll back the status so it can be retried
-      await db.applicant.update({
-        where: { id: applicant.id },
-        data: { idenfyStatus: "PENDING" },
+      // Roll back to the original pre-claim status.
+      await db.applicant.updateMany({
+        where: { id: applicant.id, idenfyStatus: "IN_PROGRESS" },
+        data: { idenfyStatus: rollbackStatus },
       });
       throw err;
     }
