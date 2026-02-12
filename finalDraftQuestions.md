@@ -173,9 +173,9 @@
 52. Which better describes your view: "Money is a tool for immediate adventure and experiences," or "Money is a foundation for future security and legacy"? `[DROPDOWN: Tool for immediate adventure and experiences, Foundation for future security and legacy, A balance of both]`
 53. How would you describe your spending style: "I prioritize saving and long-term investment," or "I prioritize high-luxury experiences and immediate adventure"? `[DROPDOWN: Prioritize saving and long-term investment, Prioritize high-luxury experiences, A balance of both]`
 54. Which feels more aligned with your goals: "I want to reach my peak financial stability before settling down," or "I want a partner who will navigate the climb toward financial stability with me"? `[DROPDOWN: Reach peak stability before settling down, Navigate the climb together, Either works for me]`
-55. What do you typically spend your money on? `[TEXTAREA]`
-56. What do you not spend your money on? `[TEXTAREA]`
-57. What do you save your money for? `[TEXTAREA]`
+55. What do you typically spend your money on? (Select all that apply) `[CHECKBOXES: Housing and utilities, Food and groceries, Dining out and restaurants, Transportation (car gas public transit), Travel and vacations, Clothing and fashion, Entertainment (movies concerts events), Hobbies and recreation, Technology and gadgets, Health and fitness, Education and personal development, Gifts and celebrations, Charitable donations, Savings and investments, Other]`
+56. What do you not spend your money on? (Select all that apply) `[CHECKBOXES: Luxury or designer items, Expensive dining, Fast fashion, Latest technology, Subscriptions and memberships, Travel, Alcohol or nightlife, Expensive hobbies, Home decor, Beauty products or services, I spend on most things, Other]`
+57. What do you save your money for? (Select all that apply) `[CHECKBOXES: Emergency fund, Retirement, Down payment on a home, Travel and experiences, Starting or growing a business, Education or further learning, Major purchases (car home renovations etc), Children or family future, Financial independence or early retirement, I don't actively save, Other]`
 58. Do you prefer separate banking accounts or everything shared financially in a relationship? `[DROPDOWN: Separate accounts, Everything shared, A mix of both]`
 59. Would you be willing to spend money on vacation to visit your partner's friends (for a wedding or just to meet them)? `[DROPDOWN: Yes absolutely, Yes but within reason, Probably not, No]`
 
@@ -188,7 +188,7 @@
 
 62. On average, how many hours per week do you dedicate to your professional endeavors, including "after-hours" emails or social obligations? `[TEXT:number]`
 63. Which best describes your typical work day? `[DROPDOWN: Fixed 9-to-5, Irregular/on-call, Self-directed/entrepreneurial]`
-64. Do you have established boundaries between your professional and personal life (e.g., "no phones during dinner" or "no work on weekends"), and how strictly do you adhere to them? `[TEXTAREA]`
+64. What best describes your work-life boundaries? `[DROPDOWN: Strict boundaries - I always maintain clear separation, Clear boundaries - I mostly maintain separation with occasional exceptions, Flexible boundaries - I have guidelines but often cross them, Loose boundaries - Work and personal life frequently blend, No boundaries - I'm always available for work, My work requires constant availability]`
 65. Does your role allow for remote work, or does it require you to be physically present at a specific office or site? `[DROPDOWN: Fully remote, Hybrid, Fully in-person]`
 66. How often does your career require you to be away from home? `[DROPDOWN: Rarely, Occasionally (1-2 times per month), Often (weekly/extended stays)]`
 67. Do you maintain multiple residences or spend significant portions of the year in different cities? `[DROPDOWN: Yes, No]`
@@ -298,7 +298,7 @@
 ### Section B: Social Time Allocation
 
 111. Do you believe that a partner is responsible for being your "everything" (best friend, hobby partner, and lover), or do you rely on a separate social circle to meet your non-romantic needs? `[DROPDOWN: Partner is my everything, Rely on separate social circle, A mix of both]`
-112. On a typical weekend, what ratio of your time should be spent with friends/extended family versus just the two of you? `[TEXT]`
+112. On a typical weekend, what ratio of your time should be spent with friends/extended family versus just the two of you? `[DROPDOWN: Mostly couple time (80%+ together), More couple time than social (60-80% together), Balanced split (around 50/50), More social time than couple (60-80% with friends/family), Mostly social time (80%+ with friends/family), It varies greatly]`
 113. Do you prefer your friend circle to be separate from your partner's, partially shared, or completely shared? `[DROPDOWN: Separate, Partially shared, Completely shared]`
 
 ### Section C: Substance Use Frequency
@@ -322,6 +322,7 @@
 120. Did you vote in the last local elections? `[DROPDOWN: Yes, No, Not eligible]`
 121. Did you vote in the last national election? For more than just the presidential election? `[DROPDOWN: Yes for all races, Yes but only presidential, No, Not eligible]`
 122. How important is political alignment with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+123. How would you describe your political stance? `[DROPDOWN: Very progressive/left, Progressive/left, Moderate/centrist, Conservative/right, Very conservative/right, Libertarian, Independent/no strong affiliation, Prefer not to say]`
 
 ---
 
@@ -329,16 +330,16 @@
 
 ### Section A: General Anxiety
 
-123. How would you rate your general worry level? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-124. What do you typically worry about in general? `[TEXTAREA]`
-125. How would you rate your social anxiety level? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-126. How much do you worry specifically in relationships? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+124. How would you rate your general worry level? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+125. What do you typically worry about in general? `[TEXTAREA]`
+126. How would you rate your social anxiety level? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+127. How much do you worry specifically in relationships? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 
 ### Section B: Emotional Self-Awareness
 
-127. How well do you think you know yourself? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-128. In a relationship do you see yourself changing your boundaries or changing your partner? `[DROPDOWN: Changing my boundaries, Changing my partner, Both, Neither]`
-129. Are you "therapy-positive" or committed to emotional self-regulation? `[DROPDOWN: Yes I am therapy-positive, Working on it, Not particularly, Prefer other methods]`
+128. How well do you think you know yourself? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+129. In a relationship do you see yourself changing your boundaries or changing your partner? (Example: Your partner frequently stays out late for fun) `[DROPDOWN: Changing my boundaries, Changing my partner, Both, Neither]`
+130. Are you "therapy-positive" or committed to emotional self-regulation? `[DROPDOWN: Yes I am therapy-positive, Working on it, Not particularly, Prefer other methods]`
 
 ---
 
@@ -346,26 +347,22 @@
 
 ### Section A: Lifestyle
 
-130. How important is substance (Alcohol/Marijuana) use compatibility? (casual vs. regular use vs. none) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-131. How important is health and lifestyle compatibility (gym, diet, social battery)? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-132. Do you have pets, and how do you feel about a partner having pets? `[TEXTAREA]`
+131. How important is substance (alcohol/marijuana) use compatibility (casual vs. regular use vs. none)? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+132. How important is health and lifestyle compatibility (gym, diet, social battery)? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+133. Do you have pets? `[DROPDOWN: Yes, No]`
+134. How do you feel about a partner having pets? `[DROPDOWN: Very comfortable - I love pets, Comfortable - I'm open to pets, Neutral, Uncomfortable - I'd prefer no pets, Very uncomfortable - I'm allergic or cannot accommodate]`
 
-### Section B: Core Values
+### Section B: Values and Religion
 
-133. What is your religious or spiritual affiliation? `[DROPDOWN: Christianity - Catholic, Christianity - Protestant, Christianity - Orthodox, Christianity - Other, Judaism, Islam, Buddhism, Hinduism, Sikhism, Atheist, Agnostic, Spiritual but not religious, No affiliation, Prefer not to say, Other]`
-134. How important is religious or spiritual alignment with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-135. How many days per week do you participate in spiritual or religious activities? `[DROPDOWN: 0 days, 1 day, 2 days, 3 days, 4 days, 5 days, 6 days, 7 days]`
-136. Which religious or spiritual practices do you engage in? (Select all that apply) `[CHECKBOXES: Prayer or meditation, Attending religious services or gatherings, Reading sacred or spiritual texts, Yoga or mindfulness practice, Community service or charity work, Fasting or dietary observances, Sabbath or day of rest observance, Pilgrimage or spiritual retreats, Study groups or religious classes, None, Other]`
-137. What are your views on gender roles versus expectations in a relationship? `[TEXTAREA]`
-138. How important is it that your partner is driven/goal-oriented and willing to grow? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-139. How important is independence level compatibility? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+135. What is your religious or spiritual affiliation? `[DROPDOWN: Christianity - Catholic, Christianity - Protestant, Christianity - Orthodox, Christianity - Other, Judaism, Islam, Buddhism, Hinduism, Sikhism, Atheist, Agnostic, Spiritual but not religious, No religious or spiritual affiliation, Prefer not to say, Other]`
+136. How important is religious or spiritual alignment with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+137. How many days per week do you participate in spiritual or religious activities? `[DROPDOWN: 0 days, 1 day, 2 days, 3 days, 4 days, 5 days, 6 days, 7 days]`
+138. Which religious or spiritual practices do you engage in? (Select all that apply) `[CHECKBOXES: Prayer or meditation, Attending religious services or gatherings, Reading sacred or spiritual texts, Yoga or mindfulness practice, Community service or charity work, Fasting or dietary observances, Sabbath or day of rest observance, Pilgrimage or spiritual retreats, Study groups or religious classes, None, Other]`
+139. What are your views on gender roles versus expectations in a relationship? `[TEXTAREA]`
+140. How important is it that your partner is driven/goal-oriented and willing to grow? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+141. How important is independence level compatibility? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 
-### Section C: Communication & Respect
-
-140. How would you describe your communication style and need for transparency/honesty? `[TEXTAREA]`
-141. What is your expectation for respect level in a relationship? (Consider: needy texts, anger management, yelling, entitlement) `[TEXTAREA]`
-
-### Section D: Rate the Importance of Similarities
+### Section C: Rate the Importance of Similarities
 
 142. Music taste with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 143. Genre of a movie/book preference? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
