@@ -13,9 +13,7 @@ const getStripe = () => {
 /**
  * Resolves a PaymentType to the corresponding Stripe Price ID from env vars.
  */
-function resolveStripePriceId(
-  type: "APPLICATION_FEE" | "EVENT_FEE",
-): string {
+function resolveStripePriceId(type: "APPLICATION_FEE" | "EVENT_FEE"): string {
   const mapping: Record<string, string | undefined> = {
     APPLICATION_FEE: process.env.STRIPE_APPLICATION_FEE_PRICE_ID,
     EVENT_FEE: process.env.STRIPE_EVENT_FEE_PRICE_ID,
@@ -175,9 +173,7 @@ export async function getPaymentIntentMetadata(
     return paymentIntent.metadata;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `Failed to fetch PaymentIntent metadata: ${errorMessage}`,
-    );
+    throw new Error(`Failed to fetch PaymentIntent metadata: ${errorMessage}`);
   }
 }
 

@@ -1,9 +1,6 @@
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
-import {
-  verifyStripeWebhook,
-  getPaymentIntentMetadata,
-} from "@/lib/stripe";
+import { verifyStripeWebhook, getPaymentIntentMetadata } from "@/lib/stripe";
 import { sendPaymentConfirmationEmail } from "@/lib/email/payment";
 import type Stripe from "stripe";
 
@@ -66,8 +63,9 @@ export async function POST(request: Request) {
         // to get the metadata.paymentId and look up by internal ID instead.
         if (!existingPayment) {
           try {
-            const metadata =
-              await getPaymentIntentMetadata(refundedPaymentIntentId);
+            const metadata = await getPaymentIntentMetadata(
+              refundedPaymentIntentId,
+            );
 
             const internalPaymentId = metadata?.paymentId;
             if (internalPaymentId) {
