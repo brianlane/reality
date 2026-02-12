@@ -65,7 +65,7 @@ export const mockQuestionnaireAnswers: Record<
 export const mockInviteToken = "preview-invite-token-123";
 
 export const mockPaymentInfo = {
-  amount: 500,
+  amount: 199,
   currency: "USD",
   status: "pending" as const,
   description: "Application processing fee",
