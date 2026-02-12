@@ -118,6 +118,7 @@ export async function POST(request: Request) {
           applicantId: true,
           type: true,
           amount: true,
+          status: true,
           stripePaymentId: true,
           applicant: {
             select: {
@@ -136,7 +137,9 @@ export async function POST(request: Request) {
         return successResponse({ received: true, eventId: event.id });
       }
 
-      if (status === "SUCCEEDED") {
+      // Re-check the payment status from DB to avoid race conditions with
+      // concurrent refund handlers. Only proceed if status is still SUCCEEDED.
+      if (payment.status === "SUCCEEDED") {
         // Application-specific: advance applicant status after application fee
         if (payment.type === "APPLICATION_FEE") {
           await db.applicant.update({
