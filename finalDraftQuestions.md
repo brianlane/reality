@@ -88,9 +88,9 @@
 
 ### Section B: Dating Preferences
 
-16. How do you typically like to meet new people? `[TEXTAREA]`
-17. What are your thoughts about dating apps? `[TEXTAREA]`
-18. What is usually missing from the past people you've gone on dates with? `[TEXTAREA]`
+16. How do you typically like to meet new people? `[DROPDOWN: Through mutual friends in social settings, At organized events or activities (classes clubs meetups), Through work or professional networking, Spontaneously in everyday life (coffee shops gym bookstores), Through dating apps or online platforms, I prefer being introduced by others, I rarely seek to meet new people outside my current circle]`
+17. What are your thoughts about dating apps? `[DROPDOWN: Positive - they're an effective way to meet compatible people, Neutral - useful tool but not my preferred method, Skeptical - I prefer organic in-person connections, Negative - I find them superficial and avoid them, Mixed feelings - they have significant pros and cons, Open-minded - haven't used them much but willing to try, Experienced user - I've used them extensively with varying results]`
+18. What is usually missing from the past people you've gone on dates with? `[DROPDOWN: Deep emotional connection and vulnerability, Intellectual stimulation and curiosity, Physical chemistry or attraction, Shared life values and priorities, Ambition and drive toward goals, Compatible sense of humor, Emotional availability and communication skills, Lifestyle compatibility (hobbies social preferences interests), Long-term vision and relationship goal alignment, Authenticity and genuine self-expression]`
 
 ### Section C: Past Relationship Patterns
 
@@ -301,19 +301,27 @@
 112. On a typical weekend, what ratio of your time should be spent with friends/extended family versus just the two of you? `[TEXT]`
 113. Do you prefer your friend circle to be separate from your partner's, partially shared, or completely shared? `[DROPDOWN: Separate, Partially shared, Completely shared]`
 
-### Section C: Social Preferences
+### Section C: Substance Use Frequency
 
-114. How social do you yoou prefer to be in a relationship? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-115. How do you like to party and when? `[DROPDOWN: Often and until the sun rises, Sometimes and come back home at a reasonable time, Rarely or never]`
-116. Does the thought of meeting your partner's friends make you anxious or excited? `[DROPDOWN: Anxious, Excited, A mix of both, Neutral]`
+114. How often do you consume nicotine? `[DROPDOWN: Never, Rarely (less than monthly), Monthly, Weekly, Daily]`
+115. How often do you consume alcohol? `[DROPDOWN: Never, Rarely (less than monthly), Monthly, Weekly, Daily]`
+116. How often do you consume marijuana? `[DROPDOWN: Never, Rarely (less than monthly), Monthly, Weekly, Daily]`
+
+### Section D: Social Preferences
+
+117. How social do you you prefer to be in a relationship? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+118. How do you like to party and when? `[DROPDOWN: Often and until the sun rises, Sometimes and come back home at a reasonable time, Rarely or never]`
+119. Does the thought of meeting your partner's friends make you anxious or excited? `[DROPDOWN: Anxious, Excited, A mix of both, Neutral]`
 
 ---
 
 ## Page 12: Politics & Civic Engagement
 
-117. Did you vote in the last local elections? `[DROPDOWN: Yes, No, Not eligible]`
-118. Did you vote in the last national election? For more than just the presidential election? `[DROPDOWN: Yes for all races, Yes but only presidential, No, Not eligible]`
-119. How important is political alignment with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+### Section A: Political Preferences
+
+120. Did you vote in the last local elections? `[DROPDOWN: Yes, No, Not eligible]`
+121. Did you vote in the last national election? For more than just the presidential election? `[DROPDOWN: Yes for all races, Yes but only presidential, No, Not eligible]`
+122. How important is political alignment with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 
 ---
 
@@ -321,16 +329,16 @@
 
 ### Section A: General Anxiety
 
-120. How would you rate your general worry level? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-121. What do you typically worry about in general? `[TEXTAREA]`
-122. How would you rate your social anxiety level? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-123. How much do you worry specifically in relationships? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+123. How would you rate your general worry level? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+124. What do you typically worry about in general? `[TEXTAREA]`
+125. How would you rate your social anxiety level? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+126. How much do you worry specifically in relationships? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 
 ### Section B: Emotional Self-Awareness
 
-124. How well do you think you know yourself? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-125. In a relationship do you see yourself changing your boundaries or changing your partner? `[DROPDOWN: Changing my boundaries, Changing my partner, Both, Neither]`
-126. Are you "therapy-positive" or committed to emotional self-regulation? `[DROPDOWN: Yes I am therapy-positive, Working on it, Not particularly, Prefer other methods]`
+127. How well do you think you know yourself? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+128. In a relationship do you see yourself changing your boundaries or changing your partner? `[DROPDOWN: Changing my boundaries, Changing my partner, Both, Neither]`
+129. Are you "therapy-positive" or committed to emotional self-regulation? `[DROPDOWN: Yes I am therapy-positive, Working on it, Not particularly, Prefer other methods]`
 
 ---
 
@@ -338,29 +346,29 @@
 
 ### Section A: Lifestyle
 
-127. What are your views on substance use? (Specify views on casual vs. regular use) `[TEXTAREA]`
-128. How important is health and lifestyle compatibility (gym, diet, social battery)? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-129. Do you have pets, and how do you feel about a partner having pets? `[TEXTAREA]`
+130. What are your views on substance use? (Specify views on casual vs. regular use) `[TEXTAREA]`
+131. How important is health and lifestyle compatibility (gym, diet, social battery)? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+132. Do you have pets, and how do you feel about a partner having pets? `[TEXTAREA]`
 
 ### Section B: Core Values
 
-130. How important is religious or spiritual alignment with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-131. What are your views on gender roles versus expectations in a relationship? `[TEXTAREA]`
-132. How important is it that your partner is driven/goal-oriented and willing to grow? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-133. How important is independence level compatibility? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+133. How important is religious or spiritual alignment with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+134. What are your views on gender roles versus expectations in a relationship? `[TEXTAREA]`
+135. How important is it that your partner is driven/goal-oriented and willing to grow? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+136. How important is independence level compatibility? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 
 ### Section C: Communication & Respect
 
-134. How would you describe your communication style and need for transparency/honesty? `[TEXTAREA]`
-135. What is your expectation for respect level in a relationship? (Consider: needy texts, anger management, yelling, entitlement) `[TEXTAREA]`
+137. How would you describe your communication style and need for transparency/honesty? `[TEXTAREA]`
+138. What is your expectation for respect level in a relationship? (Consider: needy texts, anger management, yelling, entitlement) `[TEXTAREA]`
 
 ### Section D: Rate the Importance of Similarities
 
-136. Music taste with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-137. Genre of a movie/book preference? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-138. The type and amount of activities prefered in your freetime? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-139. Shared sense of humor? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-140. How important is it that your partner is open to trying new things with you? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+139. Music taste with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+140. Genre of a movie/book preference? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+141. The type and amount of activities prefered in your freetime? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+142. Shared sense of humor? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+143. How important is it that your partner is open to trying new things with you? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 
 ---
 
@@ -368,13 +376,13 @@
 
 ### Section A: Priorities Allocation
 
-141. You have 100 points to distribute across the five pillars below. The more points you assign, the less willing you are to compromise in that area. `[POINT_ALLOCATION:100: Education (Pedigree and intellectual background), Profession (Status and income and ambition), Attractiveness (Facial symmetry and the spark), Body Type (Build and fitness habits and physical shape), Location (Proximity and willingness to relocate)]`
+144. You have 100 points to distribute across the five pillars below. The more points you assign, the less willing you are to compromise in that area. `[POINT_ALLOCATION:100: Education (Pedigree and intellectual background), Profession (Status and income and ambition), Attractiveness (Facial symmetry and the spark), Body Type (Build and fitness habits and physical shape), Location (Proximity and willingness to relocate)]`
 
 ### Section B: Quality Ranking
 
-142. Please rank the following from 1 (Most Important) to 5 (Least Important) in terms of what are a priority in your life. `[RANKING: Friends, Family, Work, Phone, Social media]`
+145. Please rank the following from 1 (Most Important) to 5 (Least Important) in terms of what are a priority in your life. `[RANKING: Friends, Family, Work, Phone, Social media]`
 
-143. Please rank the following qualities from 1 (Most Critical) to 7 (Least Critical) for your ideal partner. `[RANKING: Trust, Emotional Intelligence, Growth Mindset, Accountability, Resilience, Loyalty, Intellectual Curiosity]`
+146. Please rank the following qualities from 1 (Most Critical) to 7 (Least Critical) for your ideal partner. `[RANKING: Trust, Emotional Intelligence, Growth Mindset, Accountability, Resilience, Loyalty, Intellectual Curiosity]`
 
 ---
 
@@ -384,19 +392,19 @@
 
 ### Section A: Questionnaire Feedback
 
-144. Overall, how did you feel about this questionnaire? `[TEXTAREA]`
+147. Overall, how did you feel about this questionnaire? `[TEXTAREA]`
 
-145. Were there any questions you particularly liked or found valuable? If so, which ones and why? `[TEXTAREA]`
+148. Were there any questions you particularly liked or found valuable? If so, which ones and why? `[TEXTAREA]`
 
-146. Are there any questions you believe should be removed from this questionnaire? Please list them and explain your reasoning. `[TEXTAREA]`
+149. Are there any questions you believe should be removed from this questionnaire? Please list them and explain your reasoning. `[TEXTAREA]`
 
-147. Is there anything important about compatibility or relationships that you feel this questionnaire failed to ask about? `[TEXTAREA]`
+150. Is there anything important about compatibility or relationships that you feel this questionnaire failed to ask about? `[TEXTAREA]`
 
 ---
 
 ## Summary Statistics
 
-- **Total Questions:** 147 (143 standard + 4 research feedback)
+- **Total Questions:** 150 (146 standard + 4 research feedback)
 - **Pages:** 17 (including Page 0: Consent & Agreements and Page 16: Research Feedback)
 - **Consent Page Questions:** 11 (covering service consent, research participation, and terms)
 - **Research-Only Questions:** 5 (Page 16, visible only to research participants)
