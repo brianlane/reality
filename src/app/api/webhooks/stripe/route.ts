@@ -1,6 +1,9 @@
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
-import { verifyStripeWebhook } from "@/lib/stripe";
+import {
+  verifyStripeWebhook,
+  getPaymentIntentMetadata,
+} from "@/lib/stripe";
 import { sendPaymentConfirmationEmail } from "@/lib/email/payment";
 import type Stripe from "stripe";
 
@@ -53,9 +56,33 @@ export async function POST(request: Request) {
           : charge.payment_intent?.id;
 
       if (refundedPaymentIntentId) {
-        const existingPayment = await db.payment.findUnique({
+        // First, try to find the payment by stripePaymentId (common case)
+        let existingPayment = await db.payment.findUnique({
           where: { stripePaymentId: refundedPaymentIntentId },
         });
+
+        // If not found, this could be a race condition where the refund webhook
+        // arrived before the success webhook. Fetch the PaymentIntent from Stripe
+        // to get the metadata.paymentId and look up by internal ID instead.
+        if (!existingPayment) {
+          try {
+            const metadata =
+              await getPaymentIntentMetadata(refundedPaymentIntentId);
+
+            const internalPaymentId = metadata?.paymentId;
+            if (internalPaymentId) {
+              existingPayment = await db.payment.findUnique({
+                where: { id: internalPaymentId },
+              });
+            }
+          } catch (stripeError) {
+            console.error(
+              "Failed to fetch PaymentIntent metadata for refund:",
+              stripeError,
+            );
+            // Continue without the payment record - will skip refund
+          }
+        }
 
         if (existingPayment && existingPayment.status !== "REFUNDED") {
           await db.payment.update({

@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 
-export const getStripe = () => {
+const getStripe = () => {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
     throw new Error("STRIPE_SECRET_KEY is not configured");
@@ -13,7 +13,7 @@ export const getStripe = () => {
 /**
  * Resolves a PaymentType to the corresponding Stripe Price ID from env vars.
  */
-export function resolveStripePriceId(
+function resolveStripePriceId(
   type: "APPLICATION_FEE" | "EVENT_FEE",
 ): string {
   const mapping: Record<string, string | undefined> = {
@@ -159,6 +159,26 @@ export async function createRefund(paymentIntentId: string) {
   });
 
   return refund;
+}
+
+/**
+ * Fetches the metadata from a Stripe Payment Intent.
+ * Used by webhook handlers to resolve internal payment IDs.
+ */
+export async function getPaymentIntentMetadata(
+  paymentIntentId: string,
+): Promise<Record<string, string> | undefined> {
+  const stripe = getStripe();
+
+  try {
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    return paymentIntent.metadata;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Failed to fetch PaymentIntent metadata: ${errorMessage}`,
+    );
+  }
 }
 
 export function verifyStripeWebhook(
