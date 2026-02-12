@@ -8,10 +8,26 @@ import { notifyApplicationSubmitted } from "@/lib/email/admin-notifications";
 import { createPaymentCheckout } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
+  // Parse and validate request body
+  let body;
   try {
-    const { applicationId } = submitApplicationSchema.parse(
-      await request.json(),
-    );
+    body = await request.json();
+  } catch (error) {
+    return errorResponse("INVALID_JSON", "Invalid JSON in request body", 400);
+  }
+
+  let applicationId;
+  try {
+    const parsed = submitApplicationSchema.parse(body);
+    applicationId = parsed.applicationId;
+  } catch (error) {
+    return errorResponse("VALIDATION_ERROR", "Invalid submit payload", 400, [
+      { message: (error as Error).message },
+    ]);
+  }
+
+  // Process the submission
+  try {
     const applicant = await db.applicant.findUnique({
       where: { id: applicationId },
       include: { user: true },
@@ -126,8 +142,14 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
-    return errorResponse("VALIDATION_ERROR", "Invalid submit payload", 400, [
-      { message: (error as Error).message },
-    ]);
+    // Log the error for debugging
+    console.error("Application submission error:", error);
+
+    return errorResponse(
+      "SERVER_ERROR",
+      "An unexpected error occurred while processing your submission. Please try again later.",
+      500,
+      [{ message: (error as Error).message }],
+    );
   }
 }
