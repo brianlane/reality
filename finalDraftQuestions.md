@@ -346,29 +346,32 @@
 
 ### Section A: Lifestyle
 
-130. What are your views on substance use? (Specify views on casual vs. regular use) `[TEXTAREA]`
+130. How important is substance (Alcohol/Marijuana) use compatibility? (casual vs. regular use vs. none) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 131. How important is health and lifestyle compatibility (gym, diet, social battery)? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 132. Do you have pets, and how do you feel about a partner having pets? `[TEXTAREA]`
 
 ### Section B: Core Values
 
-133. How important is religious or spiritual alignment with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-134. What are your views on gender roles versus expectations in a relationship? `[TEXTAREA]`
-135. How important is it that your partner is driven/goal-oriented and willing to grow? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-136. How important is independence level compatibility? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+133. What is your religious or spiritual affiliation? `[DROPDOWN: Christianity - Catholic, Christianity - Protestant, Christianity - Orthodox, Christianity - Other, Judaism, Islam, Buddhism, Hinduism, Sikhism, Atheist, Agnostic, Spiritual but not religious, No affiliation, Prefer not to say, Other]`
+134. How important is religious or spiritual alignment with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+135. How many days per week do you participate in spiritual or religious activities? `[DROPDOWN: 0 days, 1 day, 2 days, 3 days, 4 days, 5 days, 6 days, 7 days]`
+136. Which religious or spiritual practices do you engage in? (Select all that apply) `[CHECKBOXES: Prayer or meditation, Attending religious services or gatherings, Reading sacred or spiritual texts, Yoga or mindfulness practice, Community service or charity work, Fasting or dietary observances, Sabbath or day of rest observance, Pilgrimage or spiritual retreats, Study groups or religious classes, None, Other]`
+137. What are your views on gender roles versus expectations in a relationship? `[TEXTAREA]`
+138. How important is it that your partner is driven/goal-oriented and willing to grow? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+139. How important is independence level compatibility? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 
 ### Section C: Communication & Respect
 
-137. How would you describe your communication style and need for transparency/honesty? `[TEXTAREA]`
-138. What is your expectation for respect level in a relationship? (Consider: needy texts, anger management, yelling, entitlement) `[TEXTAREA]`
+140. How would you describe your communication style and need for transparency/honesty? `[TEXTAREA]`
+141. What is your expectation for respect level in a relationship? (Consider: needy texts, anger management, yelling, entitlement) `[TEXTAREA]`
 
 ### Section D: Rate the Importance of Similarities
 
-139. Music taste with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-140. Genre of a movie/book preference? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-141. The type and amount of activities prefered in your freetime? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-142. Shared sense of humor? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-143. How important is it that your partner is open to trying new things with you? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+142. Music taste with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+143. Genre of a movie/book preference? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+144. The type and amount of activities prefered in your freetime? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+145. Shared sense of humor? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+146. How important is it that your partner is open to trying new things with you? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 
 ---
 
@@ -376,13 +379,15 @@
 
 ### Section A: Priorities Allocation
 
-144. You have 100 points to distribute across the five pillars below. The more points you assign, the less willing you are to compromise in that area. `[POINT_ALLOCATION:100: Education (Pedigree and intellectual background), Profession (Status and income and ambition), Attractiveness (Facial symmetry and the spark), Body Type (Build and fitness habits and physical shape), Location (Proximity and willingness to relocate)]`
+147. You have 100 points to distribute across the five pillars below. The more points you assign, the less willing you are to compromise in that area. `[POINT_ALLOCATION:100: Education (Pedigree and intellectual background), Profession (Status and income and ambition), Attractiveness (Facial symmetry and the spark), Body Type (Build and fitness habits and physical shape), Location (Proximity and willingness to relocate)]`
 
 ### Section B: Quality Ranking
 
-145. Please rank the following from 1 (Most Important) to 5 (Least Important) in terms of what are a priority in your life. `[RANKING: Friends, Family, Work, Phone, Social media]`
+148. Please rank the following from 1 (Most Important) to 5 (Least Important) in terms of what are a priority in your life. `[RANKING: Friends, Family, Work, Phone, Social media]`
 
-146. Please rank the following qualities from 1 (Most Critical) to 7 (Least Critical) for your ideal partner. `[RANKING: Trust, Emotional Intelligence, Growth Mindset, Accountability, Resilience, Loyalty, Intellectual Curiosity]`
+149. Please rank the following life values from 1 (Most Important) to 10 (Least Important) in terms of their priority in your life. `[RANKING: Community Life and Citizenship, Education and Learning, Family, Social Life and Friendship, Health and Self-Care, Intimate Romantic Relationship, Parenting, Recreation and Leisure, Spirituality and Faith, Work and Career]`
+
+150. Please rank the following qualities from 1 (Most Critical) to 7 (Least Critical) for your ideal partner. `[RANKING: Trust, Emotional Intelligence, Growth Mindset, Accountability, Resilience, Loyalty, Intellectual Curiosity]`
 
 ---
 
@@ -392,19 +397,19 @@
 
 ### Section A: Questionnaire Feedback
 
-147. Overall, how did you feel about this questionnaire? `[TEXTAREA]`
+151. Overall, how did you feel about this questionnaire? `[TEXTAREA]`
 
-148. Were there any questions you particularly liked or found valuable? If so, which ones and why? `[TEXTAREA]`
+152. Were there any questions you particularly liked or found valuable? If so, which ones and why? `[TEXTAREA]`
 
-149. Are there any questions you believe should be removed from this questionnaire? Please list them and explain your reasoning. `[TEXTAREA]`
+153. Are there any questions you believe should be removed from this questionnaire? Please list them and explain your reasoning. `[TEXTAREA]`
 
-150. Is there anything important about compatibility or relationships that you feel this questionnaire failed to ask about? `[TEXTAREA]`
+154. Is there anything important about compatibility or relationships that you feel this questionnaire failed to ask about? `[TEXTAREA]`
 
 ---
 
 ## Summary Statistics
 
-- **Total Questions:** 150 (146 standard + 4 research feedback)
+- **Total Questions:** 154 (150 standard + 4 research feedback)
 - **Pages:** 17 (including Page 0: Consent & Agreements and Page 16: Research Feedback)
 - **Consent Page Questions:** 11 (covering service consent, research participation, and terms)
 - **Research-Only Questions:** 5 (Page 16, visible only to research participants)
