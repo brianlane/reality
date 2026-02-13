@@ -64,7 +64,7 @@
     "eslint-config-next": "16.1.6",
     "lightningcss": "^1.31.1",
     "prettier": "^3.2.5",
-    "prisma": "^7.3.0",
+    "prisma": "^7.4.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"
