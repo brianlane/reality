@@ -51,6 +51,7 @@ export interface SendEmailParams {
   to: string;
   subject: string;
   html: string;
+  text?: string;
   replyTo?: string;
   emailType: EmailType;
   applicantId?: string;
