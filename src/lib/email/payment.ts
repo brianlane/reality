@@ -137,7 +137,7 @@ export async function sendPaymentConfirmationEmail(
   `.trim();
 
   const text =
-    `Hi ${safeFirstName},\n\n` +
+    `Hi ${params.firstName},\n\n` +
     "Thank you for your payment! We've successfully received your application fee and you're one step closer to finding your match.\n\n" +
     "PAYMENT DETAILS\n\n" +
     `Amount Paid: ${formattedAmount}\n` +

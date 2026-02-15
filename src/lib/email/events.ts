@@ -190,15 +190,15 @@ export async function sendEventInvitationEmail(params: EventInvitationParams) {
   `.trim();
 
   const text =
-    `Hi ${safeFirstName},\n\n` +
+    `Hi ${params.firstName},\n\n` +
     "We're excited to invite you to an exclusive Reality Matchmaking event where you'll meet other carefully selected members of our community. " +
     "This is your opportunity to make meaningful connections in person!\n\n" +
-    `EVENT: ${safeEventTitle}\n\n` +
+    `EVENT: ${params.eventTitle}\n\n` +
     "EVENT DETAILS\n\n" +
     `Date: ${formattedDate}\n` +
     `Time: ${formattedStartTime} - ${formattedEndTime}\n` +
-    `Location: ${safeLocation}\n` +
-    `Address: ${safeAddress}\n\n` +
+    `Location: ${params.eventLocation}\n` +
+    `Address: ${params.eventAddress}\n\n` +
     `RSVP Now: ${params.rsvpUrl}\n\n` +
     `Please RSVP by ${new Date(params.eventDate.getTime() - 3 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", { month: "long", day: "numeric" })}\n\n` +
     "Space is limited, so we need your response to finalize arrangements and ensure everyone has the best experience possible.\n\n" +

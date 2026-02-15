@@ -142,7 +142,7 @@ export async function sendApplicationStatusEmail(
   }
 
   // Generate plain text version
-  let textContent = `Hi ${safeFirstName},\n\n${mainMessage}\n\n`;
+  let textContent = `Hi ${params.firstName},\n\n${mainMessage}\n\n`;
 
   switch (params.status.toUpperCase()) {
     case "SCREENING_IN_PROGRESS":
@@ -156,8 +156,8 @@ export async function sendApplicationStatusEmail(
       textContent +=
         "This decision is based on our matching criteria and current member composition. " +
         "We maintain high standards to ensure the best experience for all members.\n\n";
-      if (safeMessage) {
-        textContent += `${safeMessage}\n\n`;
+      if (params.message) {
+        textContent += `${params.message}\n\n`;
       }
       textContent +=
         "We wish you the best in your search for a meaningful relationship.\n\n";

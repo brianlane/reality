@@ -130,7 +130,7 @@ export async function sendApplicationApprovalEmail(
   `.trim();
 
   const text =
-    `Hi ${safeFirstName},\n\n` +
+    `Hi ${params.firstName},\n\n` +
     "Congratulations! After careful review of your application, we're thrilled to welcome you as an official member of Reality Matchmaking.\n\n" +
     "Our team was impressed by your profile, and we believe you're an excellent fit for our community of thoughtful, genuine individuals seeking meaningful connections.\n\n" +
     "WELCOME TO THE COMMUNITY\n\n" +

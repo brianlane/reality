@@ -155,10 +155,10 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
     "EMAIL DELIVERY FAILED\n\n" +
     "An email failed to send after multiple retry attempts. Action may be required.\n\n" +
     "FAILURE DETAILS\n\n" +
-    `Email Type: ${safeEmailType}\n` +
-    `Recipient: ${safeRecipientEmail}\n` +
-    (safeApplicantId ? `Applicant ID: ${safeApplicantId}\n` : "") +
-    `Error: ${safeErrorMessage}\n` +
+    `Email Type: ${params.emailType}\n` +
+    `Recipient: ${params.recipientEmail}\n` +
+    (params.applicantId ? `Applicant ID: ${params.applicantId}\n` : "") +
+    `Error: ${params.errorMessage}\n` +
     `Time: ${new Date().toLocaleString()}\n\n` +
     "RECOMMENDED ACTIONS\n\n" +
     "- Verify the recipient's email address is valid\n" +
@@ -266,9 +266,9 @@ export async function notifyQuestionnaireCompleted(
     "RESEARCH QUESTIONNAIRE COMPLETED\n\n" +
     "A research participant has completed their questionnaire.\n\n" +
     "PARTICIPANT DETAILS\n\n" +
-    `Name: ${safeFirstName} ${safeLastName}\n` +
-    `Email: ${safeEmail}\n` +
-    `Applicant ID: ${safeApplicantId}\n` +
+    `Name: ${params.firstName} ${params.lastName}\n` +
+    `Email: ${params.email}\n` +
+    `Applicant ID: ${params.applicantId}\n` +
     `Completed At: ${new Date().toLocaleString()}`;
 
   try {
@@ -384,9 +384,9 @@ export async function notifyApplicationSubmitted(
     "NEW APPLICATION SUBMITTED\n\n" +
     "An applicant has submitted their full application and is ready for review.\n\n" +
     "APPLICANT DETAILS\n\n" +
-    `Name: ${safeFirstName} ${safeLastName}\n` +
-    `Email: ${safeEmail}\n` +
-    `Applicant ID: ${safeApplicantId}\n` +
+    `Name: ${params.firstName} ${params.lastName}\n` +
+    `Email: ${params.email}\n` +
+    `Applicant ID: ${params.applicantId}\n` +
     `Submitted At: ${new Date().toLocaleString()}\n\n` +
     "ACTION REQUIRED: Please review this application in the admin dashboard.";
 
