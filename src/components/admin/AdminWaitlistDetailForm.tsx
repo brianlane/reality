@@ -27,6 +27,9 @@ export default function AdminWaitlistDetailForm({
 }: AdminWaitlistDetailFormProps) {
   const [data, setData] = useState<WaitlistDetail | null>(null);
   const [applicationStatus, setApplicationStatus] = useState("WAITLIST");
+  const [initialApplicationStatus, setInitialApplicationStatus] = useState<
+    string | null
+  >(null);
   const [waitlistReason, setWaitlistReason] = useState("");
   const [waitlistPosition, setWaitlistPosition] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +56,9 @@ export default function AdminWaitlistDetailForm({
           return;
         }
         setData(json.applicant);
-        setApplicationStatus(json.applicant.applicationStatus ?? "WAITLIST");
+        const status = json.applicant.applicationStatus ?? "WAITLIST";
+        setApplicationStatus(status);
+        setInitialApplicationStatus(status);
         setWaitlistReason(json.applicant.waitlistReason ?? "");
         setWaitlistPosition(
           json.applicant.waitlistPosition
@@ -90,7 +95,11 @@ export default function AdminWaitlistDetailForm({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          applicationStatus,
+          // Only include applicationStatus if it has changed from initial value
+          // This prevents validation errors for applicants in invite-only statuses
+          ...(applicationStatus !== initialApplicationStatus && {
+            applicationStatus,
+          }),
           waitlistReason: waitlistReason || null,
           waitlistPosition: waitlistPosition ? Number(waitlistPosition) : null,
         }),

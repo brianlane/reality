@@ -36,6 +36,9 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
     role: "APPLICANT",
     applicationStatus: "SUBMITTED",
   });
+  const [initialApplicationStatus, setInitialApplicationStatus] = useState<
+    string | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,14 +70,15 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
           return;
         }
         setUser(json.user);
+        const status = json.user.applicant?.applicationStatus ?? "SUBMITTED";
+        setInitialApplicationStatus(status);
         setForm({
           clerkId: json.user.clerkId ?? "",
           email: json.user.email ?? "",
           firstName: json.user.firstName ?? "",
           lastName: json.user.lastName ?? "",
           role: json.user.role ?? "APPLICANT",
-          applicationStatus:
-            json.user.applicant?.applicationStatus ?? "SUBMITTED",
+          applicationStatus: status,
         });
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
@@ -105,8 +109,12 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
       }
       const payload = {
         ...form,
+        // Only include applicationStatus if it has changed from initial value
+        // This prevents validation errors for applicants in invite-only statuses
         applicationStatus:
-          mode === "edit" && user?.applicant
+          mode === "edit" &&
+          user?.applicant &&
+          form.applicationStatus !== initialApplicationStatus
             ? form.applicationStatus
             : undefined,
       };
