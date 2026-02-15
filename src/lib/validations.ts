@@ -120,20 +120,6 @@ export const adminUserCreateSchema = z.object({
   role: z.enum(["APPLICANT", "ADMIN"]),
 });
 
-// All application statuses (used for display/filtering)
-const adminApplicationStatusSchema = z.enum([
-  "DRAFT",
-  "SUBMITTED",
-  "PAYMENT_PENDING",
-  "SCREENING_IN_PROGRESS",
-  "APPROVED",
-  "WAITLIST",
-  "WAITLIST_INVITED",
-  "RESEARCH_INVITED",
-  "RESEARCH_IN_PROGRESS",
-  "RESEARCH_COMPLETED",
-]);
-
 // Statuses that admins can directly set via PATCH endpoints
 // WAITLIST_INVITED and RESEARCH_INVITED are excluded because they require
 // invite-specific metadata (tokens, timestamps, etc.) and should only be

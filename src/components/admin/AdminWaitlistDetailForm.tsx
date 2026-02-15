@@ -111,6 +111,11 @@ export default function AdminWaitlistDetailForm({
         return;
       }
       setSuccess("Waitlist details updated.");
+      // Update initial status to current value after successful save
+      // This ensures subsequent status changes are detected correctly
+      if (applicationStatus !== initialApplicationStatus) {
+        setInitialApplicationStatus(applicationStatus);
+      }
       setData((prev) =>
         prev
           ? {

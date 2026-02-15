@@ -200,6 +200,14 @@ export default function AdminApplicationForm({
         return;
       }
       setSuccess("Application saved.");
+      // Update initial status to current value after successful save
+      // This ensures subsequent status changes are detected correctly
+      if (
+        mode === "edit" &&
+        payload.applicant?.applicationStatus !== undefined
+      ) {
+        setInitialApplicationStatus(form.applicationStatus);
+      }
       setIsLoading(false);
     } catch {
       setError("Failed to save application.");

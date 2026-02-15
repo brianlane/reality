@@ -137,6 +137,11 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
         return;
       }
       setSuccess("User saved.");
+      // Update initial status to current value after successful save
+      // This ensures subsequent status changes are detected correctly
+      if (mode === "edit" && payload.applicationStatus !== undefined) {
+        setInitialApplicationStatus(form.applicationStatus);
+      }
       if (mode === "create") {
         setForm({
           clerkId: "",
