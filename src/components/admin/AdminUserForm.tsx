@@ -306,6 +306,12 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
             onChange={(event) =>
               updateField("applicationStatus", event.target.value)
             }
+            disabled={form.applicationStatus.startsWith("RESEARCH_")}
+            title={
+              form.applicationStatus.startsWith("RESEARCH_")
+                ? "Research statuses cannot be changed. Use /admin/research to manage research participants."
+                : undefined
+            }
           >
             <option value="DRAFT">Draft</option>
             <option value="SUBMITTED">Submitted</option>
@@ -313,8 +319,14 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
             <option value="SCREENING_IN_PROGRESS">Screening</option>
             <option value="APPROVED">Approved</option>
             <option value="WAITLIST">Waitlist</option>
-            <option value="RESEARCH_IN_PROGRESS">Research In Progress</option>
-            <option value="RESEARCH_COMPLETED">Research Completed</option>
+            {/* Invite-only and research statuses cannot be set directly */}
+            {/* Show current status as read-only if applicant is in one of these states */}
+            {(form.applicationStatus === "WAITLIST_INVITED" ||
+              form.applicationStatus.startsWith("RESEARCH_")) && (
+              <option value={form.applicationStatus} disabled>
+                {form.applicationStatus.replace(/_/g, " ")} (read-only)
+              </option>
+            )}
           </Select>
         ) : null}
       </div>

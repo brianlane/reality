@@ -193,6 +193,12 @@ export default function AdminWaitlistDetailForm({
           <Select
             value={applicationStatus}
             onChange={(event) => setApplicationStatus(event.target.value)}
+            disabled={applicationStatus.startsWith("RESEARCH_")}
+            title={
+              applicationStatus.startsWith("RESEARCH_")
+                ? "Research statuses cannot be changed. Use /admin/research to manage research participants."
+                : undefined
+            }
           >
             <option value="DRAFT">Draft</option>
             <option value="SUBMITTED">Submitted</option>
@@ -200,8 +206,14 @@ export default function AdminWaitlistDetailForm({
             <option value="SCREENING_IN_PROGRESS">Screening</option>
             <option value="APPROVED">Approved</option>
             <option value="WAITLIST">Waitlist</option>
-            <option value="RESEARCH_IN_PROGRESS">Research In Progress</option>
-            <option value="RESEARCH_COMPLETED">Research Completed</option>
+            {/* Invite-only and research statuses cannot be set directly */}
+            {/* Show current status as read-only if applicant is in one of these states */}
+            {(applicationStatus === "WAITLIST_INVITED" ||
+              applicationStatus.startsWith("RESEARCH_")) && (
+              <option value={applicationStatus} disabled>
+                {applicationStatus.replace(/_/g, " ")} (read-only)
+              </option>
+            )}
           </Select>
         </div>
       </div>
