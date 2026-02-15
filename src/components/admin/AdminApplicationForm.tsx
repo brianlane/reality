@@ -496,11 +496,12 @@ export default function AdminApplicationForm({
           <option value="SCREENING_IN_PROGRESS">Screening</option>
           <option value="APPROVED">Approved</option>
           <option value="WAITLIST">Waitlist</option>
-          <option value="WAITLIST_INVITED">Waitlist Invited</option>
-          {/* Research statuses are read-only - use /admin/research to manage */}
-          {form.applicationStatus.startsWith("RESEARCH_") && (
-            <option value={form.applicationStatus}>
-              {form.applicationStatus.replace(/_/g, " ")}
+          {/* Invite-only statuses (WAITLIST_INVITED, RESEARCH_INVITED) cannot be set directly */}
+          {/* Use dedicated invite endpoints to set these statuses with required metadata */}
+          {(form.applicationStatus === "WAITLIST_INVITED" ||
+            form.applicationStatus.startsWith("RESEARCH_")) && (
+            <option value={form.applicationStatus} disabled>
+              {form.applicationStatus.replace(/_/g, " ")} (read-only)
             </option>
           )}
         </Select>

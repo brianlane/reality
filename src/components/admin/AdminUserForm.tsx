@@ -300,8 +300,6 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
             <option value="SCREENING_IN_PROGRESS">Screening</option>
             <option value="APPROVED">Approved</option>
             <option value="WAITLIST">Waitlist</option>
-            <option value="WAITLIST_INVITED">Waitlist Invited</option>
-            <option value="RESEARCH_INVITED">Research Invited</option>
             <option value="RESEARCH_IN_PROGRESS">Research In Progress</option>
             <option value="RESEARCH_COMPLETED">Research Completed</option>
           </Select>
