@@ -14,6 +14,7 @@ import { sendPaymentConfirmationEmail } from "@/lib/email/payment";
 import { sendApplicationApprovalEmail } from "@/lib/email/approval";
 import { sendEventInvitationEmail } from "@/lib/email/events";
 import { sendApplicationStatusEmail } from "@/lib/email/status";
+import { sendResearchInviteEmail } from "@/lib/email/research";
 import type { TestEmailType } from "@/lib/email/types";
 
 type RequestBody = {
@@ -83,6 +84,14 @@ export async function POST(request: Request) {
           to: recipientEmail,
           firstName: "Test User",
           inviteToken: "test_token_123",
+        });
+        break;
+
+      case "RESEARCH_INVITE":
+        result = await sendResearchInviteEmail({
+          to: recipientEmail,
+          firstName: "Test User",
+          inviteCode: "test_code_abc123",
         });
         break;
 
