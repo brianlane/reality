@@ -6,6 +6,12 @@
 
 import { sendEmail } from "./client";
 
+const EMAIL_ASSET_BASE_URL = (
+  process.env.EMAIL_ASSET_BASE_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "https://www.realitymatchmaking.com"
+).replace(/\/$/, "");
+
 interface EventInvitationParams {
   to: string;
   firstName: string;
@@ -71,9 +77,13 @@ export async function sendEventInvitationEmail(params: EventInvitationParams) {
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #c8915f 0%, #a67c52 100%); padding: 40px 20px; text-align: center;">
-      <div style="width: 80px; height: 80px; margin: 0 auto 20px; background-color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-        <span style="font-size: 48px;">📅</span>
-      </div>
+      <img
+        src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+        alt="Reality Matchmaking logo"
+        width="80"
+        height="80"
+        style="display: inline-block; margin-bottom: 20px; border: 0; outline: none; text-decoration: none;"
+      />
       <h1 style="color: white; margin: 0 0 12px; font-size: 32px; font-weight: 600;">You're Invited!</h1>
       <p style="color: #fef3c7; font-size: 16px; margin: 0;">${safeEventTitle}</p>
     </div>
@@ -179,10 +189,32 @@ export async function sendEventInvitationEmail(params: EventInvitationParams) {
 </html>
   `.trim();
 
+  const text =
+    `Hi ${params.firstName},\n\n` +
+    "We're excited to invite you to an exclusive Reality Matchmaking event where you'll meet other carefully selected members of our community. " +
+    "This is your opportunity to make meaningful connections in person!\n\n" +
+    `EVENT: ${params.eventTitle}\n\n` +
+    "EVENT DETAILS\n\n" +
+    `Date: ${formattedDate}\n` +
+    `Time: ${formattedStartTime} - ${formattedEndTime}\n` +
+    `Location: ${params.eventLocation}\n` +
+    `Address: ${params.eventAddress}\n\n` +
+    `RSVP Now: ${params.rsvpUrl}\n\n` +
+    `Please RSVP by ${new Date(params.eventDate.getTime() - 3 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", { month: "long", day: "numeric" })}\n\n` +
+    "Space is limited, so we need your response to finalize arrangements and ensure everyone has the best experience possible.\n\n" +
+    "WHAT TO EXPECT\n\n" +
+    "- Meet 10-15 carefully matched members in a relaxed, upscale setting\n" +
+    "- Participate in structured introductions and conversation activities\n" +
+    "- Enjoy complimentary refreshments and a welcoming atmosphere\n" +
+    "- Connect with our team for personalized support and guidance\n\n" +
+    "We can't wait to see you there and help you make meaningful connections!\n\n" +
+    "Questions about the event? Reply to this email and we'll get back to you right away.";
+
   return sendEmail({
     to: params.to,
     subject,
     html,
+    text,
     emailType: "EVENT_INVITATION",
     applicantId: params.applicantId,
   });

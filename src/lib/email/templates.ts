@@ -8,6 +8,11 @@
  */
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const EMAIL_ASSET_BASE_URL = (
+  process.env.EMAIL_ASSET_BASE_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "https://www.realitymatchmaking.com"
+).replace(/\/$/, "");
 
 const htmlEscapes: Record<string, string> = {
   "&": "&amp;",
@@ -36,18 +41,13 @@ export function getWaitlistConfirmationHTML() {
     <div style="padding: 40px 32px;">
       <!-- Logo and Title -->
       <div style="text-align: center; margin-bottom: 32px;">
-        <svg width="60" height="60" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; margin-bottom: 16px;">
-          <defs>
-            <linearGradient id="lineGradient" x1="12" y1="24" x2="36" y2="24" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stop-color="#c9a880"/>
-              <stop offset="0.5" stop-color="#c9a880" stop-opacity="0.3"/>
-              <stop offset="1" stop-color="#c9a880"/>
-            </linearGradient>
-          </defs>
-          <line x1="18" y1="24" x2="30" y2="24" stroke="url(#lineGradient)" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="12" cy="24" r="6" fill="#c9a880"/>
-          <circle cx="36" cy="24" r="6" fill="#c9a880"/>
-        </svg>
+        <img
+          src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+          alt="Reality Matchmaking logo"
+          width="60"
+          height="60"
+          style="display: inline-block; margin-bottom: 16px; border: 0; outline: none; text-decoration: none;"
+        />
         <h1 style="color: #1a1a2e; margin: 0; font-size: 32px; font-weight: 600;">Reality Matchmaking</h1>
       </div>
 
@@ -91,18 +91,13 @@ export function getResearchInviteHTML(firstName: string, inviteCode: string) {
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #1a2332 0%, #2d3e50 100%); padding: 40px 20px; text-align: center;">
-      <svg width="60" height="60" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; margin-bottom: 16px;">
-        <defs>
-          <linearGradient id="lineGradient" x1="12" y1="24" x2="36" y2="24" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#c9a880"/>
-            <stop offset="0.5" stop-color="#c9a880" stop-opacity="0.3"/>
-            <stop offset="1" stop-color="#c9a880"/>
-          </linearGradient>
-        </defs>
-        <line x1="18" y1="24" x2="30" y2="24" stroke="url(#lineGradient)" stroke-width="2" stroke-linecap="round"/>
-        <circle cx="12" cy="24" r="6" fill="#c9a880"/>
-        <circle cx="36" cy="24" r="6" fill="#c9a880"/>
-      </svg>
+      <img
+        src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+        alt="Reality Matchmaking logo"
+        width="60"
+        height="60"
+        style="display: inline-block; margin-bottom: 16px; border: 0; outline: none; text-decoration: none;"
+      />
       <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">Research Invitation</h1>
     </div>
 

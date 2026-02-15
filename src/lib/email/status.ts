@@ -6,6 +6,12 @@
 
 import { sendEmail } from "./client";
 
+const EMAIL_ASSET_BASE_URL = (
+  process.env.EMAIL_ASSET_BASE_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "https://www.realitymatchmaking.com"
+).replace(/\/$/, "");
+
 interface ApplicationStatusParams {
   to: string;
   firstName: string;
@@ -36,7 +42,6 @@ export async function sendApplicationStatusEmail(
   let subject = "Application Status Update - Reality Matchmaking";
   let headerText = "Status Update";
   let headerColor = "#1a2332";
-  let headerIcon = "ℹ️";
   let mainMessage = "";
   let additionalInfo = "";
 
@@ -45,7 +50,6 @@ export async function sendApplicationStatusEmail(
       subject = "Your Background Check is In Progress";
       headerText = "Screening in Progress";
       headerColor = "#2563eb";
-      headerIcon = "🔍";
       mainMessage = `We're currently processing your background check and identity verification. This typically takes 2-3 business days.`;
       additionalInfo = `
         <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; padding: 20px; border-radius: 8px; margin: 24px 0;">
@@ -65,7 +69,6 @@ export async function sendApplicationStatusEmail(
       subject = "Update on Your Application";
       headerText = "Application Decision";
       headerColor = "#dc2626";
-      headerIcon = "✉️";
       mainMessage = `Thank you for your interest in Reality Matchmaking. After careful review, we've decided not to move forward with your application at this time.`;
       additionalInfo = `
         <p style="color: #4a5568; font-size: 15px; line-height: 1.6; margin: 24px 0;">
@@ -92,7 +95,6 @@ export async function sendApplicationStatusEmail(
       subject = "Complete Your Payment to Continue";
       headerText = "Payment Required";
       headerColor = "#c8915f";
-      headerIcon = "💳";
       mainMessage = `To continue with your application, please complete the $199 application fee payment.`;
       additionalInfo = `
         <div style="background-color: #fff7ed; border: 1px solid #fed7aa; padding: 20px; border-radius: 8px; margin: 24px 0;">
@@ -118,7 +120,6 @@ export async function sendApplicationStatusEmail(
       subject = "Application Received - Under Review";
       headerText = "Under Review";
       headerColor = "#059669";
-      headerIcon = "✓";
       mainMessage = `We've received your complete application and our team is currently reviewing it. We'll be in touch within 3-5 business days.`;
       additionalInfo = `
         <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; padding: 20px; border-radius: 8px; margin: 24px 0;">
@@ -140,6 +141,49 @@ export async function sendApplicationStatusEmail(
       additionalInfo = "";
   }
 
+  // Generate plain text version
+  let textContent = `Hi ${params.firstName},\n\n${mainMessage}\n\n`;
+
+  switch (params.status.toUpperCase()) {
+    case "SCREENING_IN_PROGRESS":
+      textContent +=
+        "What's being checked:\n" +
+        "- Identity verification\n" +
+        "- Criminal background check\n" +
+        "- Sex offender registry\n\n";
+      break;
+    case "REJECTED":
+      textContent +=
+        "This decision is based on our matching criteria and current member composition. " +
+        "We maintain high standards to ensure the best experience for all members.\n\n";
+      if (params.message) {
+        textContent += `${params.message}\n\n`;
+      }
+      textContent +=
+        "We wish you the best in your search for a meaningful relationship.\n\n";
+      break;
+    case "PAYMENT_PENDING":
+      textContent +=
+        "What happens after payment:\n" +
+        "1. Complete full application questionnaire (80 questions)\n" +
+        "2. Identity verification and background check\n" +
+        "3. Review by our team\n" +
+        "4. Approval and event invitation\n\n" +
+        `Complete your payment: ${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/apply/payment\n\n`;
+      break;
+    case "SUBMITTED":
+      textContent +=
+        "Our review process includes:\n" +
+        "- Compatibility assessment\n" +
+        "- Profile completeness check\n" +
+        "- Background check verification\n" +
+        "- Fit with current member community\n\n";
+      break;
+  }
+
+  textContent +=
+    "Questions? Reply to this email and our team will be happy to help.";
+
   const html = `
 <!DOCTYPE html>
 <html>
@@ -152,9 +196,13 @@ export async function sendApplicationStatusEmail(
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
     <!-- Header -->
     <div style="background: linear-gradient(135deg, ${headerColor} 0%, ${headerColor}dd 100%); padding: 40px 20px; text-align: center;">
-      <div style="width: 60px; height: 60px; margin: 0 auto 16px; background-color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-        <span style="font-size: 32px;">${headerIcon}</span>
-      </div>
+      <img
+        src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+        alt="Reality Matchmaking logo"
+        width="60"
+        height="60"
+        style="display: inline-block; margin-bottom: 16px; border: 0; outline: none; text-decoration: none;"
+      />
       <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">${headerText}</h1>
     </div>
 
@@ -193,6 +241,7 @@ export async function sendApplicationStatusEmail(
     to: params.to,
     subject,
     html,
+    text: textContent,
     emailType: "STATUS_UPDATE",
     applicantId: params.applicantId,
   });

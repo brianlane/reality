@@ -41,6 +41,7 @@ export async function sendEmail(params: SendEmailParams) {
     to: params.to,
     subject: params.subject,
     html: params.html,
+    ...(params.text && { text: params.text }),
     ...(params.replyTo && { reply_to: params.replyTo }),
   });
 
