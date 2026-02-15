@@ -1,0 +1,11 @@
+<svg width="240" height="80" viewBox="0 0 240 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <line x1="16" y1="40" x2="44" y2="40" stroke="#c9a880" stroke-width="2" stroke-linecap="round" />
+  <circle cx="10" cy="40" r="6" fill="#c9a880" />
+  <circle cx="50" cy="40" r="6" fill="#c9a880" />
+  <text x="64" y="37" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#1a1a2e" letter-spacing="0.5">
+    REALITY
+  </text>
+  <text x="64" y="54" font-family="Arial, sans-serif" font-size="10" font-weight="500" fill="#4a5568" letter-spacing="1">
+    MATCHMAKING
+  </text>
+</svg>

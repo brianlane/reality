@@ -42,7 +42,7 @@ export function getWaitlistConfirmationHTML() {
       <!-- Logo and Title -->
       <div style="text-align: center; margin-bottom: 32px;">
         <img
-          src="${EMAIL_ASSET_BASE_URL}/api/email/logo"
+          src="${EMAIL_ASSET_BASE_URL}/email-logo.svg"
           alt="Reality Matchmaking logo"
           width="60"
           height="60"
@@ -92,7 +92,7 @@ export function getResearchInviteHTML(firstName: string, inviteCode: string) {
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #1a2332 0%, #2d3e50 100%); padding: 40px 20px; text-align: center;">
       <img
-        src="${EMAIL_ASSET_BASE_URL}/api/email/logo"
+        src="${EMAIL_ASSET_BASE_URL}/email-logo.svg"
         alt="Reality Matchmaking logo"
         width="60"
         height="60"
