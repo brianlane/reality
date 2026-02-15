@@ -78,10 +78,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     return errorResponse("NOT_FOUND", "User not found", 404);
   }
 
-  const applicant =
-    body.applicationStatus !== undefined
-      ? await db.applicant.findUnique({ where: { userId: id } })
-      : null;
+  // Always load applicant to include current status in response
+  const applicant = await db.applicant.findUnique({ where: { userId: id } });
 
   if (body.applicationStatus !== undefined && !applicant) {
     return errorResponse(
