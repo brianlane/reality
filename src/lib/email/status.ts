@@ -85,7 +85,8 @@ export async function sendApplicationStatusEmail(
         "- Fit with current member community\n\n";
       break;
     default:
-      textContent += params.message || "Your application status has been updated.";
+      textContent +=
+        params.message || "Your application status has been updated.";
       textContent += "\n\n";
   }
 
