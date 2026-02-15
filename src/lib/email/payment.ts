@@ -6,6 +6,12 @@
 
 import { sendEmail } from "./client";
 
+const EMAIL_ASSET_BASE_URL = (
+  process.env.EMAIL_ASSET_BASE_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "https://www.realitymatchmaking.com"
+).replace(/\/$/, "");
+
 interface PaymentConfirmationParams {
   to: string;
   firstName: string;
@@ -52,9 +58,13 @@ export async function sendPaymentConfirmationEmail(
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #1a2332 0%, #2d3e50 100%); padding: 40px 20px; text-align: center;">
-      <div style="width: 60px; height: 60px; margin: 0 auto 16px; background-color: #c8915f; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-        <span style="font-size: 32px; color: white;">✓</span>
-      </div>
+      <img
+        src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+        alt="Reality Matchmaking logo"
+        width="60"
+        height="60"
+        style="display: inline-block; margin-bottom: 16px; border: 0; outline: none; text-decoration: none;"
+      />
       <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">Payment Confirmed</h1>
     </div>
 
@@ -126,10 +136,29 @@ export async function sendPaymentConfirmationEmail(
 </html>
   `.trim();
 
+  const text =
+    `Hi ${safeFirstName},\n\n` +
+    "Thank you for your payment! We've successfully received your application fee and you're one step closer to finding your match.\n\n" +
+    "PAYMENT DETAILS\n\n" +
+    `Amount Paid: ${formattedAmount}\n` +
+    `Date: ${new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })}\n\n` +
+    `View your receipt: ${params.receiptUrl}\n\n` +
+    "WHAT'S NEXT?\n\n" +
+    "1. Complete Your Profile: Fill in your detailed questionnaire\n" +
+    "2. Background Check: Complete your identity verification and background check\n" +
+    "3. Review Process: Our team will review your complete application\n" +
+    "4. Approval: Once approved, you'll be invited to our next matchmaking event\n\n" +
+    "Questions about your payment? Reply to this email and we'll be happy to help.";
+
   return sendEmail({
     to: params.to,
     subject,
     html,
+    text,
     emailType: "PAYMENT_CONFIRMATION",
     applicantId: params.applicantId,
   });

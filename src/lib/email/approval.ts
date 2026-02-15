@@ -6,6 +6,12 @@
 
 import { sendEmail } from "./client";
 
+const EMAIL_ASSET_BASE_URL = (
+  process.env.EMAIL_ASSET_BASE_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "https://www.realitymatchmaking.com"
+).replace(/\/$/, "");
+
 interface ApplicationApprovalParams {
   to: string;
   firstName: string;
@@ -43,9 +49,13 @@ export async function sendApplicationApprovalEmail(
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #1a2332 0%, #2d3e50 100%); padding: 40px 20px; text-align: center;">
-      <div style="width: 80px; height: 80px; margin: 0 auto 20px; background-color: #c8915f; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-        <span style="font-size: 48px;">🎉</span>
-      </div>
+      <img
+        src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+        alt="Reality Matchmaking logo"
+        width="80"
+        height="80"
+        style="display: inline-block; margin-bottom: 20px; border: 0; outline: none; text-decoration: none;"
+      />
       <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 600;">You're Approved!</h1>
     </div>
 
@@ -119,10 +129,27 @@ export async function sendApplicationApprovalEmail(
 </html>
   `.trim();
 
+  const text =
+    `Hi ${safeFirstName},\n\n` +
+    "Congratulations! After careful review of your application, we're thrilled to welcome you as an official member of Reality Matchmaking.\n\n" +
+    "Our team was impressed by your profile, and we believe you're an excellent fit for our community of thoughtful, genuine individuals seeking meaningful connections.\n\n" +
+    "WELCOME TO THE COMMUNITY\n\n" +
+    "You're now part of an exclusive network of individuals committed to finding authentic, lasting relationships.\n\n" +
+    "WHAT HAPPENS NEXT?\n\n" +
+    "1. Event Invitation: You'll receive an invitation to our next matchmaking event with details about date, time, and venue\n" +
+    "2. Curated Matches: Our team will review your questionnaire and curate personalized matches for you\n" +
+    "3. Pre-Event Preparation: We'll send you tips and guidance to help you make the most of your matchmaking experience\n" +
+    "4. Ongoing Support: Our team is here to support you throughout your journey to finding your match\n\n" +
+    "Pro Tip: Start thinking about what you're looking for in a partner. The more clarity you have about your values and goals, the better your matches will be!\n\n" +
+    "We're excited to begin this journey with you. If you have any questions or need support, don't hesitate to reach out.\n\n" +
+    "Welcome aboard,\n" +
+    "The Reality Matchmaking Team";
+
   return sendEmail({
     to: params.to,
     subject,
     html,
+    text,
     emailType: "APPLICATION_APPROVAL",
     applicantId: params.applicantId,
   });

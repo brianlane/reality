@@ -9,6 +9,12 @@
 
 import { sendEmail } from "./client";
 
+const EMAIL_ASSET_BASE_URL = (
+  process.env.EMAIL_ASSET_BASE_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "https://www.realitymatchmaking.com"
+).replace(/\/$/, "");
+
 // Escape HTML to prevent injection when interpolating user data into email templates
 const escapeHtml = (str: string) => {
   const htmlEscapes: Record<string, string> = {
@@ -73,9 +79,13 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
     <!-- Header -->
     <div style="background-color: #dc2626; padding: 32px 20px; text-align: center;">
-      <div style="width: 60px; height: 60px; margin: 0 auto 16px; background-color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-        <span style="font-size: 32px; color: #dc2626;">⚠️</span>
-      </div>
+      <img
+        src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+        alt="Reality Matchmaking logo"
+        width="60"
+        height="60"
+        style="display: inline-block; margin-bottom: 16px; border: 0; outline: none; text-decoration: none;"
+      />
       <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Email Delivery Failed</h1>
     </div>
 
@@ -141,11 +151,27 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
 </html>
   `.trim();
 
+  const text =
+    "EMAIL DELIVERY FAILED\n\n" +
+    "An email failed to send after multiple retry attempts. Action may be required.\n\n" +
+    "FAILURE DETAILS\n\n" +
+    `Email Type: ${safeEmailType}\n` +
+    `Recipient: ${safeRecipientEmail}\n` +
+    (safeApplicantId ? `Applicant ID: ${safeApplicantId}\n` : "") +
+    `Error: ${safeErrorMessage}\n` +
+    `Time: ${new Date().toLocaleString()}\n\n` +
+    "RECOMMENDED ACTIONS\n\n" +
+    "- Verify the recipient's email address is valid\n" +
+    "- Check Resend dashboard for delivery status\n" +
+    "- Review Resend API key configuration\n" +
+    "- Contact the applicant through alternate means if urgent";
+
   try {
     await sendEmail({
       to: adminEmail,
       subject,
       html,
+      text,
       emailType: "STATUS_UPDATE", // Using STATUS_UPDATE as a general admin notification type
     });
     console.log("Admin notification sent successfully");
@@ -186,6 +212,13 @@ export async function notifyQuestionnaireCompleted(
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #1a2332 0%, #2d3e50 100%); padding: 32px 20px; text-align: center;">
+      <img
+        src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+        alt="Reality Matchmaking logo"
+        width="60"
+        height="60"
+        style="display: inline-block; margin-bottom: 16px; border: 0; outline: none; text-decoration: none;"
+      />
       <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Research Questionnaire Completed</h1>
     </div>
 
@@ -229,11 +262,21 @@ export async function notifyQuestionnaireCompleted(
 </html>
   `.trim();
 
+  const questionnaireText =
+    "RESEARCH QUESTIONNAIRE COMPLETED\n\n" +
+    "A research participant has completed their questionnaire.\n\n" +
+    "PARTICIPANT DETAILS\n\n" +
+    `Name: ${safeFirstName} ${safeLastName}\n` +
+    `Email: ${safeEmail}\n` +
+    `Applicant ID: ${safeApplicantId}\n` +
+    `Completed At: ${new Date().toLocaleString()}`;
+
   try {
     await sendEmail({
       to: notificationEmail,
       subject,
       html,
+      text: questionnaireText,
       emailType: "STATUS_UPDATE",
       applicantId: params.applicantId,
     });
@@ -281,6 +324,13 @@ export async function notifyApplicationSubmitted(
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #1a2332 0%, #2d3e50 100%); padding: 32px 20px; text-align: center;">
+      <img
+        src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+        alt="Reality Matchmaking logo"
+        width="60"
+        height="60"
+        style="display: inline-block; margin-bottom: 16px; border: 0; outline: none; text-decoration: none;"
+      />
       <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">New Application Submitted</h1>
     </div>
 
@@ -330,11 +380,22 @@ export async function notifyApplicationSubmitted(
 </html>
   `.trim();
 
+  const applicationText =
+    "NEW APPLICATION SUBMITTED\n\n" +
+    "An applicant has submitted their full application and is ready for review.\n\n" +
+    "APPLICANT DETAILS\n\n" +
+    `Name: ${safeFirstName} ${safeLastName}\n` +
+    `Email: ${safeEmail}\n` +
+    `Applicant ID: ${safeApplicantId}\n` +
+    `Submitted At: ${new Date().toLocaleString()}\n\n` +
+    "ACTION REQUIRED: Please review this application in the admin dashboard.";
+
   try {
     await sendEmail({
       to: notificationEmail,
       subject,
       html,
+      text: applicationText,
       emailType: "STATUS_UPDATE",
       applicantId: params.applicantId,
     });
