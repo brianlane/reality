@@ -19,6 +19,10 @@ type UserDetail = {
   firstName: string;
   lastName: string;
   role: string;
+  applicant?: {
+    id: string;
+    applicationStatus: string;
+  } | null;
   deletedAt: string | null;
 };
 
@@ -30,7 +34,11 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
     firstName: "",
     lastName: "",
     role: "APPLICANT",
+    applicationStatus: "SUBMITTED",
   });
+  const [initialApplicationStatus, setInitialApplicationStatus] = useState<
+    string | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,12 +70,15 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
           return;
         }
         setUser(json.user);
+        const status = json.user.applicant?.applicationStatus ?? "SUBMITTED";
+        setInitialApplicationStatus(status);
         setForm({
           clerkId: json.user.clerkId ?? "",
           email: json.user.email ?? "",
           firstName: json.user.firstName ?? "",
           lastName: json.user.lastName ?? "",
           role: json.user.role ?? "APPLICANT",
+          applicationStatus: status,
         });
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
@@ -96,6 +107,18 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
         setIsLoading(false);
         return;
       }
+      const payload = {
+        ...form,
+        // Only include applicationStatus if it has changed from initial value
+        // This prevents validation errors for applicants in invite-only statuses
+        applicationStatus:
+          mode === "edit" &&
+          user?.applicant &&
+          form.applicationStatus !== initialApplicationStatus
+            ? form.applicationStatus
+            : undefined,
+      };
+
       const res = await fetch(
         mode === "create" ? "/api/admin/users" : `/api/admin/users/${userId}`,
         {
@@ -104,7 +127,7 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
             ...headers,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         },
       );
       const json = await res.json();
@@ -114,6 +137,11 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
         return;
       }
       setSuccess("User saved.");
+      // Update initial status to current value after successful save
+      // This ensures subsequent status changes are detected correctly
+      if (mode === "edit" && payload.applicationStatus !== undefined) {
+        setInitialApplicationStatus(form.applicationStatus);
+      }
       if (mode === "create") {
         setForm({
           clerkId: "",
@@ -121,6 +149,7 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
           firstName: "",
           lastName: "",
           role: "APPLICANT",
+          applicationStatus: "SUBMITTED",
         });
       }
       setIsLoading(false);
@@ -271,6 +300,35 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
           <option value="APPLICANT">Applicant</option>
           <option value="ADMIN">Admin</option>
         </Select>
+        {mode === "edit" && user?.applicant ? (
+          <Select
+            value={form.applicationStatus}
+            onChange={(event) =>
+              updateField("applicationStatus", event.target.value)
+            }
+            disabled={form.applicationStatus.startsWith("RESEARCH_")}
+            title={
+              form.applicationStatus.startsWith("RESEARCH_")
+                ? "Research statuses cannot be changed. Use /admin/research to manage research participants."
+                : undefined
+            }
+          >
+            <option value="DRAFT">Draft</option>
+            <option value="SUBMITTED">Submitted</option>
+            <option value="PAYMENT_PENDING">Payment Pending</option>
+            <option value="SCREENING_IN_PROGRESS">Screening</option>
+            <option value="APPROVED">Approved</option>
+            <option value="WAITLIST">Waitlist</option>
+            {/* Invite-only and research statuses cannot be set directly */}
+            {/* Show current status as read-only if applicant is in one of these states */}
+            {(form.applicationStatus === "WAITLIST_INVITED" ||
+              form.applicationStatus.startsWith("RESEARCH_")) && (
+              <option value={form.applicationStatus} disabled>
+                {form.applicationStatus.replace(/_/g, " ")} (read-only)
+              </option>
+            )}
+          </Select>
+        ) : null}
       </div>
       <div className="flex flex-wrap gap-2">
         <Button

@@ -120,9 +120,25 @@ export const adminUserCreateSchema = z.object({
   role: z.enum(["APPLICANT", "ADMIN"]),
 });
 
-export const adminUserUpdateSchema = adminUserCreateSchema
-  .partial()
-  .extend({ deletedAt: z.string().datetime().optional().nullable() });
+// Statuses that admins can directly set via PATCH endpoints
+// WAITLIST_INVITED and RESEARCH_INVITED are excluded because they require
+// invite-specific metadata (tokens, timestamps, etc.) and should only be
+// set through dedicated invite endpoints
+const adminEditableApplicationStatusSchema = z.enum([
+  "DRAFT",
+  "SUBMITTED",
+  "PAYMENT_PENDING",
+  "SCREENING_IN_PROGRESS",
+  "APPROVED",
+  "WAITLIST",
+  "RESEARCH_IN_PROGRESS",
+  "RESEARCH_COMPLETED",
+]);
+
+export const adminUserUpdateSchema = adminUserCreateSchema.partial().extend({
+  deletedAt: z.string().datetime().optional().nullable(),
+  applicationStatus: adminEditableApplicationStatusSchema.optional(),
+});
 
 export const adminApplicantCreateSchema = z.object({
   user: adminUserCreateSchema,
@@ -138,18 +154,7 @@ export const adminApplicantCreateSchema = z.object({
     incomeRange: z.string().min(1),
     referredBy: z.string().optional().nullable(),
     aboutYourself: z.string().min(50).max(500),
-    applicationStatus: z.enum([
-      "DRAFT",
-      "SUBMITTED",
-      "PAYMENT_PENDING",
-      "SCREENING_IN_PROGRESS",
-      "APPROVED",
-      "WAITLIST",
-      "WAITLIST_INVITED",
-      "RESEARCH_INVITED",
-      "RESEARCH_IN_PROGRESS",
-      "RESEARCH_COMPLETED",
-    ]),
+    applicationStatus: adminEditableApplicationStatusSchema,
     screeningStatus: z.enum(["PENDING", "IN_PROGRESS", "PASSED", "FAILED"]),
     photos: z.array(z.string()).default([]),
   }),
@@ -171,20 +176,7 @@ export const adminApplicantUpdateSchema = z.object({
       incomeRange: z.string().min(1).optional(),
       referredBy: z.string().optional().nullable(),
       aboutYourself: z.string().min(50).max(500).optional(),
-      applicationStatus: z
-        .enum([
-          "DRAFT",
-          "SUBMITTED",
-          "PAYMENT_PENDING",
-          "SCREENING_IN_PROGRESS",
-          "APPROVED",
-          "WAITLIST",
-          "WAITLIST_INVITED",
-          "RESEARCH_INVITED",
-          "RESEARCH_IN_PROGRESS",
-          "RESEARCH_COMPLETED",
-        ])
-        .optional(),
+      applicationStatus: adminEditableApplicationStatusSchema.optional(),
       screeningStatus: z
         .enum(["PENDING", "IN_PROGRESS", "PASSED", "FAILED"])
         .optional(),
@@ -265,6 +257,7 @@ export const adminPaymentUpdateSchema = adminPaymentCreateSchema.partial();
 export const adminWaitlistUpdateSchema = z.object({
   waitlistReason: z.string().optional().nullable(),
   waitlistPosition: z.number().int().min(1).optional().nullable(),
+  applicationStatus: adminEditableApplicationStatusSchema.optional(),
 });
 
 export const adminResearchInviteCreateSchema = z.object({

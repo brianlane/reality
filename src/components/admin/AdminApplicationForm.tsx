@@ -40,6 +40,9 @@ export default function AdminApplicationForm({
     notes: "",
     photos: "",
   });
+  const [initialApplicationStatus, setInitialApplicationStatus] = useState<
+    string | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -64,6 +67,8 @@ export default function AdminApplicationForm({
           setError("Failed to load application.");
           return;
         }
+        const status = json.applicant.applicationStatus ?? "SUBMITTED";
+        setInitialApplicationStatus(status);
         setForm((prev) => ({
           ...prev,
           email: json.applicant.email ?? "",
@@ -80,7 +85,7 @@ export default function AdminApplicationForm({
           incomeRange: json.applicant.incomeRange ?? "",
           referredBy: json.applicant.referredBy ?? "",
           aboutYourself: json.applicant.aboutYourself ?? "",
-          applicationStatus: json.applicant.applicationStatus ?? "SUBMITTED",
+          applicationStatus: status,
           screeningStatus: json.applicant.screeningStatus ?? "PENDING",
           compatibilityScore: json.applicant.compatibilityScore
             ? String(json.applicant.compatibilityScore)
@@ -155,10 +160,15 @@ export default function AdminApplicationForm({
                 incomeRange: form.incomeRange,
                 referredBy: form.referredBy.trim() || null,
                 aboutYourself: form.aboutYourself.trim() || undefined,
+                // Only include applicationStatus if it has changed from initial value
+                // This prevents validation errors for applicants in invite-only statuses
                 applicationStatus:
-                  form.applicationStatus === "REJECTED"
+                  mode === "edit" &&
+                  form.applicationStatus === initialApplicationStatus
                     ? undefined
-                    : form.applicationStatus,
+                    : form.applicationStatus === "REJECTED"
+                      ? undefined
+                      : form.applicationStatus,
                 screeningStatus: form.screeningStatus,
                 compatibilityScore: form.compatibilityScore
                   ? Number(form.compatibilityScore)
@@ -190,6 +200,14 @@ export default function AdminApplicationForm({
         return;
       }
       setSuccess("Application saved.");
+      // Update initial status to current value after successful save
+      // This ensures subsequent status changes are detected correctly
+      if (
+        mode === "edit" &&
+        payload.applicant?.applicationStatus !== undefined
+      ) {
+        setInitialApplicationStatus(form.applicationStatus);
+      }
       setIsLoading(false);
     } catch {
       setError("Failed to save application.");
@@ -496,11 +514,12 @@ export default function AdminApplicationForm({
           <option value="SCREENING_IN_PROGRESS">Screening</option>
           <option value="APPROVED">Approved</option>
           <option value="WAITLIST">Waitlist</option>
-          <option value="WAITLIST_INVITED">Waitlist Invited</option>
-          {/* Research statuses are read-only - use /admin/research to manage */}
-          {form.applicationStatus.startsWith("RESEARCH_") && (
-            <option value={form.applicationStatus}>
-              {form.applicationStatus.replace(/_/g, " ")}
+          {/* Invite-only statuses (WAITLIST_INVITED, RESEARCH_INVITED) cannot be set directly */}
+          {/* Use dedicated invite endpoints to set these statuses with required metadata */}
+          {(form.applicationStatus === "WAITLIST_INVITED" ||
+            form.applicationStatus.startsWith("RESEARCH_")) && (
+            <option value={form.applicationStatus} disabled>
+              {form.applicationStatus.replace(/_/g, " ")} (read-only)
             </option>
           )}
         </Select>
