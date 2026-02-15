@@ -132,7 +132,7 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
       );
       const json = await res.json();
       if (!res.ok || json?.error) {
-        setError("Failed to save user.");
+        setError(json?.error?.message || json?.error || "Failed to save user.");
         setIsLoading(false);
         return;
       }

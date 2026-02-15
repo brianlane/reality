@@ -6,6 +6,7 @@
 
 import { sendEmail } from "./client";
 import { getApplicationApprovalHTML } from "./templates";
+import { EMAIL_STATUS_CONTENT } from "../status-content";
 
 interface ApplicationApprovalParams {
   to: string;
@@ -16,7 +17,7 @@ interface ApplicationApprovalParams {
 export async function sendApplicationApprovalEmail(
   params: ApplicationApprovalParams,
 ) {
-  const subject = "Welcome to Reality Matchmaking - Application Approved! 🎉";
+  const subject = EMAIL_STATUS_CONTENT.APPROVED.emailSubject;
   const html = getApplicationApprovalHTML(params.firstName);
 
   const text =

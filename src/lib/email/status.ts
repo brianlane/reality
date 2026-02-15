@@ -6,6 +6,7 @@
 
 import { sendEmail } from "./client";
 import { getStatusUpdateHTML } from "./templates";
+import { EMAIL_STATUS_CONTENT, type StatusContentKey } from "../status-content";
 
 interface ApplicationStatusParams {
   to: string;
@@ -18,22 +19,15 @@ interface ApplicationStatusParams {
 export async function sendApplicationStatusEmail(
   params: ApplicationStatusParams,
 ) {
-  // Customize content based on status
-  let subject = "Application Status Update - Reality Matchmaking";
+  // Get subject from shared content if available
+  const statusKey = params.status.toUpperCase() as StatusContentKey;
+  const sharedContent = EMAIL_STATUS_CONTENT[statusKey];
 
-  switch (params.status.toUpperCase()) {
-    case "SCREENING_IN_PROGRESS":
-      subject = "Your Background Check is In Progress";
-      break;
-    case "REJECTED":
-      subject = "Update on Your Application";
-      break;
-    case "PAYMENT_PENDING":
-      subject = "Complete Your Payment to Continue";
-      break;
-    case "SUBMITTED":
-      subject = "Application Received - Under Review";
-      break;
+  let subject = sharedContent?.emailSubject || "Application Status Update - Reality Matchmaking";
+
+  // Override for rejected status (not in shared content yet)
+  if (params.status.toUpperCase() === "REJECTED") {
+    subject = "Update on Your Application - Reality Matchmaking";
   }
 
   const html = getStatusUpdateHTML({

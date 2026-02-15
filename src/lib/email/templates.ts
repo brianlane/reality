@@ -5,7 +5,12 @@
  * These functions are used by both:
  * - Email sending (src/lib/email/*.ts)
  * - Email preview endpoint (src/app/api/admin/preview-email/route.ts)
+ *
+ * Content definitions come from src/lib/status-content.ts to ensure
+ * consistency between emails and webpages.
  */
+
+import { EMAIL_STATUS_CONTENT, type StatusContentKey } from "../status-content";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const EMAIL_ASSET_BASE_URL = (
@@ -151,6 +156,7 @@ export function getResearchInviteHTML(firstName: string, inviteCode: string) {
 export function getWaitlistInviteHTML(firstName: string, inviteToken: string) {
   const inviteUrl = `${APP_URL}/apply/continue?token=${inviteToken}`;
   const safeFirstName = escapeHtml(firstName);
+  const content = EMAIL_STATUS_CONTENT.WAITLIST_INVITED;
 
   return `
 <!DOCTYPE html>
@@ -158,7 +164,7 @@ export function getWaitlistInviteHTML(firstName: string, inviteToken: string) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>You're Invited to Continue Your Reality Matchmaking Application!</title>
+  <title>${content.emailSubject}</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
@@ -167,32 +173,36 @@ export function getWaitlistInviteHTML(firstName: string, inviteToken: string) {
       <div style="width: 60px; height: 60px; margin: 0 auto 16px; background-color: #c8915f; border-radius: 50%; text-align: center; line-height: 60px; font-size: 32px;">
         🎉
       </div>
-      <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">A Spot Has Opened Up!</h1>
+      <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">${content.title}</h1>
     </div>
 
     <!-- Content -->
     <div style="padding: 40px 32px;">
       <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-        Hi ${safeFirstName},
+        ${content.greeting(safeFirstName)}
       </p>
 
       <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-        Great news! We've reviewed your qualification and we're excited to invite you to continue your Reality Matchmaking application.
+        ${content.description}
       </p>
 
+      ${
+        content.nextSteps
+          ? `
       <div style="background-color: #f8f9fa; border-left: 4px solid #c8915f; padding: 20px; margin: 32px 0; border-radius: 4px;">
-        <h3 style="color: #1a2332; margin: 0 0 16px; font-size: 18px; font-weight: 600;">Next Steps:</h3>
+        <h3 style="color: #1a2332; margin: 0 0 16px; font-size: 18px; font-weight: 600;">${content.nextSteps.title}</h3>
         <ol style="color: #4a5568; margin: 0; padding-left: 20px; line-height: 1.8;">
-          <li style="margin-bottom: 12px;"><strong>Complete Your Profile:</strong> Fill in your full demographic information</li>
-          <li style="margin-bottom: 12px;"><strong>Application Fee:</strong> Submit the $199 application fee</li>
-          <li style="margin-bottom: 12px;"><strong>Full Assessment:</strong> Complete our comprehensive 80-question questionnaire</li>
+          ${content.nextSteps.steps.map((step) => `<li style="margin-bottom: 12px;">${step}</li>`).join("")}
         </ol>
       </div>
+      `
+          : ""
+      }
 
       <!-- CTA Button -->
       <div style="text-align: center; margin: 40px 0;">
         <a href="${inviteUrl}" style="display: inline-block; background-color: #c8915f; color: white; text-decoration: none; padding: 16px 32px; border-radius: 6px; font-size: 16px; font-weight: 600; box-shadow: 0 2px 4px rgba(200, 145, 95, 0.3);">
-          Continue Your Application
+          ${content.actionText}
         </a>
       </div>
 
@@ -328,6 +338,7 @@ export function getPaymentConfirmationHTML(params: {
 
 export function getApplicationApprovalHTML(firstName: string) {
   const safeFirstName = escapeHtml(firstName);
+  const content = EMAIL_STATUS_CONTENT.APPROVED;
 
   return `
 <!DOCTYPE html>
@@ -335,7 +346,7 @@ export function getApplicationApprovalHTML(firstName: string) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Reality Matchmaking - Application Approved! 🎉</title>
+  <title>${content.emailSubject}</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
@@ -348,21 +359,17 @@ export function getApplicationApprovalHTML(firstName: string) {
         height="80"
         style="display: inline-block; margin-bottom: 20px; border: 0; outline: none; text-decoration: none;"
       />
-      <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 600;">You're Approved!</h1>
+      <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 600;">${content.title}</h1>
     </div>
 
     <!-- Content -->
     <div style="padding: 40px 32px;">
       <p style="color: #1a2332; font-size: 18px; line-height: 1.6; margin: 0 0 24px;">
-        Hi ${safeFirstName},
+        ${content.greeting(safeFirstName)}
       </p>
 
       <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-        Congratulations! After careful review of your application, we're thrilled to welcome you as an official member of Reality Matchmaking.
-      </p>
-
-      <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 32px;">
-        Our team was impressed by your profile, and we believe you're an excellent fit for our community of thoughtful, genuine individuals seeking meaningful connections.
+        ${content.description}
       </p>
 
       <!-- Celebration Section -->
@@ -373,23 +380,18 @@ export function getApplicationApprovalHTML(firstName: string) {
         </p>
       </div>
 
+      ${
+        content.nextSteps
+          ? `
       <div style="background-color: #f8f9fa; border-left: 4px solid #c8915f; padding: 24px; margin: 32px 0; border-radius: 4px;">
-        <h3 style="color: #1a2332; margin: 0 0 20px; font-size: 20px; font-weight: 600;">What Happens Next?</h3>
+        <h3 style="color: #1a2332; margin: 0 0 20px; font-size: 20px; font-weight: 600;">${content.nextSteps.title}</h3>
         <ol style="color: #4a5568; margin: 0; padding-left: 20px; line-height: 1.9;">
-          <li style="margin-bottom: 16px;">
-            <strong style="color: #1a2332;">Event Invitation:</strong> You'll receive an invitation to our next matchmaking event with details about date, time, and venue
-          </li>
-          <li style="margin-bottom: 16px;">
-            <strong style="color: #1a2332;">Curated Matches:</strong> Our team will review your questionnaire and curate personalized matches for you
-          </li>
-          <li style="margin-bottom: 16px;">
-            <strong style="color: #1a2332;">Pre-Event Preparation:</strong> We'll send you tips and guidance to help you make the most of your matchmaking experience
-          </li>
-          <li style="margin-bottom: 0;">
-            <strong style="color: #1a2332;">Ongoing Support:</strong> Our team is here to support you throughout your journey to finding your match
-          </li>
+          ${content.nextSteps.steps.map((step) => `<li style="margin-bottom: 16px;">${step}</li>`).join("")}
         </ol>
       </div>
+      `
+          : ""
+      }
 
       <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; padding: 20px; border-radius: 8px; margin: 32px 0;">
         <p style="color: #065f46; font-size: 15px; margin: 0; line-height: 1.6;">
@@ -589,28 +591,18 @@ export function getStatusUpdateHTML(params: {
   const safeFirstName = escapeHtml(params.firstName);
   const safeMessage = params.message ? escapeHtml(params.message) : "";
 
-  let headerText = "Status Update";
+  // Try to get content from shared source first
+  const statusKey = params.status.toUpperCase() as StatusContentKey;
+  const sharedContent = EMAIL_STATUS_CONTENT[statusKey];
+
+  let headerText = sharedContent?.title || "Status Update";
   let headerColor = "#1a2332";
-  let mainMessage = "";
+  let mainMessage = sharedContent?.description || safeMessage || "Your application status has been updated.";
   let additionalInfo = "";
 
   switch (params.status.toUpperCase()) {
     case "SCREENING_IN_PROGRESS":
-      headerText = "Screening in Progress";
       headerColor = "#2563eb";
-      mainMessage = `We're currently processing your background check and identity verification. This typically takes 2-3 business days.`;
-      additionalInfo = `
-        <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; padding: 20px; border-radius: 8px; margin: 24px 0;">
-          <p style="color: #1e40af; font-size: 14px; margin: 0; line-height: 1.6;">
-            <strong>What's being checked:</strong>
-          </p>
-          <ul style="color: #1e40af; font-size: 14px; margin: 12px 0 0; padding-left: 20px;">
-            <li>Identity verification</li>
-            <li>Criminal background check</li>
-            <li>Sex offender registry</li>
-          </ul>
-        </div>
-      `;
       break;
 
     case "REJECTED":
@@ -639,51 +631,33 @@ export function getStatusUpdateHTML(params: {
       break;
 
     case "PAYMENT_PENDING":
-      headerText = "Payment Required";
       headerColor = "#c8915f";
-      mainMessage = `To continue with your application, please complete the $199 application fee payment.`;
-      additionalInfo = `
+      if (sharedContent?.nextSteps) {
+        additionalInfo = `
         <div style="background-color: #fff7ed; border: 1px solid #fed7aa; padding: 20px; border-radius: 8px; margin: 24px 0;">
           <p style="color: #92400e; font-size: 14px; margin: 0; line-height: 1.6;">
-            <strong>What happens after payment:</strong>
+            <strong>${sharedContent.nextSteps.title}</strong>
           </p>
           <ol style="color: #92400e; font-size: 14px; margin: 12px 0 0; padding-left: 20px; line-height: 1.7;">
-            <li>Complete full application questionnaire (80 questions)</li>
-            <li>Identity verification and background check</li>
-            <li>Review by our team</li>
-            <li>Approval and event invitation</li>
+            ${sharedContent.nextSteps.steps.map((step) => `<li>${step}</li>`).join("")}
           </ol>
         </div>
         <div style="text-align: center; margin: 32px 0;">
           <a href="${APP_URL}/apply/payment" style="display: inline-block; background-color: #c8915f; color: white; text-decoration: none; padding: 16px 32px; border-radius: 6px; font-size: 16px; font-weight: 600; box-shadow: 0 2px 4px rgba(200, 145, 95, 0.3);">
-            Complete Payment
+            ${sharedContent.actionText}
           </a>
         </div>
       `;
+      }
       break;
 
     case "SUBMITTED":
-      headerText = "Under Review";
       headerColor = "#059669";
-      mainMessage = `We've received your complete application and our team is currently reviewing it. We'll be in touch within 3-5 business days.`;
-      additionalInfo = `
-        <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; padding: 20px; border-radius: 8px; margin: 24px 0;">
-          <p style="color: #065f46; font-size: 14px; margin: 0; line-height: 1.6;">
-            <strong>Our review process includes:</strong>
-          </p>
-          <ul style="color: #065f46; font-size: 14px; margin: 12px 0 0; padding-left: 20px;">
-            <li>Compatibility assessment</li>
-            <li>Profile completeness check</li>
-            <li>Background check verification</li>
-            <li>Fit with current member community</li>
-          </ul>
-        </div>
-      `;
       break;
 
     default:
-      mainMessage = safeMessage || "Your application status has been updated.";
-      additionalInfo = "";
+      // Use shared content if available
+      break;
   }
 
   return `
@@ -711,7 +685,7 @@ export function getStatusUpdateHTML(params: {
     <!-- Content -->
     <div style="padding: 40px 32px;">
       <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-        Hi ${safeFirstName},
+        ${sharedContent ? sharedContent.greeting(safeFirstName) : `Hi ${safeFirstName},`}
       </p>
 
       <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
