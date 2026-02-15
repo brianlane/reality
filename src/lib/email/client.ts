@@ -36,12 +36,12 @@ export async function sendEmail(params: SendEmailParams) {
   if (!params.text) {
     console.warn(
       `[Email Warning] Missing plain text content for ${params.emailType} email to ${params.to}. ` +
-        "Plain text versions improve deliverability and prevent email client clipping."
+        "Plain text versions improve deliverability and prevent email client clipping.",
     );
   } else if (params.text.length < 100) {
     console.warn(
       `[Email Warning] Plain text content is very short (${params.text.length} chars) for ${params.emailType} email to ${params.to}. ` +
-        "Short text content may cause email clients like Gmail to clip the message."
+        "Short text content may cause email clients like Gmail to clip the message.",
     );
   }
 
@@ -79,7 +79,10 @@ export async function sendEmail(params: SendEmailParams) {
       );
     }
   } catch (minifyError) {
-    console.error("HTML minification failed, using original HTML:", minifyError);
+    console.error(
+      "HTML minification failed, using original HTML:",
+      minifyError,
+    );
     // Continue with original HTML if minification fails
   }
 
