@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 
@@ -25,6 +26,7 @@ export default function AdminWaitlistDetailForm({
   applicantId,
 }: AdminWaitlistDetailFormProps) {
   const [data, setData] = useState<WaitlistDetail | null>(null);
+  const [applicationStatus, setApplicationStatus] = useState("WAITLIST");
   const [waitlistReason, setWaitlistReason] = useState("");
   const [waitlistPosition, setWaitlistPosition] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +53,7 @@ export default function AdminWaitlistDetailForm({
           return;
         }
         setData(json.applicant);
+        setApplicationStatus(json.applicant.applicationStatus ?? "WAITLIST");
         setWaitlistReason(json.applicant.waitlistReason ?? "");
         setWaitlistPosition(
           json.applicant.waitlistPosition
@@ -87,6 +90,7 @@ export default function AdminWaitlistDetailForm({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          applicationStatus,
           waitlistReason: waitlistReason || null,
           waitlistPosition: waitlistPosition ? Number(waitlistPosition) : null,
         }),
@@ -98,6 +102,15 @@ export default function AdminWaitlistDetailForm({
         return;
       }
       setSuccess("Waitlist details updated.");
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              applicationStatus:
+                json?.applicant?.applicationStatus ?? applicationStatus,
+            }
+          : prev,
+      );
       setIsSaving(false);
     } catch {
       setError("Failed to update waitlist details.");
@@ -159,8 +172,25 @@ export default function AdminWaitlistDetailForm({
           {data.user.firstName} {data.user.lastName}
         </div>
         <div className="text-sm text-navy-soft">{data.user.email}</div>
-        <div className="mt-1 text-xs text-navy-soft">
-          Status: {data.applicationStatus}
+        <div className="mt-3 max-w-sm space-y-2">
+          <label className="text-xs font-semibold text-navy-soft">
+            Application Status
+          </label>
+          <Select
+            value={applicationStatus}
+            onChange={(event) => setApplicationStatus(event.target.value)}
+          >
+            <option value="DRAFT">Draft</option>
+            <option value="SUBMITTED">Submitted</option>
+            <option value="PAYMENT_PENDING">Payment Pending</option>
+            <option value="SCREENING_IN_PROGRESS">Screening</option>
+            <option value="APPROVED">Approved</option>
+            <option value="WAITLIST">Waitlist</option>
+            <option value="WAITLIST_INVITED">Waitlist Invited</option>
+            <option value="RESEARCH_INVITED">Research Invited</option>
+            <option value="RESEARCH_IN_PROGRESS">Research In Progress</option>
+            <option value="RESEARCH_COMPLETED">Research Completed</option>
+          </Select>
         </div>
       </div>
 

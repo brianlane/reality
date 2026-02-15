@@ -78,6 +78,19 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     return errorResponse("NOT_FOUND", "User not found", 404);
   }
 
+  const applicant =
+    body.applicationStatus !== undefined
+      ? await db.applicant.findUnique({ where: { userId: id } })
+      : null;
+
+  if (body.applicationStatus !== undefined && !applicant) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "Only applicant users can have an application status",
+      400,
+    );
+  }
+
   const adminUser = await getOrCreateAdminUser({
     userId: auth.userId,
     email: auth.email,
@@ -131,6 +144,31 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     },
   });
 
+  let updatedApplicant = null;
+  if (body.applicationStatus !== undefined && applicant) {
+    const applicationStatusChanged =
+      body.applicationStatus !== applicant.applicationStatus;
+
+    updatedApplicant = await db.applicant.update({
+      where: { userId: id },
+      data: {
+        applicationStatus: body.applicationStatus,
+        reviewedAt: new Date(),
+        reviewedBy: adminUser.id,
+        ...(applicationStatusChanged
+          ? {
+              softRejectedAt: null,
+              softRejectedFromStatus: null,
+            }
+          : {}),
+      },
+      select: {
+        id: true,
+        applicationStatus: true,
+      },
+    });
+  }
+
   await db.adminAction.create({
     data: {
       userId: adminUser.id,
@@ -148,6 +186,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      applicationStatus:
+        updatedApplicant?.applicationStatus ?? applicant?.applicationStatus,
       updatedAt: user.updatedAt,
     },
   });

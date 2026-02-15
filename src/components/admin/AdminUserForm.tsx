@@ -19,6 +19,10 @@ type UserDetail = {
   firstName: string;
   lastName: string;
   role: string;
+  applicant?: {
+    id: string;
+    applicationStatus: string;
+  } | null;
   deletedAt: string | null;
 };
 
@@ -30,6 +34,7 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
     firstName: "",
     lastName: "",
     role: "APPLICANT",
+    applicationStatus: "SUBMITTED",
   });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -68,6 +73,8 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
           firstName: json.user.firstName ?? "",
           lastName: json.user.lastName ?? "",
           role: json.user.role ?? "APPLICANT",
+          applicationStatus:
+            json.user.applicant?.applicationStatus ?? "SUBMITTED",
         });
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
@@ -96,6 +103,14 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
         setIsLoading(false);
         return;
       }
+      const payload = {
+        ...form,
+        applicationStatus:
+          mode === "edit" && user?.applicant
+            ? form.applicationStatus
+            : undefined,
+      };
+
       const res = await fetch(
         mode === "create" ? "/api/admin/users" : `/api/admin/users/${userId}`,
         {
@@ -104,7 +119,7 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
             ...headers,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         },
       );
       const json = await res.json();
@@ -121,6 +136,7 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
           firstName: "",
           lastName: "",
           role: "APPLICANT",
+          applicationStatus: "SUBMITTED",
         });
       }
       setIsLoading(false);
@@ -271,6 +287,25 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
           <option value="APPLICANT">Applicant</option>
           <option value="ADMIN">Admin</option>
         </Select>
+        {mode === "edit" && user?.applicant ? (
+          <Select
+            value={form.applicationStatus}
+            onChange={(event) =>
+              updateField("applicationStatus", event.target.value)
+            }
+          >
+            <option value="DRAFT">Draft</option>
+            <option value="SUBMITTED">Submitted</option>
+            <option value="PAYMENT_PENDING">Payment Pending</option>
+            <option value="SCREENING_IN_PROGRESS">Screening</option>
+            <option value="APPROVED">Approved</option>
+            <option value="WAITLIST">Waitlist</option>
+            <option value="WAITLIST_INVITED">Waitlist Invited</option>
+            <option value="RESEARCH_INVITED">Research Invited</option>
+            <option value="RESEARCH_IN_PROGRESS">Research In Progress</option>
+            <option value="RESEARCH_COMPLETED">Research Completed</option>
+          </Select>
+        ) : null}
       </div>
       <div className="flex flex-wrap gap-2">
         <Button

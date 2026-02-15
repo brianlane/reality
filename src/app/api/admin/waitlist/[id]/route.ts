@@ -88,13 +88,24 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     email: auth.email,
   });
 
+  const applicationStatusChanged =
+    body.applicationStatus !== undefined &&
+    body.applicationStatus !== existing.applicationStatus;
+
   const applicant = await db.applicant.update({
     where: { id },
     data: {
       waitlistReason: body.waitlistReason,
       waitlistPosition: body.waitlistPosition,
+      applicationStatus: body.applicationStatus,
       reviewedAt: new Date(),
       reviewedBy: adminUser.id,
+      ...(applicationStatusChanged
+        ? {
+            softRejectedAt: null,
+            softRejectedFromStatus: null,
+          }
+        : {}),
     },
   });
 
@@ -112,6 +123,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   return successResponse({
     applicant: {
       id: applicant.id,
+      applicationStatus: applicant.applicationStatus,
       waitlistReason: applicant.waitlistReason,
       waitlistPosition: applicant.waitlistPosition,
       updatedAt: applicant.updatedAt,
