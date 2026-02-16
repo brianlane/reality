@@ -116,13 +116,12 @@ export function getSimpleStatusViewHTML(
 ): string {
   const content = EMAIL_STATUS_CONTENT[params.statusKey];
   const buttonUrl = params.buttonUrl || `${APP_URL}/dashboard`;
-  const appId = params.appId || "preview-app-001";
 
   return getSimpleEmailHTML({
     title: content.title,
     description: content.description,
     buttonText: content.actionText,
     buttonUrl,
-    appId,
+    appId: params.appId, // Only pass appId if explicitly provided (for test/preview contexts)
   });
 }
