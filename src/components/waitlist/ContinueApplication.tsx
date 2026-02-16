@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import LogoCircles from "@/components/layout/LogoCircles";
 
 type ContinueApplicationProps = {
   token: string;
@@ -117,88 +118,34 @@ export default function ContinueApplication({
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 py-8">
-      {/* Success Icon */}
-      <div className="text-center">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-copper">
-          <span className="text-4xl">🎉</span>
+    <div className="mx-auto max-w-2xl">
+      <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="flex flex-col items-center space-y-6 text-center">
+          {/* Logo */}
+          <LogoCircles />
+
+          {/* Title */}
+          <h1 className="text-3xl font-semibold text-navy">
+            You&apos;ve Been Invited!
+          </h1>
+
+          {/* Description */}
+          <p className="max-w-2xl text-lg text-navy-soft">
+            Great news! You&apos;ve been invited off the waitlist to complete
+            your full application. Click below to continue with the next steps.
+          </p>
+
+          {/* Button */}
+          <div className="pt-4">
+            <Button
+              onClick={handleContinue}
+              className="bg-navy px-8 py-4 text-base font-medium text-white transition-colors hover:bg-copper"
+            >
+              Complete Application
+            </Button>
+          </div>
         </div>
       </div>
-
-      {/* Heading */}
-      <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-bold text-navy">
-          Welcome back, {validation.firstName}!
-        </h1>
-        <p className="text-lg text-navy-soft">
-          A spot has opened up for you to continue your application.
-        </p>
-      </div>
-
-      {/* Next Steps */}
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-6">
-        <h2 className="mb-4 text-xl font-semibold text-navy">Next Steps:</h2>
-        <ol className="space-y-4">
-          <li className="flex items-start gap-3">
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-copper text-sm font-bold text-white">
-              1
-            </div>
-            <div>
-              <h3 className="font-semibold text-navy">Complete Your Profile</h3>
-              <p className="text-sm text-navy-soft">
-                Fill in your full demographic information and professional
-                details.
-              </p>
-            </div>
-          </li>
-          <li className="flex items-start gap-3">
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-copper text-sm font-bold text-white">
-              2
-            </div>
-            <div>
-              <h3 className="font-semibold text-navy">
-                Application Fee ($199)
-              </h3>
-              <p className="text-sm text-navy-soft">
-                Submit your application fee to proceed with the screening
-                process.
-              </p>
-            </div>
-          </li>
-          <li className="flex items-start gap-3">
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-copper text-sm font-bold text-white">
-              3
-            </div>
-            <div>
-              <h3 className="font-semibold text-navy">Full Assessment</h3>
-              <p className="text-sm text-navy-soft">
-                Complete our comprehensive 80-question compatibility
-                questionnaire.
-              </p>
-            </div>
-          </li>
-        </ol>
-      </div>
-
-      {/* Info Note */}
-      <div className="rounded-lg border-l-4 border-copper bg-copper/5 p-4">
-        <p className="text-sm text-navy">
-          <span className="font-semibold">Important:</span> Your invitation is
-          valid for the next 7 days. Please complete your application within
-          this timeframe.
-        </p>
-      </div>
-
-      {/* CTA */}
-      <div className="text-center">
-        <Button onClick={handleContinue}>Continue Application</Button>
-      </div>
-
-      {/* Additional Info */}
-      <p className="text-center text-sm text-gray-500">
-        You can complete your application in multiple sessions. Your progress
-        will be saved automatically.
-      </p>
     </div>
   );
 }
