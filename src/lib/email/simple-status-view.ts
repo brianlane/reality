@@ -49,7 +49,7 @@ export interface SimpleEmailParams {
  */
 export function getSimpleEmailHTML(params: SimpleEmailParams): string {
   // Application ID is only shown in test/preview contexts when explicitly provided
-  const showAppId = params.appId !== undefined;
+  const showAppId = !!params.appId;
 
   return `
 <!DOCTYPE html>
