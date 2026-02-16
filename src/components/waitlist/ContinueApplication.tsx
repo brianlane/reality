@@ -126,13 +126,13 @@ export default function ContinueApplication({
 
           {/* Title */}
           <h1 className="text-3xl font-semibold text-navy">
-            You've Been Invited!
+            You&apos;ve Been Invited!
           </h1>
 
           {/* Description */}
           <p className="max-w-2xl text-lg text-navy-soft">
-            Great news! You've been invited off the waitlist to complete your
-            full application. Click below to continue with the next steps.
+            Great news! You&apos;ve been invited off the waitlist to complete
+            your full application. Click below to continue with the next steps.
           </p>
 
           {/* Button */}
