@@ -3,6 +3,7 @@ import {
   getWaitlistConfirmationHTML,
   getWaitlistInviteHTML,
 } from "./templates";
+import { EMAIL_STATUS_CONTENT } from "../status-content";
 
 type WaitlistConfirmationParams = {
   to: string;
@@ -46,9 +47,8 @@ export async function sendWaitlistInviteEmail({
   inviteToken,
   applicantId,
 }: WaitlistInviteParams) {
-  const subject =
-    "You're Invited to Continue Your Reality Matchmaking Application!";
-  const html = getWaitlistInviteHTML(firstName, inviteToken);
+  const subject = EMAIL_STATUS_CONTENT.WAITLIST_INVITED.emailSubject;
+  const html = getWaitlistInviteHTML(inviteToken);
   const inviteUrl = `${
     process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
   }/apply/continue?token=${inviteToken}`;

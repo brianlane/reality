@@ -147,18 +147,41 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     const applicationStatusChanged =
       body.applicationStatus !== applicant.applicationStatus;
 
+    // Determine which fields to clear based on status change
+    const clearFields: Record<string, null> = {};
+
+    if (applicationStatusChanged) {
+      // Always clear soft rejection fields when status changes
+      clearFields.softRejectedAt = null;
+      clearFields.softRejectedFromStatus = null;
+
+      // Clear waitlist invitation fields when moving from WAITLIST_INVITED
+      if (applicant.applicationStatus === "WAITLIST_INVITED") {
+        clearFields.invitedOffWaitlistAt = null;
+        clearFields.invitedOffWaitlistBy = null;
+        clearFields.waitlistInviteToken = null;
+      }
+
+      // Clear research invitation fields when moving from any research status
+      if (
+        applicant.applicationStatus === "RESEARCH_INVITED" ||
+        applicant.applicationStatus === "RESEARCH_IN_PROGRESS" ||
+        applicant.applicationStatus === "RESEARCH_COMPLETED"
+      ) {
+        clearFields.researchInviteCode = null;
+        clearFields.researchInvitedAt = null;
+        clearFields.researchInvitedBy = null;
+        clearFields.researchInviteUsedAt = null;
+      }
+    }
+
     updatedApplicant = await db.applicant.update({
       where: { userId: id },
       data: {
         applicationStatus: body.applicationStatus,
         reviewedAt: new Date(),
         reviewedBy: adminUser.id,
-        ...(applicationStatusChanged
-          ? {
-              softRejectedAt: null,
-              softRejectedFromStatus: null,
-            }
-          : {}),
+        ...clearFields,
       },
       select: {
         id: true,
