@@ -48,7 +48,7 @@ export async function sendWaitlistInviteEmail({
   applicantId,
 }: WaitlistInviteParams) {
   const subject = EMAIL_STATUS_CONTENT.WAITLIST_INVITED.emailSubject;
-  const html = getWaitlistInviteHTML(firstName, inviteToken);
+  const html = getWaitlistInviteHTML(inviteToken);
   const inviteUrl = `${
     process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
   }/apply/continue?token=${inviteToken}`;

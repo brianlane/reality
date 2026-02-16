@@ -38,8 +38,8 @@ export interface SimpleStatusViewParams {
 export interface SimpleEmailParams {
   title: string;
   description: string;
-  buttonText: string;
-  buttonUrl: string;
+  buttonText?: string;
+  buttonUrl?: string;
   appId?: string;
 }
 
@@ -80,13 +80,17 @@ export function getSimpleEmailHTML(params: SimpleEmailParams): string {
       <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 32px;">
         ${escapeHtml(params.description)}
       </p>
-
+${
+  params.buttonText && params.buttonUrl
+    ? `
       <!-- Button -->
       <div style="margin: 32px 0;">
         <a href="${params.buttonUrl}" style="display: inline-block; background-color: #1a2332; color: white; text-decoration: none; padding: 16px 32px; border-radius: 6px; font-size: 16px; font-weight: 500;">
           ${escapeHtml(params.buttonText)}
         </a>
-      </div>
+      </div>`
+    : ""
+}
 ${
   showAppId
     ? `

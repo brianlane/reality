@@ -72,7 +72,7 @@ export function getWaitlistConfirmationHTML() {
   `.trim();
 }
 
-export function getResearchInviteHTML(firstName: string, inviteCode: string) {
+export function getResearchInviteHTML(inviteCode: string) {
   const inviteUrl = `${APP_URL}/research?code=${inviteCode}`;
   const content = EMAIL_STATUS_CONTENT.RESEARCH_INVITED;
 
@@ -84,7 +84,7 @@ export function getResearchInviteHTML(firstName: string, inviteCode: string) {
   });
 }
 
-export function getWaitlistInviteHTML(firstName: string, inviteToken: string) {
+export function getWaitlistInviteHTML(inviteToken: string) {
   const inviteUrl = `${APP_URL}/apply/continue?token=${inviteToken}`;
 
   return getSimpleStatusViewHTML({
@@ -171,8 +171,9 @@ export function getStatusUpdateHTML(params: {
     sharedContent?.description ||
     params.message ||
     "Your application status has been updated.";
-  const buttonText = sharedContent?.actionText || "View Dashboard";
-  let buttonUrl = `${APP_URL}/dashboard`;
+  let buttonText: string | undefined =
+    sharedContent?.actionText || "View Dashboard";
+  let buttonUrl: string | undefined = `${APP_URL}/dashboard`;
 
   // Customize for specific statuses
   if (params.status.toUpperCase() === "PAYMENT_PENDING") {
@@ -181,6 +182,9 @@ export function getStatusUpdateHTML(params: {
     title = "Application Decision";
     description =
       "Thank you for your interest in Reality Matchmaking. After careful review, we've decided not to move forward with your application at this time.";
+    // No button for rejected applicants
+    buttonText = undefined;
+    buttonUrl = undefined;
   }
 
   return getSimpleEmailHTML({

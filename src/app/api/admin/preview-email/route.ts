@@ -56,11 +56,11 @@ export async function GET(request: Request) {
         break;
 
       case "WAITLIST_INVITE":
-        html = getWaitlistInviteHTML("Test User", "test_token_123");
+        html = getWaitlistInviteHTML("test_token_123");
         break;
 
       case "RESEARCH_INVITE":
-        html = getResearchInviteHTML("Test User", "test_code_abc123");
+        html = getResearchInviteHTML("test_code_abc123");
         break;
 
       case "PAYMENT_CONFIRMATION":
