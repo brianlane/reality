@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import LogoCircles from "@/components/layout/LogoCircles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { CopperIcon } from "@/components/ui/copper-icon";
-import { STATUS_CONTENT } from "@/lib/status-content";
 
 // ---------------------------------------------------------------------------
 // View registry
@@ -220,22 +219,6 @@ const VIEWS: ViewItem[] = [
     description: "Account settings and notification preferences",
   },
 ];
-
-// ---------------------------------------------------------------------------
-// Mock data helpers
-// ---------------------------------------------------------------------------
-
-function mockApplicant(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "preview-app-001",
-    applicationStatus: "DRAFT",
-    waitlistInviteToken: "preview-token-abc123",
-    researchInviteCode: "preview-research-xyz",
-    softRejectedAt: null,
-    softRejectedFromStatus: null,
-    ...overrides,
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Preview renderers

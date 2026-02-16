@@ -99,20 +99,21 @@ export function getPaymentConfirmationHTML(params: {
   currency: string;
   receiptUrl: string;
 }) {
+  const { amount, currency, receiptUrl } = params;
   const formattedAmount = new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: params.currency.toUpperCase(),
-  }).format(params.amount / 100);
+    currency: currency.toUpperCase(),
+  }).format(amount / 100);
 
   return getSimpleEmailHTML({
     title: "Payment Confirmed",
     description: `Thank you for your payment! We've successfully received your application fee of ${formattedAmount} and you're one step closer to finding your match.`,
     buttonText: "View Receipt",
-    buttonUrl: params.receiptUrl,
+    buttonUrl: receiptUrl,
   });
 }
 
-export function getApplicationApprovalHTML(firstName: string) {
+export function getApplicationApprovalHTML() {
   return getSimpleStatusViewHTML({
     statusKey: "APPROVED",
     buttonUrl: `${APP_URL}/dashboard`,
@@ -170,7 +171,7 @@ export function getStatusUpdateHTML(params: {
     sharedContent?.description ||
     params.message ||
     "Your application status has been updated.";
-  let buttonText = sharedContent?.actionText || "View Dashboard";
+  const buttonText = sharedContent?.actionText || "View Dashboard";
   let buttonUrl = `${APP_URL}/dashboard`;
 
   // Customize for specific statuses

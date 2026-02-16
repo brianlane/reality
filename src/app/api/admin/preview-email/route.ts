@@ -73,7 +73,7 @@ export async function GET(request: Request) {
         break;
 
       case "APPLICATION_APPROVAL":
-        html = getApplicationApprovalHTML("Test User");
+        html = getApplicationApprovalHTML();
         break;
 
       case "EVENT_INVITATION":

@@ -7,10 +7,7 @@
 
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { errorResponse } from "@/lib/api-response";
-import {
-  getSimpleStatusViewHTML,
-  type SimpleStatusViewParams,
-} from "@/lib/email/simple-status-view";
+import { getSimpleStatusViewHTML } from "@/lib/email/simple-status-view";
 import type { StatusContentKey } from "@/lib/status-content";
 import { NextResponse } from "next/server";
 

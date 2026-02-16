@@ -48,7 +48,8 @@ export interface SimpleEmailParams {
  * Same design for all emails - no gradient headers
  */
 export function getSimpleEmailHTML(params: SimpleEmailParams): string {
-  const appId = params.appId || "preview-app-001";
+  // Application ID is only shown in test/preview contexts when explicitly provided
+  const showAppId = params.appId !== undefined;
 
   return `
 <!DOCTYPE html>
@@ -86,11 +87,15 @@ export function getSimpleEmailHTML(params: SimpleEmailParams): string {
           ${escapeHtml(params.buttonText)}
         </a>
       </div>
-
-      <!-- App ID -->
+${
+  showAppId
+    ? `
+      <!-- App ID (test/preview only) -->
       <p style="color: #cbd5e0; font-size: 12px; margin: 24px 0 0;">
-        Application ID: ${escapeHtml(appId)}
-      </p>
+        Application ID: ${escapeHtml(params.appId!)}
+      </p>`
+    : ""
+}
     </div>
   </div>
 </body>

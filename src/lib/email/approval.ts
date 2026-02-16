@@ -18,7 +18,7 @@ export async function sendApplicationApprovalEmail(
   params: ApplicationApprovalParams,
 ) {
   const subject = EMAIL_STATUS_CONTENT.APPROVED.emailSubject;
-  const html = getApplicationApprovalHTML(params.firstName);
+  const html = getApplicationApprovalHTML();
 
   const text =
     `Hi ${params.firstName},\n\n` +

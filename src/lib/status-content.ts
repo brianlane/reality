@@ -94,11 +94,6 @@ export const STATUS_CONTENT: Record<StatusContentKey, StatusContent> = {
  */
 export interface EmailStatusContent extends StatusContent {
   emailSubject: string;
-  greeting: (firstName: string) => string;
-  nextSteps?: {
-    title: string;
-    steps: string[];
-  };
 }
 
 export const EMAIL_STATUS_CONTENT: Record<
@@ -108,77 +103,41 @@ export const EMAIL_STATUS_CONTENT: Record<
   DRAFT: {
     ...STATUS_CONTENT.DRAFT,
     emailSubject: "Application in Progress - Reality Matchmaking",
-    greeting: (firstName) => `Hi ${firstName},`,
   },
   SUBMITTED: {
     ...STATUS_CONTENT.SUBMITTED,
     emailSubject: "Application Submitted - Reality Matchmaking",
-    greeting: (firstName) => `Hi ${firstName},`,
   },
   PAYMENT_PENDING: {
     ...STATUS_CONTENT.PAYMENT_PENDING,
     emailSubject: "Payment Pending - Reality Matchmaking",
-    greeting: (firstName) => `Hi ${firstName},`,
-    nextSteps: {
-      title: "What happens after payment:",
-      steps: [
-        "Complete full application questionnaire (80 questions)",
-        "Identity verification and background check",
-        "Review by our team",
-        "Approval and event invitation",
-      ],
-    },
   },
   SCREENING_IN_PROGRESS: {
     ...STATUS_CONTENT.SCREENING_IN_PROGRESS,
     emailSubject: "Application Under Review - Reality Matchmaking",
-    greeting: (firstName) => `Hi ${firstName},`,
   },
   APPROVED: {
     ...STATUS_CONTENT.APPROVED,
     emailSubject: "Application Approved - Reality Matchmaking",
-    greeting: (firstName) => `Hi ${firstName},`,
-    nextSteps: {
-      title: "What Happens Next?",
-      steps: [
-        "Event Invitation: You'll receive an invitation to our next matchmaking event with details about date, time, and venue",
-        "Curated Matches: Our team will review your questionnaire and curate personalized matches for you",
-        "Pre-Event Preparation: We'll send you tips and guidance to help you make the most of your matchmaking experience",
-        "Ongoing Support: Our team is here to support you throughout your journey to finding your match",
-      ],
-    },
   },
   WAITLIST_INVITED: {
     ...STATUS_CONTENT.WAITLIST_INVITED,
     emailSubject: "You've Been Invited - Reality Matchmaking",
-    greeting: (firstName) => `Hi ${firstName},`,
-    nextSteps: {
-      title: "Next Steps:",
-      steps: [
-        "Complete Your Profile: Fill in your full demographic information",
-        "Application Fee: Submit the $199 application fee",
-        "Full Assessment: Complete our comprehensive 80-question questionnaire",
-      ],
-    },
   },
   RESEARCH_INVITED: {
     ...STATUS_CONTENT.RESEARCH_INVITED,
     emailSubject: "Research Invitation - Reality Matchmaking",
-    greeting: (firstName) => `Hi ${firstName},`,
   },
   RESEARCH_IN_PROGRESS: {
     ...STATUS_CONTENT.RESEARCH_IN_PROGRESS,
     emailSubject: "Research Questionnaire in Progress - Reality Matchmaking",
-    greeting: (firstName) => `Hi ${firstName},`,
   },
   RESEARCH_COMPLETED: {
     ...STATUS_CONTENT.RESEARCH_COMPLETED,
     emailSubject: "Research Completed - Reality Matchmaking",
-    greeting: (firstName) => `Hi ${firstName},`,
   },
   SOFT_REJECTED: {
     ...STATUS_CONTENT.SOFT_REJECTED,
     emailSubject: "Application Update - Reality Matchmaking",
-    greeting: (firstName) => `Hi ${firstName},`,
   },
 };
