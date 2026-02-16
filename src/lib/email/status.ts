@@ -39,16 +39,21 @@ export async function sendApplicationStatusEmail(
   });
 
   // Generate plain text version matching the simplified HTML template
-  const textDescription = sharedContent?.description || params.message || "Your application status has been updated.";
+  const textDescription =
+    sharedContent?.description ||
+    params.message ||
+    "Your application status has been updated.";
 
   let textContent = textDescription + "\n\n";
 
   // Add specific message for rejected status
   if (params.status.toUpperCase() === "REJECTED") {
-    textContent = "Thank you for your interest in Reality Matchmaking. After careful review, we've decided not to move forward with your application at this time.\n\n";
+    textContent =
+      "Thank you for your interest in Reality Matchmaking. After careful review, we've decided not to move forward with your application at this time.\n\n";
   }
 
-  textContent += "Questions? Reply to this email and our team will be happy to help.";
+  textContent +=
+    "Questions? Reply to this email and our team will be happy to help.";
 
   return sendEmail({
     to: params.to,

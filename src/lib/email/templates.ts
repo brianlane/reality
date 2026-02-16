@@ -11,7 +11,10 @@
  */
 
 import { EMAIL_STATUS_CONTENT, type StatusContentKey } from "../status-content";
-import { getSimpleStatusViewHTML, getSimpleEmailHTML } from "./simple-status-view";
+import {
+  getSimpleStatusViewHTML,
+  getSimpleEmailHTML,
+} from "./simple-status-view";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const EMAIL_ASSET_BASE_URL = (
@@ -19,18 +22,6 @@ const EMAIL_ASSET_BASE_URL = (
   process.env.NEXT_PUBLIC_APP_URL ||
   "https://www.realitymatchmaking.com"
 ).replace(/\/$/, "");
-
-const htmlEscapes: Record<string, string> = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;",
-};
-
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (char) => htmlEscapes[char] ?? char);
-}
 
 export function getWaitlistConfirmationHTML() {
   return `
@@ -175,16 +166,20 @@ export function getStatusUpdateHTML(params: {
   const sharedContent = EMAIL_STATUS_CONTENT[statusKey];
 
   let title = sharedContent?.title || "Status Update";
-  let description = sharedContent?.description || params.message || "Your application status has been updated.";
+  let description =
+    sharedContent?.description ||
+    params.message ||
+    "Your application status has been updated.";
   let buttonText = sharedContent?.actionText || "View Dashboard";
   let buttonUrl = `${APP_URL}/dashboard`;
 
   // Customize for specific statuses
-  if (statusKey === "PAYMENT_PENDING") {
+  if (params.status.toUpperCase() === "PAYMENT_PENDING") {
     buttonUrl = `${APP_URL}/apply/payment`;
-  } else if (statusKey === "REJECTED") {
+  } else if (params.status.toUpperCase() === "REJECTED") {
     title = "Application Decision";
-    description = "Thank you for your interest in Reality Matchmaking. After careful review, we've decided not to move forward with your application at this time.";
+    description =
+      "Thank you for your interest in Reality Matchmaking. After careful review, we've decided not to move forward with your application at this time.";
   }
 
   return getSimpleEmailHTML({

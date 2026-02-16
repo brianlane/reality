@@ -70,7 +70,10 @@ export async function GET(request: Request) {
         buttonUrl = `${APP_URL}/apply/continue?token=preview_token`;
       } else if (statusKey === "PAYMENT_PENDING") {
         buttonUrl = `${APP_URL}/apply/payment`;
-      } else if (statusKey === "RESEARCH_INVITED" || statusKey === "RESEARCH_IN_PROGRESS") {
+      } else if (
+        statusKey === "RESEARCH_INVITED" ||
+        statusKey === "RESEARCH_IN_PROGRESS"
+      ) {
         buttonUrl = `${APP_URL}/research?code=preview_code`;
       }
 

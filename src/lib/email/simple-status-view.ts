@@ -102,7 +102,9 @@ export function getSimpleEmailHTML(params: SimpleEmailParams): string {
  * Generates simple status view HTML
  * Same design for both emails and test views
  */
-export function getSimpleStatusViewHTML(params: SimpleStatusViewParams): string {
+export function getSimpleStatusViewHTML(
+  params: SimpleStatusViewParams,
+): string {
   const content = EMAIL_STATUS_CONTENT[params.statusKey];
   const buttonUrl = params.buttonUrl || `${APP_URL}/dashboard`;
   const appId = params.appId || "preview-app-001";
