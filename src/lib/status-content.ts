@@ -95,7 +95,6 @@ export const STATUS_CONTENT: Record<StatusContentKey, StatusContent> = {
 export interface EmailStatusContent extends StatusContent {
   emailSubject: string;
   greeting: (firstName: string) => string;
-  mainMessage: string;
   nextSteps?: {
     title: string;
     steps: string[];
@@ -110,19 +109,16 @@ export const EMAIL_STATUS_CONTENT: Record<
     ...STATUS_CONTENT.DRAFT,
     emailSubject: "Application in Progress - Reality Matchmaking",
     greeting: (firstName) => `Hi ${firstName},`,
-    mainMessage: STATUS_CONTENT.DRAFT.description,
   },
   SUBMITTED: {
     ...STATUS_CONTENT.SUBMITTED,
     emailSubject: "Application Submitted - Reality Matchmaking",
     greeting: (firstName) => `Hi ${firstName},`,
-    mainMessage: STATUS_CONTENT.SUBMITTED.description,
   },
   PAYMENT_PENDING: {
     ...STATUS_CONTENT.PAYMENT_PENDING,
     emailSubject: "Payment Pending - Reality Matchmaking",
     greeting: (firstName) => `Hi ${firstName},`,
-    mainMessage: STATUS_CONTENT.PAYMENT_PENDING.description,
     nextSteps: {
       title: "What happens after payment:",
       steps: [
@@ -137,13 +133,11 @@ export const EMAIL_STATUS_CONTENT: Record<
     ...STATUS_CONTENT.SCREENING_IN_PROGRESS,
     emailSubject: "Application Under Review - Reality Matchmaking",
     greeting: (firstName) => `Hi ${firstName},`,
-    mainMessage: STATUS_CONTENT.SCREENING_IN_PROGRESS.description,
   },
   APPROVED: {
     ...STATUS_CONTENT.APPROVED,
     emailSubject: "Application Approved - Reality Matchmaking",
     greeting: (firstName) => `Hi ${firstName},`,
-    mainMessage: STATUS_CONTENT.APPROVED.description,
     nextSteps: {
       title: "What Happens Next?",
       steps: [
@@ -158,7 +152,6 @@ export const EMAIL_STATUS_CONTENT: Record<
     ...STATUS_CONTENT.WAITLIST_INVITED,
     emailSubject: "You've Been Invited - Reality Matchmaking",
     greeting: (firstName) => `Hi ${firstName},`,
-    mainMessage: STATUS_CONTENT.WAITLIST_INVITED.description,
     nextSteps: {
       title: "Next Steps:",
       steps: [
@@ -172,24 +165,20 @@ export const EMAIL_STATUS_CONTENT: Record<
     ...STATUS_CONTENT.RESEARCH_INVITED,
     emailSubject: "Research Invitation - Reality Matchmaking",
     greeting: (firstName) => `Hi ${firstName},`,
-    mainMessage: STATUS_CONTENT.RESEARCH_INVITED.description,
   },
   RESEARCH_IN_PROGRESS: {
     ...STATUS_CONTENT.RESEARCH_IN_PROGRESS,
     emailSubject: "Research Questionnaire in Progress - Reality Matchmaking",
     greeting: (firstName) => `Hi ${firstName},`,
-    mainMessage: STATUS_CONTENT.RESEARCH_IN_PROGRESS.description,
   },
   RESEARCH_COMPLETED: {
     ...STATUS_CONTENT.RESEARCH_COMPLETED,
     emailSubject: "Research Completed - Reality Matchmaking",
     greeting: (firstName) => `Hi ${firstName},`,
-    mainMessage: STATUS_CONTENT.RESEARCH_COMPLETED.description,
   },
   SOFT_REJECTED: {
     ...STATUS_CONTENT.SOFT_REJECTED,
     emailSubject: "Application Update - Reality Matchmaking",
     greeting: (firstName) => `Hi ${firstName},`,
-    mainMessage: STATUS_CONTENT.SOFT_REJECTED.description,
   },
 };

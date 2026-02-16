@@ -565,7 +565,8 @@ function PreviewExistingStatus({ statusKey }: { statusKey: string }) {
   }
 
   // Get content from shared source of truth
-  const sharedContent = STATUS_CONTENT[statusKey as keyof typeof STATUS_CONTENT];
+  const sharedContent =
+    STATUS_CONTENT[statusKey as keyof typeof STATUS_CONTENT];
   const icon = iconMap[statusKey];
 
   if (!sharedContent) return null;
@@ -574,7 +575,9 @@ function PreviewExistingStatus({ statusKey }: { statusKey: string }) {
     <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
       <div className="flex flex-col items-center space-y-6 text-center">
         {icon}
-        <h1 className="text-3xl font-semibold text-navy">{sharedContent.title}</h1>
+        <h1 className="text-3xl font-semibold text-navy">
+          {sharedContent.title}
+        </h1>
         <p className="max-w-2xl text-lg text-navy-soft">
           {sharedContent.description}
         </p>
@@ -757,6 +760,32 @@ const STATUS_KEY_MAP: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 function ViewRenderer({ viewId }: { viewId: string }) {
+  // For status views, use the shared template via API (same as email previews)
+  const statusViews = [
+    "status-soft-rejected",
+    "status-draft",
+    "status-submitted",
+    "status-payment-pending",
+    "status-screening",
+    "status-approved",
+    "status-waitlist-invited",
+    "status-research-invited",
+    "status-research-in-progress",
+    "status-research-completed",
+  ];
+
+  if (statusViews.includes(viewId)) {
+    return (
+      <iframe
+        key={viewId}
+        src={`/api/admin/test-view?viewId=${viewId}`}
+        className="w-full"
+        style={{ height: "600px", border: "none" }}
+        title={`${viewId} View`}
+      />
+    );
+  }
+
   switch (viewId) {
     // Public
     case "homepage":
@@ -777,22 +806,6 @@ function ViewRenderer({ viewId }: { viewId: string }) {
       return <PreviewResearchInviteError />;
     case "research-thank-you":
       return <PreviewResearchThankYou />;
-    // Application Status
-    case "status-soft-rejected":
-    case "status-draft":
-    case "status-submitted":
-    case "status-payment-pending":
-    case "status-screening":
-    case "status-approved":
-    case "status-waitlist-invited":
-    case "status-research-invited":
-    case "status-research-in-progress":
-    case "status-research-completed":
-      return (
-        <div className="mx-auto max-w-3xl px-6 py-16">
-          <PreviewExistingStatus statusKey={STATUS_KEY_MAP[viewId]} />
-        </div>
-      );
     // Applicant
     case "dashboard":
       return <PreviewDashboard />;
