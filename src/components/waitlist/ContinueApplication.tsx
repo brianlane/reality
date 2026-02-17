@@ -49,6 +49,9 @@ export default function ContinueApplication({
         if (typeof window !== "undefined") {
           localStorage.setItem("waitlistInviteToken", token);
           localStorage.setItem("applicationId", data.applicationId);
+          // Clear research mode to prevent cross-contamination
+          localStorage.removeItem("researchMode");
+          localStorage.removeItem("researchInviteCode");
         }
       } catch (err) {
         console.error("Token validation error:", err);
