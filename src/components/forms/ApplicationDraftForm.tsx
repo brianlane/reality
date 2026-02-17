@@ -125,6 +125,7 @@ export default function ApplicationDraftForm({
       cityFrom: formData.get("cityFrom"),
       industry: formData.get("industry"),
       occupation: formData.get("occupation"),
+      employer: formData.get("employer") || null,
       education: formData.get("education"),
       incomeRange: formData.get("incomeRange"),
       referredBy: formData.get("referredBy") || null,
@@ -337,6 +338,19 @@ export default function ApplicationDraftForm({
           name="industry"
           defaultValue={draft.industry ?? ""}
           required
+        />
+      </div>
+      <div>
+        <label
+          htmlFor="employer"
+          className="text-sm font-medium text-navy-muted"
+        >
+          Employer
+        </label>
+        <Input
+          id="employer"
+          name="employer"
+          defaultValue={draft.employer ?? ""}
         />
       </div>
       <div>
