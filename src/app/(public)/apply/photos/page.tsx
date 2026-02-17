@@ -21,32 +21,37 @@ export default function PhotosPage() {
     }
 
     setIsSubmitting(true);
-    const response = await fetch("/api/applications/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ applicationId: draft.applicationId }),
-    });
+    try {
+      const response = await fetch("/api/applications/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ applicationId: draft.applicationId }),
+      });
 
-    if (!response.ok) {
-      const data = await response.json().catch(() => null);
-      if (response.status === 401) {
-        router.push(`/apply/create-password?id=${draft.applicationId}`);
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        if (response.status === 401) {
+          router.push(`/apply/create-password?id=${draft.applicationId}`);
+          return;
+        }
+        setStatus(
+          data?.error?.message ||
+            "Failed to submit application. Please try again.",
+        );
+        setIsSubmitting(false);
         return;
       }
-      setStatus(
-        data?.error?.message ||
-          "Failed to submit application. Please try again.",
-      );
+
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("waitlistInviteToken");
+        localStorage.removeItem("applicationId");
+      }
+
+      router.push(`/apply/waitlist?id=${draft.applicationId}`);
+    } catch {
+      setStatus("Failed to submit application. Please try again.");
       setIsSubmitting(false);
-      return;
     }
-
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("waitlistInviteToken");
-      localStorage.removeItem("applicationId");
-    }
-
-    router.push(`/apply/waitlist?id=${draft.applicationId}`);
   }
 
   return (

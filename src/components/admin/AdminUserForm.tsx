@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import { skipPaymentForApplicant } from "@/lib/admin/skip-payment";
 
 type AdminUserFormProps = {
   userId?: string;
@@ -280,16 +281,12 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
         setIsLoading(false);
         return;
       }
-      const res = await fetch(
-        `/api/admin/applications/${applicantId}/skip-payment`,
-        {
-          method: "POST",
-          headers,
-        },
-      );
-      const json = await res.json();
-      if (!res.ok || json?.error) {
-        setError(json?.error?.message || "Failed to skip payment.");
+      const result = await skipPaymentForApplicant({
+        applicationId: applicantId,
+        headers,
+      });
+      if (!result.ok) {
+        setError(result.message);
         setIsLoading(false);
         return;
       }

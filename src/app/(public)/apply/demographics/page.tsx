@@ -1,41 +1,60 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import ApplicationDraftForm from "@/components/forms/ApplicationDraftForm";
 import Link from "next/link";
 import ResearchRouteGuard from "@/components/research/ResearchRouteGuard";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function DemographicsPage() {
-  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-    const token = localStorage.getItem("waitlistInviteToken");
-    const applicationId = localStorage.getItem("applicationId");
-    return token || applicationId ? true : null;
-  });
+  const hasInviteContext = useSyncExternalStore(
+    (callback) => {
+      if (typeof window === "undefined") {
+        return () => undefined;
+      }
+      window.addEventListener("storage", callback);
+      return () => window.removeEventListener("storage", callback);
+    },
+    () => {
+      if (typeof window === "undefined") {
+        return null;
+      }
+      const token = localStorage.getItem("waitlistInviteToken");
+      const applicationId = localStorage.getItem("applicationId");
+      return !!(token || applicationId);
+    },
+    () => null,
+  );
+  const [hasSession, setHasSession] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (isAuthorized !== null) {
+    if (hasInviteContext) {
       return;
     }
 
     const supabase = createSupabaseBrowserClient();
     if (!supabase) {
-      queueMicrotask(() => setIsAuthorized(false));
+      queueMicrotask(() => setHasSession(false));
       return;
     }
 
     supabase.auth
       .getSession()
       .then(({ data }) => {
-        setIsAuthorized(!!data.session);
+        setHasSession(!!data.session);
       })
       .catch(() => {
-        setIsAuthorized(false);
+        setHasSession(false);
       });
-  }, [isAuthorized]);
+  }, [hasInviteContext]);
+
+  const isAuthorized =
+    hasInviteContext === null ? null : hasInviteContext ? true : hasSession;
 
   let content: ReactNode;
 
