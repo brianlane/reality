@@ -184,11 +184,20 @@ export default function ApplicationDraftForm({
             },
           });
 
-        if (signUpError) {
-          if (
-            signUpError.message.includes("already registered") ||
-            signUpError.message.includes("User already registered")
-          ) {
+        const looksLikeExistingUser =
+          !signUpError &&
+          !signUpData.session &&
+          Array.isArray(signUpData.user?.identities) &&
+          signUpData.user.identities.length === 0;
+        const shouldFallbackToSignIn = !!signUpError || looksLikeExistingUser;
+
+        if (shouldFallbackToSignIn) {
+          const isAlreadyRegisteredError =
+            !!signUpError &&
+            (signUpError.message.includes("already registered") ||
+              signUpError.message.includes("User already registered"));
+
+          if (isAlreadyRegisteredError || looksLikeExistingUser) {
             const { data: signInData, error: signInError } =
               await supabase.auth.signInWithPassword({
                 email: applicant.email,
@@ -204,7 +213,7 @@ export default function ApplicationDraftForm({
             }
             session = signInData.session;
           } else {
-            setStatus(signUpError.message);
+            setStatus(signUpError?.message ?? "Unable to create account.");
             setIsSubmitting(false);
             return;
           }
