@@ -14,8 +14,7 @@ export async function sendResearchInviteEmail({
   inviteCode,
   applicantId,
 }: ResearchInviteParams) {
-  const subject =
-    "You're Invited to Participate in Reality Matchmaking Research";
+  const subject = "Your Research Questionnaire Link";
   const html = getResearchInviteHTML(inviteCode);
   const inviteUrl = `${
     process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
@@ -24,7 +23,8 @@ export async function sendResearchInviteEmail({
     `Hi ${firstName},\n\n` +
     "You've been invited to participate in a research questionnaire for Reality Matchmaking. " +
     "Your responses help us validate and improve our compatibility questions.\n\n" +
-    "Start questionnaire: " +
+    "You can use this same link anytime to resume where you left off.\n\n" +
+    "Start or resume questionnaire: " +
     inviteUrl;
 
   return sendEmail({

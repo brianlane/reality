@@ -88,7 +88,7 @@ async function main() {
     data: {
       userId: mockApplicantUser.id,
       age: 28,
-      gender: "FEMALE",
+      gender: "WOMAN",
       location: "Phoenix, AZ",
       occupation: "Marketing Manager",
       employer: "Reality Matchmaking",
@@ -235,7 +235,7 @@ async function main() {
       data: {
         userId: user.id,
         age: 25 + Math.floor(Math.random() * 11), // 25-35
-        gender: "MALE",
+        gender: "MAN",
         location: "Phoenix, AZ",
         occupation: occupations[i],
         employer:
@@ -292,7 +292,7 @@ async function main() {
       data: {
         userId: user.id,
         age: 24 + Math.floor(Math.random() * 11), // 24-34
-        gender: "FEMALE",
+        gender: "WOMAN",
         location: "Phoenix, AZ",
         occupation: occupations[i],
         employer:
@@ -522,10 +522,10 @@ async function main() {
 
   // Select first 10 male and 10 female approved applicants for past event
   const pastEventMales = applicants
-    .filter((a) => a.gender === "MALE")
+    .filter((a) => a.gender === "MAN")
     .slice(0, 10);
   const pastEventFemales = applicants
-    .filter((a) => a.gender === "FEMALE")
+    .filter((a) => a.gender === "WOMAN")
     .slice(0, 10);
   const pastEventParticipants = [...pastEventMales, ...pastEventFemales];
 

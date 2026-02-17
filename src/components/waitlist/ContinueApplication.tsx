@@ -87,9 +87,9 @@ export default function ContinueApplication({
     return (
       <div className="mx-auto max-w-2xl space-y-6 py-12">
         <div className="text-center">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-100">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-copper/20">
             <svg
-              className="h-12 w-12 text-red-500"
+              className="h-12 w-12 text-copper"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

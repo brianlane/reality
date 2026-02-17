@@ -74,8 +74,8 @@ async function testDivisionByZero() {
     data: {
       userId: userA.id,
       age: 28,
-      gender: "FEMALE",
-      seeking: "MALE",
+      gender: "WOMAN",
+      seeking: "MAN",
       location: "Test City",
       cityFrom: "Test City",
       industry: "Tech",
@@ -102,8 +102,8 @@ async function testDivisionByZero() {
     data: {
       userId: userB.id,
       age: 30,
-      gender: "MALE",
-      seeking: "FEMALE",
+      gender: "MAN",
+      seeking: "WOMAN",
       location: "Test City",
       cityFrom: "Test City",
       industry: "Tech",
@@ -243,8 +243,8 @@ async function testNullAnswers() {
     data: {
       userId: userA.id,
       age: 28,
-      gender: "FEMALE",
-      seeking: "MALE",
+      gender: "WOMAN",
+      seeking: "MAN",
       location: "Test City",
       cityFrom: "Test City",
       industry: "Tech",
@@ -271,8 +271,8 @@ async function testNullAnswers() {
     data: {
       userId: userB.id,
       age: 30,
-      gender: "MALE",
-      seeking: "FEMALE",
+      gender: "MAN",
+      seeking: "WOMAN",
       location: "Test City",
       cityFrom: "Test City",
       industry: "Tech",
