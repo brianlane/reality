@@ -11,7 +11,6 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const RESEARCH_STATUSES: ApplicationStatus[] = [
   "RESEARCH_INVITED",
   "RESEARCH_IN_PROGRESS",
-  "RESEARCH_COMPLETED",
 ];
 
 export async function POST(

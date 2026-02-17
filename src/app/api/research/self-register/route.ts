@@ -5,6 +5,12 @@ import { sendResearchInviteEmail } from "@/lib/email/research";
 import { logger } from "@/lib/logger";
 import { generateUniqueResearchInviteCode } from "@/lib/research/invite-code";
 
+const RESEARCH_STATUSES = new Set([
+  "RESEARCH_INVITED",
+  "RESEARCH_IN_PROGRESS",
+  "RESEARCH_COMPLETED",
+]);
+
 /**
  * POST /api/research/self-register
  * Allows anyone to self-register for the research study
@@ -30,6 +36,14 @@ export async function POST(request: Request) {
     });
 
     if (existingUser?.applicant) {
+      if (!RESEARCH_STATUSES.has(existingUser.applicant.applicationStatus)) {
+        return errorResponse(
+          "CONFLICT",
+          "A non-research application already exists for this email.",
+          409,
+        );
+      }
+
       const inviteCode =
         existingUser.applicant.researchInviteCode ??
         (await generateUniqueResearchInviteCode(db));

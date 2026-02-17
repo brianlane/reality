@@ -26,18 +26,33 @@ export default function ApplicationDraftForm({
       typeof window !== "undefined"
         ? localStorage.getItem("applicationId")
         : null;
+    const inviteTokenRaw =
+      typeof window !== "undefined"
+        ? localStorage.getItem("waitlistInviteToken")
+        : null;
+    const inviteToken = inviteTokenRaw ?? undefined;
+    const draftBelongsToCurrentApplication =
+      !!draft.applicationId && draft.applicationId === storedApplicationId;
 
-    // Only fetch if we have an applicationId and haven't already populated the draft
-    if (!storedApplicationId || draft.firstName) {
+    // Only prefill when we have both application + invite token.
+    // If local draft already belongs to the same application, skip the fetch.
+    if (
+      !storedApplicationId ||
+      !inviteToken ||
+      (draftBelongsToCurrentApplication && draft.firstName)
+    ) {
       return;
     }
+    const inviteTokenForFetch = inviteToken;
 
     let cancelled = false;
 
     async function fetchApplicantData() {
       setIsLoadingExistingData(true);
       try {
-        const res = await fetch(`/api/applications/${storedApplicationId}`);
+        const res = await fetch(
+          `/api/applications/${storedApplicationId}?token=${encodeURIComponent(inviteTokenForFetch)}`,
+        );
         if (!res.ok) {
           console.error("Failed to fetch existing applicant data");
           return;
@@ -48,6 +63,7 @@ export default function ApplicationDraftForm({
 
         // Pre-fill the draft with existing data
         updateDraft({
+          applicationId: storedApplicationId ?? undefined,
           firstName: data.firstName,
           lastName: data.lastName,
           email: data.email,
@@ -81,7 +97,7 @@ export default function ApplicationDraftForm({
     return () => {
       cancelled = true;
     };
-  }, [previewMode, draft.firstName, updateDraft]);
+  }, [previewMode, draft.applicationId, draft.firstName, updateDraft]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
