@@ -22,7 +22,6 @@
     "db:dev": "npx prisma migrate dev",
     "db:studio": "npx prisma studio",
     "db:seed": "npx prisma db seed",
-    "db:backfill:pending-placeholders": "npx tsx scripts/backfill-pending-placeholders.ts",
     "db:full": "concurrently \"npm run db:dev\" \"npm run db:studio\"",
     "dev:all": "concurrently \"npm run db:dev\" \"npm run db:studio\" \"npm run dev\" --names \"DB,STUDIO,NEXT\" -c \"blue,magenta,green\"",
     "db:reset": "npx prisma migrate reset && npm run seed:questions",
