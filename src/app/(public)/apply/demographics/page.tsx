@@ -8,10 +8,12 @@ import {
 } from "react";
 import ApplicationDraftForm from "@/components/forms/ApplicationDraftForm";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import ResearchRouteGuard from "@/components/research/ResearchRouteGuard";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function DemographicsPage() {
+  const router = useRouter();
   const hasInviteContext = useSyncExternalStore(
     (callback) => {
       if (typeof window === "undefined") {
@@ -30,35 +32,76 @@ export default function DemographicsPage() {
     },
     () => null,
   );
-  const [hasSession, setHasSession] = useState<boolean | null>(null);
+  const [sessionState, setSessionState] = useState<
+    "unknown" | "authenticated" | "unauthenticated"
+  >("unknown");
 
   useEffect(() => {
-    if (hasInviteContext) {
-      return;
-    }
+    let cancelled = false;
 
     const supabase = createSupabaseBrowserClient();
     if (!supabase) {
-      queueMicrotask(() => setHasSession(false));
-      return;
+      queueMicrotask(() => {
+        if (!cancelled) {
+          setSessionState("unauthenticated");
+        }
+      });
+      return () => {
+        cancelled = true;
+      };
     }
 
     supabase.auth
       .getSession()
-      .then(({ data }) => {
-        setHasSession(!!data.session);
+      .then(async ({ data }) => {
+        if (cancelled) return;
+        if (!data.session) {
+          setSessionState("unauthenticated");
+          return;
+        }
+        setSessionState("authenticated");
+
+        const dashboardRes = await fetch("/api/applicant/dashboard");
+        const dashboardJson = await dashboardRes.json().catch(() => null);
+        const status = dashboardJson?.application?.status as string | undefined;
+
+        if (status === "DRAFT") {
+          router.replace("/apply/questionnaire");
+          return;
+        }
+
+        if (
+          status === "SUBMITTED" ||
+          status === "SCREENING_IN_PROGRESS" ||
+          status === "APPROVED"
+        ) {
+          router.replace("/dashboard");
+          return;
+        }
+
+        // Authenticated applicants should not return to demographics.
+        router.replace("/apply/payment");
       })
       .catch(() => {
-        setHasSession(false);
+        if (!cancelled) {
+          setSessionState("unauthenticated");
+        }
       });
-  }, [hasInviteContext]);
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
+  const isLoading =
+    hasInviteContext === null ||
+    sessionState === "unknown" ||
+    sessionState === "authenticated";
   const isAuthorized =
-    hasInviteContext === null ? null : hasInviteContext ? true : hasSession;
+    sessionState === "unauthenticated" && hasInviteContext === true;
 
   let content: ReactNode;
 
-  if (isAuthorized === null) {
+  if (isLoading) {
     content = (
       <section className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
         <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">

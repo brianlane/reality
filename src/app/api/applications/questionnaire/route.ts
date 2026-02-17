@@ -13,7 +13,6 @@ const RESEARCH_STATUSES: ApplicationStatus[] = [
   "RESEARCH_INVITED",
   "RESEARCH_IN_PROGRESS",
 ];
-const RESEARCH_ALLOWED_STATUSES: ApplicationStatus[] = [...RESEARCH_STATUSES];
 const NON_RESEARCH_ALLOWED_STATUSES: ApplicationStatus[] = [
   "WAITLIST_INVITED",
   "PAYMENT_PENDING",
@@ -118,11 +117,6 @@ async function requireInvitedApplicant(
   if (isResearchApplicant) {
     if (!applicant.researchInvitedAt) {
       return { error: "Applicant not found or not invited." };
-    }
-    if (!RESEARCH_ALLOWED_STATUSES.includes(applicant.applicationStatus)) {
-      return {
-        error: "Questionnaire access is not available for this status.",
-      };
     }
     return { applicant, isResearchMode: true };
   }
