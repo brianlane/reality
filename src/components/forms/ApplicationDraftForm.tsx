@@ -303,7 +303,7 @@ export default function ApplicationDraftForm({
           htmlFor="cityFrom"
           className="text-sm font-medium text-navy-muted"
         >
-          City you are from
+          City you are from (Home Town)
         </label>
         <Input
           id="cityFrom"
