@@ -226,6 +226,45 @@ export default function QuestionnaireForm({
     }
     const controller = new AbortController();
 
+    const tryRestoreResearchSession = async (): Promise<boolean> => {
+      if (!isResearchMode || typeof window === "undefined") {
+        return false;
+      }
+
+      const inviteCode = localStorage.getItem("researchInviteCode");
+      if (!inviteCode) {
+        return false;
+      }
+
+      try {
+        const recoveryRes = await fetch(
+          `/api/research/validate-invite?code=${encodeURIComponent(inviteCode)}`,
+          { signal: controller.signal },
+        );
+        const recoveryJson = await recoveryRes.json().catch(() => null);
+
+        if (!recoveryRes.ok || !recoveryJson?.applicationId) {
+          return false;
+        }
+
+        const restoredApplicationId = String(recoveryJson.applicationId);
+        localStorage.setItem("applicationId", restoredApplicationId);
+        updateDraft({
+          applicationId: restoredApplicationId,
+          currentPageId: undefined,
+          questionnaire: undefined,
+        });
+        setApplicationId(restoredApplicationId);
+        setStatus(null);
+        return true;
+      } catch (error) {
+        if ((error as Error).name === "AbortError") {
+          return false;
+        }
+        return false;
+      }
+    };
+
     const loadQuestionnaire = async () => {
       try {
         setIsLoading(true);
@@ -236,6 +275,17 @@ export default function QuestionnaireForm({
         );
         const json = await res.json();
         if (!res.ok || json?.error) {
+          const canRecoverFromStaleResearchSession =
+            isResearchMode &&
+            json?.error?.message === "Applicant not found or not invited.";
+          if (canRecoverFromStaleResearchSession) {
+            const recovered = await tryRestoreResearchSession();
+            if (recovered) {
+              setIsLoading(false);
+              return;
+            }
+          }
+
           setStatus(
             json?.error?.message ??
               (isResearchMode
@@ -302,7 +352,13 @@ export default function QuestionnaireForm({
     loadQuestionnaire();
 
     return () => controller.abort();
-  }, [applicationId, previewMode, draft.currentPageId, isResearchMode]);
+  }, [
+    applicationId,
+    previewMode,
+    draft.currentPageId,
+    isResearchMode,
+    updateDraft,
+  ]);
 
   const questionsBySection = useMemo(
     () => sections.filter((section) => section.questions.length > 0),
@@ -539,6 +595,11 @@ export default function QuestionnaireForm({
           : "Please use your invite link to continue the application."}
       </p>
     );
+  }
+
+  // Show API/load errors before the generic "not available" fallback.
+  if (status && questionsBySection.length === 0) {
+    return <p className="text-sm text-red-500">{status}</p>;
   }
 
   if (questionsBySection.length === 0) {

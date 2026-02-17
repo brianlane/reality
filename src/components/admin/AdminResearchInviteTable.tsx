@@ -38,6 +38,7 @@ export default function AdminResearchInviteTable({
   const [error, setError] = useState<string | null>(initialError);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [sendingResumeId, setSendingResumeId] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [form, setForm] = useState({
     firstName: "",
@@ -154,6 +155,44 @@ export default function AdminResearchInviteTable({
       setError("Failed to permanently delete participant.");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handleSendResumeEmail(applicantId: string) {
+    setError(null);
+    setSuccess(null);
+    setSendingResumeId(applicantId);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError("Please sign in again.");
+        setSendingResumeId(null);
+        return;
+      }
+      const res = await fetch(`/api/admin/research-invites/${applicantId}`, {
+        method: "POST",
+        headers,
+      });
+      const json = await res.json();
+      if (!res.ok || json?.error) {
+        setError(json?.error?.message || "Failed to send resume email.");
+        setSendingResumeId(null);
+        return;
+      }
+
+      if (json?.inviteUrl) {
+        setInviteUrl(json.inviteUrl);
+      }
+      const emailNote = json?.emailSent
+        ? " Resume email sent."
+        : " Could not send email, but the resume link is available.";
+      setSuccess(`Research resume link ready.${emailNote}`);
+      await loadResearchInvites();
+    } catch (err) {
+      console.error("Error sending research resume email:", err);
+      setError("Failed to send resume email.");
+    } finally {
+      setSendingResumeId(null);
     }
   }
 
@@ -340,6 +379,17 @@ export default function AdminResearchInviteTable({
                               : "Copy Link"}
                           </Button>
                         ) : null}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => handleSendResumeEmail(applicant.id)}
+                          disabled={sendingResumeId === applicant.id}
+                          className="text-xs"
+                        >
+                          {sendingResumeId === applicant.id
+                            ? "Sending..."
+                            : "Send Resume Link"}
+                        </Button>
                         <Button
                           type="button"
                           variant="outline"

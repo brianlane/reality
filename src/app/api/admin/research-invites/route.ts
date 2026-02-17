@@ -1,4 +1,3 @@
-import { randomBytes } from "crypto";
 import { ApplicationStatus } from "@prisma/client";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -7,12 +6,9 @@ import { adminResearchInviteCreateSchema } from "@/lib/validations";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 import { sendResearchInviteEmail } from "@/lib/email/research";
 import { logger } from "@/lib/logger";
+import { generateUniqueResearchInviteCode } from "@/lib/research/invite-code";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-function generateInviteCode() {
-  return randomBytes(16).toString("hex");
-}
 
 export async function GET(request: Request) {
   const auth = await getAuthUser();
@@ -127,22 +123,14 @@ export async function POST(request: Request) {
   });
 
   let inviteCode = "";
-  let foundUniqueCode = false;
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    inviteCode = generateInviteCode();
-    const exists = await db.applicant.findFirst({
-      where: { researchInviteCode: inviteCode },
-    });
-    if (!exists) {
-      foundUniqueCode = true;
-      break;
-    }
-  }
-
-  if (!foundUniqueCode) {
+  try {
+    inviteCode = await generateUniqueResearchInviteCode(db);
+  } catch (error) {
     return errorResponse(
       "INVITE_FAILED",
-      "Failed to generate unique invite code after 5 attempts.",
+      error instanceof Error
+        ? error.message
+        : "Failed to generate research invite code.",
       500,
     );
   }

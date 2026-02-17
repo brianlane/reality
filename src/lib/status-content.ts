@@ -65,8 +65,8 @@ export const STATUS_CONTENT: Record<StatusContentKey, StatusContent> = {
   RESEARCH_INVITED: {
     title: "Research Invitation Ready",
     description:
-      "You have been invited to help validate our questionnaire. Click below to begin.",
-    actionText: "Start Research Questionnaire",
+      "You have been invited to help validate our questionnaire. Use the link below to start now, and you can resume anytime later using this same link from your email.",
+    actionText: "Start or Resume Research Questionnaire",
   },
   RESEARCH_IN_PROGRESS: {
     title: "Research Questionnaire in Progress",

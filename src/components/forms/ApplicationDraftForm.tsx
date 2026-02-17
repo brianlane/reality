@@ -154,7 +154,11 @@ export default function ApplicationDraftForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4"
+      key={draft.firstName || "empty"}
+    >
       {isLoadingExistingData && (
         <div className="rounded-md bg-blue-50 p-4 text-sm text-blue-800">
           Loading your information from waitlist...
