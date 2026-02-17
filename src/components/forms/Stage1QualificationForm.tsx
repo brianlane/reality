@@ -381,8 +381,8 @@ export default function Stage1QualificationForm({
               className={errors.gender ? "border-red-500" : ""}
             >
               <option value="">Select gender</option>
-              <option value="MALE">Male</option>
-              <option value="FEMALE">Female</option>
+              <option value="MAN">Man</option>
+              <option value="WOMAN">Woman</option>
               <option value="NON_BINARY">Non-binary</option>
               <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
             </Select>

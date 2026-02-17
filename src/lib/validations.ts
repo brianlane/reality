@@ -12,7 +12,7 @@ export const stage1QualificationSchema = z.object({
     .regex(EMAIL_REGEX, "Please enter a valid email address"),
   phone: z.string().min(1, "Phone is required"),
   age: z.number().int().min(24, "Must be 24 or older").max(41),
-  gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
+  gender: z.enum(["MAN", "WOMAN", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
   location: z.string().min(1, "Location is required"),
   instagram: z
     .string()
@@ -25,8 +25,8 @@ export const stage1QualificationSchema = z.object({
 
 export const demographicsSchema = z.object({
   age: z.number().int().min(24).max(41),
-  gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
-  seeking: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
+  gender: z.enum(["MAN", "WOMAN", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
+  seeking: z.enum(["MAN", "WOMAN", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
   location: z.string().min(1),
   cityFrom: z.string().min(1),
   industry: z.string().min(1),
@@ -144,7 +144,7 @@ export const adminApplicantCreateSchema = z.object({
   user: adminUserCreateSchema,
   applicant: z.object({
     age: z.number().int().min(24).max(41),
-    gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
+    gender: z.enum(["MAN", "WOMAN", "NON_BINARY", "PREFER_NOT_TO_SAY"]),
     location: z.string().min(1),
     cityFrom: z.string().min(1),
     industry: z.string().min(1),
@@ -165,7 +165,7 @@ export const adminApplicantUpdateSchema = z.object({
     .object({
       age: z.number().int().min(24).max(41).optional(),
       gender: z
-        .enum(["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"])
+        .enum(["MAN", "WOMAN", "NON_BINARY", "PREFER_NOT_TO_SAY"])
         .optional(),
       location: z.string().min(1).optional(),
       cityFrom: z.string().min(1).optional(),

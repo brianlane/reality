@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,72 @@ export default function ApplicationDraftForm({
   const router = useRouter();
   const { draft, updateDraft } = useApplicationDraft();
   const [status, setStatus] = useState<string | null>(null);
+  const [isLoadingExistingData, setIsLoadingExistingData] = useState(false);
+
+  // Fetch existing applicant data to pre-fill form (for waitlist invitees)
+  useEffect(() => {
+    if (previewMode) return;
+
+    const storedApplicationId =
+      typeof window !== "undefined"
+        ? localStorage.getItem("applicationId")
+        : null;
+
+    // Only fetch if we have an applicationId and haven't already populated the draft
+    if (!storedApplicationId || draft.firstName) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function fetchApplicantData() {
+      setIsLoadingExistingData(true);
+      try {
+        const res = await fetch(`/api/applications/${storedApplicationId}`);
+        if (!res.ok) {
+          console.error("Failed to fetch existing applicant data");
+          return;
+        }
+        const data = await res.json();
+
+        if (cancelled) return;
+
+        // Pre-fill the draft with existing data
+        updateDraft({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          phone: data.phone,
+          age: data.age,
+          gender: data.gender,
+          seeking: data.seeking,
+          location: data.location,
+          cityFrom: data.cityFrom,
+          occupation: data.occupation,
+          industry: data.industry,
+          employer: data.employer,
+          education: data.education,
+          incomeRange: data.incomeRange,
+          referredBy: data.referredBy,
+          aboutYourself: data.aboutYourself,
+        });
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Error fetching applicant data:", err);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingExistingData(false);
+        }
+      }
+    }
+
+    fetchApplicantData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [previewMode, draft.firstName, updateDraft]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -89,6 +155,11 @@ export default function ApplicationDraftForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {isLoadingExistingData && (
+        <div className="rounded-md bg-blue-50 p-4 text-sm text-blue-800">
+          Loading your information from waitlist...
+        </div>
+      )}
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label
@@ -118,26 +189,6 @@ export default function ApplicationDraftForm({
             required
           />
         </div>
-      </div>
-      <div>
-        <label
-          htmlFor="seeking"
-          className="text-sm font-medium text-navy-muted"
-        >
-          Seeking
-        </label>
-        <Select
-          id="seeking"
-          name="seeking"
-          defaultValue={draft.seeking ?? ""}
-          required
-        >
-          <option value="">Select seeking preference</option>
-          <option value="MALE">Male</option>
-          <option value="FEMALE">Female</option>
-          <option value="NON_BINARY">Non-binary</option>
-          <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
-        </Select>
       </div>
       <div>
         <label htmlFor="email" className="text-sm font-medium text-navy-muted">
@@ -187,8 +238,28 @@ export default function ApplicationDraftForm({
           required
         >
           <option value="">Select gender</option>
-          <option value="MALE">Male</option>
-          <option value="FEMALE">Female</option>
+          <option value="MAN">Man</option>
+          <option value="WOMAN">Woman</option>
+          <option value="NON_BINARY">Non-binary</option>
+          <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+        </Select>
+      </div>
+      <div>
+        <label
+          htmlFor="seeking"
+          className="text-sm font-medium text-navy-muted"
+        >
+          Seeking
+        </label>
+        <Select
+          id="seeking"
+          name="seeking"
+          defaultValue={draft.seeking ?? ""}
+          required
+        >
+          <option value="">Select seeking preference</option>
+          <option value="MAN">Man</option>
+          <option value="WOMAN">Woman</option>
           <option value="NON_BINARY">Non-binary</option>
           <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
         </Select>

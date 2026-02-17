@@ -37,8 +37,8 @@ export async function GET(request: Request, { params }: RouteContext) {
 
   const genderBalance = event.invitations.reduce(
     (acc, invite) => {
-      if (invite.applicant.gender === "MALE") acc.male += 1;
-      if (invite.applicant.gender === "FEMALE") acc.female += 1;
+      if (invite.applicant.gender === "MAN") acc.male += 1;
+      if (invite.applicant.gender === "WOMAN") acc.female += 1;
       return acc;
     },
     { male: 0, female: 0 },
