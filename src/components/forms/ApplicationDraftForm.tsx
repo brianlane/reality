@@ -303,7 +303,7 @@ export default function ApplicationDraftForm({
           htmlFor="cityFrom"
           className="text-sm font-medium text-navy-muted"
         >
-          City you are from (Home Town)
+          City you are from (Hometown)
         </label>
         <Input
           id="cityFrom"
@@ -338,19 +338,6 @@ export default function ApplicationDraftForm({
           name="industry"
           defaultValue={draft.industry ?? ""}
           required
-        />
-      </div>
-      <div>
-        <label
-          htmlFor="employer"
-          className="text-sm font-medium text-navy-muted"
-        >
-          Career
-        </label>
-        <Input
-          id="employer"
-          name="employer"
-          defaultValue={draft.employer ?? ""}
         />
       </div>
       <div>
