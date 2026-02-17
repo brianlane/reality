@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useApplicationDraft } from "./useApplicationDraft";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { validatePassword } from "@/lib/utils";
 
 export default function ApplicationDraftForm({
   previewMode = false,
@@ -17,6 +19,7 @@ export default function ApplicationDraftForm({
   const { draft, updateDraft } = useApplicationDraft();
   const [status, setStatus] = useState<string | null>(null);
   const [isLoadingExistingData, setIsLoadingExistingData] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch existing applicant data to pre-fill form (for waitlist invitees)
   useEffect(() => {
@@ -101,10 +104,12 @@ export default function ApplicationDraftForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setIsSubmitting(true);
     setStatus(null);
 
     if (previewMode) {
       setStatus("Preview mode - form submission is disabled");
+      setIsSubmitting(false);
       return;
     }
 
@@ -131,6 +136,22 @@ export default function ApplicationDraftForm({
       referredBy: formData.get("referredBy") || null,
       aboutYourself: String(formData.get("aboutYourself") ?? "").trim(),
     };
+    const password = String(formData.get("password") ?? "");
+    const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+    const passwordValidation = validatePassword(password, confirmPassword);
+    if (!passwordValidation.valid) {
+      setStatus(passwordValidation.error);
+      setIsSubmitting(false);
+      return;
+    }
+
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) {
+      setStatus("Authentication is not configured.");
+      setIsSubmitting(false);
+      return;
+    }
 
     // Retrieve waitlist invite token and application id if present
     const inviteToken =
@@ -144,29 +165,98 @@ export default function ApplicationDraftForm({
     const applicationId =
       draft.applicationId ?? storedApplicationId ?? undefined;
 
-    const response = await fetch("/api/applications/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        applicant,
-        applicationId,
+    try {
+      const {
+        data: { session: existingSession },
+      } = await supabase.auth.getSession();
+
+      let session = existingSession;
+      if (!session) {
+        const { data: signUpData, error: signUpError } =
+          await supabase.auth.signUp({
+            email: applicant.email,
+            password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/dashboard`,
+              data: {
+                email: applicant.email,
+              },
+            },
+          });
+
+        if (signUpError) {
+          if (
+            signUpError.message.includes("already registered") ||
+            signUpError.message.includes("User already registered")
+          ) {
+            const { data: signInData, error: signInError } =
+              await supabase.auth.signInWithPassword({
+                email: applicant.email,
+                password,
+              });
+
+            if (signInError) {
+              setStatus(
+                "An account exists with this email but the password is incorrect. Please try again or reset your password.",
+              );
+              setIsSubmitting(false);
+              return;
+            }
+            session = signInData.session;
+          } else {
+            setStatus(signUpError.message);
+            setIsSubmitting(false);
+            return;
+          }
+        } else {
+          session = signUpData.session;
+        }
+      }
+
+      if (!session) {
+        setStatus("Failed to create session. Please try again.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const response = await fetch("/api/applications/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applicant,
+          applicationId,
+          demographics,
+          ...(inviteToken ? { inviteToken } : {}),
+        }),
+      });
+
+      if (!response.ok) {
+        setStatus("Failed to save application.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const data = await response.json();
+      updateDraft({
+        applicationId: data.applicationId,
         demographics,
-        ...(inviteToken ? { inviteToken } : {}),
-      }),
-    });
+        ...applicant,
+      });
 
-    if (!response.ok) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("applicationId", data.applicationId);
+      }
+
+      if (data.status === "DRAFT") {
+        router.push("/apply/questionnaire");
+      } else {
+        router.push("/apply/payment");
+      }
+    } catch (error) {
+      console.error("Demographics submit error:", error);
       setStatus("Failed to save application.");
-      return;
+      setIsSubmitting(false);
     }
-
-    const data = await response.json();
-    updateDraft({
-      applicationId: data.applicationId,
-      demographics,
-      ...applicant,
-    });
-    router.push("/apply/payment");
   }
 
   return (
@@ -426,7 +516,45 @@ export default function ApplicationDraftForm({
           placeholder="Share what makes you unique, your interests, values, or what you're passionate about..."
         />
       </div>
-      <Button type="submit">Save and continue</Button>
+      <div className="rounded-md bg-slate-50 p-3 text-sm text-navy-soft">
+        <p className="font-medium text-navy">Create your password</p>
+        <p className="mt-1">
+          You will use this password to sign in and continue your application.
+        </p>
+      </div>
+      <div>
+        <label
+          htmlFor="password"
+          className="text-sm font-medium text-navy-muted"
+        >
+          Password
+        </label>
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          required
+        />
+      </div>
+      <div>
+        <label
+          htmlFor="confirmPassword"
+          className="text-sm font-medium text-navy-muted"
+        >
+          Confirm Password
+        </label>
+        <Input
+          id="confirmPassword"
+          name="confirmPassword"
+          type="password"
+          autoComplete="new-password"
+          required
+        />
+      </div>
+      <Button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Saving..." : "Save and continue"}
+      </Button>
       {status && <p className="text-sm text-red-500">{status}</p>}
     </form>
   );

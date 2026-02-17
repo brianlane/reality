@@ -13,11 +13,11 @@ const RESEARCH_STATUSES: ApplicationStatus[] = [
   "RESEARCH_INVITED",
   "RESEARCH_IN_PROGRESS",
 ];
-const ALLOWED_STATUSES: ApplicationStatus[] = [
+const RESEARCH_ALLOWED_STATUSES: ApplicationStatus[] = [...RESEARCH_STATUSES];
+const NON_RESEARCH_ALLOWED_STATUSES: ApplicationStatus[] = [
   "WAITLIST_INVITED",
   "PAYMENT_PENDING",
   "DRAFT",
-  ...RESEARCH_STATUSES,
 ];
 
 // Negative patterns for consent validation
@@ -98,6 +98,13 @@ async function requireInvitedApplicant(
       id: applicationId,
       deletedAt: null,
     },
+    include: {
+      user: {
+        select: {
+          email: true,
+        },
+      },
+    },
   });
 
   if (!applicant) {
@@ -107,19 +114,33 @@ async function requireInvitedApplicant(
   const isResearchApplicant = RESEARCH_STATUSES.includes(
     applicant.applicationStatus,
   );
-  const hasInvite = isResearchApplicant
-    ? !!applicant.researchInvitedAt
-    : !!applicant.invitedOffWaitlistAt;
 
-  if (!hasInvite) {
-    return { error: "Applicant not found or not invited." };
+  if (isResearchApplicant) {
+    if (!applicant.researchInvitedAt) {
+      return { error: "Applicant not found or not invited." };
+    }
+    if (!RESEARCH_ALLOWED_STATUSES.includes(applicant.applicationStatus)) {
+      return {
+        error: "Questionnaire access is not available for this status.",
+      };
+    }
+    return { applicant, isResearchMode: true };
   }
 
-  if (!ALLOWED_STATUSES.includes(applicant.applicationStatus)) {
+  const auth = await getAuthUser();
+  if (!auth?.email) {
+    return { error: "Please sign in to continue." };
+  }
+
+  if (auth.email.toLowerCase() !== applicant.user.email.toLowerCase()) {
+    return { error: "You can only access your own application." };
+  }
+
+  if (!NON_RESEARCH_ALLOWED_STATUSES.includes(applicant.applicationStatus)) {
     return { error: "Questionnaire access is not available for this status." };
   }
 
-  return { applicant, isResearchMode: isResearchApplicant };
+  return { applicant, isResearchMode: false };
 }
 
 export async function GET(request: NextRequest) {

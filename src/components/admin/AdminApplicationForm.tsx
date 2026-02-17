@@ -397,6 +397,48 @@ export default function AdminApplicationForm({
     }
   }
 
+  async function handleSkipPayment() {
+    if (!applicationId) return;
+    if (
+      !window.confirm(
+        "Skip payment and unlock questionnaire for this applicant?",
+      )
+    ) {
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError("Please sign in again.");
+        setIsLoading(false);
+        return;
+      }
+      const res = await fetch(
+        `/api/admin/applications/${applicationId}/skip-payment`,
+        {
+          method: "POST",
+          headers,
+        },
+      );
+      const json = await res.json();
+      if (!res.ok || json?.error) {
+        setError(json?.error?.message || "Failed to skip payment.");
+        setIsLoading(false);
+        return;
+      }
+      setForm((prev) => ({ ...prev, applicationStatus: "DRAFT" }));
+      setInitialApplicationStatus("DRAFT");
+      setSuccess("Payment skipped. Applicant is now in Draft.");
+      setIsLoading(false);
+    } catch {
+      setError("Failed to skip payment.");
+      setIsLoading(false);
+    }
+  }
+
   return (
     <Card className="space-y-4">
       {error ? (
@@ -592,6 +634,14 @@ export default function AdminApplicationForm({
               disabled={isLoading}
             >
               Soft Reject
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSkipPayment}
+              disabled={isLoading}
+            >
+              Skip Payment
             </Button>
             <Button
               type="button"

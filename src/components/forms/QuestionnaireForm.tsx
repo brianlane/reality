@@ -203,6 +203,7 @@ export default function QuestionnaireForm({
       // Skip localStorage checks in preview mode
       return;
     }
+    let cancelled = false;
     if (draft.applicationId) {
       setApplicationId(draft.applicationId);
       return;
@@ -212,9 +213,38 @@ export default function QuestionnaireForm({
       if (storedId) {
         setApplicationId(storedId);
         updateDraft({ applicationId: storedId });
+        return;
       }
     }
-  }, [draft.applicationId, updateDraft, previewMode]);
+
+    if (isResearchMode) {
+      return;
+    }
+
+    const loadApplicantFromSession = async () => {
+      try {
+        const res = await fetch("/api/applicant/dashboard");
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json?.application?.id) {
+          return;
+        }
+        if (cancelled) return;
+        const recoveredId = String(json.application.id);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("applicationId", recoveredId);
+        }
+        setApplicationId(recoveredId);
+        updateDraft({ applicationId: recoveredId });
+      } catch {
+        // Ignore and allow existing UI messaging to guide user.
+      }
+    };
+
+    loadApplicantFromSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [draft.applicationId, updateDraft, previewMode, isResearchMode]);
 
   useEffect(() => {
     if (previewMode) {
@@ -275,6 +305,15 @@ export default function QuestionnaireForm({
         );
         const json = await res.json();
         if (!res.ok || json?.error) {
+          const requiresSignIn =
+            !isResearchMode &&
+            json?.error?.message === "Please sign in to continue.";
+          if (requiresSignIn) {
+            router.push("/sign-in?next=/apply/questionnaire");
+            setIsLoading(false);
+            return;
+          }
+
           const canRecoverFromStaleResearchSession =
             isResearchMode &&
             json?.error?.message === "Applicant not found or not invited.";
@@ -290,7 +329,7 @@ export default function QuestionnaireForm({
             json?.error?.message ??
               (isResearchMode
                 ? "Your research invite is not valid."
-                : "You must be invited off the waitlist to continue."),
+                : "Please sign in to continue your application."),
           );
           setIsLoading(false);
           return;
@@ -358,6 +397,7 @@ export default function QuestionnaireForm({
     draft.currentPageId,
     isResearchMode,
     updateDraft,
+    router,
   ]);
 
   const questionsBySection = useMemo(
@@ -592,7 +632,7 @@ export default function QuestionnaireForm({
       <p className="text-sm text-navy-soft">
         {isResearchMode
           ? "Please use your research invite link to begin."
-          : "Please use your invite link to continue the application."}
+          : "Please sign in to continue your application."}
       </p>
     );
   }

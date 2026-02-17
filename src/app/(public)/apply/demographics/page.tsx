@@ -1,29 +1,41 @@
 "use client";
 
-import { useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import ApplicationDraftForm from "@/components/forms/ApplicationDraftForm";
 import Link from "next/link";
 import ResearchRouteGuard from "@/components/research/ResearchRouteGuard";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function DemographicsPage() {
-  const isAuthorized = useSyncExternalStore(
-    (callback) => {
-      if (typeof window === "undefined") {
-        return () => undefined;
-      }
-      window.addEventListener("storage", callback);
-      return () => window.removeEventListener("storage", callback);
-    },
-    () => {
-      if (typeof window === "undefined") {
-        return null;
-      }
-      const token = localStorage.getItem("waitlistInviteToken");
-      const applicationId = localStorage.getItem("applicationId");
-      return !!(token || applicationId);
-    },
-    () => null,
-  );
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    const token = localStorage.getItem("waitlistInviteToken");
+    const applicationId = localStorage.getItem("applicationId");
+    return token || applicationId ? true : null;
+  });
+
+  useEffect(() => {
+    if (isAuthorized !== null) {
+      return;
+    }
+
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) {
+      queueMicrotask(() => setIsAuthorized(false));
+      return;
+    }
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setIsAuthorized(!!data.session);
+      })
+      .catch(() => {
+        setIsAuthorized(false);
+      });
+  }, [isAuthorized]);
 
   let content: ReactNode;
 
