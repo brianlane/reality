@@ -66,7 +66,9 @@ export default function DemographicsPage() {
         setSessionState("authenticated");
 
         const dashboardRes = await fetch("/api/applicant/dashboard");
+        if (cancelled) return;
         const dashboardJson = await dashboardRes.json().catch(() => null);
+        if (cancelled) return;
         const status = dashboardJson?.application?.status as string | undefined;
 
         // Recovery path: auth exists but applicant record is missing.
@@ -80,16 +82,19 @@ export default function DemographicsPage() {
         }
 
         if (!dashboardRes.ok) {
+          if (cancelled) return;
           router.replace("/dashboard");
           return;
         }
 
         if (status === "DRAFT") {
+          if (cancelled) return;
           router.replace("/apply/questionnaire");
           return;
         }
 
         if (status === "PAYMENT_PENDING") {
+          if (cancelled) return;
           router.replace("/apply/payment");
           return;
         }
@@ -105,11 +110,13 @@ export default function DemographicsPage() {
           status === "RESEARCH_IN_PROGRESS" ||
           status === "RESEARCH_COMPLETED"
         ) {
+          if (cancelled) return;
           router.replace("/dashboard");
           return;
         }
 
         // Unknown states should not land on demographics.
+        if (cancelled) return;
         router.replace("/dashboard");
       })
       .catch(() => {
