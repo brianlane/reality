@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
-import { skipPaymentForApplicant } from "@/lib/admin/skip-payment";
+import { runSkipPaymentFlow } from "@/lib/admin/skip-payment";
 
 type AdminUserFormProps = {
   userId?: string;
@@ -264,41 +264,18 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
 
   async function handleSkipPayment() {
     const applicantId = user?.applicant?.id;
-    if (!applicantId) return;
-    if (
-      !window.confirm(
-        "Skip payment and unlock questionnaire for this applicant?",
-      )
-    ) {
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      const headers = await getAuthHeaders();
-      if (!headers) {
-        setError("Please sign in again.");
-        setIsLoading(false);
-        return;
-      }
-      const result = await skipPaymentForApplicant({
-        applicationId: applicantId,
-        headers,
-      });
-      if (!result.ok) {
-        setError(result.message);
-        setIsLoading(false);
-        return;
-      }
-      setForm((prev) => ({ ...prev, applicationStatus: "DRAFT" }));
-      setInitialApplicationStatus("DRAFT");
-      setSuccess("Payment skipped. Applicant is now in Draft.");
-      setIsLoading(false);
-    } catch {
-      setError("Failed to skip payment.");
-      setIsLoading(false);
-    }
+    await runSkipPaymentFlow({
+      applicationId: applicantId,
+      confirmAction: (message) => window.confirm(message),
+      getAuthHeaders,
+      setIsLoading,
+      setError,
+      setSuccess,
+      setApplicationStatusDraft: () => {
+        setForm((prev) => ({ ...prev, applicationStatus: "DRAFT" }));
+        setInitialApplicationStatus("DRAFT");
+      },
+    });
   }
 
   return (
