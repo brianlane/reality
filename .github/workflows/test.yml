@@ -2,9 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [main, develop, frontend]
+    branches: [main, develop]  # Run all tests after merge
   pull_request:
-    branches: [main]
+    branches: [main]  # Run all tests on PRs (including from frontend)
 
 jobs:
   unit-tests:
@@ -66,9 +66,8 @@ jobs:
   e2e-tests:
     name: E2E Tests
     runs-on: ubuntu-latest
-    # Only run e2e tests on pull requests to save CI time
-    # They will appear as "skipped" on direct pushes
-    if: github.event_name == 'pull_request'
+    # Runs on PRs and after merge to main/develop
+    # Feature branch pushes are not triggered (controlled at workflow level)
 
     env:
       DATABASE_URL: postgresql://user:pass@localhost:5432/testdb

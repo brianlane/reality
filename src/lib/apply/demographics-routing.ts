@@ -5,7 +5,6 @@ import {
 } from "@/lib/application-status";
 
 export type DemographicsRouteDecision =
-  | { type: "allow_demographics" }
   | { type: "redirect"; href: string }
   | { type: "reset_session_for_invite_recovery" };
 
