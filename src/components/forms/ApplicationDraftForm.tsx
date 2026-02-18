@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useApplicationDraft } from "./useApplicationDraft";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { validatePassword } from "@/lib/utils";
+import { signUpOrSignIn } from "@/lib/auth/signup-or-signin";
+import { ERROR_MESSAGES } from "@/lib/error-messages";
 
 export default function ApplicationDraftForm({
   previewMode = false,
@@ -20,6 +22,9 @@ export default function ApplicationDraftForm({
   const [status, setStatus] = useState<string | null>(null);
   const [isLoadingExistingData, setIsLoadingExistingData] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   // Fetch existing applicant data to pre-fill form (for waitlist invitees)
   useEffect(() => {
@@ -102,13 +107,32 @@ export default function ApplicationDraftForm({
     };
   }, [previewMode, draft.applicationId, draft.firstName, updateDraft]);
 
+  function handlePasswordChange(value: string) {
+    setPassword(value);
+    // Only validate if confirm password has been entered
+    if (confirmPassword) {
+      const validation = validatePassword(value, confirmPassword);
+      setPasswordError(validation.valid ? null : validation.error);
+    } else if (passwordError) {
+      // Clear error if confirm password is empty
+      setPasswordError(null);
+    }
+  }
+
+  function handleConfirmPasswordChange(value: string) {
+    setConfirmPassword(value);
+    // Validate as soon as user starts typing in confirm field
+    const validation = validatePassword(password, value);
+    setPasswordError(validation.valid ? null : validation.error);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSubmitting(true);
     setStatus(null);
 
     if (previewMode) {
-      setStatus("Preview mode - form submission is disabled");
+      setStatus(ERROR_MESSAGES.PREVIEW_MODE_SUBMIT_DISABLED);
       setIsSubmitting(false);
       return;
     }
@@ -136,11 +160,11 @@ export default function ApplicationDraftForm({
       referredBy: formData.get("referredBy") || null,
       aboutYourself: String(formData.get("aboutYourself") ?? "").trim(),
     };
-    const password = String(formData.get("password") ?? "");
-    const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
+    // Validate password one final time before submission
     const passwordValidation = validatePassword(password, confirmPassword);
     if (!passwordValidation.valid) {
+      setPasswordError(passwordValidation.error);
       setStatus(passwordValidation.error);
       setIsSubmitting(false);
       return;
@@ -148,7 +172,7 @@ export default function ApplicationDraftForm({
 
     const supabase = createSupabaseBrowserClient();
     if (!supabase) {
-      setStatus("Authentication is not configured.");
+      setStatus(ERROR_MESSAGES.AUTH_NOT_CONFIGURED);
       setIsSubmitting(false);
       return;
     }
@@ -172,58 +196,22 @@ export default function ApplicationDraftForm({
 
       let session = existingSession;
       if (!session) {
-        const { data: signUpData, error: signUpError } =
-          await supabase.auth.signUp({
-            email: applicant.email,
-            password,
-            options: {
-              emailRedirectTo: `${window.location.origin}/dashboard`,
-              data: {
-                email: applicant.email,
-              },
-            },
-          });
-
-        const looksLikeExistingUser =
-          !signUpError &&
-          !signUpData.session &&
-          Array.isArray(signUpData.user?.identities) &&
-          signUpData.user.identities.length === 0;
-        const shouldFallbackToSignIn = !!signUpError || looksLikeExistingUser;
-
-        if (shouldFallbackToSignIn) {
-          const isAlreadyRegisteredError =
-            !!signUpError &&
-            (signUpError.message.includes("already registered") ||
-              signUpError.message.includes("User already registered"));
-
-          if (isAlreadyRegisteredError || looksLikeExistingUser) {
-            const { data: signInData, error: signInError } =
-              await supabase.auth.signInWithPassword({
-                email: applicant.email,
-                password,
-              });
-
-            if (signInError) {
-              setStatus(
-                "An account exists with this email but the password is incorrect. Please try again or reset your password.",
-              );
-              setIsSubmitting(false);
-              return;
-            }
-            session = signInData.session;
-          } else {
-            setStatus(signUpError?.message ?? "Unable to create account.");
-            setIsSubmitting(false);
-            return;
-          }
-        } else {
-          session = signUpData.session;
+        const authResult = await signUpOrSignIn({
+          supabase,
+          email: applicant.email,
+          password,
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+        });
+        if (authResult.errorMessage) {
+          setStatus(authResult.errorMessage);
+          setIsSubmitting(false);
+          return;
         }
+        session = authResult.session;
       }
 
       if (!session) {
-        setStatus("Failed to create session. Please try again.");
+        setStatus(ERROR_MESSAGES.FAILED_CREATE_SESSION);
         setIsSubmitting(false);
         return;
       }
@@ -240,7 +228,7 @@ export default function ApplicationDraftForm({
       });
 
       if (!response.ok) {
-        setStatus("Failed to save application.");
+        setStatus(ERROR_MESSAGES.FAILED_SAVE_APPLICATION);
         setIsSubmitting(false);
         return;
       }
@@ -544,6 +532,9 @@ export default function ApplicationDraftForm({
           type="password"
           autoComplete="new-password"
           required
+          value={password}
+          onChange={(e) => handlePasswordChange(e.target.value)}
+          aria-invalid={!!passwordError}
         />
       </div>
       <div>
@@ -559,9 +550,15 @@ export default function ApplicationDraftForm({
           type="password"
           autoComplete="new-password"
           required
+          value={confirmPassword}
+          onChange={(e) => handleConfirmPasswordChange(e.target.value)}
+          aria-invalid={!!passwordError}
         />
+        {passwordError && (
+          <p className="mt-1 text-sm text-red-500">{passwordError}</p>
+        )}
       </div>
-      <Button type="submit" disabled={isSubmitting}>
+      <Button type="submit" disabled={isSubmitting || !!passwordError}>
         {isSubmitting ? "Saving..." : "Save and continue"}
       </Button>
       {status && <p className="text-sm text-red-500">{status}</p>}

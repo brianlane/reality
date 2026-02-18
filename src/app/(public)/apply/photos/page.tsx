@@ -1,17 +1,66 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PhotoUploadForm from "@/components/forms/PhotoUploadForm";
 import { Button } from "@/components/ui/button";
 import { useApplicationDraft } from "@/components/forms/useApplicationDraft";
 import ResearchRouteGuard from "@/components/research/ResearchRouteGuard";
+import { APP_STATUS } from "@/lib/application-status";
+import { ERROR_MESSAGES } from "@/lib/error-messages";
 
 export default function PhotosPage() {
   const router = useRouter();
   const { draft } = useApplicationDraft();
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingAccess, setIsCheckingAccess] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkAccess = async () => {
+      try {
+        const response = await fetch("/api/applicant/dashboard");
+        const json = await response.json().catch(() => null);
+        if (cancelled) return;
+
+        if (response.status === 401) {
+          router.replace("/sign-in?next=/apply/photos");
+          return;
+        }
+
+        if (!response.ok) {
+          router.replace("/dashboard");
+          return;
+        }
+
+        const appStatus = json?.application?.status as string | undefined;
+        if (appStatus === APP_STATUS.PAYMENT_PENDING) {
+          router.replace("/apply/payment");
+          return;
+        }
+
+        if (appStatus !== APP_STATUS.DRAFT) {
+          router.replace("/dashboard");
+          return;
+        }
+      } catch {
+        if (!cancelled) {
+          router.replace("/dashboard");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsCheckingAccess(false);
+        }
+      }
+    };
+
+    void checkAccess();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   async function handleNext() {
     setStatus(null);
@@ -35,8 +84,7 @@ export default function PhotosPage() {
           return;
         }
         setStatus(
-          data?.error?.message ||
-            "Failed to submit application. Please try again.",
+          data?.error?.message || ERROR_MESSAGES.FAILED_SUBMIT_APPLICATION,
         );
         setIsSubmitting(false);
         return;
@@ -49,7 +97,7 @@ export default function PhotosPage() {
 
       router.push(`/apply/waitlist?id=${draft.applicationId}`);
     } catch {
-      setStatus("Failed to submit application. Please try again.");
+      setStatus(ERROR_MESSAGES.FAILED_SUBMIT_APPLICATION);
       setIsSubmitting(false);
     }
   }
@@ -62,12 +110,19 @@ export default function PhotosPage() {
           Upload at least 2 profile photos, then submit your application.
         </p>
         <div className="mt-6 space-y-4 rounded-xl border border-slate-200 bg-white p-6">
-          <PhotoUploadForm />
+          {isCheckingAccess ? (
+            <p className="text-sm text-navy-soft">Verifying access...</p>
+          ) : (
+            <PhotoUploadForm />
+          )}
           <div className="text-sm text-navy-soft">
             Upload at least two photos, then submit to complete your
             application.
           </div>
-          <Button onClick={handleNext} disabled={isSubmitting}>
+          <Button
+            onClick={handleNext}
+            disabled={isSubmitting || isCheckingAccess}
+          >
             {isSubmitting ? "Submitting..." : "Submit Application"}
           </Button>
           {status ? <p className="text-sm text-red-500">{status}</p> : null}

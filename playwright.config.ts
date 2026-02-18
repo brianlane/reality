@@ -18,7 +18,8 @@ export default defineConfig({
       ? "npm run start -- --port 3000"
       : "npm run dev -- --port 3000",
     url: "http://127.0.0.1:3000",
-    reuseExistingServer: !isCI,
+    // Always start a dedicated server so E2E env vars are guaranteed.
+    reuseExistingServer: false,
     timeout: 120_000,
     env: {
       ...process.env,

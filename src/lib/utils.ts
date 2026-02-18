@@ -6,6 +6,19 @@ export type PasswordValidationResult =
   | { valid: true }
   | { valid: false; error: string };
 
+function secureCompareStrings(a: string, b: string): boolean {
+  const maxLength = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+
+  for (let i = 0; i < maxLength; i += 1) {
+    const aCode = i < a.length ? a.charCodeAt(i) : 0;
+    const bCode = i < b.length ? b.charCodeAt(i) : 0;
+    diff |= aCode ^ bCode;
+  }
+
+  return diff === 0;
+}
+
 /**
  * Validates password strength and confirmation match.
  * Requirements:
@@ -40,7 +53,7 @@ export function validatePassword(
       error: "Password must contain at least one number",
     };
   }
-  if (password !== confirmPassword) {
+  if (!secureCompareStrings(password, confirmPassword)) {
     return { valid: false, error: "Passwords do not match" };
   }
   return { valid: true };

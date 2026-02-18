@@ -1,19 +1,22 @@
-import { randomUUID } from "crypto";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { APP_STATUS } from "@/lib/application-status";
+import { type ApplicationStatus } from "@prisma/client";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-const RESEARCH_STATUSES = new Set([
-  "RESEARCH_INVITED",
-  "RESEARCH_IN_PROGRESS",
-  "RESEARCH_COMPLETED",
+const RESEARCH_STATUSES: Set<ApplicationStatus> = new Set([
+  APP_STATUS.RESEARCH_INVITED,
+  APP_STATUS.RESEARCH_IN_PROGRESS,
+  APP_STATUS.RESEARCH_COMPLETED,
 ]);
-const SKIP_PAYMENT_ELIGIBLE_STATUSES = new Set(["PAYMENT_PENDING"]);
+const SKIP_PAYMENT_ELIGIBLE_STATUSES: Set<ApplicationStatus> = new Set([
+  APP_STATUS.PAYMENT_PENDING,
+]);
 
 export async function POST(_: Request, { params }: RouteContext) {
   const { id } = await params;
@@ -66,15 +69,13 @@ export async function POST(_: Request, { params }: RouteContext) {
   });
 
   const invitedOffWaitlistAt = existing.invitedOffWaitlistAt ?? new Date();
-  // Keep a non-empty invite token so operational recovery paths remain available.
-  const waitlistInviteToken = existing.waitlistInviteToken ?? randomUUID();
-
   const applicant = await db.applicant.update({
     where: { id },
     data: {
-      applicationStatus: "DRAFT",
+      applicationStatus: APP_STATUS.DRAFT,
       invitedOffWaitlistAt,
-      waitlistInviteToken,
+      // Preserve any existing invite token; skip-payment does not mint new links.
+      waitlistInviteToken: existing.waitlistInviteToken,
       softRejectedAt: null,
       softRejectedFromStatus: null,
       reviewedAt: new Date(),
@@ -96,7 +97,7 @@ export async function POST(_: Request, { params }: RouteContext) {
       description: "Skipped payment and unlocked questionnaire",
       metadata: {
         previousStatus: existing.applicationStatus,
-        nextStatus: "DRAFT",
+        nextStatus: APP_STATUS.DRAFT,
       },
     },
   });

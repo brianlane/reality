@@ -8,15 +8,17 @@ import {
   validateAnswerForQuestion,
 } from "@/lib/questionnaire";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
-
-const RESEARCH_STATUSES: ApplicationStatus[] = [
-  "RESEARCH_INVITED",
-  "RESEARCH_IN_PROGRESS",
+import {
+  APP_STATUS,
+  QUESTIONNAIRE_NON_RESEARCH_ALLOWED_STATUSES,
+} from "@/lib/application-status";
+import { ERROR_MESSAGES } from "@/lib/error-messages";
+const RESEARCH_ACCESS_STATUSES: ApplicationStatus[] = [
+  APP_STATUS.RESEARCH_INVITED,
+  APP_STATUS.RESEARCH_IN_PROGRESS,
 ];
 const NON_RESEARCH_ALLOWED_STATUSES: ApplicationStatus[] = [
-  "WAITLIST_INVITED",
-  "PAYMENT_PENDING",
-  "DRAFT",
+  ...QUESTIONNAIRE_NON_RESEARCH_ALLOWED_STATUSES,
 ];
 
 // Negative patterns for consent validation
@@ -110,20 +112,20 @@ async function requireInvitedApplicant(
     return { error: "Applicant not found or not invited." };
   }
 
-  const isResearchApplicant = RESEARCH_STATUSES.includes(
+  const isResearchApplicant = RESEARCH_ACCESS_STATUSES.includes(
     applicant.applicationStatus,
   );
 
   if (isResearchApplicant) {
     if (!applicant.researchInvitedAt) {
-      return { error: "Applicant not found or not invited." };
+      return { error: ERROR_MESSAGES.APP_NOT_FOUND_OR_INVITED };
     }
     return { applicant, isResearchMode: true };
   }
 
   const auth = await getAuthUser();
   if (!auth?.email) {
-    return { error: "Please sign in to continue." };
+    return { error: ERROR_MESSAGES.SIGN_IN_TO_CONTINUE };
   }
 
   if (auth.email.toLowerCase() !== applicant.user.email.toLowerCase()) {
@@ -242,6 +244,7 @@ export async function GET(request: NextRequest) {
   return successResponse({
     sections: sections.map((section) => ({
       id: section.id,
+      pageId: section.pageId ?? undefined,
       title: section.title,
       description: section.description,
       order: section.order,

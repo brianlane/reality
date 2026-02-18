@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ResearchRouteGuard from "@/components/research/ResearchRouteGuard";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getDemographicsRouteDecision } from "@/lib/apply/demographics-routing";
 
 export default function DemographicsPage() {
   const router = useRouter();
@@ -35,6 +36,7 @@ export default function DemographicsPage() {
   const [sessionState, setSessionState] = useState<
     "unknown" | "authenticated" | "unauthenticated"
   >("unknown");
+  const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (hasInviteContext === null) {
@@ -74,60 +76,34 @@ export default function DemographicsPage() {
           return;
         }
         setSessionState("authenticated");
+        setRecoveryMessage(null);
 
         const dashboardRes = await fetch("/api/applicant/dashboard");
         if (cancelled) return;
         const dashboardJson = await dashboardRes.json().catch(() => null);
         if (cancelled) return;
         const status = dashboardJson?.application?.status as string | undefined;
+        const decision = getDemographicsRouteDecision({
+          status,
+          dashboardStatusCode: dashboardRes.status,
+          hasInviteContext,
+        });
 
-        // Recovery path: auth exists but applicant record is missing.
-        // Clear auth so user can complete demographics again via invite context.
-        if (dashboardRes.status === 401 && hasInviteContext) {
+        if (decision.type === "reset_session_for_invite_recovery") {
           await supabase.auth.signOut();
           if (!cancelled) {
             setSessionState("unauthenticated");
+            setRecoveryMessage(
+              "Your previous session expired for this application. Please continue with your invite link details.",
+            );
           }
           return;
         }
 
-        if (!dashboardRes.ok) {
+        if (decision.type === "redirect") {
           if (cancelled) return;
-          router.replace("/dashboard");
-          return;
+          router.replace(decision.href);
         }
-
-        if (status === "DRAFT") {
-          if (cancelled) return;
-          router.replace("/apply/questionnaire");
-          return;
-        }
-
-        if (status === "PAYMENT_PENDING") {
-          if (cancelled) return;
-          router.replace("/apply/payment");
-          return;
-        }
-
-        if (
-          status === "SUBMITTED" ||
-          status === "SCREENING_IN_PROGRESS" ||
-          status === "APPROVED" ||
-          status === "REJECTED" ||
-          status === "WAITLIST" ||
-          status === "WAITLIST_INVITED" ||
-          status === "RESEARCH_INVITED" ||
-          status === "RESEARCH_IN_PROGRESS" ||
-          status === "RESEARCH_COMPLETED"
-        ) {
-          if (cancelled) return;
-          router.replace("/dashboard");
-          return;
-        }
-
-        // Unknown states should not land on demographics.
-        if (cancelled) return;
-        router.replace("/dashboard");
       } catch {
         // Errors after session confirmation should not downgrade auth state.
         // Route to dashboard as the safest fallback for authenticated users.
@@ -194,6 +170,11 @@ export default function DemographicsPage() {
           application.
         </p>
         <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+          {recoveryMessage ? (
+            <p className="mb-4 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              {recoveryMessage}
+            </p>
+          ) : null}
           <ApplicationDraftForm />
         </div>
       </section>

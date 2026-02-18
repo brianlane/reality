@@ -13,6 +13,8 @@ export type StatusContentKey =
   | "PAYMENT_PENDING"
   | "SCREENING_IN_PROGRESS"
   | "APPROVED"
+  | "REJECTED"
+  | "WAITLIST"
   | "WAITLIST_INVITED"
   | "RESEARCH_INVITED"
   | "RESEARCH_IN_PROGRESS"
@@ -55,6 +57,18 @@ export const STATUS_CONTENT: Record<StatusContentKey, StatusContent> = {
     description:
       "Congratulations! Your application has been approved. You can now access your matches and view upcoming events.",
     actionText: "Go to Dashboard",
+  },
+  REJECTED: {
+    title: "Application Update",
+    description:
+      "Thank you for applying. We have completed our review and will share any next steps by email.",
+    actionText: "View Dashboard",
+  },
+  WAITLIST: {
+    title: "On Waitlist",
+    description:
+      "You are currently on our waitlist. We will notify you as soon as a spot opens.",
+    actionText: "View Dashboard",
   },
   WAITLIST_INVITED: {
     title: "You've Been Invited!",
@@ -119,6 +133,14 @@ export const EMAIL_STATUS_CONTENT: Record<
   APPROVED: {
     ...STATUS_CONTENT.APPROVED,
     emailSubject: "Application Approved - Reality Matchmaking",
+  },
+  REJECTED: {
+    ...STATUS_CONTENT.REJECTED,
+    emailSubject: "Application Update - Reality Matchmaking",
+  },
+  WAITLIST: {
+    ...STATUS_CONTENT.WAITLIST,
+    emailSubject: "Waitlist Update - Reality Matchmaking",
   },
   WAITLIST_INVITED: {
     ...STATUS_CONTENT.WAITLIST_INVITED,

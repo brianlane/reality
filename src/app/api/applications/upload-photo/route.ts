@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { getSupabaseClient } from "@/lib/storage/client";
 import { logger } from "@/lib/logger";
+import { getAuthUser } from "@/lib/auth";
 
 const PHOTO_BUCKET = "photos";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -46,6 +47,11 @@ function verifyFileSignature(buffer: Uint8Array, mimeType: string): boolean {
 }
 
 export async function POST(request: Request) {
+  const auth = await getAuthUser();
+  if (!auth?.email) {
+    return errorResponse("UNAUTHORIZED", "Please sign in to continue.", 401);
+  }
+
   const formData = await request.formData();
   const file = formData.get("file");
   const applicantId = formData.get("applicantId")?.toString();
@@ -83,10 +89,30 @@ export async function POST(request: Request) {
   // Validate applicant exists and hasn't exceeded photo limit
   const applicant = await db.applicant.findUnique({
     where: { id: applicantId },
+    select: {
+      id: true,
+      photos: true,
+      user: {
+        select: {
+          email: true,
+        },
+      },
+    },
   });
 
   if (!applicant) {
     return errorResponse("NOT_FOUND", "Applicant not found", 404);
+  }
+
+  if (
+    !applicant.user?.email ||
+    applicant.user.email.toLowerCase() !== auth.email.toLowerCase()
+  ) {
+    return errorResponse(
+      "FORBIDDEN",
+      "You can only upload photos for your own application.",
+      403,
+    );
   }
 
   if (applicant.photos.length >= MAX_PHOTOS_PER_APPLICANT) {
@@ -130,9 +156,11 @@ export async function POST(request: Request) {
     });
 
   if (error) {
-    return errorResponse("INTERNAL_SERVER_ERROR", "Upload failed", 500, [
-      { message: error.message },
-    ]);
+    logger.error("Photo upload failed", {
+      applicantId,
+      error: error.message,
+    });
+    return errorResponse("INTERNAL_SERVER_ERROR", "Upload failed", 500);
   }
 
   const { data } = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(path);

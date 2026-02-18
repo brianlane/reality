@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useApplicationDraft } from "./useApplicationDraft";
 import RichTextEditor from "./RichTextEditor";
+import { ERROR_MESSAGES } from "@/lib/error-messages";
 
 type QuestionType =
   | "TEXT"
@@ -67,6 +68,7 @@ type Question = {
 
 type Section = {
   id: string;
+  pageId?: string;
   title: string;
   description: string | null;
   questions: Question[];
@@ -181,6 +183,7 @@ export default function QuestionnaireForm({
   const router = useRouter();
   const { draft, updateDraft } = useApplicationDraft();
   const [sections, setSections] = useState<Section[]>(mockSections ?? []);
+  const [allSections, setAllSections] = useState<Section[]>(mockSections ?? []);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>(
     mockAnswers ?? {},
   );
@@ -191,11 +194,15 @@ export default function QuestionnaireForm({
   const [isLoading, setIsLoading] = useState(false);
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const isResearchMode = mode === "research";
+  const initialResumePageIdRef = useRef(draft.currentPageId);
 
   useEffect(() => {
     if (!previewMode) return;
-    setSections(mockSections ?? []);
-    setAnswers(mockAnswers ?? {});
+    queueMicrotask(() => {
+      setSections(mockSections ?? []);
+      setAllSections(mockSections ?? []);
+      setAnswers(mockAnswers ?? {});
+    });
   }, [previewMode, mockSections, mockAnswers]);
 
   useEffect(() => {
@@ -204,15 +211,25 @@ export default function QuestionnaireForm({
       return;
     }
     let cancelled = false;
+    const persistRecoveredApplicationId = (nextId: string) => {
+      if (typeof window !== "undefined") {
+        const current = localStorage.getItem("applicationId");
+        if (current !== nextId) {
+          localStorage.setItem("applicationId", nextId);
+        }
+      }
+      setApplicationId(nextId);
+      updateDraft({ applicationId: nextId });
+    };
+
     if (draft.applicationId) {
-      setApplicationId(draft.applicationId);
+      queueMicrotask(() => setApplicationId(draft.applicationId ?? null));
       return;
     }
     if (typeof window !== "undefined") {
       const storedId = localStorage.getItem("applicationId");
       if (storedId) {
-        setApplicationId(storedId);
-        updateDraft({ applicationId: storedId });
+        persistRecoveredApplicationId(storedId);
         return;
       }
     }
@@ -230,11 +247,7 @@ export default function QuestionnaireForm({
         }
         if (cancelled) return;
         const recoveredId = String(json.application.id);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("applicationId", recoveredId);
-        }
-        setApplicationId(recoveredId);
-        updateDraft({ applicationId: recoveredId });
+        persistRecoveredApplicationId(recoveredId);
       } catch {
         // Ignore and allow existing UI messaging to guide user.
       }
@@ -307,7 +320,7 @@ export default function QuestionnaireForm({
         if (!res.ok || json?.error) {
           const requiresSignIn =
             !isResearchMode &&
-            json?.error?.message === "Please sign in to continue.";
+            json?.error?.message === ERROR_MESSAGES.SIGN_IN_TO_CONTINUE;
           if (requiresSignIn) {
             router.push("/sign-in?next=/apply/questionnaire");
             setIsLoading(false);
@@ -316,7 +329,7 @@ export default function QuestionnaireForm({
 
           const canRecoverFromStaleResearchSession =
             isResearchMode &&
-            json?.error?.message === "Applicant not found or not invited.";
+            json?.error?.message === ERROR_MESSAGES.APP_NOT_FOUND_OR_INVITED;
           if (canRecoverFromStaleResearchSession) {
             const recovered = await tryRestoreResearchSession();
             if (recovered) {
@@ -328,19 +341,21 @@ export default function QuestionnaireForm({
           setStatus(
             json?.error?.message ??
               (isResearchMode
-                ? "Your research invite is not valid."
-                : "Please sign in to continue your application."),
+                ? ERROR_MESSAGES.INVALID_RESEARCH_INVITE
+                : ERROR_MESSAGES.SIGN_IN_TO_CONTINUE_APPLICATION),
           );
           setIsLoading(false);
           return;
         }
 
         const fetchedPages = json.pages ?? [];
+        const fetchedSections = (json.sections ?? []) as Section[];
         setPages(fetchedPages);
+        setAllSections(fetchedSections);
         setAnswers(json.answers ?? {});
 
         // Determine current page from draft or start at first page
-        const resumePageId = draft.currentPageId;
+        const resumePageId = initialResumePageIdRef.current;
         let pageIndex = 0;
         let pageId: string | null = null;
 
@@ -361,28 +376,22 @@ export default function QuestionnaireForm({
 
         setCurrentPageIndex(pageIndex);
 
-        // Now fetch sections for the current page
+        // Filter sections client-side by pageId to avoid a second request.
         if (pageId) {
-          const sectionsRes = await fetch(
-            `/api/applications/questionnaire?applicationId=${applicationId}&pageId=${pageId}`,
-            { signal: controller.signal },
+          setSections(
+            fetchedSections.filter(
+              (section) => (section.pageId ?? null) === pageId,
+            ),
           );
-          const sectionsJson = await sectionsRes.json();
-          if (!sectionsRes.ok || sectionsJson?.error) {
-            setStatus("Failed to load questionnaire sections.");
-            setIsLoading(false);
-            return;
-          }
-          setSections(sectionsJson.sections ?? []);
         } else {
           // No pages, fallback to all sections
-          setSections(json.sections ?? []);
+          setSections(fetchedSections);
         }
 
         setIsLoading(false);
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
-          setStatus("Failed to load questionnaire.");
+          setStatus(ERROR_MESSAGES.FAILED_LOAD_QUESTIONNAIRE);
           setIsLoading(false);
         }
       }
@@ -391,14 +400,7 @@ export default function QuestionnaireForm({
     loadQuestionnaire();
 
     return () => controller.abort();
-  }, [
-    applicationId,
-    previewMode,
-    draft.currentPageId,
-    isResearchMode,
-    updateDraft,
-    router,
-  ]);
+  }, [applicationId, previewMode, isResearchMode, updateDraft, router]);
 
   const questionsBySection = useMemo(
     () => sections.filter((section) => section.questions.length > 0),
@@ -407,7 +409,7 @@ export default function QuestionnaireForm({
 
   async function saveCurrentPageAnswers(): Promise<boolean> {
     if (previewMode) {
-      setStatus("Preview mode - form submission is disabled");
+      setStatus(ERROR_MESSAGES.PREVIEW_MODE_SUBMIT_DISABLED);
       return false;
     }
     if (!applicationId) {
@@ -443,7 +445,8 @@ export default function QuestionnaireForm({
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data?.error) {
       setStatus(
-        data?.error?.message ?? "Failed to save questionnaire answers.",
+        data?.error?.message ??
+          ERROR_MESSAGES.FAILED_SAVE_QUESTIONNAIRE_ANSWERS,
       );
       return false;
     }
@@ -592,33 +595,16 @@ export default function QuestionnaireForm({
       const nextPageId = pages[nextPageIndex]?.id;
 
       if (nextPageId) {
-        // Load next page sections
-        setIsLoading(true);
-        let nextLoaded = false;
-        try {
-          const res = await fetch(
-            `/api/applications/questionnaire?applicationId=${applicationId}&pageId=${nextPageId}`,
-          );
-          const json = await res.json();
-          if (!res.ok || json?.error) {
-            setStatus("Failed to load next page.");
-            return;
-          }
-          setSections(json.sections ?? []);
-          setCurrentPageIndex(nextPageIndex);
-          updateDraft({ currentPageId: nextPageId });
-          setFieldErrors({});
-          nextLoaded = true;
-        } catch {
-          setStatus("Failed to load next page.");
-        } finally {
-          setIsLoading(false);
-        }
+        const nextSections = allSections.filter(
+          (section) => (section.pageId ?? null) === nextPageId,
+        );
+        setSections(nextSections);
+        setCurrentPageIndex(nextPageIndex);
+        updateDraft({ currentPageId: nextPageId });
+        setFieldErrors({});
 
-        if (nextLoaded) {
-          // Scroll to top
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
     }
   }
