@@ -147,7 +147,7 @@ describe("signUpOrSignIn", () => {
     );
   });
 
-  it("should return error when signup fails with non-already-registered error", async () => {
+  it("should return actual error message when signup fails with non-already-registered error", async () => {
     const mockSupabase = {
       auth: {
         signUp: vi.fn().mockResolvedValue({
@@ -166,9 +166,8 @@ describe("signUpOrSignIn", () => {
     });
 
     expect(result.session).toBeNull();
-    expect(result.errorMessage).toBe(
-      "Unable to create account. Please try again.",
-    );
+    // Should return the actual Supabase error message, not a generic one
+    expect(result.errorMessage).toBe("Invalid email format");
     expect(mockSupabase.auth.signInWithPassword).not.toHaveBeenCalled();
   });
 

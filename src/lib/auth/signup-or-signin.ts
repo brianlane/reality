@@ -66,9 +66,11 @@ export async function signUpOrSignIn(params: {
     looksLikeExistingUser ||
     (!!signUpError && isAlreadyRegisteredError(signUpError.message));
   if (!canFallback) {
+    // Return the actual Supabase error message for better user feedback
+    // (e.g., rate limit, invalid email, disabled signups, etc.)
     return {
       session: null,
-      errorMessage: "Unable to create account. Please try again.",
+      errorMessage: signUpError?.message || "Unable to create account. Please try again.",
     };
   }
 
