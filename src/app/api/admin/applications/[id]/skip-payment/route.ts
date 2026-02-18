@@ -13,6 +13,7 @@ const RESEARCH_STATUSES = new Set([
   "RESEARCH_IN_PROGRESS",
   "RESEARCH_COMPLETED",
 ]);
+const SKIP_PAYMENT_ELIGIBLE_STATUSES = new Set(["PAYMENT_PENDING"]);
 
 export async function POST(_: Request, { params }: RouteContext) {
   const { id } = await params;
@@ -48,6 +49,13 @@ export async function POST(_: Request, { params }: RouteContext) {
     return errorResponse(
       "INVALID_STATUS",
       "Skip payment is not available for research participants.",
+      400,
+    );
+  }
+  if (!SKIP_PAYMENT_ELIGIBLE_STATUSES.has(existing.applicationStatus)) {
+    return errorResponse(
+      "INVALID_STATUS",
+      `Skip payment is only available for PAYMENT_PENDING applications. Current status: ${existing.applicationStatus}.`,
       400,
     );
   }

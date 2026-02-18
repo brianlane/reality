@@ -41,6 +41,7 @@ export default function AdminApplicationForm({
     notes: "",
     photos: "",
   });
+  const canSkipPayment = form.applicationStatus === "PAYMENT_PENDING";
   const [initialApplicationStatus, setInitialApplicationStatus] = useState<
     string | null
   >(null);
@@ -636,7 +637,12 @@ export default function AdminApplicationForm({
               type="button"
               variant="outline"
               onClick={handleSkipPayment}
-              disabled={isLoading}
+              disabled={isLoading || !canSkipPayment}
+              title={
+                canSkipPayment
+                  ? undefined
+                  : "Skip Payment is only available for PAYMENT_PENDING applicants."
+              }
             >
               Skip Payment
             </Button>

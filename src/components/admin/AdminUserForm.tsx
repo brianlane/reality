@@ -37,6 +37,7 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
     role: "APPLICANT",
     applicationStatus: "SUBMITTED",
   });
+  const canSkipPayment = form.applicationStatus === "PAYMENT_PENDING";
   const [initialApplicationStatus, setInitialApplicationStatus] = useState<
     string | null
   >(null);
@@ -386,7 +387,12 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
                 type="button"
                 variant="outline"
                 onClick={handleSkipPayment}
-                disabled={isLoading}
+                disabled={isLoading || !canSkipPayment}
+                title={
+                  canSkipPayment
+                    ? undefined
+                    : "Skip Payment is only available for PAYMENT_PENDING applicants."
+                }
               >
                 Skip Payment
               </Button>
