@@ -2,9 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [main, develop]  # Run all tests after merge
+    branches: [main, develop] # Run all tests after merge
   pull_request:
-    branches: [main]  # Run all tests on PRs (including from frontend)
+    branches: [main] # Run all tests on PRs (including from frontend)
 
 jobs:
   unit-tests:
