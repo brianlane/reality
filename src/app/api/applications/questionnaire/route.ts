@@ -89,7 +89,7 @@ function isAffirmativeConsentValue(
 
 type InvitedApplicantResult =
   | { applicant: Applicant; isResearchMode: boolean }
-  | { error: string };
+  | { error: string; statusCode: number };
 
 async function requireInvitedApplicant(
   applicationId: string,
@@ -109,7 +109,7 @@ async function requireInvitedApplicant(
   });
 
   if (!applicant) {
-    return { error: "Applicant not found or not invited." };
+    return { error: "Applicant not found or not invited.", statusCode: 404 };
   }
 
   const isResearchApplicant = RESEARCH_ACCESS_STATUSES.includes(
@@ -118,22 +118,33 @@ async function requireInvitedApplicant(
 
   if (isResearchApplicant) {
     if (!applicant.researchInvitedAt) {
-      return { error: ERROR_MESSAGES.APP_NOT_FOUND_OR_INVITED };
+      return {
+        error: ERROR_MESSAGES.APP_NOT_FOUND_OR_INVITED,
+        statusCode: 404,
+      };
     }
     return { applicant, isResearchMode: true };
   }
 
   const auth = await getAuthUser();
   if (!auth?.email) {
-    return { error: ERROR_MESSAGES.SIGN_IN_TO_CONTINUE };
+    // 401 = Unauthorized (authentication required)
+    return { error: ERROR_MESSAGES.SIGN_IN_TO_CONTINUE, statusCode: 401 };
   }
 
   if (auth.email.toLowerCase() !== applicant.user.email.toLowerCase()) {
-    return { error: "You can only access your own application." };
+    // 403 = Forbidden (authenticated but insufficient permissions)
+    return {
+      error: "You can only access your own application.",
+      statusCode: 403,
+    };
   }
 
   if (!NON_RESEARCH_ALLOWED_STATUSES.includes(applicant.applicationStatus)) {
-    return { error: "Questionnaire access is not available for this status." };
+    return {
+      error: "Questionnaire access is not available for this status.",
+      statusCode: 403,
+    };
   }
 
   return { applicant, isResearchMode: false };
@@ -174,7 +185,10 @@ export async function GET(request: NextRequest) {
     // Regular mode requires invited applicant validation
     const access = await requireInvitedApplicant(applicationId);
     if ("error" in access) {
-      return errorResponse("FORBIDDEN", access.error, 403);
+      // Use the specific status code from the access check (401, 403, or 404)
+      const errorCode =
+        access.statusCode === 401 ? "UNAUTHORIZED" : "FORBIDDEN";
+      return errorResponse(errorCode, access.error, access.statusCode);
     }
     isResearchMode = access.isResearchMode;
   }
@@ -285,7 +299,9 @@ export async function POST(request: NextRequest) {
   const pageId = body.pageId;
   const access = await requireInvitedApplicant(applicationId);
   if ("error" in access) {
-    return errorResponse("FORBIDDEN", access.error, 403);
+    // Use the specific status code from the access check (401, 403, or 404)
+    const errorCode = access.statusCode === 401 ? "UNAUTHORIZED" : "FORBIDDEN";
+    return errorResponse(errorCode, access.error, access.statusCode);
   }
 
   // Same filtering logic as GET: research participants see all content,
