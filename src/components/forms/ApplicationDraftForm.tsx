@@ -189,12 +189,13 @@ export default function ApplicationDraftForm({
     const applicationId =
       draft.applicationId ?? storedApplicationId ?? undefined;
 
-    try {
-      const {
-        data: { session: existingSession },
-      } = await supabase.auth.getSession();
+    let session = null;
+    let existingSession = null;
 
-      let session = existingSession;
+    try {
+      const sessionData = await supabase.auth.getSession();
+      existingSession = sessionData.data.session;
+      session = existingSession;
       if (!session) {
         const authResult = await signUpOrSignIn({
           supabase,
@@ -228,6 +229,11 @@ export default function ApplicationDraftForm({
       });
 
       if (!response.ok) {
+        // If application creation failed but auth succeeded, sign out to prevent stranded state
+        // Otherwise user will have a session but no applicant record
+        if (session && !existingSession) {
+          await supabase.auth.signOut();
+        }
         setStatus(ERROR_MESSAGES.FAILED_SAVE_APPLICATION);
         setIsSubmitting(false);
         return;
@@ -251,6 +257,15 @@ export default function ApplicationDraftForm({
       }
     } catch (error) {
       console.error("Demographics submit error:", error);
+      // If application creation failed but auth succeeded, sign out to prevent stranded state
+      // Otherwise user will have a session but no applicant record
+      if (session && !existingSession) {
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutError) {
+          console.error("Failed to sign out after error:", signOutError);
+        }
+      }
       setStatus(ERROR_MESSAGES.FAILED_SAVE_APPLICATION);
       setIsSubmitting(false);
     }

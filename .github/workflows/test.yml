@@ -68,6 +68,20 @@ jobs:
     runs-on: ubuntu-latest
     # Runs on PRs and after merge to main/develop
     # Feature branch pushes are not triggered (controlled at workflow level)
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: pass
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U user -d testdb"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
     env:
       DATABASE_URL: postgresql://user:pass@localhost:5432/testdb
@@ -87,6 +101,9 @@ jobs:
 
       - name: Generate Prisma Client
         run: npx prisma generate
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
 
       - name: Build application
         run: npm run build

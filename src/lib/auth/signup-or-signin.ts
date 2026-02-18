@@ -70,7 +70,8 @@ export async function signUpOrSignIn(params: {
     // (e.g., rate limit, invalid email, disabled signups, etc.)
     return {
       session: null,
-      errorMessage: signUpError?.message || "Unable to create account. Please try again.",
+      errorMessage:
+        signUpError?.message || "Unable to create account. Please try again.",
     };
   }
 
