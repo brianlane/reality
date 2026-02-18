@@ -68,7 +68,9 @@ describe("Application Status Helpers", () => {
 
     it("should return false for WAITLIST_INVITED", () => {
       // WAITLIST_INVITED users should access questionnaire, not dashboard
-      expect(isDashboardRedirectStatus(APP_STATUS.WAITLIST_INVITED)).toBe(false);
+      expect(isDashboardRedirectStatus(APP_STATUS.WAITLIST_INVITED)).toBe(
+        false,
+      );
     });
 
     it("should return true for all research statuses", () => {

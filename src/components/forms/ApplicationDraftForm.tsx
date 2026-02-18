@@ -251,7 +251,7 @@ export default function ApplicationDraftForm({
       }
     } catch (error) {
       console.error("Demographics submit error:", error);
-      setStatus("Failed to save application.");
+      setStatus(ERROR_MESSAGES.FAILED_SAVE_APPLICATION);
       setIsSubmitting(false);
     }
   }
