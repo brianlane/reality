@@ -37,6 +37,10 @@ export default function DemographicsPage() {
   >("unknown");
 
   useEffect(() => {
+    if (hasInviteContext === null) {
+      return;
+    }
+
     let cancelled = false;
 
     const supabase = createSupabaseBrowserClient();
@@ -65,6 +69,21 @@ export default function DemographicsPage() {
         const dashboardJson = await dashboardRes.json().catch(() => null);
         const status = dashboardJson?.application?.status as string | undefined;
 
+        // Recovery path: auth exists but applicant record is missing.
+        // Clear auth so user can complete demographics again via invite context.
+        if (dashboardRes.status === 401 && hasInviteContext) {
+          await supabase.auth.signOut();
+          if (!cancelled) {
+            setSessionState("unauthenticated");
+          }
+          return;
+        }
+
+        if (!dashboardRes.ok) {
+          router.replace("/dashboard");
+          return;
+        }
+
         if (status === "DRAFT") {
           router.replace("/apply/questionnaire");
           return;
@@ -90,7 +109,7 @@ export default function DemographicsPage() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, hasInviteContext]);
 
   const isLoading =
     hasInviteContext === null ||
