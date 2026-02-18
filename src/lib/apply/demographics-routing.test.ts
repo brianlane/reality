@@ -139,7 +139,7 @@ describe("getDemographicsRouteDecision", () => {
       });
     });
 
-    it("should redirect to dashboard for WAITLIST_INVITED status", () => {
+    it("should redirect to questionnaire for WAITLIST_INVITED status", () => {
       const result = getDemographicsRouteDecision({
         status: APP_STATUS.WAITLIST_INVITED,
         dashboardStatusCode: 200,
@@ -148,7 +148,7 @@ describe("getDemographicsRouteDecision", () => {
 
       expect(result).toEqual({
         type: "redirect",
-        href: "/dashboard",
+        href: "/apply/questionnaire",
       });
     });
 

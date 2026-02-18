@@ -32,6 +32,11 @@ export function getDemographicsRouteDecision(params: {
     return { type: "redirect", href: "/apply/payment" };
   }
 
+  if (status === APP_STATUS.WAITLIST_INVITED) {
+    // Authenticated waitlist-invited users should continue to questionnaire
+    return { type: "redirect", href: "/apply/questionnaire" };
+  }
+
   if (DEMOGRAPHICS_TO_DASHBOARD_STATUSES.includes(status as AppStatus)) {
     return { type: "redirect", href: "/dashboard" };
   }
