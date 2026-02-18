@@ -41,12 +41,9 @@ export default function PhotosPage() {
           return;
         }
 
-        // Allow DRAFT and WAITLIST_INVITED users to access photos
-        // (consistent with questionnaire access requirements)
-        if (
-          appStatus !== APP_STATUS.DRAFT &&
-          appStatus !== APP_STATUS.WAITLIST_INVITED
-        ) {
+        // Only DRAFT users can access photos
+        // WAITLIST_INVITED users must fill out demographics first to transition to PAYMENT_PENDING
+        if (appStatus !== APP_STATUS.DRAFT) {
           router.replace("/dashboard");
           return;
         }

@@ -98,9 +98,9 @@ describe("Application Status Helpers", () => {
   });
 
   describe("isQuestionnaireAccessibleStatus", () => {
-    it("should return true for WAITLIST_INVITED", () => {
+    it("should return false for WAITLIST_INVITED", () => {
       expect(isQuestionnaireAccessibleStatus(APP_STATUS.WAITLIST_INVITED)).toBe(
-        true,
+        false,
       );
     });
 

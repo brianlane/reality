@@ -139,7 +139,7 @@ describe("getDemographicsRouteDecision", () => {
       });
     });
 
-    it("should redirect to questionnaire for WAITLIST_INVITED status", () => {
+    it("should redirect to dashboard for WAITLIST_INVITED status without invite context", () => {
       const result = getDemographicsRouteDecision({
         status: APP_STATUS.WAITLIST_INVITED,
         dashboardStatusCode: 200,
@@ -148,7 +148,19 @@ describe("getDemographicsRouteDecision", () => {
 
       expect(result).toEqual({
         type: "redirect",
-        href: "/apply/questionnaire",
+        href: "/dashboard",
+      });
+    });
+
+    it("should reset session for WAITLIST_INVITED status with invite context", () => {
+      const result = getDemographicsRouteDecision({
+        status: APP_STATUS.WAITLIST_INVITED,
+        dashboardStatusCode: 200,
+        hasInviteContext: true,
+      });
+
+      expect(result).toEqual({
+        type: "reset_session_for_invite_recovery",
       });
     });
 

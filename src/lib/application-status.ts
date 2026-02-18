@@ -34,7 +34,7 @@ export const DEMOGRAPHICS_TO_DASHBOARD_STATUSES: readonly AppStatus[] = [
 
 export const QUESTIONNAIRE_NON_RESEARCH_ALLOWED_STATUSES: readonly AppStatus[] =
   [
-    APP_STATUS.WAITLIST_INVITED,
+    // WAITLIST_INVITED removed - they must fill out demographics first to transition to PAYMENT_PENDING
     APP_STATUS.PAYMENT_PENDING,
     APP_STATUS.DRAFT,
   ] as const;
