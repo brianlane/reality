@@ -43,23 +43,33 @@ export default function DemographicsPage() {
 
     let cancelled = false;
 
-    const supabase = createSupabaseBrowserClient();
-    if (!supabase) {
-      queueMicrotask(() => {
+    const run = async () => {
+      const supabase = createSupabaseBrowserClient();
+      if (!supabase) {
+        queueMicrotask(() => {
+          if (!cancelled) {
+            setSessionState("unauthenticated");
+          }
+        });
+        return;
+      }
+
+      let sessionData:
+        | Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]
+        | null = null;
+      try {
+        const { data } = await supabase.auth.getSession();
+        sessionData = data;
+      } catch {
         if (!cancelled) {
           setSessionState("unauthenticated");
         }
-      });
-      return () => {
-        cancelled = true;
-      };
-    }
+        return;
+      }
 
-    supabase.auth
-      .getSession()
-      .then(async ({ data }) => {
+      try {
         if (cancelled) return;
-        if (!data.session) {
+        if (!sessionData?.session) {
           setSessionState("unauthenticated");
           return;
         }
@@ -118,12 +128,17 @@ export default function DemographicsPage() {
         // Unknown states should not land on demographics.
         if (cancelled) return;
         router.replace("/dashboard");
-      })
-      .catch(() => {
+      } catch {
+        // Errors after session confirmation should not downgrade auth state.
+        // Route to dashboard as the safest fallback for authenticated users.
         if (!cancelled) {
-          setSessionState("unauthenticated");
+          router.replace("/dashboard");
         }
-      });
+      }
+    };
+
+    void run();
+
     return () => {
       cancelled = true;
     };
