@@ -272,7 +272,11 @@ export default function ApplicationDraftForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4"
+      key={draft.firstName || "empty"}
+    >
       {isLoadingExistingData && (
         <div className="rounded-md bg-blue-50 p-4 text-sm text-blue-800">
           Loading your information from waitlist...
@@ -543,6 +547,7 @@ export default function ApplicationDraftForm({
           type="password"
           autoComplete="new-password"
           required
+          disabled={isLoadingExistingData}
           value={password}
           onChange={(e) => handlePasswordChange(e.target.value)}
           aria-invalid={!!passwordError}
@@ -561,6 +566,7 @@ export default function ApplicationDraftForm({
           type="password"
           autoComplete="new-password"
           required
+          disabled={isLoadingExistingData}
           value={confirmPassword}
           onChange={(e) => handleConfirmPasswordChange(e.target.value)}
           aria-invalid={!!passwordError}
@@ -569,7 +575,10 @@ export default function ApplicationDraftForm({
           <p className="mt-1 text-sm text-red-500">{passwordError}</p>
         )}
       </div>
-      <Button type="submit" disabled={isSubmitting || !!passwordError}>
+      <Button
+        type="submit"
+        disabled={isSubmitting || !!passwordError || isLoadingExistingData}
+      >
         {isSubmitting ? "Saving..." : "Save and continue"}
       </Button>
       {status && <p className="text-sm text-red-500">{status}</p>}
