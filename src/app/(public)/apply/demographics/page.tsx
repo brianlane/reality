@@ -89,17 +89,28 @@ export default function DemographicsPage() {
           return;
         }
 
+        if (status === "PAYMENT_PENDING") {
+          router.replace("/apply/payment");
+          return;
+        }
+
         if (
           status === "SUBMITTED" ||
           status === "SCREENING_IN_PROGRESS" ||
-          status === "APPROVED"
+          status === "APPROVED" ||
+          status === "REJECTED" ||
+          status === "WAITLIST" ||
+          status === "WAITLIST_INVITED" ||
+          status === "RESEARCH_INVITED" ||
+          status === "RESEARCH_IN_PROGRESS" ||
+          status === "RESEARCH_COMPLETED"
         ) {
           router.replace("/dashboard");
           return;
         }
 
-        // Authenticated applicants should not return to demographics.
-        router.replace("/apply/payment");
+        // Unknown states should not land on demographics.
+        router.replace("/dashboard");
       })
       .catch(() => {
         if (!cancelled) {
