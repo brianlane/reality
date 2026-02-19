@@ -48,6 +48,14 @@ export async function POST(_: Request, { params }: RouteContext) {
     return errorResponse("NOT_FOUND", "Applicant not found", 404);
   }
 
+  if (existing.softRejectedAt) {
+    return errorResponse(
+      "APPLICATION_LOCKED",
+      "Cannot skip payment for soft-rejected applicant.",
+      403,
+    );
+  }
+
   if (RESEARCH_STATUSES.has(existing.applicationStatus)) {
     return errorResponse(
       "INVALID_STATUS",

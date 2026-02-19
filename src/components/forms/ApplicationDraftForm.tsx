@@ -232,7 +232,11 @@ export default function ApplicationDraftForm({
         // If application creation failed but auth succeeded, sign out to prevent stranded state
         // Otherwise user will have a session but no applicant record
         if (session && !existingSession) {
-          await supabase.auth.signOut();
+          try {
+            await supabase.auth.signOut();
+          } catch (signOutError) {
+            console.error("Failed to sign out after error:", signOutError);
+          }
         }
         setStatus(ERROR_MESSAGES.FAILED_SAVE_APPLICATION);
         setIsSubmitting(false);
