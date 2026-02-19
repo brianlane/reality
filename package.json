@@ -18,6 +18,10 @@
     "typecheck": "tsc --noEmit",
     "format:check": "prettier --check . --ignore-path .gitignore",
     "bundle:check": "node scripts/check-bundle-size.mjs",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:e2e": "env -u NO_COLOR FORCE_COLOR=0 playwright test",
     "db:dev": "npx prisma migrate dev",
     "db:studio": "npx prisma studio",
@@ -60,15 +64,18 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/sanitize-html": "^2.16.0",
+    "@vitest/ui": "^4.0.18",
     "babel-plugin-react-compiler": "1.0.0",
     "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "jsdom": "^28.1.0",
     "lightningcss": "^1.31.1",
     "prettier": "^3.2.5",
     "prisma": "^7.4.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.18"
   }
 }

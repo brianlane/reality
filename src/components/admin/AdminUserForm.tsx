@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import { runSkipPaymentFlow } from "@/lib/admin/skip-payment";
 
 type AdminUserFormProps = {
   userId?: string;
@@ -36,6 +37,7 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
     role: "APPLICANT",
     applicationStatus: "SUBMITTED",
   });
+  const canSkipPayment = form.applicationStatus === "PAYMENT_PENDING";
   const [initialApplicationStatus, setInitialApplicationStatus] = useState<
     string | null
   >(null);
@@ -260,6 +262,22 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
     }
   }
 
+  async function handleSkipPayment() {
+    const applicantId = user?.applicant?.id;
+    await runSkipPaymentFlow({
+      applicationId: applicantId,
+      confirmAction: (message) => window.confirm(message),
+      getAuthHeaders,
+      setIsLoading,
+      setError,
+      setSuccess,
+      setApplicationStatusDraft: () => {
+        setForm((prev) => ({ ...prev, applicationStatus: "DRAFT" }));
+        setInitialApplicationStatus("DRAFT");
+      },
+    });
+  }
+
   return (
     <Card className="space-y-4">
       {error ? (
@@ -341,6 +359,21 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
         </Button>
         {mode === "edit" ? (
           <>
+            {user?.applicant ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSkipPayment}
+                disabled={isLoading || !canSkipPayment}
+                title={
+                  canSkipPayment
+                    ? undefined
+                    : "Skip Payment is only available for PAYMENT_PENDING applicants."
+                }
+              >
+                Skip Payment
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"

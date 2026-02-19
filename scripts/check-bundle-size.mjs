@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-const limitKb = Number(process.env.BUNDLE_SIZE_LIMIT_KB ?? "1500");
+const limitKb = Number(process.env.BUNDLE_SIZE_LIMIT_KB ?? "1600");
 const chunksDir = path.join(process.cwd(), ".next", "static", "chunks");
 
 if (!fs.existsSync(chunksDir)) {

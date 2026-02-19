@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import { runSkipPaymentFlow } from "@/lib/admin/skip-payment";
 
 type AdminApplicationFormProps = {
   applicationId?: string;
@@ -40,6 +41,7 @@ export default function AdminApplicationForm({
     notes: "",
     photos: "",
   });
+  const canSkipPayment = form.applicationStatus === "PAYMENT_PENDING";
   const [initialApplicationStatus, setInitialApplicationStatus] = useState<
     string | null
   >(null);
@@ -397,6 +399,21 @@ export default function AdminApplicationForm({
     }
   }
 
+  async function handleSkipPayment() {
+    await runSkipPaymentFlow({
+      applicationId,
+      confirmAction: (message) => window.confirm(message),
+      getAuthHeaders,
+      setIsLoading,
+      setError,
+      setSuccess,
+      setApplicationStatusDraft: () => {
+        setForm((prev) => ({ ...prev, applicationStatus: "DRAFT" }));
+        setInitialApplicationStatus("DRAFT");
+      },
+    });
+  }
+
   return (
     <Card className="space-y-4">
       {error ? (
@@ -592,6 +609,19 @@ export default function AdminApplicationForm({
               disabled={isLoading}
             >
               Soft Reject
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSkipPayment}
+              disabled={isLoading || !canSkipPayment}
+              title={
+                canSkipPayment
+                  ? undefined
+                  : "Skip Payment is only available for PAYMENT_PENDING applicants."
+              }
+            >
+              Skip Payment
             </Button>
             <Button
               type="button"
