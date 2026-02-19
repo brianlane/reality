@@ -82,6 +82,7 @@ export default function PhotosPage() {
       if (!response.ok) {
         const data = await response.json().catch(() => null);
         if (response.status === 401) {
+          setIsSubmitting(false);
           router.push(`/apply/create-password?id=${draft.applicationId}`);
           return;
         }

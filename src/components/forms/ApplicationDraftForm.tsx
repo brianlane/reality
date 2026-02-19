@@ -165,7 +165,7 @@ export default function ApplicationDraftForm({
     const passwordValidation = validatePassword(password, confirmPassword);
     if (!passwordValidation.valid) {
       setPasswordError(passwordValidation.error);
-      setStatus(passwordValidation.error);
+      // Don't set status - passwordError already displays inline and clears in real-time
       setIsSubmitting(false);
       return;
     }
