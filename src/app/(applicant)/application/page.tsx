@@ -60,7 +60,9 @@ export default function ApplicantApplicationPage() {
         <Card>
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-navy">{config.title}</h2>
+              <h2 className="text-lg font-semibold text-navy">
+                {config.title}
+              </h2>
               <span
                 className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${config.badgeClass}`}
               >

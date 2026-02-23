@@ -49,8 +49,7 @@ export default function ApplicantDashboardSummary() {
 
   const status = data.application.status;
   const statusConfig = getApplicationStatusConfig(status);
-  const showActionBanner =
-    status === "DRAFT" || status === "PAYMENT_PENDING";
+  const showActionBanner = status === "DRAFT" || status === "PAYMENT_PENDING";
 
   return (
     <>
@@ -80,24 +79,24 @@ export default function ApplicantDashboardSummary() {
           Application status: {status}
         </p>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
-        <div>
-          <div className="text-2xl font-semibold">
-            {data.stats.eventsAttended}
+          <div>
+            <div className="text-2xl font-semibold">
+              {data.stats.eventsAttended}
+            </div>
+            <div className="text-sm text-navy-soft">Events attended</div>
           </div>
-          <div className="text-sm text-navy-soft">Events attended</div>
-        </div>
-        <div>
-          <div className="text-2xl font-semibold">
-            {data.stats.matchesReceived}
+          <div>
+            <div className="text-2xl font-semibold">
+              {data.stats.matchesReceived}
+            </div>
+            <div className="text-sm text-navy-soft">Matches received</div>
           </div>
-          <div className="text-sm text-navy-soft">Matches received</div>
-        </div>
-        <div>
-          <div className="text-2xl font-semibold">
-            {data.stats.datesCompleted}
+          <div>
+            <div className="text-2xl font-semibold">
+              {data.stats.datesCompleted}
+            </div>
+            <div className="text-sm text-navy-soft">Dates completed</div>
           </div>
-          <div className="text-sm text-navy-soft">Dates completed</div>
-        </div>
         </div>
       </Card>
     </>
