@@ -1,22 +1,47 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Logo from "./Logo";
 import NavAuthActions from "./NavAuthActions";
-
-const navLinks = [
-  { href: "/apply", label: "Join Now", external: false },
-  { href: "/purpose", label: "Purpose", external: false },
-  {
-    href: "mailto:contact@realitymatchmaking.com",
-    label: "Contact",
-    external: true,
-  },
-];
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const [isSignedIn, setIsSignedIn] = useState(false);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) return;
+
+    supabase.auth.getSession().then(({ data }) => {
+      setIsSignedIn(Boolean(data.session));
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsSignedIn(Boolean(session));
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const staticLinks = [
+    { href: "/purpose", label: "Purpose", external: false },
+    {
+      href: "mailto:contact@realitymatchmaking.com",
+      label: "Contact",
+      external: true,
+    },
+  ];
+
+  const firstLink = isSignedIn
+    ? { href: "/dashboard", label: "Dashboard", external: false }
+    : { href: "/apply", label: "Join Now", external: false };
+
+  const navLinks = [firstLink, ...staticLinks];
 
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -51,7 +76,7 @@ export default function Navbar() {
             </Link>
           );
         })}
-        <NavAuthActions />
+        <NavAuthActions isSignedIn={isSignedIn} />
       </nav>
     </header>
   );

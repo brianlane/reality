@@ -56,19 +56,19 @@ export default function ApplicantDashboardSummary() {
   return (
     <>
       {showActionBanner && statusConfig.ctaLabel && statusConfig.ctaHref ? (
-        <Card className="border-amber-200 bg-amber-50">
+        <Card className="border-copper/30 bg-copper/5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="font-semibold text-amber-900">
+              <h2 className="font-semibold text-navy">
                 {statusConfig.title}
               </h2>
-              <p className="mt-1 text-sm text-amber-800">
+              <p className="mt-1 text-sm text-navy-soft">
                 {statusConfig.description}
               </p>
             </div>
             <Link
               href={statusConfig.ctaHref}
-              className="inline-flex shrink-0 items-center justify-center rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-800"
+              className="inline-flex shrink-0 items-center justify-center rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition hover:bg-copper"
             >
               {statusConfig.ctaLabel}
             </Link>

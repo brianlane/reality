@@ -1,35 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import SignOutButton from "@/components/layout/SignOutButton";
 
-export default function NavAuthActions() {
-  const [isSignedIn, setIsSignedIn] = useState(false);
+type Props = {
+  isSignedIn: boolean;
+};
+
+export default function NavAuthActions({ isSignedIn }: Props) {
   const pathname = usePathname();
-
-  useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    if (!supabase) {
-      // Supabase not configured, stay signed out
-      return;
-    }
-    supabase.auth.getSession().then(({ data }) => {
-      setIsSignedIn(Boolean(data.session));
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsSignedIn(Boolean(session));
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
 
   if (isSignedIn) {
     return (
