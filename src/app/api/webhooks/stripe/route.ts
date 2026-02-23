@@ -36,10 +36,13 @@ export async function POST(request: Request) {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
       paymentId = paymentIntent.metadata?.paymentId;
       stripePaymentIntentId = paymentIntent.id;
-    } else if (event.type === "checkout.session.completed") {
+    } else if (
+      event.type === "checkout.session.completed" ||
+      event.type === "checkout.session.async_payment_succeeded" ||
+      event.type === "checkout.session.async_payment_failed"
+    ) {
       const session = event.data.object as Stripe.Checkout.Session;
       paymentId = session.metadata?.paymentId;
-      // Extract the Payment Intent ID from the checkout session
       stripePaymentIntentId =
         typeof session.payment_intent === "string"
           ? session.payment_intent
@@ -99,8 +102,19 @@ export async function POST(request: Request) {
       status = "SUCCEEDED";
     } else if (event.type === "payment_intent.payment_failed") {
       status = "FAILED";
-    } else if (event.type === "checkout.session.completed") {
+    } else if (event.type === "checkout.session.async_payment_succeeded") {
       status = "SUCCEEDED";
+    } else if (event.type === "checkout.session.async_payment_failed") {
+      status = "FAILED";
+    } else if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      // Only mark succeeded when payment is already collected.
+      // For async methods (ACH, bank debits), payment_status is "unpaid" at
+      // session completion — the actual result arrives via
+      // checkout.session.async_payment_succeeded/failed handled above.
+      if (session.payment_status === "paid") {
+        status = "SUCCEEDED";
+      }
     }
 
     if (paymentId && status) {
