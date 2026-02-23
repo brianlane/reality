@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
+import { getApplicationStatusConfig } from "@/lib/applicant-status-ui";
 
 type DashboardResponse = {
   application: { id: string; status: string; submittedAt?: string | null };
@@ -47,44 +48,28 @@ export default function ApplicantDashboardSummary() {
   }
 
   const status = data.application.status;
+  const statusConfig = getApplicationStatusConfig(status);
+  const showActionBanner =
+    status === "DRAFT" || status === "PAYMENT_PENDING";
 
   return (
     <>
-      {status === "DRAFT" ? (
+      {showActionBanner && statusConfig.ctaLabel && statusConfig.ctaHref ? (
         <Card className="border-amber-200 bg-amber-50">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-semibold text-amber-900">
-                Complete Your Application
+                {statusConfig.title}
               </h2>
               <p className="mt-1 text-sm text-amber-800">
-                Your access fee has been processed. Please fill out the
-                questionnaire and upload your photos to submit.
+                {statusConfig.description}
               </p>
             </div>
             <Link
-              href="/apply/questionnaire"
+              href={statusConfig.ctaHref}
               className="inline-flex shrink-0 items-center justify-center rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-800"
             >
-              Continue Application
-            </Link>
-          </div>
-        </Card>
-      ) : null}
-      {status === "PAYMENT_PENDING" ? (
-        <Card className="border-amber-200 bg-amber-50">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="font-semibold text-amber-900">Payment Required</h2>
-              <p className="mt-1 text-sm text-amber-800">
-                Please complete your application fee payment to continue.
-              </p>
-            </div>
-            <Link
-              href="/apply/payment"
-              className="inline-flex shrink-0 items-center justify-center rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-800"
-            >
-              Complete Payment
+              {statusConfig.ctaLabel}
             </Link>
           </div>
         </Card>

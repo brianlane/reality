@@ -30,50 +30,51 @@ export default function ApplicantSettingsPage() {
 
     setIsSubmitting(true);
 
-    const supabase = createSupabaseBrowserClient();
-    if (!supabase) {
-      setErrorMessage("Authentication is not configured.");
+    try {
+      const supabase = createSupabaseBrowserClient();
+      if (!supabase) {
+        setErrorMessage("Authentication is not configured.");
+        return;
+      }
+
+      // Re-authenticate with current password first
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user?.email) {
+        setErrorMessage("You must be signed in to change your password.");
+        return;
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+
+      if (signInError) {
+        setErrorMessage("Current password is incorrect.");
+        return;
+      }
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (updateError) {
+        setErrorMessage(updateError.message);
+        return;
+      }
+
+      setSuccessMessage("Password updated successfully.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch {
+      setErrorMessage("An unexpected error occurred. Please try again.");
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-
-    // Re-authenticate with current password first
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user?.email) {
-      setErrorMessage("You must be signed in to change your password.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: currentPassword,
-    });
-
-    if (signInError) {
-      setErrorMessage("Current password is incorrect.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-
-    if (updateError) {
-      setErrorMessage(updateError.message);
-      setIsSubmitting(false);
-      return;
-    }
-
-    setSuccessMessage("Password updated successfully.");
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setIsSubmitting(false);
   };
 
   return (
