@@ -1,28 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useIsSignedIn } from "@/hooks/useIsSignedIn";
 
 export default function HomeCTA() {
-  const [isSignedIn, setIsSignedIn] = useState(false);
-
-  useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    if (!supabase) return;
-
-    supabase.auth.getSession().then(({ data }) => {
-      setIsSignedIn(Boolean(data.session));
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsSignedIn(Boolean(session));
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const isSignedIn = useIsSignedIn();
 
   if (isSignedIn) {
     return (

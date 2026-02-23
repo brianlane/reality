@@ -1,32 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Logo from "./Logo";
 import NavAuthActions from "./NavAuthActions";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useIsSignedIn } from "@/hooks/useIsSignedIn";
 
 export default function Navbar() {
   const pathname = usePathname();
-  const [isSignedIn, setIsSignedIn] = useState(false);
-
-  useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    if (!supabase) return;
-
-    supabase.auth.getSession().then(({ data }) => {
-      setIsSignedIn(Boolean(data.session));
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsSignedIn(Boolean(session));
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const isSignedIn = useIsSignedIn();
 
   const staticLinks = [
     { href: "/purpose", label: "Purpose", external: false },

@@ -59,9 +59,7 @@ export default function ApplicantDashboardSummary() {
         <Card className="border-copper/30 bg-copper/5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="font-semibold text-navy">
-                {statusConfig.title}
-              </h2>
+              <h2 className="font-semibold text-navy">{statusConfig.title}</h2>
               <p className="mt-1 text-sm text-navy-soft">
                 {statusConfig.description}
               </p>
