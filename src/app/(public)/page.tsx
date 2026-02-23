@@ -1,5 +1,5 @@
-import Link from "next/link";
 import LogoCircles from "@/components/layout/LogoCircles";
+import HomeCTA from "@/components/layout/HomeCTA";
 
 export default function HomePage() {
   return (
@@ -20,22 +20,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Buttons below */}
+        {/* Auth-aware CTA buttons */}
         <div className="flex flex-col items-center gap-3 w-full max-w-md">
-          <div className="w-full flex flex-col items-center gap-2">
-            <Link
-              href="/apply"
-              className="w-full rounded-md bg-navy px-8 py-4 text-center text-base font-medium text-white hover:bg-copper transition-colors"
-            >
-              Join Now
-            </Link>
-          </div>
-          <Link
-            href="/sign-in"
-            className="w-full rounded-md border border-slate-300 px-8 py-4 text-center text-base font-medium text-navy hover:border-copper hover:text-copper transition-colors"
-          >
-            Sign in
-          </Link>
+          <HomeCTA />
         </div>
       </div>
     </section>

@@ -4,19 +4,26 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Logo from "./Logo";
 import NavAuthActions from "./NavAuthActions";
-
-const navLinks = [
-  { href: "/apply", label: "Join Now", external: false },
-  { href: "/purpose", label: "Purpose", external: false },
-  {
-    href: "mailto:contact@realitymatchmaking.com",
-    label: "Contact",
-    external: true,
-  },
-];
+import { useIsSignedIn } from "@/hooks/useIsSignedIn";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const isSignedIn = useIsSignedIn();
+
+  const staticLinks = [
+    { href: "/purpose", label: "Purpose", external: false },
+    {
+      href: "mailto:contact@realitymatchmaking.com",
+      label: "Contact",
+      external: true,
+    },
+  ];
+
+  const firstLink = isSignedIn
+    ? { href: "/dashboard", label: "Dashboard", external: false }
+    : { href: "/apply", label: "Join Now", external: false };
+
+  const navLinks = [firstLink, ...staticLinks];
 
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -51,7 +58,7 @@ export default function Navbar() {
             </Link>
           );
         })}
-        <NavAuthActions />
+        <NavAuthActions isSignedIn={isSignedIn} />
       </nav>
     </header>
   );

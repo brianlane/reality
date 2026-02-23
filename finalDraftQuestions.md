@@ -88,9 +88,9 @@
 
 ### Section B: Dating Preferences
 
-16. How do you typically like to meet new people? `[TEXTAREA]`
-17. What are your thoughts about dating apps? `[TEXTAREA]`
-18. What is usually missing from the past people you've gone on dates with? `[TEXTAREA]`
+16. How do you typically like to meet new people? `[DROPDOWN: Through mutual friends in social settings, At organized events or activities (classes clubs meetups), Through work or professional networking, Spontaneously in everyday life (coffee shops gym bookstores), Through dating apps or online platforms, I prefer being introduced by others, I rarely seek to meet new people outside my current circle]`
+17. What are your thoughts about dating apps? `[DROPDOWN: Positive - they're an effective way to meet compatible people, Neutral - useful tool but not my preferred method, Skeptical - I prefer organic in-person connections, Negative - I find them superficial and avoid them, Mixed feelings - they have significant pros and cons, Open-minded - haven't used them much but willing to try, Experienced user - I've used them extensively with varying results]`
+18. What is usually missing from the past people you've gone on dates with? `[DROPDOWN: Deep emotional connection and vulnerability, Intellectual stimulation and curiosity, Physical chemistry or attraction, Shared life values and priorities, Ambition and drive toward goals, Compatible sense of humor, Emotional availability and communication skills, Lifestyle compatibility (hobbies social preferences interests), Long-term vision and relationship goal alignment, Authenticity and genuine self-expression]`
 
 ### Section C: Past Relationship Patterns
 
@@ -173,9 +173,9 @@
 52. Which better describes your view: "Money is a tool for immediate adventure and experiences," or "Money is a foundation for future security and legacy"? `[DROPDOWN: Tool for immediate adventure and experiences, Foundation for future security and legacy, A balance of both]`
 53. How would you describe your spending style: "I prioritize saving and long-term investment," or "I prioritize high-luxury experiences and immediate adventure"? `[DROPDOWN: Prioritize saving and long-term investment, Prioritize high-luxury experiences, A balance of both]`
 54. Which feels more aligned with your goals: "I want to reach my peak financial stability before settling down," or "I want a partner who will navigate the climb toward financial stability with me"? `[DROPDOWN: Reach peak stability before settling down, Navigate the climb together, Either works for me]`
-55. What do you typically spend your money on? `[TEXTAREA]`
-56. What do you not spend your money on? `[TEXTAREA]`
-57. What do you save your money for? `[TEXTAREA]`
+55. What do you typically spend your money on? (Select all that apply) `[CHECKBOXES: Housing and utilities, Food and groceries, Dining out and restaurants, Transportation (car gas public transit), Travel and vacations, Clothing and fashion, Entertainment (movies concerts events), Hobbies and recreation, Technology and gadgets, Health and fitness, Education and personal development, Gifts and celebrations, Charitable donations, Savings and investments, Other]`
+56. What do you not spend your money on? (Select all that apply) `[CHECKBOXES: Luxury or designer items, Expensive dining, Fast fashion, Latest technology, Subscriptions and memberships, Travel, Alcohol or nightlife, Expensive hobbies, Home decor, Beauty products or services, I spend on most things, Other]`
+57. What do you save your money for? (Select all that apply) `[CHECKBOXES: Emergency fund, Retirement, Down payment on a home, Travel and experiences, Starting or growing a business, Education or further learning, Major purchases (car home renovations etc), Children or family future, Financial independence or early retirement, I don't actively save, Other]`
 58. Do you prefer separate banking accounts or everything shared financially in a relationship? `[DROPDOWN: Separate accounts, Everything shared, A mix of both]`
 59. Would you be willing to spend money on vacation to visit your partner's friends (for a wedding or just to meet them)? `[DROPDOWN: Yes absolutely, Yes but within reason, Probably not, No]`
 
@@ -188,7 +188,7 @@
 
 62. On average, how many hours per week do you dedicate to your professional endeavors, including "after-hours" emails or social obligations? `[TEXT:number]`
 63. Which best describes your typical work day? `[DROPDOWN: Fixed 9-to-5, Irregular/on-call, Self-directed/entrepreneurial]`
-64. Do you have established boundaries between your professional and personal life (e.g., "no phones during dinner" or "no work on weekends"), and how strictly do you adhere to them? `[TEXTAREA]`
+64. What best describes your work-life boundaries? `[DROPDOWN: Strict boundaries - I always maintain clear separation, Clear boundaries - I mostly maintain separation with occasional exceptions, Flexible boundaries - I have guidelines but often cross them, Loose boundaries - Work and personal life frequently blend, No boundaries - I'm always available for work, My work requires constant availability]`
 65. Does your role allow for remote work, or does it require you to be physically present at a specific office or site? `[DROPDOWN: Fully remote, Hybrid, Fully in-person]`
 66. How often does your career require you to be away from home? `[DROPDOWN: Rarely, Occasionally (1-2 times per month), Often (weekly/extended stays)]`
 67. Do you maintain multiple residences or spend significant portions of the year in different cities? `[DROPDOWN: Yes, No]`
@@ -268,7 +268,7 @@
 
 ### Section A: Screen Time
 
-101. What is your daily average screen time? `[TEXT:number]`
+101. What is your daily average screen time? (Avg. Hours)`[TEXT:number]`
 102. When you receive a non-emergency notification during a face-to-face conversation, do you feel a physical urge to check it immediately, or can you wait until the interaction concludes? `[DROPDOWN: Feel urge to check immediately, Can wait until interaction concludes, It depends]`
 
 ### Section B: Phone Privacy & Transparency
@@ -298,22 +298,31 @@
 ### Section B: Social Time Allocation
 
 111. Do you believe that a partner is responsible for being your "everything" (best friend, hobby partner, and lover), or do you rely on a separate social circle to meet your non-romantic needs? `[DROPDOWN: Partner is my everything, Rely on separate social circle, A mix of both]`
-112. On a typical weekend, what ratio of your time should be spent with friends/extended family versus just the two of you? `[TEXT]`
+112. On a typical weekend, what ratio of your time should be spent with friends/extended family versus just the two of you? `[DROPDOWN: Mostly couple time (80%+ together), More couple time than social (60-80% together), Balanced split (around 50/50), More social time than couple (60-80% with friends/family), Mostly social time (80%+ with friends/family), It varies greatly]`
 113. Do you prefer your friend circle to be separate from your partner's, partially shared, or completely shared? `[DROPDOWN: Separate, Partially shared, Completely shared]`
 
-### Section C: Social Preferences
+### Section C: Substance Use Frequency
 
-114. How social do you yoou prefer to be in a relationship? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-115. How do you like to party and when? `[DROPDOWN: Often and until the sun rises, Sometimes and come back home at a reasonable time, Rarely or never]`
-116. Does the thought of meeting your partner's friends make you anxious or excited? `[DROPDOWN: Anxious, Excited, A mix of both, Neutral]`
+114. How often do you consume nicotine? `[DROPDOWN: Never, Rarely (less than monthly), Monthly, Weekly, Daily]`
+115. How often do you consume alcohol? `[DROPDOWN: Never, Rarely (less than monthly), Monthly, Weekly, Daily]`
+116. How often do you consume marijuana? `[DROPDOWN: Never, Rarely (less than monthly), Monthly, Weekly, Daily]`
+
+### Section D: Social Preferences
+
+117. How social do you you prefer to be in a relationship? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+118. How do you like to party and when? `[DROPDOWN: Often and until the sun rises, Sometimes and come back home at a reasonable time, Rarely or never]`
+119. Does the thought of meeting your partner's friends make you anxious or excited? `[DROPDOWN: Anxious, Excited, A mix of both, Neutral]`
 
 ---
 
 ## Page 12: Politics & Civic Engagement
 
-117. Did you vote in the last local elections? `[DROPDOWN: Yes, No, Not eligible]`
-118. Did you vote in the last national election? For more than just the presidential election? `[DROPDOWN: Yes for all races, Yes but only presidential, No, Not eligible]`
-119. How important is political alignment with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+### Section A: Political Preferences
+
+120. Did you vote in the last local elections? `[DROPDOWN: Yes, No, Not eligible]`
+121. Did you vote in the last national election? For more than just the presidential election? `[DROPDOWN: Yes for all races, Yes but only presidential, No, Not eligible]`
+122. How important is political alignment with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+123. How would you describe your political stance? `[DROPDOWN: Very progressive/left, Progressive/left, Moderate/centrist, Conservative/right, Very conservative/right, Libertarian, Independent/no strong affiliation, Prefer not to say]`
 
 ---
 
@@ -321,16 +330,16 @@
 
 ### Section A: General Anxiety
 
-120. How would you rate your general worry level? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-121. What do you typically worry about in general? `[TEXTAREA]`
-122. How would you rate your social anxiety level? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-123. How much do you worry specifically in relationships? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+124. How would you rate your general worry level? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+125. What do you typically worry about in general? `[TEXTAREA]`
+126. How would you rate your social anxiety level? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+127. How much do you worry specifically in relationships? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 
 ### Section B: Emotional Self-Awareness
 
-124. How well do you think you know yourself? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-125. In a relationship do you see yourself changing your boundaries or changing your partner? `[DROPDOWN: Changing my boundaries, Changing my partner, Both, Neither]`
-126. Are you "therapy-positive" or committed to emotional self-regulation? `[DROPDOWN: Yes I am therapy-positive, Working on it, Not particularly, Prefer other methods]`
+128. How well do you think you know yourself? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+129. In a relationship do you see yourself changing your boundaries or changing your partner? (Example: Your partner frequently stays out late for fun) `[DROPDOWN: Changing my boundaries, Changing my partner, Both, Neither]`
+130. Are you "therapy-positive" or committed to emotional self-regulation? `[DROPDOWN: Yes I am therapy-positive, Working on it, Not particularly, Prefer other methods]`
 
 ---
 
@@ -338,29 +347,28 @@
 
 ### Section A: Lifestyle
 
-127. What are your views on substance use? (Specify views on casual vs. regular use) `[TEXTAREA]`
-128. How important is health and lifestyle compatibility (gym, diet, social battery)? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-129. Do you have pets, and how do you feel about a partner having pets? `[TEXTAREA]`
+131. How important is substance (alcohol/marijuana) use compatibility (casual vs. regular use vs. none)? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+132. How important is health and lifestyle compatibility (gym, diet, social battery)? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+133. Do you have pets? `[DROPDOWN: Yes, No]`
+134. How do you feel about a partner having pets? `[DROPDOWN: Very comfortable - I love pets, Comfortable - I'm open to pets, Neutral, Uncomfortable - I'd prefer no pets, Very uncomfortable - I'm allergic or cannot accommodate]`
 
-### Section B: Core Values
+### Section B: Values and Religion
 
-130. How important is religious or spiritual alignment with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-131. What are your views on gender roles versus expectations in a relationship? `[TEXTAREA]`
-132. How important is it that your partner is driven/goal-oriented and willing to grow? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-133. How important is independence level compatibility? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+135. What is your religious or spiritual affiliation? `[DROPDOWN: Christianity - Catholic, Christianity - Protestant, Christianity - Orthodox, Christianity - Other, Judaism, Islam, Buddhism, Hinduism, Sikhism, Atheist, Agnostic, Spiritual but not religious, No religious or spiritual affiliation, Prefer not to say, Other]`
+136. How important is religious or spiritual alignment with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+137. How many days per week do you participate in spiritual or religious activities? `[DROPDOWN: 0 days, 1 day, 2 days, 3 days, 4 days, 5 days, 6 days, 7 days]`
+138. Which religious or spiritual practices do you engage in? (Select all that apply) `[CHECKBOXES: Prayer or meditation, Attending religious services or gatherings, Reading sacred or spiritual texts, Yoga or mindfulness practice, Community service or charity work, Fasting or dietary observances, Sabbath or day of rest observance, Pilgrimage or spiritual retreats, Study groups or religious classes, None, Other]`
+139. What are your views on gender roles versus expectations in a relationship? `[TEXTAREA]`
+140. How important is it that your partner is driven/goal-oriented and willing to grow? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+141. How important is independence level compatibility? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 
-### Section C: Communication & Respect
+### Section C: Rate the Importance of Similarities
 
-134. How would you describe your communication style and need for transparency/honesty? `[TEXTAREA]`
-135. What is your expectation for respect level in a relationship? (Consider: needy texts, anger management, yelling, entitlement) `[TEXTAREA]`
-
-### Section D: Rate the Importance of Similarities
-
-136. Music taste with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-137. Genre of a movie/book preference? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-138. The type and amount of activities prefered in your freetime? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-139. Shared sense of humor? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-140. How important is it that your partner is open to trying new things with you? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+142. Music taste with your partner? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+143. Genre of a movie/book preference? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+144. The type and amount of activities prefered in your freetime? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+145. Shared sense of humor? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+146. How important is it that your partner is open to trying new things with you? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 
 ---
 
@@ -368,13 +376,15 @@
 
 ### Section A: Priorities Allocation
 
-141. You have 100 points to distribute across the five pillars below. The more points you assign, the less willing you are to compromise in that area. `[POINT_ALLOCATION:100: Education (Pedigree and intellectual background), Profession (Status and income and ambition), Attractiveness (Facial symmetry and the spark), Body Type (Build and fitness habits and physical shape), Location (Proximity and willingness to relocate)]`
+147. You have 100 points to distribute across the five pillars below. The more points you assign, the less willing you are to compromise in that area. `[POINT_ALLOCATION:100: Education (Pedigree and intellectual background), Profession (Status and income and ambition), Attractiveness (Facial symmetry and the spark), Body Type (Build and fitness habits and physical shape), Location (Proximity and willingness to relocate)]`
 
 ### Section B: Quality Ranking
 
-142. Please rank the following from 1 (Most Important) to 5 (Least Important) in terms of what are a priority in your life. `[RANKING: Friends, Family, Work, Phone, Social media]`
+148. Please rank the following from 1 (Most Important) to 5 (Least Important) in terms of what are a priority in your life. `[RANKING: Friends, Family, Work, Phone, Social media]`
 
-143. Please rank the following qualities from 1 (Most Critical) to 7 (Least Critical) for your ideal partner. `[RANKING: Trust, Emotional Intelligence, Growth Mindset, Accountability, Resilience, Loyalty, Intellectual Curiosity]`
+149. Please rank the following life values from 1 (Most Important) to 10 (Least Important) in terms of their priority in your life. `[RANKING: Community Life and Citizenship, Education and Learning, Family, Social Life and Friendship, Health and Self-Care, Intimate Romantic Relationship, Parenting, Recreation and Leisure, Spirituality and Faith, Work and Career]`
+
+150. Please rank the following qualities from 1 (Most Critical) to 7 (Least Critical) for your ideal partner. `[RANKING: Trust, Emotional Intelligence, Growth Mindset, Accountability, Resilience, Loyalty, Intellectual Curiosity]`
 
 ---
 
@@ -384,19 +394,19 @@
 
 ### Section A: Questionnaire Feedback
 
-144. Overall, how did you feel about this questionnaire? `[TEXTAREA]`
+151. Overall, how did you feel about this questionnaire? `[TEXTAREA]`
 
-145. Were there any questions you particularly liked or found valuable? If so, which ones and why? `[TEXTAREA]`
+152. Were there any questions you particularly liked or found valuable? If so, which ones and why? `[TEXTAREA]`
 
-146. Are there any questions you believe should be removed from this questionnaire? Please list them and explain your reasoning. `[TEXTAREA]`
+153. Are there any questions you believe should be removed from this questionnaire? Please list them and explain your reasoning. `[TEXTAREA]`
 
-147. Is there anything important about compatibility or relationships that you feel this questionnaire failed to ask about? `[TEXTAREA]`
+154. Is there anything important about compatibility or relationships that you feel this questionnaire failed to ask about? `[TEXTAREA]`
 
 ---
 
 ## Summary Statistics
 
-- **Total Questions:** 147 (143 standard + 4 research feedback)
+- **Total Questions:** 154 (150 standard + 4 research feedback)
 - **Pages:** 17 (including Page 0: Consent & Agreements and Page 16: Research Feedback)
 - **Consent Page Questions:** 11 (covering service consent, research participation, and terms)
 - **Research-Only Questions:** 5 (Page 16, visible only to research participants)

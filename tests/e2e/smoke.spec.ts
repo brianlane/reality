@@ -113,7 +113,7 @@ test.skip("application flow navigates through steps", async ({ page }) => {
       // First call: payment creation (status is PAYMENT_PENDING)
       await route.fulfill({
         json: {
-          paymentUrl: "https://mock.stripe.local/session/test",
+          checkoutUrl: "https://checkout.stripe.com/c/pay/test_session",
           applicationId: "appl_123",
         },
       });
@@ -147,12 +147,14 @@ test.skip("application flow navigates through steps", async ({ page }) => {
   await page.getByRole("button", { name: "Save and continue" }).click();
   await expect(page).toHaveURL(/apply\/payment/);
 
-  // Payment step
-  await page.getByRole("button", { name: "Start payment" }).click();
-  await expect(page.getByText("Payment session created")).toBeVisible();
+  // Payment step - click initiates Stripe Checkout redirect
+  await page.getByRole("button", { name: "Pay Application Fee" }).click();
+  await expect(
+    page.getByText("Redirecting to secure checkout..."),
+  ).toBeVisible();
 
   // Simulate payment success by manually navigating to questionnaire
-  // (In real flow, Stripe webhook would update status to DRAFT and user would navigate back)
+  // (In real flow, Stripe redirects to checkout, webhook updates status to DRAFT, user returns)
   await page.goto("/apply/questionnaire");
   await page.waitForLoadState("networkidle");
 
