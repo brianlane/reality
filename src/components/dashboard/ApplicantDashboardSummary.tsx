@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
+import { APP_STATUS } from "@/lib/application-status";
 import { getApplicationStatusConfig } from "@/lib/applicant-status-ui";
 
 type DashboardResponse = {
@@ -49,7 +50,8 @@ export default function ApplicantDashboardSummary() {
 
   const status = data.application.status;
   const statusConfig = getApplicationStatusConfig(status);
-  const showActionBanner = status === "DRAFT" || status === "PAYMENT_PENDING";
+  const showActionBanner =
+    status === APP_STATUS.DRAFT || status === APP_STATUS.PAYMENT_PENDING;
 
   return (
     <>

@@ -1,3 +1,6 @@
+import { APP_STATUS } from "@/lib/application-status";
+import { STATUS_CONTENT } from "@/lib/status-content";
+
 export type StatusActionConfig = {
   /** Shown as the card/page title */
   title: string;
@@ -15,7 +18,8 @@ export type StatusActionConfig = {
 
 export function getApplicationStatusConfig(status: string): StatusActionConfig {
   switch (status) {
-    case "DRAFT":
+    // Action-oriented overrides: copy is intentionally different from email/admin content
+    case APP_STATUS.DRAFT:
       return {
         title: "Complete Your Application",
         description:
@@ -25,7 +29,7 @@ export function getApplicationStatusConfig(status: string): StatusActionConfig {
         badge: "In Progress",
         badgeClass: "bg-amber-100 text-amber-800",
       };
-    case "PAYMENT_PENDING":
+    case APP_STATUS.PAYMENT_PENDING:
       return {
         title: "Payment Required",
         description:
@@ -35,31 +39,8 @@ export function getApplicationStatusConfig(status: string): StatusActionConfig {
         badge: "Payment Pending",
         badgeClass: "bg-amber-100 text-amber-800",
       };
-    case "SUBMITTED":
-      return {
-        title: "Application Submitted",
-        description:
-          "Your application is under review. Our team will be in touch soon.",
-        badge: "Submitted",
-        badgeClass: "bg-blue-100 text-blue-800",
-      };
-    case "SCREENING_IN_PROGRESS":
-      return {
-        title: "Under Review",
-        description:
-          "Your application is currently being reviewed by our team.",
-        badge: "Under Review",
-        badgeClass: "bg-blue-100 text-blue-800",
-      };
-    case "APPROVED":
-      return {
-        title: "Application Approved",
-        description:
-          "Congratulations! Your application has been approved. Welcome to Reality Matchmaking.",
-        badge: "Approved",
-        badgeClass: "bg-green-100 text-green-800",
-      };
-    case "REJECTED":
+    case APP_STATUS.REJECTED:
+      // Portal uses direct language; email uses soft "Application Update" copy
       return {
         title: "Application Not Approved",
         description:
@@ -67,45 +48,76 @@ export function getApplicationStatusConfig(status: string): StatusActionConfig {
         badge: "Not Approved",
         badgeClass: "bg-red-100 text-red-800",
       };
-    case "WAITLIST":
+    case APP_STATUS.WAITLIST_INVITED:
+      // Portal directs to email; STATUS_CONTENT says "Click below" (email CTA language)
       return {
-        title: "On the Waitlist",
-        description:
-          "You're on our waitlist. We'll reach out when a spot opens up.",
-        badge: "Waitlisted",
-        badgeClass: "bg-slate-100 text-slate-700",
-      };
-    case "WAITLIST_INVITED":
-      return {
-        title: "Invited Off Waitlist",
+        title: STATUS_CONTENT.WAITLIST_INVITED.title,
         description:
           "You've been invited to continue your application. Check your email for next steps.",
         badge: "Invited",
         badgeClass: "bg-green-100 text-green-800",
       };
-    case "RESEARCH_INVITED":
+    case APP_STATUS.RESEARCH_INVITED:
+      // Portal directs to email link; STATUS_CONTENT says "link below" (email CTA language)
       return {
-        title: "Research Invitation Ready",
+        title: STATUS_CONTENT.RESEARCH_INVITED.title,
         description:
           "You have been invited to help validate our questionnaire. Use the link from your email to start or resume the research questionnaire.",
         badge: "Research Invited",
         badgeClass: "bg-purple-100 text-purple-800",
       };
-    case "RESEARCH_IN_PROGRESS":
+    case APP_STATUS.RESEARCH_IN_PROGRESS:
+      // Portal directs to email link; STATUS_CONTENT omits the email reference
       return {
-        title: "Research Questionnaire in Progress",
+        title: STATUS_CONTENT.RESEARCH_IN_PROGRESS.title,
         description:
           "Thanks for helping with our research. Use the link from your email to continue where you left off.",
         badge: "Research In Progress",
         badgeClass: "bg-purple-100 text-purple-800",
       };
-    case "RESEARCH_COMPLETED":
+
+    // Shared with STATUS_CONTENT: titles and descriptions pulled from single source of truth
+    case APP_STATUS.SUBMITTED:
       return {
-        title: "Research Completed",
-        description:
-          "Thank you for completing the research questionnaire. Your responses have been recorded.",
+        title: STATUS_CONTENT.SUBMITTED.title,
+        description: STATUS_CONTENT.SUBMITTED.description,
+        badge: "Submitted",
+        badgeClass: "bg-blue-100 text-blue-800",
+      };
+    case APP_STATUS.SCREENING_IN_PROGRESS:
+      return {
+        title: STATUS_CONTENT.SCREENING_IN_PROGRESS.title,
+        description: STATUS_CONTENT.SCREENING_IN_PROGRESS.description,
+        badge: "Under Review",
+        badgeClass: "bg-blue-100 text-blue-800",
+      };
+    case APP_STATUS.APPROVED:
+      return {
+        title: STATUS_CONTENT.APPROVED.title,
+        description: STATUS_CONTENT.APPROVED.description,
+        badge: "Approved",
+        badgeClass: "bg-green-100 text-green-800",
+      };
+    case APP_STATUS.WAITLIST:
+      return {
+        title: STATUS_CONTENT.WAITLIST.title,
+        description: STATUS_CONTENT.WAITLIST.description,
+        badge: "Waitlisted",
+        badgeClass: "bg-slate-100 text-slate-700",
+      };
+    case APP_STATUS.RESEARCH_COMPLETED:
+      return {
+        title: STATUS_CONTENT.RESEARCH_COMPLETED.title,
+        description: STATUS_CONTENT.RESEARCH_COMPLETED.description,
         badge: "Research Completed",
         badgeClass: "bg-green-100 text-green-800",
+      };
+    case "SOFT_REJECTED": // not in APP_STATUS constants
+      return {
+        title: STATUS_CONTENT.SOFT_REJECTED.title,
+        description: STATUS_CONTENT.SOFT_REJECTED.description,
+        badge: "Under Review",
+        badgeClass: "bg-blue-100 text-blue-800",
       };
     default:
       return {

@@ -19,14 +19,14 @@ export default function ApplicantApplicationPage() {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch("/api/applicant/dashboard", { signal: controller.signal })
+    fetch("/api/applicant/application", { signal: controller.signal })
       .then(async (res) => {
         const json = await res.json();
         if (!res.ok || json?.error) {
           setError("Failed to load application status.");
           return;
         }
-        setData(json.application as ApplicationData);
+        setData(json as ApplicationData);
       })
       .catch((err) => {
         if (err.name !== "AbortError") {
