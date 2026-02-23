@@ -268,7 +268,7 @@
 
 ### Section A: Screen Time
 
-101. What is your daily average screen time? `[TEXT:number]`
+101. What is your daily average screen time? (Avg. Hours)`[TEXT:number]`
 102. When you receive a non-emergency notification during a face-to-face conversation, do you feel a physical urge to check it immediately, or can you wait until the interaction concludes? `[DROPDOWN: Feel urge to check immediately, Can wait until interaction concludes, It depends]`
 
 ### Section B: Phone Privacy & Transparency
