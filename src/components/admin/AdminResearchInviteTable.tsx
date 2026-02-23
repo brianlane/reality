@@ -38,6 +38,7 @@ export default function AdminResearchInviteTable({
   const [error, setError] = useState<string | null>(initialError);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [sendingResumeId, setSendingResumeId] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [form, setForm] = useState({
     firstName: "",
@@ -154,6 +155,44 @@ export default function AdminResearchInviteTable({
       setError("Failed to permanently delete participant.");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handleSendResumeEmail(applicantId: string) {
+    setError(null);
+    setSuccess(null);
+    setSendingResumeId(applicantId);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError("Please sign in again.");
+        setSendingResumeId(null);
+        return;
+      }
+      const res = await fetch(`/api/admin/research-invites/${applicantId}`, {
+        method: "POST",
+        headers,
+      });
+      const json = await res.json();
+      if (!res.ok || json?.error) {
+        setError(json?.error?.message || "Failed to send resume email.");
+        setSendingResumeId(null);
+        return;
+      }
+
+      if (json?.inviteUrl) {
+        setInviteUrl(json.inviteUrl);
+      }
+      const emailNote = json?.emailSent
+        ? " Resume email sent."
+        : " Could not send email, but the resume link is available.";
+      setSuccess(`Research resume link ready.${emailNote}`);
+      await loadResearchInvites();
+    } catch (err) {
+      console.error("Error sending research resume email:", err);
+      setError("Failed to send resume email.");
+    } finally {
+      setSendingResumeId(null);
     }
   }
 
@@ -280,45 +319,49 @@ export default function AdminResearchInviteTable({
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <Table className="mt-4">
+            <Table className="mt-4 min-w-[980px]">
               <thead>
-                <tr className="border-b text-xs uppercase text-slate-400">
-                  <th className="py-2 text-left">Name</th>
-                  <th className="py-2 text-left">Email</th>
-                  <th className="py-2 text-left">Status</th>
-                  <th className="py-2 text-left">Invited</th>
-                  <th className="py-2 text-left">Started</th>
-                  <th className="py-2 text-left">Completed</th>
-                  <th className="py-2 text-left">Actions</th>
+                <tr className="border-b text-xs uppercase tracking-wide text-slate-500">
+                  <th className="px-3 py-3 text-left">Name</th>
+                  <th className="px-3 py-3 text-left">Email</th>
+                  <th className="px-3 py-3 text-left">Status</th>
+                  <th className="px-3 py-3 text-left">Invited</th>
+                  <th className="px-3 py-3 text-left">Started</th>
+                  <th className="px-3 py-3 text-left">Completed</th>
+                  <th className="px-3 py-3 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {applicants.map((applicant) => (
                   <tr
                     key={applicant.id}
-                    className="border-b text-sm text-navy-soft"
+                    className="border-b align-top text-sm text-navy-soft"
                   >
-                    <td className="py-2">
+                    <td className="px-3 py-3 font-medium text-navy">
                       {applicant.user.firstName} {applicant.user.lastName}
                     </td>
-                    <td className="py-2">{applicant.user.email}</td>
-                    <td className="py-2">{applicant.applicationStatus}</td>
-                    <td className="py-2">
+                    <td className="px-3 py-3">{applicant.user.email}</td>
+                    <td className="px-3 py-3">
+                      <span className="rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                        {applicant.applicationStatus}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap">
                       {formatDate(applicant.researchInvitedAt)}
                     </td>
-                    <td className="py-2">
+                    <td className="px-3 py-3 whitespace-nowrap">
                       {formatDate(applicant.researchInviteUsedAt)}
                     </td>
-                    <td className="py-2">
+                    <td className="px-3 py-3 whitespace-nowrap">
                       {formatDate(applicant.researchCompletedAt)}
                     </td>
-                    <td className="py-2">
-                      <div className="flex gap-2">
+                    <td className="px-3 py-3">
+                      <div className="flex flex-wrap gap-2">
                         <Link href={`/admin/research/${applicant.id}`}>
                           <Button
                             type="button"
                             variant="outline"
-                            className="text-xs"
+                            className="h-8 px-3 text-xs"
                           >
                             View Responses
                           </Button>
@@ -333,11 +376,25 @@ export default function AdminResearchInviteTable({
                                 applicant.id,
                               )
                             }
-                            className="text-xs"
+                            className="h-8 px-3 text-xs"
                           >
                             {copiedId === applicant.id
                               ? "Copied!"
                               : "Copy Link"}
+                          </Button>
+                        ) : null}
+                        {applicant.applicationStatus !==
+                        "RESEARCH_COMPLETED" ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleSendResumeEmail(applicant.id)}
+                            disabled={sendingResumeId === applicant.id}
+                            className="h-8 px-3 text-xs"
+                          >
+                            {sendingResumeId === applicant.id
+                              ? "Sending..."
+                              : "Send Resume Link"}
                           </Button>
                         ) : null}
                         <Button
@@ -345,7 +402,7 @@ export default function AdminResearchInviteTable({
                           variant="outline"
                           onClick={() => handleHardDelete(applicant.id)}
                           disabled={isLoading}
-                          className="border-red-300 text-red-600 hover:bg-red-50"
+                          className="h-8 border-red-300 px-3 text-xs text-red-600 hover:bg-red-50"
                         >
                           Hard Delete
                         </Button>

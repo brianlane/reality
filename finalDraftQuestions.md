@@ -226,7 +226,7 @@
 79. How do you execute life decisions currently vs potentially with a life partner? (e.g., money stress, career changes, distance, kids)? `[TEXTAREA]`
 80. If a close friend had to choose between a "once-in-a-lifetime" career promotion in another city and staying near their aging parents, what specific advice would you give them? `[TEXTAREA]`
 81. When making a major life decision (e.g., a career move or relocating), do you prefer to reach a conclusion individually before sharing it, or is your first instinct to consult a partner before your own mind is made up? `[DROPDOWN: Reach conclusion individually first, Consult partner before deciding, It depends on the decision]`
-82. How comfortable are you making a significant personal decision (e.g., a hobby purchase or a weekend plan) without first seeking your partner's guidance or approval? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+82. How comfortable are you making a personal decision (e.g., a hobby purchase or a weekend plan) without first seeking your partner's guidance or approval? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 83. How much weight should a partner's parents have in your major life decisions (e.g., buying a home or career changes)? `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 
 ### Section B: Relationship Philosophy

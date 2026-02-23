@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CopperIcon } from "@/components/ui/copper-icon";
+import { resetResearchDraftContext } from "./researchDraftStorage";
 
 type ResearchInviteGateProps = {
   code: string;
@@ -42,6 +43,7 @@ export default function ResearchInviteGate({ code }: ResearchInviteGateProps) {
 
         if (typeof window !== "undefined") {
           localStorage.setItem("applicationId", data.applicationId);
+          resetResearchDraftContext(data.applicationId);
           localStorage.setItem("researchMode", "true");
           localStorage.setItem("researchInviteCode", code);
           localStorage.removeItem("waitlistInviteToken");

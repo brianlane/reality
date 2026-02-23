@@ -14,6 +14,10 @@ import {
   getWaitlistConfirmationHTML,
   getWaitlistInviteHTML,
   getResearchInviteHTML,
+  getPaymentConfirmationHTML,
+  getApplicationApprovalHTML,
+  getEventInvitationHTML,
+  getStatusUpdateHTML,
 } from "@/lib/email/templates";
 import { NextResponse } from "next/server";
 
@@ -52,19 +56,56 @@ export async function GET(request: Request) {
         break;
 
       case "WAITLIST_INVITE":
-        html = getWaitlistInviteHTML("Test User", "test_token_123");
+        html = getWaitlistInviteHTML("test_token_123");
         break;
 
       case "RESEARCH_INVITE":
-        html = getResearchInviteHTML("Test User", "test_code_abc123");
+        html = getResearchInviteHTML("test_code_abc123");
         break;
 
       case "PAYMENT_CONFIRMATION":
+        html = getPaymentConfirmationHTML({
+          firstName: "Test User",
+          amount: 19900, // $199.00 in cents
+          currency: "usd",
+          receiptUrl: "https://example.com/receipt/test_123",
+        });
+        break;
+
       case "APPLICATION_APPROVAL":
+        html = getApplicationApprovalHTML();
+        break;
+
       case "EVENT_INVITATION":
+        // Create test event dates
+        const eventDate = new Date("2026-03-15T19:00:00");
+        const startTime = new Date("2026-03-15T19:00:00");
+        const endTime = new Date("2026-03-15T22:00:00");
+
+        html = getEventInvitationHTML({
+          firstName: "Test User",
+          eventTitle: "Spring Mixer at The Rooftop",
+          eventDate,
+          eventLocation: "The Rooftop Lounge",
+          eventAddress: "123 Main Street, San Francisco, CA 94102",
+          startTime,
+          endTime,
+          rsvpUrl: "https://example.com/events/rsvp/test_123",
+        });
+        break;
+
       case "STATUS_UPDATE_SCREENING":
+        html = getStatusUpdateHTML({
+          firstName: "Test User",
+          status: "SCREENING_IN_PROGRESS",
+        });
+        break;
+
       case "STATUS_UPDATE_PAYMENT_PENDING":
-        html = "<h1>Template not yet implemented</h1>";
+        html = getStatusUpdateHTML({
+          firstName: "Test User",
+          status: "PAYMENT_PENDING",
+        });
         break;
 
       default:

@@ -6,6 +6,8 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { validatePassword } from "@/lib/utils";
+import { signUpOrSignIn } from "@/lib/auth/signup-or-signin";
+import { ERROR_MESSAGES } from "@/lib/error-messages";
 
 type CreatePasswordFormProps = {
   email: string;
@@ -39,7 +41,7 @@ export default function CreatePasswordForm({
 
     const supabase = createSupabaseBrowserClient();
     if (!supabase) {
-      setError("Authentication is not configured.");
+      setError(ERROR_MESSAGES.AUTH_NOT_CONFIGURED);
       setIsSubmitting(false);
       return;
     }
@@ -53,54 +55,23 @@ export default function CreatePasswordForm({
       let session = existingSession;
 
       if (!session) {
-        // Step 2: Create Supabase account (only if no session exists)
-        const { data: signUpData, error: signUpError } =
-          await supabase.auth.signUp({
-            email: email.trim().toLowerCase(),
-            password,
-            options: {
-              emailRedirectTo: `${window.location.origin}/dashboard`,
-              data: {
-                email: email.trim().toLowerCase(),
-              },
-            },
-          });
-
-        if (signUpError) {
-          // If account already exists, try signing in instead
-          if (
-            signUpError.message.includes("already registered") ||
-            signUpError.message.includes("User already registered")
-          ) {
-            const { data: signInData, error: signInError } =
-              await supabase.auth.signInWithPassword({
-                email: email.trim().toLowerCase(),
-                password,
-              });
-
-            if (signInError) {
-              setError(
-                "An account exists with this email but the password is incorrect. Please try again or reset your password.",
-              );
-              setIsSubmitting(false);
-              return;
-            }
-
-            session = signInData.session;
-          } else {
-            setError(signUpError.message);
-            setIsSubmitting(false);
-            return;
-          }
-        } else {
-          session = signUpData.session;
+        // Step 2: Create account or sign in with shared fallback logic
+        const authResult = await signUpOrSignIn({
+          supabase,
+          email: email.trim().toLowerCase(),
+          password,
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+        });
+        if (authResult.errorMessage) {
+          setError(authResult.errorMessage);
+          setIsSubmitting(false);
+          return;
         }
+        session = authResult.session;
       }
 
       if (!session) {
-        setError(
-          "Failed to create session. Please try again or contact support.",
-        );
+        setError(ERROR_MESSAGES.FAILED_CREATE_SESSION);
         setIsSubmitting(false);
         return;
       }
@@ -114,7 +85,9 @@ export default function CreatePasswordForm({
 
       if (!response.ok) {
         const errorData = await response.json();
-        setError(errorData?.error?.message || "Failed to submit application.");
+        setError(
+          errorData?.error?.message ?? ERROR_MESSAGES.FAILED_SUBMIT_APPLICATION,
+        );
         setIsSubmitting(false);
         return;
       }
