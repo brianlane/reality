@@ -83,6 +83,30 @@ export function getApplicationStatusConfig(status: string): StatusActionConfig {
         badge: "Invited",
         badgeClass: "bg-green-100 text-green-800",
       };
+    case "RESEARCH_INVITED":
+      return {
+        title: "Research Invitation Ready",
+        description:
+          "You have been invited to help validate our questionnaire. Use the link from your email to start or resume the research questionnaire.",
+        badge: "Research Invited",
+        badgeClass: "bg-purple-100 text-purple-800",
+      };
+    case "RESEARCH_IN_PROGRESS":
+      return {
+        title: "Research Questionnaire in Progress",
+        description:
+          "Thanks for helping with our research. Use the link from your email to continue where you left off.",
+        badge: "Research In Progress",
+        badgeClass: "bg-purple-100 text-purple-800",
+      };
+    case "RESEARCH_COMPLETED":
+      return {
+        title: "Research Completed",
+        description:
+          "Thank you for completing the research questionnaire. Your responses have been recorded.",
+        badge: "Research Completed",
+        badgeClass: "bg-green-100 text-green-800",
+      };
     default:
       return {
         title: "Application",
