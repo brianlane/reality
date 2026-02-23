@@ -47,13 +47,14 @@ export default function PhotosPage() {
           router.replace("/dashboard");
           return;
         }
+
+        // User passes: reveal the photo upload form
+        if (!cancelled) {
+          setIsCheckingAccess(false);
+        }
       } catch {
         if (!cancelled) {
           router.replace("/dashboard");
-        }
-      } finally {
-        if (!cancelled) {
-          setIsCheckingAccess(false);
         }
       }
     };
