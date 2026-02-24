@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import PhotoUploadForm, { PHOTO_MIN_COUNT } from "@/components/forms/PhotoUploadForm";
+import PhotoUploadForm, {
+  PHOTO_MIN_COUNT,
+} from "@/components/forms/PhotoUploadForm";
 import { Button } from "@/components/ui/button";
 import { useApplicationDraft } from "@/components/forms/useApplicationDraft";
 import ResearchRouteGuard from "@/components/research/ResearchRouteGuard";
@@ -115,23 +117,37 @@ export default function PhotosPage() {
         </p>
         <ul className="mt-3 space-y-1 text-sm text-navy-soft list-disc list-inside">
           <li>At least one clear, well-lit photo of your face</li>
-          <li>Photos must be recent and accurately represent your appearance</li>
-          <li>No sunglasses, heavy filters, or group photos as your primary photo</li>
-          <li>Accepted formats: JPG, PNG, HEIC &mdash; max 10 MB per photo</li>
+          <li>
+            Photos must be recent and accurately represent your appearance
+          </li>
+          <li>
+            No sunglasses, heavy filters, or group photos as your primary photo
+          </li>
+          <li>
+            Accepted formats: JPG, PNG, WebP, HEIC &mdash; max 10 MB per photo
+          </li>
         </ul>
-        <div className="mt-6 space-y-4 rounded-xl border border-slate-200 bg-white p-6">
+        <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 space-y-6">
           {isCheckingAccess ? (
             <p className="text-sm text-navy-soft">Verifying access...</p>
           ) : (
             <PhotoUploadForm />
           )}
-          <Button
-            onClick={handleNext}
-            disabled={isSubmitting || isCheckingAccess || (draft.photos ?? []).length < PHOTO_MIN_COUNT}
-          >
-            {isSubmitting ? "Submitting..." : "Submit Application"}
-          </Button>
-          {status ? <p className="text-sm text-red-500">{status}</p> : null}
+          <div className="border-t border-slate-100 pt-4">
+            <Button
+              onClick={handleNext}
+              disabled={
+                isSubmitting ||
+                isCheckingAccess ||
+                (draft.photos ?? []).length < PHOTO_MIN_COUNT
+              }
+            >
+              {isSubmitting ? "Submitting..." : "Submit Application"}
+            </Button>
+            {status ? (
+              <p className="mt-2 text-sm text-red-500">{status}</p>
+            ) : null}
+          </div>
         </div>
       </section>
     </ResearchRouteGuard>

@@ -7,7 +7,13 @@ import { getAuthUser } from "@/lib/auth";
 const PHOTO_BUCKET = "photos";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_PHOTOS_PER_APPLICANT = 10;
-const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const ALLOWED_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+];
 
 // Magic numbers for file type verification
 const FILE_SIGNATURES: Record<string, number[][]> = {
@@ -23,9 +29,6 @@ const FILE_SIGNATURES: Record<string, number[][]> = {
 };
 
 function verifyFileSignature(buffer: Uint8Array, mimeType: string): boolean {
-  const signatures = FILE_SIGNATURES[mimeType];
-  if (!signatures) return false;
-
   // Special handling for WebP - check RIFF at 0-3 and WEBP at 8-11
   if (mimeType === "image/webp") {
     return (
@@ -40,6 +43,20 @@ function verifyFileSignature(buffer: Uint8Array, mimeType: string): boolean {
       buffer[11] === 0x50 // WEBP
     );
   }
+
+  // HEIC/HEIF are ISOBMFF containers: bytes 4-7 are "ftyp" (0x66 0x74 0x79 0x70)
+  if (mimeType === "image/heic" || mimeType === "image/heif") {
+    return (
+      buffer.length >= 12 &&
+      buffer[4] === 0x66 && // f
+      buffer[5] === 0x74 && // t
+      buffer[6] === 0x79 && // y
+      buffer[7] === 0x70 // p
+    );
+  }
+
+  const signatures = FILE_SIGNATURES[mimeType];
+  if (!signatures) return false;
 
   return signatures.some((signature) =>
     signature.every((byte, index) => buffer[index] === byte),
