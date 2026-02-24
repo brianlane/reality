@@ -26,6 +26,15 @@ export async function POST(request: Request) {
     return errorResponse("VALIDATION_ERROR", "Missing required fields.", 400);
   }
 
+  // Ensure the path belongs to this applicant (prefix must match)
+  if (!storagePath.startsWith(`${applicantId}/`)) {
+    return errorResponse(
+      "FORBIDDEN",
+      "Storage path does not belong to this applicant.",
+      403,
+    );
+  }
+
   // Verify applicant ownership
   const applicant = await db.applicant.findUnique({
     where: { id: applicantId },
@@ -96,6 +105,19 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+
+    // Clean up the orphaned file from storage since the DB write failed
+    try {
+      await supabase.storage.from(PHOTO_BUCKET).remove([storagePath]);
+    } catch (cleanupError) {
+      logger.error("confirm-photo: failed to clean up orphaned file", {
+        storagePath,
+        error:
+          cleanupError instanceof Error
+            ? cleanupError.message
+            : String(cleanupError),
+      });
+    }
 
     if (errorMessage.includes("Applicant not found")) {
       return errorResponse("NOT_FOUND", "Applicant not found", 404);
