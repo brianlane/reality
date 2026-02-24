@@ -429,7 +429,9 @@ export default function QuestionnaireForm({
           question.type === "RANKING" &&
           (!Array.isArray(value) || (value as unknown[]).length === 0)
         ) {
-          const rankingOptions = question.options as { items?: string[] } | null;
+          const rankingOptions = question.options as {
+            items?: string[];
+          } | null;
           value = rankingOptions?.items ?? null;
         }
         return {
