@@ -427,10 +427,7 @@ export async function validateAnswerForQuestion(
       ? value.map((item) => String(item))
       : [];
     const filtered = values.filter((item) => optionsArray.includes(item));
-    if (isRequired && filtered.length === 0) {
-      if (optionsArray.includes("None")) {
-        return { ok: true, value: ["None"] };
-      }
+    if (isRequired && filtered.length === 0 && !optionsArray.includes("None")) {
       return { ok: false, message: "Select at least one option." };
     }
     return { ok: true, value: filtered };
@@ -513,9 +510,7 @@ export async function validateAnswerForQuestion(
     const rankedItems = Array.isArray(value)
       ? value.map((item) => String(item))
       : [];
-    const effectiveRanking =
-      rankedItems.length === 0 ? [...rankingOptions.items] : rankedItems;
-    if (isRequired && effectiveRanking.length !== rankingOptions.items.length) {
+    if (isRequired && rankedItems.length !== rankingOptions.items.length) {
       return {
         ok: false,
         message: "All items must be ranked.",
@@ -523,16 +518,16 @@ export async function validateAnswerForQuestion(
     }
     // Validate that ranked items match the configured items
     const validItems = new Set(rankingOptions.items);
-    const rankedSet = new Set(effectiveRanking);
-    if (effectiveRanking.length !== rankedSet.size) {
+    const rankedSet = new Set(rankedItems);
+    if (rankedItems.length !== rankedSet.size) {
       return { ok: false, message: "Each item can only be ranked once." };
     }
-    for (const item of effectiveRanking) {
+    for (const item of rankedItems) {
       if (!validItems.has(item)) {
         return { ok: false, message: `Invalid item: ${item}` };
       }
     }
-    return { ok: true, value: effectiveRanking };
+    return { ok: true, value: rankedItems };
   }
 
   return { ok: false, message: "Unsupported question type." };
