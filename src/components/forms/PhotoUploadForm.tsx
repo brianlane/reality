@@ -2,8 +2,9 @@
 
 import { useRef, useState } from "react";
 import { useApplicationDraft } from "./useApplicationDraft";
+import { PHOTO_MIN_COUNT } from "@/lib/photo-config";
 
-export const PHOTO_MIN_COUNT = 5;
+export { PHOTO_MIN_COUNT };
 
 export default function PhotoUploadForm({
   previewMode = false,
@@ -13,13 +14,14 @@ export default function PhotoUploadForm({
   const { draft, updateDraft } = useApplicationDraft();
   const [status, setStatus] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+  const [selectedCount, setSelectedCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photos = draft.photos ?? [];
 
   function handleFileChange() {
-    const file = fileInputRef.current?.files?.[0];
-    setSelectedFileName(file ? file.name : null);
+    const count = fileInputRef.current?.files?.length ?? 0;
+    setSelectedCount(count);
     setStatus(null);
   }
 
@@ -36,41 +38,62 @@ export default function PhotoUploadForm({
       return;
     }
 
-    const file = fileInputRef.current?.files?.[0];
-    if (!file) {
-      setStatus("Please choose a photo first.");
+    const files = fileInputRef.current?.files;
+    if (!files || files.length === 0) {
+      setStatus("Please choose at least one photo.");
       return;
     }
 
     setIsUploading(true);
+    const uploaded: string[] = [];
+    const failed: string[] = [];
+
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("applicantId", draft.applicationId);
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadProgress(`Uploading ${i + 1} of ${files.length}…`);
 
-      const response = await fetch("/api/applications/upload-photo", {
-        method: "POST",
-        body: formData,
-      });
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("applicantId", draft.applicationId);
 
-      const data = await response.json().catch(() => null);
+          const response = await fetch("/api/applications/upload-photo", {
+            method: "POST",
+            body: formData,
+          });
 
-      if (!response.ok) {
-        setStatus(data?.error?.message ?? "Photo upload failed.");
-        return;
+          const data = await response.json().catch(() => null);
+
+          if (!response.ok) {
+            failed.push(`${file.name}: ${data?.error?.message ?? "upload failed"}`);
+          } else {
+            uploaded.push(data.photoUrl);
+          }
+        } catch {
+          failed.push(`${file.name}: network error`);
+        }
       }
 
-      updateDraft({ photos: [...photos, data.photoUrl] });
+      if (uploaded.length > 0) {
+        updateDraft({ photos: [...photos, ...uploaded] });
+      }
 
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-      setSelectedFileName(null);
-      setStatus(null);
-    } catch {
-      setStatus("Upload failed. Please check your connection and try again.");
+      setSelectedCount(0);
+
+      if (failed.length > 0) {
+        setStatus(
+          `${uploaded.length} photo${uploaded.length !== 1 ? "s" : ""} uploaded. Failed: ${failed.join("; ")}`,
+        );
+      } else {
+        setStatus(null);
+      }
     } finally {
       setIsUploading(false);
+      setUploadProgress(null);
     }
   }
 
@@ -101,43 +124,46 @@ export default function PhotoUploadForm({
         type="file"
         name="file"
         accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+        multiple
         className="hidden"
         id="photo-file-input"
         onChange={handleFileChange}
       />
 
-      {/* Buttons — all on the same baseline */}
+      {/* Buttons */}
       <div className="flex items-center gap-3">
         <label
           htmlFor="photo-file-input"
           className="cursor-pointer inline-flex items-center justify-center rounded-md bg-copper px-4 py-2 text-sm font-medium text-white transition hover:bg-copper-dark select-none"
         >
-          Choose Photo
+          Choose Photos
         </label>
 
         <button
           type="button"
           onClick={handleUpload}
-          disabled={isUploading || !selectedFileName}
+          disabled={isUploading || selectedCount === 0}
           className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-navy transition hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {isUploading ? "Uploading…" : "Upload photo"}
+          {isUploading
+            ? uploadProgress ?? "Uploading…"
+            : selectedCount > 0
+              ? `Upload ${selectedCount} photo${selectedCount !== 1 ? "s" : ""}`
+              : "Upload photos"}
         </button>
 
-        {selectedFileName && !isUploading && (
-          <span
-            className="text-sm text-navy-soft truncate max-w-[180px]"
-            title={selectedFileName}
-          >
-            {selectedFileName}
+        {selectedCount > 0 && !isUploading && (
+          <span className="text-sm text-navy-soft">
+            {selectedCount} file{selectedCount !== 1 ? "s" : ""} selected
           </span>
-        )}
-        {isUploading && (
-          <span className="text-sm text-navy-soft">Uploading…</span>
         )}
       </div>
 
-      {status && <p className="text-sm text-red-500">{status}</p>}
+      {status && (
+        <p className={`text-sm ${status.includes("Failed") ? "text-red-500" : "text-navy-soft"}`}>
+          {status}
+        </p>
+      )}
     </div>
   );
 }

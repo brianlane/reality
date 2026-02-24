@@ -3,10 +3,11 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { getSupabaseClient } from "@/lib/storage/client";
 import { logger } from "@/lib/logger";
 import { getAuthUser } from "@/lib/auth";
+import { PHOTO_MAX_COUNT } from "@/lib/photo-config";
 
 const PHOTO_BUCKET = "photos";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_PHOTOS_PER_APPLICANT = 10;
+const MAX_PHOTOS_PER_APPLICANT = PHOTO_MAX_COUNT;
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
   "image/png",
@@ -44,15 +45,30 @@ function verifyFileSignature(buffer: Uint8Array, mimeType: string): boolean {
     );
   }
 
-  // HEIC/HEIF are ISOBMFF containers: bytes 4-7 are "ftyp" (0x66 0x74 0x79 0x70)
+  // HEIC/HEIF are ISOBMFF containers. Verify "ftyp" at bytes 4-7, then check
+  // the major brand at bytes 8-11 to exclude other ISOBMFF types (MP4, MOV, etc.).
   if (mimeType === "image/heic" || mimeType === "image/heif") {
-    return (
-      buffer.length >= 12 &&
-      buffer[4] === 0x66 && // f
-      buffer[5] === 0x74 && // t
-      buffer[6] === 0x79 && // y
-      buffer[7] === 0x70 // p
+    if (
+      buffer.length < 12 ||
+      buffer[4] !== 0x66 || // f
+      buffer[5] !== 0x74 || // t
+      buffer[6] !== 0x79 || // y
+      buffer[7] !== 0x70 // p
+    ) {
+      return false;
+    }
+    // Known HEIC/HEIF major brands at bytes 8-11
+    const brand = String.fromCharCode(
+      buffer[8],
+      buffer[9],
+      buffer[10],
+      buffer[11],
     );
+    const heicBrands = new Set([
+      "heic", "heix", "heim", "heis", "hevm", "hevs", // HEIC variants
+      "mif1", "msf1", // HEIF multi-image / sequence
+    ]);
+    return heicBrands.has(brand);
   }
 
   const signatures = FILE_SIGNATURES[mimeType];
