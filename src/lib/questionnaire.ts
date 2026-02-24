@@ -427,7 +427,7 @@ export async function validateAnswerForQuestion(
       ? value.map((item) => String(item))
       : [];
     const filtered = values.filter((item) => optionsArray.includes(item));
-    if (isRequired && filtered.length === 0) {
+    if (isRequired && filtered.length === 0 && !optionsArray.includes("None")) {
       return { ok: false, message: "Select at least one option." };
     }
     return { ok: true, value: filtered };

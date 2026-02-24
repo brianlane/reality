@@ -424,9 +424,19 @@ export default function QuestionnaireForm({
     const payloadAnswers = sections.flatMap((section) =>
       section.questions.map((question) => {
         const answer = answers[question.id] ?? { value: null, richText: null };
+        let value = answer.value ?? null;
+        if (
+          question.type === "RANKING" &&
+          (!Array.isArray(value) || (value as unknown[]).length === 0)
+        ) {
+          const rankingOptions = question.options as {
+            items?: string[];
+          } | null;
+          value = rankingOptions?.items ?? null;
+        }
         return {
           questionId: question.id,
-          value: answer.value ?? null,
+          value,
           richText: answer.richText ?? null,
         };
       }),
