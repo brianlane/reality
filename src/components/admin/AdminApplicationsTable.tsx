@@ -78,7 +78,6 @@ export default function AdminApplicationsTable() {
                 <th className="py-2 px-6 text-left">Email</th>
                 <th className="py-2 px-6 text-left">Status</th>
                 <th className="py-2 px-6 text-left">Screening</th>
-                <th className="py-2 px-6 text-left">Waitlist</th>
                 <th className="py-2 pl-6 text-left">Actions</th>
               </tr>
             </thead>
@@ -94,66 +93,6 @@ export default function AdminApplicationsTable() {
                   </td>
                   <td className="py-2 px-6 whitespace-nowrap">
                     {app.screeningStatus ?? "N/A"}
-                  </td>
-                  <td className="py-2 px-6 whitespace-nowrap">
-                    <button
-                      type="button"
-                      className="text-xs font-medium text-copper hover:underline"
-                      onClick={async () => {
-                        try {
-                          const isWaitlisted = [
-                            "WAITLIST",
-                            "WAITLIST_INVITED",
-                          ].includes(app.applicationStatus);
-                          const enableWaitlist = !isWaitlisted;
-                          const headers = await getAuthHeaders();
-                          if (!headers) {
-                            setError("Please sign in again.");
-                            return;
-                          }
-                          const response = await fetch(
-                            `/api/admin/applications/${app.id}/waitlist`,
-                            {
-                              method: "POST",
-                              headers: {
-                                ...headers,
-                                "Content-Type": "application/json",
-                              },
-                              body: JSON.stringify({ enabled: enableWaitlist }),
-                            },
-                          );
-
-                          if (!response.ok) {
-                            setError("Failed to update waitlist status.");
-                            return;
-                          }
-
-                          const data = await response.json();
-                          const nextStatus =
-                            data?.applicant?.applicationStatus ??
-                            (enableWaitlist ? "WAITLIST" : "SUBMITTED");
-                          setError(null);
-                          setApplications((prev) =>
-                            prev.map((item) =>
-                              item.id === app.id
-                                ? {
-                                    ...item,
-                                    applicationStatus: nextStatus,
-                                  }
-                                : item,
-                            ),
-                          );
-                        } catch {
-                          setError("Failed to update waitlist status.");
-                        }
-                      }}
-                    >
-                      {["WAITLIST", "WAITLIST_INVITED"].includes(
-                        app.applicationStatus,
-                      )
-                        ? "Remove"
-                        : "Add"}
-                    </button>
                   </td>
                   <td className="py-2 pl-6 whitespace-nowrap">
                     <Link

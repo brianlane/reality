@@ -92,6 +92,9 @@ export default function AdminApplicationForm({
           compatibilityScore: json.applicant.compatibilityScore
             ? String(json.applicant.compatibilityScore)
             : "",
+          photos: Array.isArray(json.applicant.photos)
+            ? json.applicant.photos.join(", ")
+            : "",
         }));
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
@@ -558,11 +561,39 @@ export default function AdminApplicationForm({
             updateField("compatibilityScore", event.target.value)
           }
         />
-        <Input
-          placeholder="Photos (comma-separated URLs)"
-          value={form.photos}
-          onChange={(event) => updateField("photos", event.target.value)}
-        />
+        <div className="col-span-2 space-y-2">
+          <label className="text-xs font-semibold text-navy-soft">
+            Photos (
+            {form.photos
+              ? form.photos.split(",").filter((u) => u.trim()).length
+              : 0}
+            )
+          </label>
+          {form.photos &&
+          form.photos.split(",").filter((u) => u.trim()).length > 0 ? (
+            <div className="flex flex-wrap gap-3">
+              {form.photos
+                .split(",")
+                .filter((u) => u.trim())
+                .map((url, i) => (
+                  <a
+                    key={i}
+                    href={url.trim()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <img
+                      src={url.trim()}
+                      alt={`Photo ${i + 1}`}
+                      className="h-32 w-32 rounded-lg object-cover border border-slate-200 hover:opacity-80 transition-opacity"
+                    />
+                  </a>
+                ))}
+            </div>
+          ) : (
+            <p className="text-sm text-navy-soft/60">No photos uploaded.</p>
+          )}
+        </div>
       </div>
       <div className="space-y-2">
         <label className="text-xs font-semibold text-navy-soft">

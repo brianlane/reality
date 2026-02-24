@@ -6,6 +6,7 @@ import { ensureApplicantAccount } from "@/lib/account-init";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notifyApplicationSubmitted } from "@/lib/email/admin-notifications";
 import { createPaymentCheckout } from "@/lib/stripe";
+import { PHOTO_MIN_COUNT } from "@/lib/photo-config";
 
 export async function POST(request: NextRequest) {
   // Parse and validate request body
@@ -105,6 +106,14 @@ export async function POST(request: NextRequest) {
           "FORBIDDEN",
           "You can only submit your own application.",
           403,
+        );
+      }
+
+      if (applicant.photos.length < PHOTO_MIN_COUNT) {
+        return errorResponse(
+          "INSUFFICIENT_PHOTOS",
+          `Please upload at least ${PHOTO_MIN_COUNT} photos before submitting.`,
+          400,
         );
       }
 
