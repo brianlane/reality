@@ -108,6 +108,14 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      if (applicant.photos.length < 5) {
+        return errorResponse(
+          "INSUFFICIENT_PHOTOS",
+          "Please upload at least 5 photos before submitting.",
+          400,
+        );
+      }
+
       await db.applicant.update({
         where: { id: applicant.id },
         data: {

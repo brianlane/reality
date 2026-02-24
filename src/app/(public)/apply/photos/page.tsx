@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import PhotoUploadForm from "@/components/forms/PhotoUploadForm";
+import PhotoUploadForm, { PHOTO_MIN_COUNT } from "@/components/forms/PhotoUploadForm";
 import { Button } from "@/components/ui/button";
 import { useApplicationDraft } from "@/components/forms/useApplicationDraft";
 import ResearchRouteGuard from "@/components/research/ResearchRouteGuard";
@@ -111,21 +111,23 @@ export default function PhotosPage() {
       <section className="mx-auto w-full max-w-3xl px-6 py-16">
         <h1 className="text-3xl font-semibold text-navy">Photo Upload</h1>
         <p className="mt-2 text-navy-soft">
-          Upload at least 2 profile photos, then submit your application.
+          Upload at least {PHOTO_MIN_COUNT} photos to complete your application.
         </p>
+        <ul className="mt-3 space-y-1 text-sm text-navy-soft list-disc list-inside">
+          <li>At least one clear, well-lit photo of your face</li>
+          <li>Photos must be recent and accurately represent your appearance</li>
+          <li>No sunglasses, heavy filters, or group photos as your primary photo</li>
+          <li>Accepted formats: JPG, PNG, HEIC &mdash; max 10 MB per photo</li>
+        </ul>
         <div className="mt-6 space-y-4 rounded-xl border border-slate-200 bg-white p-6">
           {isCheckingAccess ? (
             <p className="text-sm text-navy-soft">Verifying access...</p>
           ) : (
             <PhotoUploadForm />
           )}
-          <div className="text-sm text-navy-soft">
-            Upload at least two photos, then submit to complete your
-            application.
-          </div>
           <Button
             onClick={handleNext}
-            disabled={isSubmitting || isCheckingAccess}
+            disabled={isSubmitting || isCheckingAccess || (draft.photos ?? []).length < PHOTO_MIN_COUNT}
           >
             {isSubmitting ? "Submitting..." : "Submit Application"}
           </Button>
