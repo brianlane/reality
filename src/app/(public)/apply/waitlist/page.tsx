@@ -10,19 +10,22 @@ export default async function WaitlistPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const applicationId = params.id || "";
 
-  // Fetch applicant data to get firstName from user relation
   let firstName: string | undefined;
+  let isSubmitted = false;
+
   if (applicationId) {
     try {
       const applicant = await db.applicant.findUnique({
         where: { id: applicationId },
         select: {
+          applicationStatus: true,
           user: {
             select: { firstName: true },
           },
         },
       });
       firstName = applicant?.user.firstName;
+      isSubmitted = applicant?.applicationStatus === "SUBMITTED";
     } catch (error) {
       console.error("Error fetching applicant:", error);
     }
@@ -38,7 +41,11 @@ export default async function WaitlistPage({ searchParams }: PageProps) {
             </div>
           }
         >
-          <WaitlistConfirmation firstName={firstName} />
+          <WaitlistConfirmation
+            firstName={firstName}
+            isSubmitted={isSubmitted}
+            applicationId={applicationId}
+          />
         </Suspense>
       </div>
     </div>
