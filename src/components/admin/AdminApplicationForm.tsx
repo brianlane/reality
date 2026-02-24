@@ -92,6 +92,9 @@ export default function AdminApplicationForm({
           compatibilityScore: json.applicant.compatibilityScore
             ? String(json.applicant.compatibilityScore)
             : "",
+          photos: Array.isArray(json.applicant.photos)
+            ? json.applicant.photos.join(", ")
+            : "",
         }));
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
