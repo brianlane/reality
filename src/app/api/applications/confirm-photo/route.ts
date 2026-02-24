@@ -68,6 +68,19 @@ export async function POST(request: Request) {
     );
   }
 
+  // Verify the file was actually uploaded before saving its URL
+  const { data: fileExists, error: existsError } = await supabase.storage
+    .from(PHOTO_BUCKET)
+    .exists(storagePath);
+
+  if (existsError || !fileExists) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "Photo file not found in storage. Please upload the file first.",
+      422,
+    );
+  }
+
   const { data: urlData } = supabase.storage
     .from(PHOTO_BUCKET)
     .getPublicUrl(storagePath);
