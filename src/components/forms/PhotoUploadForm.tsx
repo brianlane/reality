@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useApplicationDraft } from "./useApplicationDraft";
 import { PHOTO_MIN_COUNT } from "@/lib/photo-config";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function PhotoUploadForm({
   previewMode = false,
@@ -49,29 +50,70 @@ export default function PhotoUploadForm({
     const failed: string[] = [];
 
     try {
+      const supabase = createSupabaseBrowserClient();
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setUploadProgress(`Uploading ${i + 1} of ${files.length}…`);
 
         try {
-          const formData = new FormData();
-          formData.append("file", file);
-          formData.append("applicantId", draft.applicationId);
-
-          const response = await fetch("/api/applications/upload-photo", {
+          // Step 1: Get a signed upload URL from our API
+          const urlRes = await fetch("/api/applications/upload-url", {
             method: "POST",
-            body: formData,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              applicantId: draft.applicationId,
+              filename: file.name,
+              mimeType: file.type,
+              fileSize: file.size,
+            }),
           });
-
-          const data = await response.json().catch(() => null);
-
-          if (!response.ok) {
+          const urlData = await urlRes.json().catch(() => null);
+          if (!urlRes.ok) {
             failed.push(
-              `${file.name}: ${data?.error?.message ?? "upload failed"}`,
+              `${file.name}: ${urlData?.error?.message ?? "failed to get upload URL"}`,
             );
-          } else {
-            uploaded.push(data.photoUrl);
+            continue;
           }
+
+          const { token, storagePath } = urlData;
+
+          // Step 2: Upload directly to Supabase (bypasses serverless body limit)
+          if (!supabase) {
+            failed.push(`${file.name}: storage client unavailable`);
+            continue;
+          }
+          const { error: uploadError } = await supabase.storage
+            .from("photos")
+            .uploadToSignedUrl(storagePath, token, file, {
+              contentType: file.type,
+              cacheControl: "3600",
+            });
+          if (uploadError) {
+            failed.push(
+              `${file.name}: ${uploadError.message ?? "upload failed"}`,
+            );
+            continue;
+          }
+
+          // Step 3: Confirm upload so we can save the URL to the database
+          const confirmRes = await fetch("/api/applications/confirm-photo", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              applicantId: draft.applicationId,
+              storagePath,
+            }),
+          });
+          const confirmData = await confirmRes.json().catch(() => null);
+          if (!confirmRes.ok) {
+            failed.push(
+              `${file.name}: ${confirmData?.error?.message ?? "failed to save photo"}`,
+            );
+            continue;
+          }
+
+          uploaded.push(confirmData.photoUrl);
         } catch {
           failed.push(`${file.name}: network error`);
         }
