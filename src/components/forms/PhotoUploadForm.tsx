@@ -4,12 +4,12 @@ import { useRef, useState } from "react";
 import { useApplicationDraft } from "./useApplicationDraft";
 import { PHOTO_MIN_COUNT } from "@/lib/photo-config";
 
-export { PHOTO_MIN_COUNT };
-
 export default function PhotoUploadForm({
   previewMode = false,
+  onPhotosChange,
 }: {
   previewMode?: boolean;
+  onPhotosChange?: (photos: string[]) => void;
 }) {
   const { draft, updateDraft } = useApplicationDraft();
   const [status, setStatus] = useState<string | null>(null);
@@ -66,7 +66,9 @@ export default function PhotoUploadForm({
           const data = await response.json().catch(() => null);
 
           if (!response.ok) {
-            failed.push(`${file.name}: ${data?.error?.message ?? "upload failed"}`);
+            failed.push(
+              `${file.name}: ${data?.error?.message ?? "upload failed"}`,
+            );
           } else {
             uploaded.push(data.photoUrl);
           }
@@ -76,7 +78,9 @@ export default function PhotoUploadForm({
       }
 
       if (uploaded.length > 0) {
-        updateDraft({ photos: [...photos, ...uploaded] });
+        const nextPhotos = [...photos, ...uploaded];
+        updateDraft({ photos: nextPhotos });
+        onPhotosChange?.(nextPhotos);
       }
 
       if (fileInputRef.current) {
@@ -146,7 +150,7 @@ export default function PhotoUploadForm({
           className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-navy transition hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isUploading
-            ? uploadProgress ?? "Uploading…"
+            ? (uploadProgress ?? "Uploading…")
             : selectedCount > 0
               ? `Upload ${selectedCount} photo${selectedCount !== 1 ? "s" : ""}`
               : "Upload photos"}
@@ -160,7 +164,9 @@ export default function PhotoUploadForm({
       </div>
 
       {status && (
-        <p className={`text-sm ${status.includes("Failed") ? "text-red-500" : "text-navy-soft"}`}>
+        <p
+          className={`text-sm ${status.includes("Failed") ? "text-red-500" : "text-navy-soft"}`}
+        >
           {status}
         </p>
       )}

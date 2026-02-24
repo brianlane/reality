@@ -65,8 +65,14 @@ function verifyFileSignature(buffer: Uint8Array, mimeType: string): boolean {
       buffer[11],
     );
     const heicBrands = new Set([
-      "heic", "heix", "heim", "heis", "hevm", "hevs", // HEIC variants
-      "mif1", "msf1", // HEIF multi-image / sequence
+      "heic",
+      "heix",
+      "heim",
+      "heis",
+      "hevm",
+      "hevs", // HEIC variants
+      "mif1",
+      "msf1", // HEIF multi-image / sequence
     ]);
     return heicBrands.has(brand);
   }
@@ -80,34 +86,55 @@ function verifyFileSignature(buffer: Uint8Array, mimeType: string): boolean {
 }
 
 export async function POST(request: Request) {
+  logger.info("Photo upload request received");
+
   const auth = await getAuthUser();
   if (!auth?.email) {
+    logger.warn("Photo upload rejected: not authenticated");
     return errorResponse("UNAUTHORIZED", "Please sign in to continue.", 401);
   }
+  logger.info("Photo upload: auth ok", { userEmail: auth.email });
 
   const formData = await request.formData();
   const file = formData.get("file");
   const applicantId = formData.get("applicantId")?.toString();
 
   if (!file || !(file instanceof File) || !applicantId) {
+    logger.warn("Photo upload rejected: missing file or applicantId", {
+      hasFile: !!file,
+      isFileInstance: file instanceof File,
+      hasApplicantId: !!applicantId,
+    });
     return errorResponse(
       "VALIDATION_ERROR",
       "Missing file or applicantId",
       400,
     );
   }
+  logger.info("Photo upload: file received", {
+    fileName: file.name,
+    fileType: file.type,
+    fileSizeBytes: file.size,
+    applicantId,
+  });
 
   // Validate file type
   if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    logger.warn("Photo upload rejected: invalid MIME type", {
+      mimeType: file.type,
+    });
     return errorResponse(
       "VALIDATION_ERROR",
-      "Invalid file type. Only JPEG, PNG, and WebP images are allowed.",
+      "Invalid file type. Only JPEG, PNG, WebP, and HEIC/HEIF images are allowed.",
       400,
     );
   }
 
   // Validate file size
   if (file.size > MAX_FILE_SIZE) {
+    logger.warn("Photo upload rejected: file too large", {
+      fileSizeBytes: file.size,
+    });
     return errorResponse(
       "VALIDATION_ERROR",
       `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
@@ -116,6 +143,7 @@ export async function POST(request: Request) {
   }
 
   if (file.size === 0) {
+    logger.warn("Photo upload rejected: empty file");
     return errorResponse("VALIDATION_ERROR", "File is empty.", 400);
   }
 
@@ -134,6 +162,7 @@ export async function POST(request: Request) {
   });
 
   if (!applicant) {
+    logger.warn("Photo upload rejected: applicant not found", { applicantId });
     return errorResponse("NOT_FOUND", "Applicant not found", 404);
   }
 
@@ -141,6 +170,7 @@ export async function POST(request: Request) {
     !applicant.user?.email ||
     applicant.user.email.toLowerCase() !== auth.email.toLowerCase()
   ) {
+    logger.warn("Photo upload rejected: email mismatch", { applicantId });
     return errorResponse(
       "FORBIDDEN",
       "You can only upload photos for your own application.",
@@ -149,6 +179,10 @@ export async function POST(request: Request) {
   }
 
   if (applicant.photos.length >= MAX_PHOTOS_PER_APPLICANT) {
+    logger.warn("Photo upload rejected: photo limit reached", {
+      applicantId,
+      currentCount: applicant.photos.length,
+    });
     return errorResponse(
       "VALIDATION_ERROR",
       `Maximum of ${MAX_PHOTOS_PER_APPLICANT} photos allowed.`,
@@ -160,6 +194,12 @@ export async function POST(request: Request) {
   const buffer = new Uint8Array(await file.arrayBuffer());
 
   if (!verifyFileSignature(buffer, file.type)) {
+    logger.warn("Photo upload rejected: file signature mismatch", {
+      declaredType: file.type,
+      bufferPrefix: Array.from(buffer.slice(0, 12))
+        .map((b) => b.toString(16))
+        .join(" "),
+    });
     return errorResponse(
       "VALIDATION_ERROR",
       "File content does not match declared file type.",
@@ -169,34 +209,50 @@ export async function POST(request: Request) {
 
   // Sanitize filename to prevent path traversal
   const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const path = `${applicantId}/${Date.now()}-${sanitizedFilename}`;
+  const storagePath = `${applicantId}/${Date.now()}-${sanitizedFilename}`;
 
   const supabase = getSupabaseClient();
   if (!supabase) {
+    logger.error(
+      "Photo upload failed: Supabase client not configured — check NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY env vars",
+    );
     return errorResponse(
       "INTERNAL_SERVER_ERROR",
       "Storage is not configured",
       500,
     );
   }
+  logger.info("Photo upload: uploading to storage", {
+    bucket: PHOTO_BUCKET,
+    storagePath,
+  });
 
   const { error } = await supabase.storage
     .from(PHOTO_BUCKET)
-    .upload(path, buffer, {
+    .upload(storagePath, buffer, {
       contentType: file.type,
-      upsert: false, // Don't overwrite existing files
+      upsert: false,
       cacheControl: "3600",
     });
 
   if (error) {
-    logger.error("Photo upload failed", {
+    logger.error("Photo upload: Supabase storage upload failed", {
       applicantId,
-      error: error.message,
+      storagePath,
+      errorMessage: error.message,
+      errorName: (error as { name?: string }).name,
     });
-    return errorResponse("INTERNAL_SERVER_ERROR", "Upload failed", 500);
+    return errorResponse(
+      "INTERNAL_SERVER_ERROR",
+      `Upload failed: ${error.message}`,
+      500,
+    );
   }
+  logger.info("Photo upload: storage upload succeeded", { storagePath });
 
-  const { data } = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(path);
+  const { data } = supabase.storage
+    .from(PHOTO_BUCKET)
+    .getPublicUrl(storagePath);
 
   try {
     // Use transaction to prevent race condition (TOCTOU)
@@ -230,11 +286,11 @@ export async function POST(request: Request) {
   } catch (error) {
     // Cleanup orphaned file if database update fails
     try {
-      await supabase.storage.from(PHOTO_BUCKET).remove([path]);
+      await supabase.storage.from(PHOTO_BUCKET).remove([storagePath]);
     } catch (cleanupError) {
       // Log cleanup failure but don't mask original error
       logger.error("Failed to cleanup orphaned file", {
-        path,
+        storagePath,
         error:
           cleanupError instanceof Error
             ? cleanupError.message

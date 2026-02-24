@@ -2,9 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import PhotoUploadForm, {
-  PHOTO_MIN_COUNT,
-} from "@/components/forms/PhotoUploadForm";
+import PhotoUploadForm from "@/components/forms/PhotoUploadForm";
+import { PHOTO_MIN_COUNT } from "@/lib/photo-config";
 import { Button } from "@/components/ui/button";
 import { useApplicationDraft } from "@/components/forms/useApplicationDraft";
 import ResearchRouteGuard from "@/components/research/ResearchRouteGuard";
@@ -17,6 +16,7 @@ export default function PhotosPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
+  const [photoCount, setPhotoCount] = useState(draft.photos?.length ?? 0);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,15 +131,15 @@ export default function PhotosPage() {
           {isCheckingAccess ? (
             <p className="text-sm text-navy-soft">Verifying access...</p>
           ) : (
-            <PhotoUploadForm />
+            <PhotoUploadForm
+              onPhotosChange={(photos) => setPhotoCount(photos.length)}
+            />
           )}
           <div className="border-t border-slate-100 pt-4">
             <Button
               onClick={handleNext}
               disabled={
-                isSubmitting ||
-                isCheckingAccess ||
-                (draft.photos ?? []).length < PHOTO_MIN_COUNT
+                isSubmitting || isCheckingAccess || photoCount < PHOTO_MIN_COUNT
               }
             >
               {isSubmitting ? "Submitting..." : "Submit Application"}
