@@ -31,8 +31,14 @@ export type TextOptions = {
   max?: number;
 };
 
+export type CheckboxOptions = {
+  options: string[];
+  maxSelections?: number;
+};
+
 export type QuestionnaireOptions =
   | string[]
+  | CheckboxOptions
   | NumberScaleOptions
   | AgeRangeOptions
   | PointAllocationOptions
@@ -96,7 +102,59 @@ export async function normalizeQuestionOptions(
     };
   }
 
-  if (type === "DROPDOWN" || type === "RADIO_7" || type === "CHECKBOXES") {
+  if (type === "CHECKBOXES") {
+    // Accept either a plain string[] (legacy) or a CheckboxOptions object
+    let optionsArray: string[];
+    let maxSelections: number | undefined;
+
+    if (Array.isArray(options)) {
+      optionsArray = options.map((item) => String(item).trim()).filter(Boolean);
+    } else if (
+      options &&
+      typeof options === "object" &&
+      !Array.isArray(options) &&
+      "options" in (options as object)
+    ) {
+      const raw = options as Record<string, unknown>;
+      optionsArray = Array.isArray(raw.options)
+        ? raw.options.map((item) => String(item).trim()).filter(Boolean)
+        : [];
+      if (raw.maxSelections !== undefined) {
+        const max = Number(raw.maxSelections);
+        if (!Number.isInteger(max) || max < 1) {
+          return {
+            ok: false,
+            message: "maxSelections must be a positive integer.",
+          };
+        }
+        maxSelections = max;
+      }
+    } else {
+      return {
+        ok: false,
+        message: "Checkbox questions must provide an array of options.",
+      };
+    }
+
+    if (optionsArray.length === 0) {
+      return {
+        ok: false,
+        message: "Checkbox questions must include at least one option.",
+      };
+    }
+    if (maxSelections !== undefined && maxSelections > optionsArray.length) {
+      return {
+        ok: false,
+        message: "maxSelections cannot exceed the number of available options.",
+      };
+    }
+
+    const result: CheckboxOptions = { options: optionsArray };
+    if (maxSelections !== undefined) result.maxSelections = maxSelections;
+    return { ok: true, value: result };
+  }
+
+  if (type === "DROPDOWN" || type === "RADIO_7") {
     if (!Array.isArray(options)) {
       return {
         ok: false,
@@ -422,13 +480,45 @@ export async function validateAnswerForQuestion(
   }
 
   if (type === "CHECKBOXES") {
-    const optionsArray = Array.isArray(options) ? options : [];
+    // Support both legacy string[] and new CheckboxOptions object
+    let optionsArray: string[];
+    let maxSelections: number | undefined;
+
+    if (Array.isArray(options)) {
+      optionsArray = options as string[];
+    } else if (
+      options &&
+      typeof options === "object" &&
+      "options" in (options as object)
+    ) {
+      const cbOpts = options as CheckboxOptions;
+      optionsArray = cbOpts.options;
+      maxSelections = cbOpts.maxSelections;
+    } else {
+      optionsArray = [];
+    }
+
     const values = Array.isArray(value)
       ? value.map((item) => String(item))
       : [];
     const filtered = values.filter((item) => optionsArray.includes(item));
+
     if (isRequired && filtered.length === 0 && !optionsArray.includes("None")) {
       return { ok: false, message: "Select at least one option." };
+    }
+    if (maxSelections !== undefined) {
+      if (filtered.length > maxSelections) {
+        return {
+          ok: false,
+          message: `You can select a maximum of ${maxSelections} option${maxSelections === 1 ? "" : "s"}.`,
+        };
+      }
+      if (isRequired && filtered.length < maxSelections) {
+        return {
+          ok: false,
+          message: `Please select exactly ${maxSelections} option${maxSelections === 1 ? "" : "s"}.`,
+        };
+      }
     }
     return { ok: true, value: filtered };
   }

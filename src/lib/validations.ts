@@ -328,6 +328,37 @@ export const adminQuestionnaireQuestionCreateSchema = z
         });
       }
     }
+    if (
+      data.type === "CHECKBOXES" &&
+      data.options !== null &&
+      data.options !== undefined
+    ) {
+      const opts = data.options;
+      const maxSelections =
+        typeof opts === "object" && !Array.isArray(opts)
+          ? opts.maxSelections
+          : undefined;
+      const optionsList = Array.isArray(opts)
+        ? opts
+        : typeof opts === "object" && Array.isArray(opts.options)
+          ? opts.options
+          : null;
+      if (maxSelections !== undefined) {
+        if (!Number.isInteger(maxSelections) || maxSelections < 1) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "maxSelections must be a positive integer.",
+            path: ["options"],
+          });
+        } else if (optionsList && maxSelections > optionsList.length) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "maxSelections cannot exceed the number of options.",
+            path: ["options"],
+          });
+        }
+      }
+    }
   });
 
 export const adminQuestionnaireQuestionUpdateSchema = z
@@ -352,6 +383,37 @@ export const adminQuestionnaireQuestionUpdateSchema = z
           message: "Radio 7 questions must have exactly 7 options.",
           path: ["options"],
         });
+      }
+    }
+    if (
+      data.type === "CHECKBOXES" &&
+      data.options !== null &&
+      data.options !== undefined
+    ) {
+      const opts = data.options;
+      const maxSelections =
+        typeof opts === "object" && !Array.isArray(opts)
+          ? opts.maxSelections
+          : undefined;
+      const optionsList = Array.isArray(opts)
+        ? opts
+        : typeof opts === "object" && Array.isArray(opts.options)
+          ? opts.options
+          : null;
+      if (maxSelections !== undefined) {
+        if (!Number.isInteger(maxSelections) || maxSelections < 1) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "maxSelections must be a positive integer.",
+            path: ["options"],
+          });
+        } else if (optionsList && maxSelections > optionsList.length) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "maxSelections cannot exceed the number of options.",
+            path: ["options"],
+          });
+        }
       }
     }
   });

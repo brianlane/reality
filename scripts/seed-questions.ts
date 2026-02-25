@@ -25,6 +25,7 @@ interface ParsedQuestion {
   type: QuestionnaireQuestionType;
   options:
     | string[]
+    | { options: string[]; maxSelections?: number }
     | { min: number; max: number; step: number }
     | { minAge: number; maxAge: number }
     | { items: string[]; total: number }
@@ -66,6 +67,7 @@ function parseAnnotation(line: string): {
   type: QuestionnaireQuestionType;
   options:
     | string[]
+    | { options: string[]; maxSelections?: number }
     | { min: number; max: number; step: number }
     | { minAge: number; maxAge: number }
     | { items: string[]; total: number }
@@ -119,13 +121,32 @@ function parseAnnotation(line: string): {
     };
   }
 
-  // Parse CHECKBOXES type: CHECKBOXES: opt1, opt2, opt3
+  // Parse CHECKBOXES type:
+  //   CHECKBOXES: opt1, opt2, opt3
+  //   CHECKBOXES:max=3: opt1, opt2, opt3
   if (annotation.startsWith("CHECKBOXES:")) {
-    const optionsStr = annotation.replace("CHECKBOXES:", "").trim();
-    const options = optionsStr.split(",").map((opt) => opt.trim());
+    const rest = annotation.replace("CHECKBOXES:", "").trim();
+    const maxMatch = rest.match(/^max=(\d+):(.*)/s);
+    if (maxMatch) {
+      const maxSelections = parseInt(maxMatch[1], 10);
+      const optionsStr = maxMatch[2].trim();
+      const options = optionsStr
+        .split(",")
+        .map((opt) => opt.trim())
+        .filter(Boolean);
+      return {
+        type: "CHECKBOXES",
+        options: { options, maxSelections },
+        cleanPrompt,
+      };
+    }
+    const options = rest
+      .split(",")
+      .map((opt) => opt.trim())
+      .filter(Boolean);
     return {
       type: "CHECKBOXES",
-      options,
+      options: { options },
       cleanPrompt,
     };
   }
@@ -444,7 +465,7 @@ async function upsertPages(pages: ParsedPage[]) {
     activePageIds.push(pageId);
 
     console.log(
-      `  ${existingPage ? "↻" : "✓"} Page ${page.order + 1}: ${page.title}${page.forResearch ? " [RESEARCH ONLY]" : ""}`,
+      `  ${existingPage ? "↻" : "✓"} Page ${page.order + 1}: ${page.title} [forResearch=${page.forResearch}]`,
     );
 
     // Upsert sections for this page (including soft-deleted for restoration)
@@ -641,6 +662,29 @@ async function upsertPages(pages: ParsedPage[]) {
     console.log(
       `\n🗑️  Soft-deleted: ${removedPages.count} pages, ${removedSections.count} sections, ${removedQuestions.count} questions`,
     );
+  }
+
+  // Verify that research-only pages have forResearch=true in the DB
+  const researchPages = pages.filter((p) => p.forResearch);
+  if (researchPages.length > 0) {
+    console.log("\n🔬 Verifying forResearch flags...");
+    for (const page of researchPages) {
+      const dbPage = await db.questionnairePage.findFirst({
+        where: { title: page.title, deletedAt: null },
+        select: { id: true, forResearch: true },
+      });
+      if (!dbPage) {
+        console.warn(
+          `  ⚠️  Research page "${page.title}" not found in DB after seed!`,
+        );
+      } else if (!dbPage.forResearch) {
+        console.error(
+          `  ❌ Research page "${page.title}" still has forResearch=false in DB! Run: npx tsx scripts/fix-research-page.ts`,
+        );
+      } else {
+        console.log(`  ✓ "${page.title}" has forResearch=true`);
+      }
+    }
   }
 
   return {

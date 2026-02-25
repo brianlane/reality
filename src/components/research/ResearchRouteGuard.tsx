@@ -1,7 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
+
+// Application statuses that belong to the research flow
+const RESEARCH_STATUSES = new Set([
+  "RESEARCH_INVITED",
+  "RESEARCH_IN_PROGRESS",
+  "RESEARCH_COMPLETED",
+]);
 
 type ResearchRouteGuardProps = {
   children: React.ReactNode;
@@ -10,7 +18,10 @@ type ResearchRouteGuardProps = {
 export default function ResearchRouteGuard({
   children,
 }: ResearchRouteGuardProps) {
-  const isResearch = useSyncExternalStore(
+  // null = not yet verified with server, true = confirmed research, false = not research
+  const [serverVerified, setServerVerified] = useState<boolean | null>(null);
+
+  const localFlag = useSyncExternalStore(
     (callback) => {
       if (typeof window === "undefined") {
         return () => undefined;
@@ -27,7 +38,43 @@ export default function ResearchRouteGuard({
     () => null,
   );
 
-  if (isResearch === null) {
+  useEffect(() => {
+    // Not in research mode locally — no server call needed
+    if (localFlag === null || localFlag === false) {
+      setServerVerified(false);
+      return;
+    }
+
+    // localStorage claims research mode — verify against the server to guard
+    // against stale flags from prior sessions on a shared browser
+    let cancelled = false;
+    fetch("/api/applicant/application")
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (RESEARCH_STATUSES.has(data?.status)) {
+          setServerVerified(true);
+        } else {
+          // Stale flag — clear it and let the user through
+          localStorage.removeItem("researchMode");
+          setServerVerified(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          // On error, default to letting the user through and clearing the flag
+          localStorage.removeItem("researchMode");
+          setServerVerified(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [localFlag]);
+
+  // Show loading during SSR or while server verification is in flight
+  if (localFlag === null || (localFlag === true && serverVerified === null)) {
     return (
       <section className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
         <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
@@ -37,7 +84,7 @@ export default function ResearchRouteGuard({
     );
   }
 
-  if (isResearch) {
+  if (serverVerified === true) {
     return (
       <section className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
         <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">

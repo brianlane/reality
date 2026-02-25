@@ -93,9 +93,9 @@ export default function PurposePage() {
         <p className="mt-4 text-base leading-relaxed text-navy-soft">
           Reality Matchmaking reintroduces the physics of real-world dating into
           a curated, intentional experience. We simulate the dynamics of a
-          physical venue with visible competition, tangible scarcity, and immediate
-          feedback through orchestrated events designed to produce meaningful
-          connections.
+          physical venue with visible competition, tangible scarcity, and
+          immediate feedback through orchestrated events designed to produce
+          meaningful connections.
         </p>
 
         <div className="mt-10 grid gap-6 sm:grid-cols-2">
@@ -166,11 +166,10 @@ export default function PurposePage() {
                 </h3>
               </div>
               <p className="mt-3 text-sm leading-relaxed text-navy-soft">
-                All members complete a comprehensive application and a
-                rigorous background screening: identity verification,
-                SSN trace, 7-year criminal search,
-                liens, judgments, and bankruptcies. This
-                helps confirm honesty and lifestyle stability.
+                All members complete a comprehensive application and a rigorous
+                background screening: identity verification, SSN trace, 7-year
+                criminal search, liens, judgments, and bankruptcies. This helps
+                confirm honesty and lifestyle stability.
               </p>
             </div>
 
@@ -186,9 +185,9 @@ export default function PurposePage() {
               </div>
               <p className="mt-3 text-sm leading-relaxed text-navy-soft">
                 Accepted applicants are scored for compatibility. When 20
-                compatible members are identified, event
-                invitations are sent. Our curation draws on research from
-                assortative mating and ideal partner standards.
+                compatible members are identified, event invitations are sent.
+                Our curation draws on research from assortative mating and ideal
+                partner standards.
               </p>
             </div>
 
@@ -231,8 +230,8 @@ export default function PurposePage() {
                     </span>
                   </p>
                   <p className="mt-1">
-                    Partitions come down. The same rotations happen again but now
-                    face-to-face. Participants can validate or revise their
+                    Partitions come down. The same rotations happen again but
+                    now face-to-face. Participants can validate or revise their
                     blind impressions, testing whether personality connection
                     translates to physical chemistry.
                   </p>
@@ -247,7 +246,7 @@ export default function PurposePage() {
                   </p>
                   <p className="mt-1">
                     Curated match recommendations are delivered privately. The
-                    space opens for free mingling with deeper conversations and 
+                    space opens for free mingling with deeper conversations and
                     the opportunity to participate in team building activities.
                   </p>
                 </div>
@@ -265,10 +264,10 @@ export default function PurposePage() {
                 </h3>
               </div>
               <p className="mt-3 text-sm leading-relaxed text-navy-soft">
-                The next day, attendees receive feedback and
-                mutual-interest notifications. Follow-up surveys at 30
-                days, 90 days, and 6 months track outcomes. This data-driven
-                approach continuously refines our matching methodology.
+                The next day, attendees receive feedback and mutual-interest
+                notifications. Follow-up surveys at 30 days, 90 days, and 6
+                months track outcomes. This data-driven approach continuously
+                refines our matching methodology.
               </p>
             </div>
           </div>
@@ -305,11 +304,10 @@ export default function PurposePage() {
         <p className="mt-6 text-sm leading-relaxed text-navy-soft">
           Financial screening is not about wealth, it&rsquo;s about honesty.
           Research shows that financial issues are a leading predictor of
-          relationship dissolution, and that
-          financial transparency strengthens relationships. 
-          By verifying financial
-          standing upfront, we help ensure that participants are building
-          connections on a foundation of truthfulness.
+          relationship dissolution, and that financial transparency strengthens
+          relationships. By verifying financial standing upfront, we help ensure
+          that participants are building connections on a foundation of
+          truthfulness.
         </p>
       </section>
 
@@ -323,14 +321,14 @@ export default function PurposePage() {
             Our approach is informed by decades of peer-reviewed research in
             psychology, interpersonal attraction, and relationship science. From
             Gottman&rsquo;s work on interaction patterns that predict marital
-            stability to large-scale machine-learning analyses identifying the most robust
-            predictors of relationship quality, our
-            methodology draws on the best available evidence.
+            stability to large-scale machine-learning analyses identifying the
+            most robust predictors of relationship quality, our methodology
+            draws on the best available evidence.
           </p>
           <p className="mt-4 text-base leading-relaxed text-navy-soft">
             We know that personality traits carry remarkable predictive power
-            for important life outcomes, that love styles
-            and attachment patterns shape relationship dynamics, and that
+            for important life outcomes, that love styles and attachment
+            patterns shape relationship dynamics, and that
             relationship-contingent self-esteem can influence how people show up
             in partnerships. We incorporate these insights into every layer of
             our process from the questions we ask to the matches we curate.
@@ -364,7 +362,9 @@ export default function PurposePage() {
 
       {/* Works Cited */}
       <section className="mx-auto max-w-3xl px-6 py-16">
-        <h2 className="text-2xl font-semibold text-navy">Supporting Research</h2>
+        <h2 className="text-2xl font-semibold text-navy">
+          Supporting Research
+        </h2>
         <div className="mt-6 text-sm text-navy-soft">
           <p className="works-cited">
             Aron, A., Norman, C. C., Aron, E. N., McKenna, C., &amp; Heyman, R.
