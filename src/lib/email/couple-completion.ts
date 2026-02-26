@@ -14,7 +14,8 @@ type CoupleData = {
 };
 
 export async function sendCoupleCompletionEmail(data: CoupleData) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.realitymatchmaking.com";
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL || "https://www.realitymatchmaking.com";
 
   const subject = "🎉 Couple Study Completion: Both Partners Finished";
 

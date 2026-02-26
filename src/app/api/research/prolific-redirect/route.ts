@@ -28,11 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!applicant.prolificCompletionCode) {
-      return errorResponse(
-        "NOT_PROLIFIC",
-        "Not a Prolific participant",
-        400
-      );
+      return errorResponse("NOT_PROLIFIC", "Not a Prolific participant", 400);
     }
 
     // Update redirect timestamp
@@ -48,10 +44,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error tracking Prolific redirect:", error);
-    return errorResponse(
-      "INTERNAL_ERROR",
-      "Failed to track redirect",
-      500
-    );
+    return errorResponse("INTERNAL_ERROR", "Failed to track redirect", 500);
   }
 }

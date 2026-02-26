@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract partner PID from questionnaire answers
-    const partnerPidAnswer = applicant.questionnaireAnswers.find(
-      (answer) => answer.question.prompt.toLowerCase().includes("partner's prolific id")
+    const partnerPidAnswer = applicant.questionnaireAnswers.find((answer) =>
+      answer.question.prompt.toLowerCase().includes("partner's prolific id"),
     );
 
     const partnerPid = partnerPidAnswer?.value as string | undefined;
@@ -90,12 +90,12 @@ export async function POST(request: NextRequest) {
           sendCoupleCompletionEmail({
             applicant1: {
               name: `${applicant.user.firstName} ${applicant.user.lastName}`,
-              prolificPid: applicant.prolificPid,
+              prolificPid: applicant.prolificPid ?? undefined,
               applicationId: applicant.id,
             },
             applicant2: {
               name: `${partnerUser.firstName} ${partnerUser.lastName}`,
-              prolificPid: partner.prolificPid,
+              prolificPid: partner.prolificPid ?? undefined,
               applicationId: partner.id,
             },
           }).catch(() => {

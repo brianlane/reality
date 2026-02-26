@@ -11,7 +11,8 @@ export type EmailType =
   | "PAYMENT_CONFIRMATION"
   | "APPLICATION_APPROVAL"
   | "EVENT_INVITATION"
-  | "STATUS_UPDATE";
+  | "STATUS_UPDATE"
+  | "COUPLE_COMPLETION_NOTIFICATION";
 
 /**
  * Test Email Types

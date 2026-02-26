@@ -6,13 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import LogoCircles from "@/components/layout/LogoCircles";
 import { resetResearchDraftContext } from "./researchDraftStorage";
-import { storeProlificParams, type ProlificParams } from "@/lib/research/prolific";
+import {
+  storeProlificParams,
+  type ProlificParams,
+} from "@/lib/research/prolific-client";
 
 type ResearchSelfRegistrationProps = {
   prolificParams: ProlificParams;
 };
 
-export default function ResearchSelfRegistration({ prolificParams }: ResearchSelfRegistrationProps) {
+export default function ResearchSelfRegistration({
+  prolificParams,
+}: ResearchSelfRegistrationProps) {
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,7 +69,10 @@ export default function ResearchSelfRegistration({ prolificParams }: ResearchSel
         localStorage.removeItem("researchInviteCode");
 
         if (data.prolificCompletionCode) {
-          localStorage.setItem("prolificCompletionCode", data.prolificCompletionCode);
+          localStorage.setItem(
+            "prolificCompletionCode",
+            data.prolificCompletionCode,
+          );
         }
       }
 

@@ -6,7 +6,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CopperIcon } from "@/components/ui/copper-icon";
 import { resetResearchDraftContext } from "./researchDraftStorage";
-import { storeProlificParams, type ProlificParams } from "@/lib/research/prolific";
+import {
+  storeProlificParams,
+  type ProlificParams,
+} from "@/lib/research/prolific-client";
 
 type ResearchInviteGateProps = {
   code: string;
@@ -20,7 +23,10 @@ type ValidationResponse = {
   prolificCompletionCode?: string;
 };
 
-export default function ResearchInviteGate({ code, prolificParams }: ResearchInviteGateProps) {
+export default function ResearchInviteGate({
+  code,
+  prolificParams,
+}: ResearchInviteGateProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,7 +66,10 @@ export default function ResearchInviteGate({ code, prolificParams }: ResearchInv
           localStorage.removeItem("waitlistInviteToken");
 
           if (data.prolificCompletionCode) {
-            localStorage.setItem("prolificCompletionCode", data.prolificCompletionCode);
+            localStorage.setItem(
+              "prolificCompletionCode",
+              data.prolificCompletionCode,
+            );
           }
         }
 

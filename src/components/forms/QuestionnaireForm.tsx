@@ -664,6 +664,13 @@ export default function QuestionnaireForm({
           );
           return;
         }
+        // Store Prolific completion code for redirect on thank-you page
+        if (data.prolificCompletionCode) {
+          localStorage.setItem(
+            "prolificCompletionCode",
+            data.prolificCompletionCode,
+          );
+        }
         router.push("/research/thank-you");
       } else {
         // Navigate to photos page

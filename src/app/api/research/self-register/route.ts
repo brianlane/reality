@@ -4,7 +4,10 @@ import { nanoid } from "nanoid";
 import { sendResearchInviteEmail } from "@/lib/email/research";
 import { logger } from "@/lib/logger";
 import { generateUniqueResearchInviteCode } from "@/lib/research/invite-code";
-import { hasValidProlificParams, type ProlificParams } from "@/lib/research/prolific";
+import {
+  hasValidProlificParams,
+  type ProlificParams,
+} from "@/lib/research/prolific";
 
 const RESEARCH_STATUSES = new Set([
   "RESEARCH_INVITED",
@@ -106,6 +109,11 @@ export async function POST(request: Request) {
         inviteCode,
         emailSent,
         message: "Welcome back! Continue with your research questionnaire.",
+        // Return completion code for Prolific participants
+        ...(hasProlific && {
+          prolificCompletionCode:
+            process.env.PROLIFIC_COMPLETION_CODE || "C6NBKFHR",
+        }),
       });
     }
 
@@ -167,6 +175,11 @@ export async function POST(request: Request) {
       inviteCode,
       emailSent,
       message: "Successfully registered for research study",
+      // Return completion code for Prolific participants
+      ...(hasProlific && {
+        prolificCompletionCode:
+          process.env.PROLIFIC_COMPLETION_CODE || "C6NBKFHR",
+      }),
     });
   } catch (error) {
     console.error("Research self-registration error:", error);
