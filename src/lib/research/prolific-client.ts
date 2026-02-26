@@ -21,23 +21,6 @@ export function hasValidProlificParams(params: ProlificParams): boolean {
 }
 
 /**
- * Store Prolific params in localStorage for persistence across navigation
- */
-export function storeProlificParams(params: ProlificParams): void {
-  if (typeof window === "undefined") return;
-
-  if (params.prolificPid) {
-    localStorage.setItem("prolificPid", params.prolificPid);
-  }
-  if (params.prolificStudyId) {
-    localStorage.setItem("prolificStudyId", params.prolificStudyId);
-  }
-  if (params.prolificSessionId) {
-    localStorage.setItem("prolificSessionId", params.prolificSessionId);
-  }
-}
-
-/**
  * Clear Prolific params from localStorage
  */
 export function clearProlificParams(): void {

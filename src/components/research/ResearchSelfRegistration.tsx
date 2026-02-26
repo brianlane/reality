@@ -9,7 +9,6 @@ import { resetResearchDraftContext } from "./researchDraftStorage";
 import {
   clearProlificParams,
   hasValidProlificParams,
-  storeProlificParams,
   type ProlificParams,
 } from "@/lib/research/prolific-client";
 
@@ -24,13 +23,11 @@ export default function ResearchSelfRegistration({
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Store Prolific params on mount
+  // If this isn't a Prolific entry, clear any stale Prolific data.
   useEffect(() => {
-    if (hasValidProlificParams(prolificParams)) {
-      storeProlificParams(prolificParams);
-      return;
+    if (!hasValidProlificParams(prolificParams)) {
+      clearProlificParams();
     }
-    clearProlificParams();
   }, [prolificParams]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

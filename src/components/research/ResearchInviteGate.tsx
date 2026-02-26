@@ -9,7 +9,6 @@ import { resetResearchDraftContext } from "./researchDraftStorage";
 import {
   clearProlificParams,
   hasValidProlificParams,
-  storeProlificParams,
   type ProlificParams,
 } from "@/lib/research/prolific-client";
 
@@ -35,7 +34,6 @@ export default function ResearchInviteGate({
 
   useEffect(() => {
     if (hasValidProlificParams(prolificParams)) {
-      storeProlificParams(prolificParams);
       localStorage.removeItem("prolificCompletionCode");
     } else {
       clearProlificParams();
