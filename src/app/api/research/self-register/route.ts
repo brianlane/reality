@@ -51,10 +51,9 @@ export async function POST(request: Request) {
       prolificStudyId,
       prolificSessionId,
     });
-    const prolificCompletionCode = hasProlific
-      ? getProlificCompletionCode()
-      : null;
-    if (hasProlific && !prolificCompletionCode) {
+    // Prolific never sends completion code on entry; this verifies server config
+    // early so participants do not fail after finishing the full questionnaire.
+    if (hasProlific && !getProlificCompletionCode()) {
       return errorResponse(
         "SERVER_MISCONFIGURED",
         "Prolific integration is temporarily unavailable. Please try again later.",
@@ -132,10 +131,6 @@ export async function POST(request: Request) {
         inviteCode,
         emailSent,
         message: "Welcome back! Continue with your research questionnaire.",
-        // Return completion code for Prolific participants
-        ...(prolificCompletionCode && {
-          prolificCompletionCode,
-        }),
       });
     }
 
@@ -197,10 +192,6 @@ export async function POST(request: Request) {
       inviteCode,
       emailSent,
       message: "Successfully registered for research study",
-      // Return completion code for Prolific participants
-      ...(prolificCompletionCode && {
-        prolificCompletionCode,
-      }),
     });
   } catch (error) {
     if (isProlificPidUniqueViolation(error)) {
