@@ -7,6 +7,7 @@ import { generateUniqueResearchInviteCode } from "@/lib/research/invite-code";
 import {
   hasValidProlificParams,
   type ProlificParams,
+  PROLIFIC_COMPLETION_CODE,
 } from "@/lib/research/prolific";
 
 const RESEARCH_STATUSES = new Set([
@@ -111,8 +112,7 @@ export async function POST(request: Request) {
         message: "Welcome back! Continue with your research questionnaire.",
         // Return completion code for Prolific participants
         ...(hasProlific && {
-          prolificCompletionCode:
-            process.env.PROLIFIC_COMPLETION_CODE || "C6NBKFHR",
+          prolificCompletionCode: PROLIFIC_COMPLETION_CODE,
         }),
       });
     }
@@ -177,8 +177,7 @@ export async function POST(request: Request) {
       message: "Successfully registered for research study",
       // Return completion code for Prolific participants
       ...(hasProlific && {
-        prolificCompletionCode:
-          process.env.PROLIFIC_COMPLETION_CODE || "C6NBKFHR",
+        prolificCompletionCode: PROLIFIC_COMPLETION_CODE,
       }),
     });
   } catch (error) {

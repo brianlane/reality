@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import LogoCircles from "@/components/layout/LogoCircles";
 import { resetResearchDraftContext } from "./researchDraftStorage";
 import {
+  clearProlificParams,
+  hasValidProlificParams,
   storeProlificParams,
   type ProlificParams,
 } from "@/lib/research/prolific-client";
@@ -24,7 +26,11 @@ export default function ResearchSelfRegistration({
 
   // Store Prolific params on mount
   useEffect(() => {
-    storeProlificParams(prolificParams);
+    if (hasValidProlificParams(prolificParams)) {
+      storeProlificParams(prolificParams);
+      return;
+    }
+    clearProlificParams();
   }, [prolificParams]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -73,6 +79,8 @@ export default function ResearchSelfRegistration({
             "prolificCompletionCode",
             data.prolificCompletionCode,
           );
+        } else {
+          localStorage.removeItem("prolificCompletionCode");
         }
       }
 

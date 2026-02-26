@@ -387,6 +387,8 @@
 
 150. Is there anything important about compatibility or relationships that you feel this questionnaire failed to ask about? `[TEXTAREA]`
 
+151. AGE `[TEXT:number]`
+
 ---
 
 ## Summary Statistics

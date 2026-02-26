@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { CopperIcon } from "@/components/ui/copper-icon";
 import { resetResearchDraftContext } from "./researchDraftStorage";
 import {
+  clearProlificParams,
+  hasValidProlificParams,
   storeProlificParams,
   type ProlificParams,
 } from "@/lib/research/prolific-client";
@@ -32,8 +34,12 @@ export default function ResearchInviteGate({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Store Prolific params immediately
-    storeProlificParams(prolificParams);
+    if (hasValidProlificParams(prolificParams)) {
+      storeProlificParams(prolificParams);
+      localStorage.removeItem("prolificCompletionCode");
+    } else {
+      clearProlificParams();
+    }
 
     async function validateCode() {
       try {
@@ -70,6 +76,8 @@ export default function ResearchInviteGate({
               "prolificCompletionCode",
               data.prolificCompletionCode,
             );
+          } else {
+            localStorage.removeItem("prolificCompletionCode");
           }
         }
 

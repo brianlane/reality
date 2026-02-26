@@ -670,6 +670,8 @@ export default function QuestionnaireForm({
             "prolificCompletionCode",
             data.prolificCompletionCode,
           );
+        } else {
+          localStorage.removeItem("prolificCompletionCode");
         }
         router.push("/research/thank-you");
       } else {

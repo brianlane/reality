@@ -1,15 +1,17 @@
 import { db } from "@/lib/db";
 
-// Re-export client-side utilities
+// Re-export client-side utilities (types and functions only)
 export {
   type ProlificParams,
-  PROLIFIC_COMPLETION_CODE,
   buildProlificRedirectUrl,
   hasValidProlificParams,
   storeProlificParams,
-  retrieveProlificParams,
-  clearProlificParams,
 } from "./prolific-client";
+
+// Server-side completion code (for API routes)
+// This is separate from the client constant to avoid requiring NEXT_PUBLIC_ prefix
+export const PROLIFIC_COMPLETION_CODE =
+  process.env.PROLIFIC_COMPLETION_CODE || "C6NBKFHR";
 
 /**
  * Check if a participant's partner has also completed

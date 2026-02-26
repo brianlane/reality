@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import {
   hasValidProlificParams,
   type ProlificParams,
+  PROLIFIC_COMPLETION_CODE,
 } from "@/lib/research/prolific";
 import { Prisma } from "@prisma/client";
 
@@ -192,8 +193,7 @@ export async function POST(request: NextRequest) {
         prolificStudyId,
         prolificSessionId,
       }) && {
-        prolificCompletionCode:
-          process.env.PROLIFIC_COMPLETION_CODE || "C6NBKFHR",
+        prolificCompletionCode: PROLIFIC_COMPLETION_CODE,
       }),
     });
   } catch (error) {

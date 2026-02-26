@@ -69,7 +69,7 @@ export default function ResearchThankYouPage() {
             <div className="h-2 bg-navy/10 rounded-full overflow-hidden">
               <div
                 className="h-full bg-copper transition-all duration-1000"
-                style={{ width: `${((6 - countdown) / 5) * 100}%` }}
+                style={{ width: `${((5 - countdown) / 5) * 100}%` }}
               />
             </div>
           </div>
