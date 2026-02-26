@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
 // Re-export client-side utilities (types and functions only)
 export {
@@ -12,6 +13,24 @@ export {
 export function getProlificCompletionCode(): string | null {
   const code = process.env.PROLIFIC_COMPLETION_CODE?.trim();
   return code ? code : null;
+}
+
+export function isProlificPidUniqueViolation(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    return false;
+  }
+  if (error.code !== "P2002") {
+    return false;
+  }
+  const target = (error.meta as { target?: string[] | string } | undefined)
+    ?.target;
+  if (Array.isArray(target)) {
+    return target.includes("prolificPid");
+  }
+  if (typeof target === "string") {
+    return target.includes("prolificPid");
+  }
+  return false;
 }
 
 /**

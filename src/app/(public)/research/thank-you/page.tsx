@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { CopperIcon } from "@/components/ui/copper-icon";
 import { buildProlificRedirectUrl } from "@/lib/research/prolific-client";
 
 export default function ResearchThankYouPage() {
-  const searchParams = useSearchParams();
-  const queryApplicationId = searchParams.get("applicationId");
+  const [queryApplicationId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const params = new URLSearchParams(window.location.search);
+    return params.get("applicationId");
+  });
 
   // Use lazy initializer to read from localStorage on first render
   const [completionCode, setCompletionCode] = useState<string | null>(() => {
@@ -42,12 +44,10 @@ export default function ResearchThankYouPage() {
     )
       .then(async (response) => {
         if (!response.ok) return null;
-        return (await response.json()) as {
-          data?: { prolificCompletionCode?: string };
-        };
+        return (await response.json()) as { prolificCompletionCode?: string };
       })
       .then((json) => {
-        const code = json?.data?.prolificCompletionCode;
+        const code = json?.prolificCompletionCode;
         if (!cancelled && code) {
           setCompletionCode(code);
           if (typeof window !== "undefined") {

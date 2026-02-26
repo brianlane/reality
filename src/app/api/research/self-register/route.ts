@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { nanoid } from "nanoid";
-import { Prisma } from "@prisma/client";
 import { sendResearchInviteEmail } from "@/lib/email/research";
 import { logger } from "@/lib/logger";
 import { generateUniqueResearchInviteCode } from "@/lib/research/invite-code";
@@ -9,6 +8,7 @@ import {
   hasValidProlificParams,
   type ProlificParams,
   getProlificCompletionCode,
+  isProlificPidUniqueViolation,
 } from "@/lib/research/prolific";
 
 const RESEARCH_STATUSES = new Set([
@@ -16,24 +16,6 @@ const RESEARCH_STATUSES = new Set([
   "RESEARCH_IN_PROGRESS",
   "RESEARCH_COMPLETED",
 ]);
-
-function isProlificPidUniqueViolation(error: unknown): boolean {
-  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
-    return false;
-  }
-  if (error.code !== "P2002") {
-    return false;
-  }
-  const target = (error.meta as { target?: string[] | string } | undefined)
-    ?.target;
-  if (Array.isArray(target)) {
-    return target.includes("prolificPid");
-  }
-  if (typeof target === "string") {
-    return target.includes("prolificPid");
-  }
-  return false;
-}
 
 /**
  * POST /api/research/self-register
