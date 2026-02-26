@@ -304,6 +304,57 @@ export const questionnaireQuestionTypeSchema = z.enum([
   "RANKING",
 ]);
 
+// Shared validation helper for questionnaire question schemas
+function validateQuestionnaireQuestionOptions(
+  data: { type?: string; options?: any },
+  ctx: z.RefinementCtx,
+) {
+  // Validate RADIO_7 has exactly 7 options
+  if (data.type === "RADIO_7" && Array.isArray(data.options)) {
+    const options = data.options.filter((item) => String(item).trim());
+    if (options.length !== 7) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Radio 7 questions must have exactly 7 options.",
+        path: ["options"],
+      });
+    }
+  }
+
+  // Validate CHECKBOXES maxSelections
+  if (
+    data.type === "CHECKBOXES" &&
+    data.options !== null &&
+    data.options !== undefined
+  ) {
+    const opts = data.options;
+    const maxSelections =
+      typeof opts === "object" && !Array.isArray(opts)
+        ? opts.maxSelections
+        : undefined;
+    const optionsList = Array.isArray(opts)
+      ? opts
+      : typeof opts === "object" && Array.isArray(opts.options)
+        ? opts.options
+        : null;
+    if (maxSelections !== undefined) {
+      if (!Number.isInteger(maxSelections) || maxSelections < 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "maxSelections must be a positive integer.",
+          path: ["options"],
+        });
+      } else if (optionsList && maxSelections > optionsList.length) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "maxSelections cannot exceed the number of options.",
+          path: ["options"],
+        });
+      }
+    }
+  }
+}
+
 export const adminQuestionnaireQuestionCreateSchema = z
   .object({
     sectionId: z.string().min(1),
@@ -317,49 +368,7 @@ export const adminQuestionnaireQuestionCreateSchema = z
     mlWeight: z.number().min(0).max(1).optional().default(1.0),
     isDealbreaker: z.boolean().optional().default(false),
   })
-  .superRefine((data, ctx) => {
-    if (data.type === "RADIO_7" && Array.isArray(data.options)) {
-      const options = data.options.filter((item) => String(item).trim());
-      if (options.length !== 7) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Radio 7 questions must have exactly 7 options.",
-          path: ["options"],
-        });
-      }
-    }
-    if (
-      data.type === "CHECKBOXES" &&
-      data.options !== null &&
-      data.options !== undefined
-    ) {
-      const opts = data.options;
-      const maxSelections =
-        typeof opts === "object" && !Array.isArray(opts)
-          ? opts.maxSelections
-          : undefined;
-      const optionsList = Array.isArray(opts)
-        ? opts
-        : typeof opts === "object" && Array.isArray(opts.options)
-          ? opts.options
-          : null;
-      if (maxSelections !== undefined) {
-        if (!Number.isInteger(maxSelections) || maxSelections < 1) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "maxSelections must be a positive integer.",
-            path: ["options"],
-          });
-        } else if (optionsList && maxSelections > optionsList.length) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "maxSelections cannot exceed the number of options.",
-            path: ["options"],
-          });
-        }
-      }
-    }
-  });
+  .superRefine(validateQuestionnaireQuestionOptions);
 
 export const adminQuestionnaireQuestionUpdateSchema = z
   .object({
@@ -374,49 +383,7 @@ export const adminQuestionnaireQuestionUpdateSchema = z
     mlWeight: z.number().min(0).max(1).optional(),
     isDealbreaker: z.boolean().optional(),
   })
-  .superRefine((data, ctx) => {
-    if (data.type === "RADIO_7" && Array.isArray(data.options)) {
-      const options = data.options.filter((item) => String(item).trim());
-      if (options.length !== 7) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Radio 7 questions must have exactly 7 options.",
-          path: ["options"],
-        });
-      }
-    }
-    if (
-      data.type === "CHECKBOXES" &&
-      data.options !== null &&
-      data.options !== undefined
-    ) {
-      const opts = data.options;
-      const maxSelections =
-        typeof opts === "object" && !Array.isArray(opts)
-          ? opts.maxSelections
-          : undefined;
-      const optionsList = Array.isArray(opts)
-        ? opts
-        : typeof opts === "object" && Array.isArray(opts.options)
-          ? opts.options
-          : null;
-      if (maxSelections !== undefined) {
-        if (!Number.isInteger(maxSelections) || maxSelections < 1) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "maxSelections must be a positive integer.",
-            path: ["options"],
-          });
-        } else if (optionsList && maxSelections > optionsList.length) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "maxSelections cannot exceed the number of options.",
-            path: ["options"],
-          });
-        }
-      }
-    }
-  });
+  .superRefine(validateQuestionnaireQuestionOptions);
 
 export const applicantQuestionnaireSubmitSchema = z.object({
   applicationId: z.string().min(1),
