@@ -41,13 +41,19 @@ export default function ResearchRouteGuard({
   useEffect(() => {
     // Not in research mode locally — no server call needed
     if (localFlag === null || localFlag === false) {
-      setServerVerified(false);
       return;
     }
 
     // localStorage claims research mode — verify against the server to guard
     // against stale flags from prior sessions on a shared browser
     let cancelled = false;
+    // Reset to loading state when entering research mode, but do it async so
+    // we don't synchronously set state inside the effect body.
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setServerVerified(null);
+      }
+    });
     fetch("/api/applicant/application")
       .then((res) => res.json())
       .then((data) => {
@@ -84,7 +90,7 @@ export default function ResearchRouteGuard({
     );
   }
 
-  if (serverVerified === true) {
+  if (localFlag === true && serverVerified === true) {
     return (
       <section className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
         <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">

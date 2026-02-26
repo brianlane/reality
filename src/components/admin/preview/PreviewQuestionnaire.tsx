@@ -33,6 +33,11 @@ type RankingOptions = {
   items: string[];
 };
 
+type CheckboxOptions = {
+  options: string[];
+  maxSelections?: number;
+};
+
 type Question = {
   id: string;
   prompt: string;
@@ -40,6 +45,7 @@ type Question = {
   type: QuestionType;
   options:
     | string[]
+    | CheckboxOptions
     | NumberScaleOptions
     | PointAllocationOptions
     | RankingOptions
@@ -353,14 +359,14 @@ export default function PreviewQuestionnaire() {
             : rawOpts !== null &&
                 typeof rawOpts === "object" &&
                 "options" in (rawOpts as object)
-              ? (rawOpts as { options: string[] }).options
+              ? (rawOpts as CheckboxOptions).options
               : [];
           const maxSel =
             !Array.isArray(rawOpts) &&
             rawOpts !== null &&
             typeof rawOpts === "object" &&
             "maxSelections" in (rawOpts as object)
-              ? (rawOpts as { maxSelections?: number }).maxSelections
+              ? (rawOpts as CheckboxOptions).maxSelections
               : undefined;
           if (checkboxList.length > 0) {
             const limit = maxSel ?? checkboxList.length;

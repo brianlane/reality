@@ -34,8 +34,8 @@ export default function PurposePage() {
           The Paradox of Choice
         </h2>
         <p className="mt-4 text-base leading-relaxed text-navy-soft">
-          Dating apps are dying. And it's not from a lack of users, but from a
-          fundamental design flaw. They create an{" "}
+          Dating apps are dying. And it&apos;s not from a lack of users, but
+          from a fundamental design flaw. They create an{" "}
           <strong className="text-navy">illusion of infinite choice</strong>{" "}
           that paralyzes decision making and prevents real connections.
         </p>

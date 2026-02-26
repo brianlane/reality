@@ -153,6 +153,8 @@ export default function PhotoUploadForm({
         {photos.length > 0 && (
           <div className="flex flex-wrap gap-3">
             {photos.map((url, i) => (
+              // Using raw img here to keep compatibility with dynamic storage URLs.
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 key={url}
                 src={url}

@@ -126,7 +126,7 @@ function parseAnnotation(line: string): {
   //   CHECKBOXES:max=3: opt1, opt2, opt3
   if (annotation.startsWith("CHECKBOXES:")) {
     const rest = annotation.replace("CHECKBOXES:", "").trim();
-    const maxMatch = rest.match(/^max=(\d+):(.*)/s);
+    const maxMatch = rest.match(/^max=(\d+):([\s\S]*)/);
     if (maxMatch) {
       const maxSelections = parseInt(maxMatch[1], 10);
       const optionsStr = maxMatch[2].trim();
