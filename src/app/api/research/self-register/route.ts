@@ -93,6 +93,13 @@ export async function POST(request: Request) {
             prolificStudyId,
             prolificSessionId,
           }),
+          ...(!hasProlific && {
+            prolificPid: null,
+            prolificStudyId: null,
+            prolificSessionId: null,
+            prolificCompletionCode: null,
+            prolificPartnerPid: null,
+          }),
         },
       });
 
