@@ -86,6 +86,7 @@ export async function POST(request: Request) {
         data: {
           applicationStatus: "RESEARCH_IN_PROGRESS",
           researchInvitedAt: new Date(),
+          researchCompletedAt: null,
           researchInviteCode: inviteCode,
           ...(hasProlific && {
             prolificPid,

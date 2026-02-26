@@ -53,10 +53,18 @@ export async function POST(request: NextRequest) {
     // so prompt wording changes don't silently break this flow.
     const partnerPidAnswer = applicant.questionnaireAnswers.find((answer) => {
       const prompt = answer.question.prompt.toLowerCase();
+      const hasPartnerToken = prompt.includes("partner");
+      const hasPartnerProlificPidPhrase =
+        prompt.includes("partner's prolific pid") ||
+        prompt.includes("partners prolific pid") ||
+        prompt.includes("partner prolific pid");
+      const hasPartnerProlificIdPhrase =
+        prompt.includes("partner's prolific id") ||
+        prompt.includes("partners prolific id") ||
+        prompt.includes("partner prolific id");
       return (
-        prompt.includes("partner") &&
-        prompt.includes("prolific") &&
-        (prompt.includes("pid") || prompt.includes("id"))
+        hasPartnerToken &&
+        (hasPartnerProlificPidPhrase || hasPartnerProlificIdPhrase)
       );
     });
     const partnerPidFromAnswer =

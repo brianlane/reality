@@ -39,6 +39,7 @@ export async function checkPartnerCompletion(applicantId: string) {
     select: {
       id: true,
       userId: true,
+      applicationStatus: true,
       researchCompletedAt: true,
       prolificPid: true,
     },
@@ -49,8 +50,11 @@ export async function checkPartnerCompletion(applicantId: string) {
     return null;
   }
 
-  // Return partner only if they've also completed
-  if (partner?.researchCompletedAt) {
+  // Return partner only when status and timestamp both indicate completion.
+  if (
+    partner?.applicationStatus === "RESEARCH_COMPLETED" &&
+    partner.researchCompletedAt
+  ) {
     return partner;
   }
 
