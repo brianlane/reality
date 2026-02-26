@@ -664,7 +664,22 @@ export default function QuestionnaireForm({
           );
           return;
         }
-        router.push("/research/thank-you");
+        // Store Prolific completion code for redirect on thank-you page
+        if (data.prolificCompletionCode) {
+          localStorage.setItem(
+            "prolificCompletionCode",
+            data.prolificCompletionCode,
+          );
+        } else {
+          localStorage.removeItem("prolificCompletionCode");
+        }
+        if (!applicationId) {
+          setStatus("Missing research application context.");
+          return;
+        }
+        router.push(
+          `/research/thank-you?applicationId=${encodeURIComponent(applicationId)}`,
+        );
       } else {
         // Navigate to photos page
         router.push("/apply/photos");

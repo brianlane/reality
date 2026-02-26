@@ -4,6 +4,12 @@ import { nanoid } from "nanoid";
 import { sendResearchInviteEmail } from "@/lib/email/research";
 import { logger } from "@/lib/logger";
 import { generateUniqueResearchInviteCode } from "@/lib/research/invite-code";
+import {
+  hasValidProlificParams,
+  type ProlificParams,
+  getProlificCompletionCode,
+  isProlificPidUniqueViolation,
+} from "@/lib/research/prolific";
 
 const RESEARCH_STATUSES = new Set([
   "RESEARCH_INVITED",
@@ -18,7 +24,18 @@ const RESEARCH_STATUSES = new Set([
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { firstName, lastName, email } = body;
+    const {
+      firstName,
+      lastName,
+      email,
+      prolificPid,
+      prolificStudyId,
+      prolificSessionId,
+    }: {
+      firstName: string;
+      lastName: string;
+      email: string;
+    } & ProlificParams = body;
 
     // Validate required fields
     if (!firstName || !lastName || !email) {
@@ -26,6 +43,22 @@ export async function POST(request: Request) {
         "VALIDATION_ERROR",
         "First name, last name, and email are required",
         400,
+      );
+    }
+
+    const hasProlific = hasValidProlificParams({
+      prolificPid,
+      prolificStudyId,
+      prolificSessionId,
+    });
+    const prolificCompletionCode = hasProlific
+      ? getProlificCompletionCode()
+      : null;
+    if (hasProlific && !prolificCompletionCode) {
+      return errorResponse(
+        "SERVER_MISCONFIGURED",
+        "Prolific integration is temporarily unavailable. Please try again later.",
+        503,
       );
     }
 
@@ -54,7 +87,23 @@ export async function POST(request: Request) {
         data: {
           applicationStatus: "RESEARCH_IN_PROGRESS",
           researchInvitedAt: new Date(),
+          researchCompletedAt: null,
+          prolificCompletionCode: null,
+          prolificPartnerPid: null,
+          prolificRedirectedAt: null,
           researchInviteCode: inviteCode,
+          ...(hasProlific && {
+            prolificPid,
+            prolificStudyId,
+            prolificSessionId,
+          }),
+          ...(!hasProlific && {
+            prolificPid: null,
+            prolificStudyId: null,
+            prolificSessionId: null,
+            prolificCompletionCode: null,
+            prolificPartnerPid: null,
+          }),
         },
       });
 
@@ -83,6 +132,10 @@ export async function POST(request: Request) {
         inviteCode,
         emailSent,
         message: "Welcome back! Continue with your research questionnaire.",
+        // Return completion code for Prolific participants
+        ...(prolificCompletionCode && {
+          prolificCompletionCode,
+        }),
       });
     }
 
@@ -112,6 +165,11 @@ export async function POST(request: Request) {
         applicationStatus: "RESEARCH_IN_PROGRESS",
         researchInvitedAt: new Date(),
         researchInviteCode: inviteCode,
+        ...(hasProlific && {
+          prolificPid,
+          prolificStudyId,
+          prolificSessionId,
+        }),
         photos: [],
       },
     });
@@ -139,8 +197,19 @@ export async function POST(request: Request) {
       inviteCode,
       emailSent,
       message: "Successfully registered for research study",
+      // Return completion code for Prolific participants
+      ...(prolificCompletionCode && {
+        prolificCompletionCode,
+      }),
     });
   } catch (error) {
+    if (isProlificPidUniqueViolation(error)) {
+      return errorResponse(
+        "CONFLICT",
+        "This Prolific participant ID is already in use.",
+        409,
+      );
+    }
     console.error("Research self-registration error:", error);
     return errorResponse(
       "INTERNAL_ERROR",

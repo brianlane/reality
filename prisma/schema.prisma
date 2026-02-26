@@ -111,6 +111,14 @@ model Applicant {
   researchInviteUsedAt  DateTime?
   researchCompletedAt   DateTime?
 
+  // Prolific Integration
+  prolificPid            String?   @unique    // Prolific participant ID
+  prolificStudyId        String?              // Study ID
+  prolificSessionId      String?              // Session/submission ID
+  prolificPartnerPid     String?              // Partner's Prolific PID (for couples)
+  prolificCompletionCode String?              // Completion code for redirect
+  prolificRedirectedAt   DateTime?            // When redirected to Prolific
+
   // Application Status
   applicationStatus     ApplicationStatus @default(DRAFT)
   submittedAt           DateTime?
@@ -152,6 +160,10 @@ model Applicant {
   @@index([screeningStatus])
   @@index([compatibilityScore])
   @@index([deletedAt])
+  @@index([prolificStudyId])
+  @@index([prolificSessionId])
+  @@index([prolificCompletionCode])
+  @@index([prolificPartnerPid])
 }
 
 enum QuestionnaireQuestionType {

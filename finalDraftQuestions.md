@@ -365,9 +365,9 @@
 
 ### Section B: Quality Ranking
 
-144. Please rank the following from 1 (Most Important) to 5 (Least Important) in terms of what are a priority in your life. `[RANKING: Friends, Family, Work, Phone, Social media]`
+144. Please rank the following from 1 (Most Important) to 5 (Least Important) in terms of what are a priority in your daily life. `[RANKING: Friends, Family, Work, Phone, Social media]`
 
-145. Please rank the following life values from 1 (Most Important) to 10 (Least Important) in terms of their priority in your life. `[RANKING: Community Life and Citizenship, Education and Learning, Family, Social Life and Friendship, Health and Self-Care, Intimate Romantic Relationship, Parenting, Recreation and Leisure, Spirituality and Faith, Work and Career]`
+145. Please rank the following life values from 1 (Most Important) to 10 (Least Important) in terms of their priority in your overall life. `[RANKING: Community Life and Citizenship, Education and Learning, Family, Social Life and Friendship, Health and Self-Care, Intimate Romantic Relationship, Parenting, Recreation and Leisure, Spirituality and Faith, Work and Career]`
 
 146. Please rank the following qualities from 1 (Most Critical) to 7 (Least Critical) for your ideal partner. `[RANKING: Trust, Emotional Intelligence, Growth Mindset, Accountability, Resilience, Loyalty, Intellectual Curiosity]`
 
@@ -386,6 +386,8 @@
 149. Are there any questions you believe should be removed from this questionnaire? Please list them and explain your reasoning. `[TEXTAREA]`
 
 150. Is there anything important about compatibility or relationships that you feel this questionnaire failed to ask about? `[TEXTAREA]`
+
+151. AGE `[TEXT:number]`
 
 ---
 

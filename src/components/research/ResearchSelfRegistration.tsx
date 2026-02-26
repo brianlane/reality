@@ -1,16 +1,34 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import LogoCircles from "@/components/layout/LogoCircles";
 import { resetResearchDraftContext } from "./researchDraftStorage";
+import {
+  clearProlificParams,
+  hasValidProlificParams,
+  type ProlificParams,
+} from "@/lib/research/prolific-client";
 
-export default function ResearchSelfRegistration() {
+type ResearchSelfRegistrationProps = {
+  prolificParams: ProlificParams;
+};
+
+export default function ResearchSelfRegistration({
+  prolificParams,
+}: ResearchSelfRegistrationProps) {
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // If this isn't a Prolific entry, clear any stale Prolific data.
+  useEffect(() => {
+    if (!hasValidProlificParams(prolificParams)) {
+      clearProlificParams();
+    }
+  }, [prolificParams]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -24,6 +42,7 @@ export default function ResearchSelfRegistration() {
       email: String(formData.get("email") ?? "")
         .trim()
         .toLowerCase(),
+      ...prolificParams,
     };
 
     try {
@@ -51,6 +70,15 @@ export default function ResearchSelfRegistration() {
         localStorage.setItem("researchMode", "true");
         localStorage.removeItem("waitlistInviteToken");
         localStorage.removeItem("researchInviteCode");
+
+        if (data.prolificCompletionCode) {
+          localStorage.setItem(
+            "prolificCompletionCode",
+            data.prolificCompletionCode,
+          );
+        } else {
+          localStorage.removeItem("prolificCompletionCode");
+        }
       }
 
       // Redirect to research questionnaire
