@@ -4,7 +4,7 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { submitApplicationSchema } from "@/lib/validations";
 import { notifyQuestionnaireCompleted } from "@/lib/email/admin-notifications";
 import {
-  PROLIFIC_COMPLETION_CODE,
+  getProlificCompletionCode,
   checkPartnerCompletion,
   buildProlificRedirectUrl,
 } from "@/lib/research/prolific";
@@ -59,7 +59,15 @@ export async function POST(request: NextRequest) {
     // Use the completion code for all Prolific participants
     let completionCode = applicant.prolificCompletionCode;
     if (applicant.prolificPid) {
-      completionCode = PROLIFIC_COMPLETION_CODE;
+      const prolificCompletionCode = getProlificCompletionCode();
+      if (!prolificCompletionCode) {
+        return errorResponse(
+          "SERVER_MISCONFIGURED",
+          "Prolific integration is temporarily unavailable. Please try again later.",
+          503,
+        );
+      }
+      completionCode = prolificCompletionCode;
     }
 
     // Update applicant with completion data

@@ -5,12 +5,14 @@ export {
   type ProlificParams,
   buildProlificRedirectUrl,
   hasValidProlificParams,
-  storeProlificParams,
 } from "./prolific-client";
 
-// Server-side completion code used by API routes
-export const PROLIFIC_COMPLETION_CODE =
-  process.env.PROLIFIC_COMPLETION_CODE || "C6NBKFHR";
+// Server-side completion code used by API routes.
+// Intentionally no hardcoded fallback: fail closed when unset.
+export function getProlificCompletionCode(): string | null {
+  const code = process.env.PROLIFIC_COMPLETION_CODE?.trim();
+  return code ? code : null;
+}
 
 /**
  * Check if a participant's partner has also completed

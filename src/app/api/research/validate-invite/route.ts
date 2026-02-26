@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 import {
   hasValidProlificParams,
   type ProlificParams,
-  PROLIFIC_COMPLETION_CODE,
+  getProlificCompletionCode,
 } from "@/lib/research/prolific";
 import { Prisma } from "@prisma/client";
 
@@ -152,6 +152,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const hasProlific = hasValidProlificParams({
+      prolificPid,
+      prolificStudyId,
+      prolificSessionId,
+    });
+    const prolificCompletionCode = hasProlific
+      ? getProlificCompletionCode()
+      : null;
+    if (hasProlific && !prolificCompletionCode) {
+      return errorResponse(
+        "SERVER_MISCONFIGURED",
+        "Prolific integration is temporarily unavailable. Please try again later.",
+        503,
+      );
+    }
+
     // Prepare update data
     const updateData: Prisma.ApplicantUpdateInput = {
       applicationStatus: "RESEARCH_IN_PROGRESS",
@@ -159,13 +175,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Add Prolific data if params are valid
-    if (
-      hasValidProlificParams({
-        prolificPid,
-        prolificStudyId,
-        prolificSessionId,
-      })
-    ) {
+    if (hasProlific) {
       updateData.prolificPid = prolificPid;
       updateData.prolificStudyId = prolificStudyId;
       updateData.prolificSessionId = prolificSessionId;
@@ -188,12 +198,8 @@ export async function POST(request: NextRequest) {
       firstName: applicant.user.firstName,
       applicationId: applicant.id,
       // Return completion code for Prolific participants
-      ...(hasValidProlificParams({
-        prolificPid,
-        prolificStudyId,
-        prolificSessionId,
-      }) && {
-        prolificCompletionCode: PROLIFIC_COMPLETION_CODE,
+      ...(prolificCompletionCode && {
+        prolificCompletionCode,
       }),
     });
   } catch (error) {
