@@ -113,7 +113,7 @@
 
 ---
 
-## Page 7: Conflict Resolution
+## Page 4: Conflict Resolution
 
 ### Section A: Conflict Style
 
@@ -136,7 +136,7 @@
 
 ---
 
-## Page 8: Decision Making & Life Approach
+## Page 5: Decision Making & Life Approach
 
 ### Section A: Decision Style
 
@@ -165,26 +165,23 @@
 
 ---
 
-## Page 4: Physical Appearance & Attraction
+## Page 6: Physical Appearance & Attraction
 
-### Section A: Self-Perception
+### Section A: Self-Perception and Physical Preferences
 
 53. What do you think is your best physical feature? `[TEXT]`
-54. Describe your "Vibe" in three words. `[TEXT]`
+54. What physical feature are you looking for in a partner? `[TEXT]`
+55. Describe your "Vibe" in three words. `[TEXT]`
 
 ### Section B: Presence & First Impressions
 
-55. When you walk into a room, do you find that people—strangers, waiters, etc.—subtly treat you differently or clear a path for you, or do you feel like you generally blend into the crowd? `[DROPDOWN: People treat me differently/clear a path, I generally blend into the crowd, It depends on the situation]`
-56. If someone took a raw, black-and-white photo of you right now, would the photo be defined by "Intensity and Shadows" or "Softness and Glow"? `[DROPDOWN: Intensity and Shadows, Softness and Glow, A mix of both]`
-57. Do people ever tell you that you look "intimidating" or "unapproachable" before they actually get to know you? `[DROPDOWN: Yes often, Sometimes, Rarely or never]`
-
-### Section C: Physical Preferences
-
-58. What physical feature are you looking for in a partner? `[TEXT]`
+56. When you walk into a room, do you find that people—strangers, waiters, etc.—subtly treat you differently or clear a path for you, or do you feel like you generally blend into the crowd? `[DROPDOWN: People treat me differently/clear a path, I generally blend into the crowd, It depends on the situation]`
+57. If someone took a raw, black-and-white photo of you right now, would the photo be defined by "Intensity and Shadows" or "Softness and Glow"? `[DROPDOWN: Intensity and Shadows, Softness and Glow, A mix of both]`
+58. Do people ever tell you that you look "intimidating" or "unapproachable" before they actually get to know you? `[DROPDOWN: Yes often, Sometimes, Rarely or never]`
 
 ---
 
-## Page 5: Connection & Chemistry
+## Page 7: Connection & Chemistry
 
 ### Section A: Meaningful Connections
 
@@ -211,7 +208,7 @@
 
 ---
 
-## Page 6: Finances & Career
+## Page 8: Finances & Career
 
 ### Section A: Money Philosophy
 
@@ -263,15 +260,12 @@
 95. What is your daily average screen time? (Avg. Hours) `[TEXT:number]`
 96. When you receive a non-emergency notification during a face-to-face conversation, do you feel a physical urge to check it immediately, or can you wait until the interaction concludes? `[DROPDOWN: Feel urge to check immediately, Can wait until interaction concludes, It depends]`
 
-### Section B: Phone Privacy & Transparency
+### Section B: Tech Boundaries
 
 97. Which describes your ideal level of transparency: "I believe partners should have open access to each other's phone passwords," or "I believe personal devices are private and trust should exist without monitoring"? `[DROPDOWN: Open access to phone passwords, Personal devices are private, Somewhere in between]`
-
-### Section C: Tech-Free Boundaries
-
 98. Which better describes your view: "A partner should always have access to their phone for personal relaxation," or "We should have 'tech-free zones' (e.g., dinner or bedroom) to protect intimacy"? `[DROPDOWN: Always have phone access, tech-free zones, A balance of both]`
 
-### Section D: Social Media & Ex-Partners
+### Section C: Social Media & Ex-Partners
 
 99. You discover a partner has been in casual contact with an ex-partner without telling you. Is your first instinct to seek an explanation or to view the trust as fundamentally broken? `[DROPDOWN: Seek an explanation, View trust as broken, It depends on the context]`
 100. How do you feel about a partner engaging with an ex-partner on social media (e.g., liking photos or commenting)? `[DROPDOWN: Completely fine, Unacceptable, Context-dependent]`
