@@ -506,7 +506,7 @@ export default function QuestionnaireForm({
     return null;
   }
 
-  function validateCheckboxSelections(): boolean {
+  function getCheckboxSelectionErrors(): Record<string, string> {
     const errors: Record<string, string> = {};
 
     for (const section of sections) {
@@ -534,11 +534,10 @@ export default function QuestionnaireForm({
       }
     }
 
-    setFieldErrors((prev) => ({ ...prev, ...errors }));
-    return Object.keys(errors).length === 0;
+    return errors;
   }
 
-  function validateNumericFields(): boolean {
+  function getNumericFieldErrors(): Record<string, string> {
     const errors: Record<string, string> = {};
 
     for (const section of sections) {
@@ -573,8 +572,18 @@ export default function QuestionnaireForm({
       }
     }
 
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
+    return errors;
+  }
+
+  function validateCurrentPageFields(): boolean {
+    const checkboxErrors = getCheckboxSelectionErrors();
+    const numericErrors = getNumericFieldErrors();
+    const nextErrors = { ...checkboxErrors, ...numericErrors };
+
+    // Always write one deterministic error map so validation behavior never
+    // depends on validator call order.
+    setFieldErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -622,14 +631,8 @@ export default function QuestionnaireForm({
       }
     }
 
-    // Validate CHECKBOXES questions with exact selection requirements
-    if (!validateCheckboxSelections()) {
-      setStatus("Please fix the highlighted errors before continuing.");
-      return;
-    }
-
-    // Validate numeric TEXT fields before saving
-    if (!validateNumericFields()) {
+    // Validate all field-level rules in one pass to avoid order-dependent errors.
+    if (!validateCurrentPageFields()) {
       setStatus("Please fix the highlighted errors before continuing.");
       return;
     }
