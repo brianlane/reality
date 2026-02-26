@@ -7,6 +7,7 @@ import { generateUniqueResearchInviteCode } from "@/lib/research/invite-code";
 import {
   hasValidProlificParams,
   type ProlificParams,
+  getProlificCompletionCode,
   isProlificPidUniqueViolation,
 } from "@/lib/research/prolific";
 
@@ -50,6 +51,15 @@ export async function POST(request: Request) {
       prolificStudyId,
       prolificSessionId,
     });
+    // Prolific never sends completion code on entry; this verifies server config
+    // early so participants do not fail after finishing the full questionnaire.
+    if (hasProlific && !getProlificCompletionCode()) {
+      return errorResponse(
+        "SERVER_MISCONFIGURED",
+        "Prolific integration is temporarily unavailable. Please try again later.",
+        503,
+      );
+    }
 
     // Check if user already exists with this email
     const existingUser = await db.user.findUnique({
