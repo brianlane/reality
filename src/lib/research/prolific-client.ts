@@ -4,11 +4,6 @@ export type ProlificParams = {
   prolificSessionId?: string;
 };
 
-// Completion code for all Prolific participants
-// Set this code in Prolific's study settings under "Completion paths"
-export const PROLIFIC_COMPLETION_CODE =
-  process.env.NEXT_PUBLIC_PROLIFIC_COMPLETION_CODE || "C6NBKFHR";
-
 /**
  * Build the Prolific completion redirect URL
  */
@@ -40,21 +35,6 @@ export function storeProlificParams(params: ProlificParams): void {
   if (params.prolificSessionId) {
     localStorage.setItem("prolificSessionId", params.prolificSessionId);
   }
-}
-
-/**
- * Retrieve Prolific params from localStorage
- */
-export function retrieveProlificParams(): ProlificParams {
-  if (typeof window === "undefined") {
-    return {};
-  }
-
-  return {
-    prolificPid: localStorage.getItem("prolificPid") || undefined,
-    prolificStudyId: localStorage.getItem("prolificStudyId") || undefined,
-    prolificSessionId: localStorage.getItem("prolificSessionId") || undefined,
-  };
 }
 
 /**

@@ -8,8 +8,7 @@ export {
   storeProlificParams,
 } from "./prolific-client";
 
-// Server-side completion code (for API routes)
-// This is separate from the client constant to avoid requiring NEXT_PUBLIC_ prefix
+// Server-side completion code used by API routes
 export const PROLIFIC_COMPLETION_CODE =
   process.env.PROLIFIC_COMPLETION_CODE || "C6NBKFHR";
 
