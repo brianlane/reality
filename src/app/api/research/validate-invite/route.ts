@@ -6,7 +6,6 @@ import { Prisma } from "@prisma/client";
 import {
   hasValidProlificParams,
   type ProlificParams,
-  getProlificCompletionCode,
   isProlificPidUniqueViolation,
 } from "@/lib/research/prolific";
 
@@ -158,16 +157,6 @@ export async function POST(request: NextRequest) {
       prolificStudyId,
       prolificSessionId,
     });
-    const prolificCompletionCode = hasProlific
-      ? getProlificCompletionCode()
-      : null;
-    if (hasProlific && !prolificCompletionCode) {
-      return errorResponse(
-        "SERVER_MISCONFIGURED",
-        "Prolific integration is temporarily unavailable. Please try again later.",
-        503,
-      );
-    }
 
     // Prepare update data
     const updateData: Prisma.ApplicantUpdateInput = {
@@ -204,10 +193,6 @@ export async function POST(request: NextRequest) {
       valid: true,
       firstName: applicant.user.firstName,
       applicationId: applicant.id,
-      // Return completion code for Prolific participants
-      ...(prolificCompletionCode && {
-        prolificCompletionCode,
-      }),
     });
   } catch (error) {
     if (isProlificPidUniqueViolation(error)) {

@@ -7,7 +7,6 @@ import { generateUniqueResearchInviteCode } from "@/lib/research/invite-code";
 import {
   hasValidProlificParams,
   type ProlificParams,
-  getProlificCompletionCode,
   isProlificPidUniqueViolation,
 } from "@/lib/research/prolific";
 
@@ -51,16 +50,6 @@ export async function POST(request: Request) {
       prolificStudyId,
       prolificSessionId,
     });
-    const prolificCompletionCode = hasProlific
-      ? getProlificCompletionCode()
-      : null;
-    if (hasProlific && !prolificCompletionCode) {
-      return errorResponse(
-        "SERVER_MISCONFIGURED",
-        "Prolific integration is temporarily unavailable. Please try again later.",
-        503,
-      );
-    }
 
     // Check if user already exists with this email
     const existingUser = await db.user.findUnique({
@@ -132,10 +121,6 @@ export async function POST(request: Request) {
         inviteCode,
         emailSent,
         message: "Welcome back! Continue with your research questionnaire.",
-        // Return completion code for Prolific participants
-        ...(prolificCompletionCode && {
-          prolificCompletionCode,
-        }),
       });
     }
 
@@ -197,10 +182,6 @@ export async function POST(request: Request) {
       inviteCode,
       emailSent,
       message: "Successfully registered for research study",
-      // Return completion code for Prolific participants
-      ...(prolificCompletionCode && {
-        prolificCompletionCode,
-      }),
     });
   } catch (error) {
     if (isProlificPidUniqueViolation(error)) {
