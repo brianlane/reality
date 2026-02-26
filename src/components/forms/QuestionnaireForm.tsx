@@ -673,7 +673,13 @@ export default function QuestionnaireForm({
         } else {
           localStorage.removeItem("prolificCompletionCode");
         }
-        router.push("/research/thank-you");
+        if (!applicationId) {
+          setStatus("Missing research application context.");
+          return;
+        }
+        router.push(
+          `/research/thank-you?applicationId=${encodeURIComponent(applicationId)}`,
+        );
       } else {
         // Navigate to photos page
         router.push("/apply/photos");

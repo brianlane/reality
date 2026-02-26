@@ -2,12 +2,30 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { logger } from "@/lib/logger";
+import { Prisma } from "@prisma/client";
 import {
   hasValidProlificParams,
   type ProlificParams,
   getProlificCompletionCode,
 } from "@/lib/research/prolific";
-import { Prisma } from "@prisma/client";
+
+function isProlificPidUniqueViolation(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    return false;
+  }
+  if (error.code !== "P2002") {
+    return false;
+  }
+  const target = (error.meta as { target?: string[] | string } | undefined)
+    ?.target;
+  if (Array.isArray(target)) {
+    return target.includes("prolificPid");
+  }
+  if (typeof target === "string") {
+    return target.includes("prolificPid");
+  }
+  return false;
+}
 
 /**
  * GET /api/research/validate-invite?code=XXX
@@ -209,6 +227,13 @@ export async function POST(request: NextRequest) {
       }),
     });
   } catch (error) {
+    if (isProlificPidUniqueViolation(error)) {
+      return errorResponse(
+        "CONFLICT",
+        "This Prolific participant ID is already in use.",
+        409,
+      );
+    }
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error("Research invite validation error", {
       error: errorMessage,
