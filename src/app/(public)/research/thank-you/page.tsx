@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CopperIcon } from "@/components/ui/copper-icon";
+import { buildProlificRedirectUrl } from "@/lib/research/prolific-client";
 
 export default function ResearchThankYouPage() {
   // Use lazy initializer to read from localStorage on first render
@@ -39,7 +40,7 @@ export default function ResearchThankYouPage() {
         if (prev <= 1) {
           clearInterval(timer);
           // Perform redirect
-          const redirectUrl = `https://app.prolific.com/submissions/complete?cc=${completionCode}`;
+          const redirectUrl = buildProlificRedirectUrl(completionCode);
           window.location.href = redirectUrl;
           return 0;
         }

@@ -49,12 +49,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract partner PID from questionnaire answers
-    const partnerPidAnswer = applicant.questionnaireAnswers.find((answer) =>
-      answer.question.prompt.toLowerCase().includes("partner's prolific id"),
-    );
-
-    const partnerPid = partnerPidAnswer?.value as string | undefined;
+    // Extract partner PID from questionnaire answers using keyword-based matching
+    // so prompt wording changes don't silently break this flow.
+    const partnerPidAnswer = applicant.questionnaireAnswers.find((answer) => {
+      const prompt = answer.question.prompt.toLowerCase();
+      return (
+        prompt.includes("partner") &&
+        prompt.includes("prolific") &&
+        (prompt.includes("pid") || prompt.includes("id"))
+      );
+    });
+    const partnerPidFromAnswer =
+      typeof partnerPidAnswer?.value === "string"
+        ? partnerPidAnswer.value.trim()
+        : undefined;
+    const partnerPid =
+      partnerPidFromAnswer || applicant.prolificPartnerPid || undefined;
 
     // Use the completion code for all Prolific participants
     let completionCode = applicant.prolificCompletionCode;

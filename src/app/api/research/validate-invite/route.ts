@@ -182,11 +182,17 @@ export async function POST(request: NextRequest) {
       // Note: Completion code will be set later based on relationship status answer
     }
 
-    if (
+    const shouldInitializeResearchSession =
       applicant.applicationStatus === "RESEARCH_INVITED" ||
       (applicant.applicationStatus === "RESEARCH_IN_PROGRESS" &&
-        !applicant.researchInviteUsedAt)
-    ) {
+        !applicant.researchInviteUsedAt);
+    const shouldPersistProlificParams =
+      hasProlific &&
+      (applicant.prolificPid !== prolificPid ||
+        applicant.prolificStudyId !== prolificStudyId ||
+        applicant.prolificSessionId !== prolificSessionId);
+
+    if (shouldInitializeResearchSession || shouldPersistProlificParams) {
       await db.applicant.update({
         where: { id: applicant.id },
         data: updateData,
