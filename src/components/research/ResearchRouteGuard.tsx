@@ -55,22 +55,38 @@ export default function ResearchRouteGuard({
       }
     });
     fetch("/api/applicant/application")
-      .then((res) => res.json())
-      .then((data) => {
+      .then(async (res) => {
         if (cancelled) return;
+
+        // This endpoint requires authentication, but research invite users are
+        // often unauthenticated. In that case, trust the local research flag
+        // and keep them blocked from the standard application flow.
+        if (res.status === 401 || res.status === 403) {
+          setServerVerified(true);
+          return;
+        }
+
+        if (!res.ok) {
+          // Fail closed for transient server failures while research mode is set.
+          setServerVerified(true);
+          return;
+        }
+
+        const data = await res.json().catch(() => null);
+        if (cancelled) return;
+
         if (RESEARCH_STATUSES.has(data?.status)) {
           setServerVerified(true);
         } else {
-          // Stale flag — clear it and let the user through
+          // Stale flag — clear it and let the user through.
           localStorage.removeItem("researchMode");
           setServerVerified(false);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          // On error, default to letting the user through and clearing the flag
-          localStorage.removeItem("researchMode");
-          setServerVerified(false);
+          // Network failures should also fail closed while research mode is set.
+          setServerVerified(true);
         }
       });
 
