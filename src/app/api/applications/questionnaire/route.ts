@@ -123,6 +123,19 @@ async function requireInvitedApplicant(
         statusCode: 404,
       };
     }
+    // If the caller has an authenticated session, verify they own this record.
+    // This prevents a regular user with a stale research applicationId in
+    // localStorage from loading another person's research questionnaire.
+    // Unauthenticated research links (auth=null) are still allowed through.
+    const auth = await getAuthUser();
+    if (auth?.email) {
+      if (auth.email.toLowerCase() !== applicant.user.email.toLowerCase()) {
+        return {
+          error: ERROR_MESSAGES.OWN_APPLICATION_ONLY,
+          statusCode: 403,
+        };
+      }
+    }
     return { applicant, isResearchMode: true };
   }
 
@@ -135,14 +148,14 @@ async function requireInvitedApplicant(
   if (auth.email.toLowerCase() !== applicant.user.email.toLowerCase()) {
     // 403 = Forbidden (authenticated but insufficient permissions)
     return {
-      error: "You can only access your own application.",
+      error: ERROR_MESSAGES.OWN_APPLICATION_ONLY,
       statusCode: 403,
     };
   }
 
   if (!NON_RESEARCH_ALLOWED_STATUSES.includes(applicant.applicationStatus)) {
     return {
-      error: "Questionnaire access is not available for this status.",
+      error: ERROR_MESSAGES.QUESTIONNAIRE_STATUS_UNAVAILABLE,
       statusCode: 403,
     };
   }
@@ -414,8 +427,14 @@ export async function POST(request: NextRequest) {
 
       // For CHECKBOXES, pass available options so ALL must be checked
       const checkboxOptions =
-        question.type === "CHECKBOXES" && Array.isArray(question.options)
-          ? (question.options as unknown[])
+        question.type === "CHECKBOXES"
+          ? Array.isArray(question.options)
+            ? (question.options as unknown[])
+            : question.options !== null &&
+                typeof question.options === "object" &&
+                "options" in (question.options as object)
+              ? (question.options as { options: unknown[] }).options
+              : undefined
           : undefined;
 
       // Check if the answer is affirmative consent

@@ -104,6 +104,8 @@ export default function AdminQuestionnaireQuestionForm({
     minAge: "18",
     maxAge: "80",
   });
+  const [checkboxMaxSelections, setCheckboxMaxSelections] =
+    useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -231,6 +233,19 @@ export default function AdminQuestionnaireQuestionForm({
             } else if (loaded.type === "RANKING" && loaded.options) {
               const options = loaded.options as { items?: string[] };
               setOptionLines((options.items ?? []).join("\n"));
+            } else if (loaded.type === "CHECKBOXES" && loaded.options) {
+              if (Array.isArray(loaded.options)) {
+                setOptionLines(loaded.options.join("\n"));
+              } else {
+                const opts = loaded.options as {
+                  options?: string[];
+                  maxSelections?: number;
+                };
+                setOptionLines((opts.options ?? []).join("\n"));
+                if (opts.maxSelections !== undefined) {
+                  setCheckboxMaxSelections(String(opts.maxSelections));
+                }
+              }
             } else if (Array.isArray(loaded.options)) {
               setOptionLines(loaded.options.join("\n"));
             }
@@ -280,11 +295,26 @@ export default function AdminQuestionnaireQuestionForm({
         maxAge: Number(ageRangeOptions.maxAge || 80),
       };
     }
-    if (["DROPDOWN", "RADIO_7", "CHECKBOXES"].includes(form.type)) {
+    if (["DROPDOWN", "RADIO_7"].includes(form.type)) {
       return optionLines
         .split("\n")
         .map((line) => line.trim())
         .filter(Boolean);
+    }
+    if (form.type === "CHECKBOXES") {
+      const options = optionLines
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const maxSelections = checkboxMaxSelections.trim()
+        ? parseInt(checkboxMaxSelections.trim(), 10)
+        : undefined;
+      return {
+        options,
+        ...(maxSelections !== undefined && !isNaN(maxSelections)
+          ? { maxSelections }
+          : {}),
+      };
     }
     if (form.type === "POINT_ALLOCATION") {
       return {
@@ -746,6 +776,29 @@ export default function AdminQuestionnaireQuestionForm({
                   value={optionLines}
                   onChange={(event) => setOptionLines(event.target.value)}
                   rows={6}
+                />
+              </div>
+            ) : null}
+            {form.type === "CHECKBOXES" ? (
+              <div className="space-y-2">
+                <label
+                  htmlFor="checkbox-max-selections"
+                  className="text-xs font-semibold text-navy-soft"
+                >
+                  Max selections (optional)
+                </label>
+                <p className="text-xs text-navy-soft">
+                  Leave blank to allow unlimited selections.
+                </p>
+                <Input
+                  id="checkbox-max-selections"
+                  type="number"
+                  min={1}
+                  placeholder="e.g. 3"
+                  value={checkboxMaxSelections}
+                  onChange={(event) =>
+                    setCheckboxMaxSelections(event.target.value)
+                  }
                 />
               </div>
             ) : null}

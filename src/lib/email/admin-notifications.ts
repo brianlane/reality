@@ -46,7 +46,23 @@ interface ApplicationSubmittedParams {
   firstName: string;
   lastName: string;
   email: string;
+  age: number;
+  gender: string;
+  location: string;
+  incomeRange: string;
+  firstPhotoUrl?: string;
 }
+
+const APP_BASE_URL = (
+  process.env.NEXT_PUBLIC_APP_URL || "https://www.realitymatchmaking.com"
+).replace(/\/$/, "");
+
+const formatEnumLabel = (value: string) =>
+  value
+    .toLowerCase()
+    .split("_")
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
 
 export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
   const adminEmail = process.env.ADMIN_EMAIL;
@@ -309,6 +325,13 @@ export async function notifyApplicationSubmitted(
   const safeLastName = escapeHtml(params.lastName);
   const safeEmail = escapeHtml(params.email);
   const safeApplicantId = escapeHtml(params.applicantId);
+  const safeGender = escapeHtml(formatEnumLabel(params.gender));
+  const safeLocation = escapeHtml(params.location);
+  const safeIncomeRange = escapeHtml(params.incomeRange);
+  const firstPhotoUrl = params.firstPhotoUrl?.trim() || null;
+  const safeFirstPhotoUrl = firstPhotoUrl ? escapeHtml(firstPhotoUrl) : null;
+  const adminApplicationUrl = `${APP_BASE_URL}/admin/applications/${encodeURIComponent(params.applicantId)}`;
+  const safeAdminApplicationUrl = escapeHtml(adminApplicationUrl);
 
   const subject = "New Application Submitted";
 
@@ -356,15 +379,56 @@ export async function notifyApplicationSubmitted(
             <td style="padding: 8px 0; color: #1a2332; font-family: monospace; font-size: 14px;">${safeApplicantId}</td>
           </tr>
           <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Age:</td>
+            <td style="padding: 8px 0; color: #1a2332;">${params.age}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Gender:</td>
+            <td style="padding: 8px 0; color: #1a2332;">${safeGender}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Location:</td>
+            <td style="padding: 8px 0; color: #1a2332;">${safeLocation}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Salary Range:</td>
+            <td style="padding: 8px 0; color: #1a2332;">${safeIncomeRange}</td>
+          </tr>
+          <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Submitted At:</td>
             <td style="padding: 8px 0; color: #1a2332;">${new Date().toLocaleString()}</td>
           </tr>
         </table>
       </div>
 
+      ${
+        safeFirstPhotoUrl
+          ? `
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 4px; margin: 24px 0;">
+        <p style="color: #1a2332; font-size: 14px; margin: 0 0 12px; line-height: 1.6;">
+          <strong>First Photo Preview</strong>
+        </p>
+        <img
+          src="${safeFirstPhotoUrl}"
+          alt="Applicant photo preview"
+          style="display: block; width: 100%; max-width: 320px; height: auto; border-radius: 6px; border: 1px solid #e2e8f0;"
+        />
+      </div>
+      `
+          : ""
+      }
+
       <div style="background-color: #fff7ed; border: 1px solid #fed7aa; padding: 16px; border-radius: 4px; margin: 24px 0;">
         <p style="color: #92400e; font-size: 14px; margin: 0; line-height: 1.6;">
           <strong>Action Required:</strong> Please review this application in the admin dashboard.
+        </p>
+        <p style="margin: 12px 0 0;">
+          <a
+            href="${safeAdminApplicationUrl}"
+            style="display: inline-block; background-color: #1a2332; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 14px; border-radius: 6px;"
+          >
+            Admin Login / Review Application
+          </a>
         </p>
       </div>
     </div>
@@ -387,7 +451,13 @@ export async function notifyApplicationSubmitted(
     `Name: ${params.firstName} ${params.lastName}\n` +
     `Email: ${params.email}\n` +
     `Applicant ID: ${params.applicantId}\n` +
+    `Age: ${params.age}\n` +
+    `Gender: ${formatEnumLabel(params.gender)}\n` +
+    `Location: ${params.location}\n` +
+    `Salary Range: ${params.incomeRange}\n` +
     `Submitted At: ${new Date().toLocaleString()}\n\n` +
+    (firstPhotoUrl ? `First Photo: ${firstPhotoUrl}\n` : "") +
+    `Admin Login / Review Link: ${adminApplicationUrl}\n\n` +
     "ACTION REQUIRED: Please review this application in the admin dashboard.";
 
   try {

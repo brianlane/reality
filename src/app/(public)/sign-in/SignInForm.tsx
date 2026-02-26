@@ -47,6 +47,29 @@ export default function SignInForm() {
       return;
     }
 
+    // Clear session-specific localStorage state so this session never
+    // accidentally reuses IDs cached from a different user's prior session.
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("applicationId");
+      localStorage.removeItem("researchMode");
+      localStorage.removeItem("researchInviteCode");
+      // Strip session IDs from the persistent draft while preserving any
+      // personal info the user may have pre-filled (name, demographics, etc.)
+      const draftKey = "reality-application-draft";
+      const storedDraft = localStorage.getItem(draftKey);
+      if (storedDraft) {
+        try {
+          const parsed = JSON.parse(storedDraft) as Record<string, unknown>;
+          delete parsed.applicationId;
+          delete parsed.currentPageId;
+          delete parsed.completedPageIds;
+          localStorage.setItem(draftKey, JSON.stringify(parsed));
+        } catch {
+          localStorage.removeItem(draftKey);
+        }
+      }
+    }
+
     router.replace(getSafeNext());
     router.refresh();
   };

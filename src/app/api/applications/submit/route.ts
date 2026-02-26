@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   let body;
   try {
     body = await request.json();
-  } catch (error) {
+  } catch {
     return errorResponse("INVALID_JSON", "Invalid JSON in request body", 400);
   }
 
@@ -135,6 +135,11 @@ export async function POST(request: NextRequest) {
         firstName: applicant.user.firstName,
         lastName: applicant.user.lastName,
         email: applicant.user.email,
+        age: applicant.age,
+        gender: applicant.gender,
+        location: applicant.location,
+        incomeRange: applicant.incomeRange,
+        firstPhotoUrl: applicant.photos[0],
       }).catch(() => {
         // Silently ignore - notification failure shouldn't affect the response
       });

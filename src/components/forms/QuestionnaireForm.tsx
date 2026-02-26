@@ -50,6 +50,11 @@ type TextOptions = {
   max?: number;
 };
 
+type CheckboxOptions = {
+  options: string[];
+  maxSelections?: number;
+};
+
 type Question = {
   id: string;
   prompt: string;
@@ -57,6 +62,7 @@ type Question = {
   type: QuestionType;
   options:
     | string[]
+    | CheckboxOptions
     | NumberScaleOptions
     | AgeRangeOptions
     | PointAllocationOptions
@@ -327,6 +333,23 @@ export default function QuestionnaireForm({
             return;
           }
 
+          // Only clear cached applicationId for the explicit "wrong owner"
+          // case. Other 403s (e.g., status not allowed) must preserve state to
+          // avoid recovery loops.
+          const isStaleId =
+            res.status === 403 &&
+            !isResearchMode &&
+            json?.error?.message === ERROR_MESSAGES.OWN_APPLICATION_ONLY;
+          if (isStaleId) {
+            if (typeof window !== "undefined") {
+              localStorage.removeItem("applicationId");
+            }
+            updateDraft({ applicationId: undefined, currentPageId: undefined });
+            setApplicationId(null);
+            setIsLoading(false);
+            return;
+          }
+
           const canRecoverFromStaleResearchSession =
             isResearchMode &&
             json?.error?.message === ERROR_MESSAGES.APP_NOT_FOUND_OR_INVITED;
@@ -486,7 +509,38 @@ export default function QuestionnaireForm({
     return null;
   }
 
-  function validateNumericFields(): boolean {
+  function getCheckboxSelectionErrors(): Record<string, string> {
+    const errors: Record<string, string> = {};
+
+    for (const section of sections) {
+      for (const question of section.questions) {
+        if (question.type !== "CHECKBOXES" || !question.isRequired) continue;
+
+        const rawOpts = question.options as CheckboxOptions | string[] | null;
+        const maxSelections =
+          !Array.isArray(rawOpts) &&
+          rawOpts !== null &&
+          typeof rawOpts === "object" &&
+          "maxSelections" in rawOpts
+            ? rawOpts.maxSelections
+            : undefined;
+
+        if (maxSelections === undefined) continue;
+
+        const answer = answers[question.id];
+        const selected = Array.isArray(answer?.value) ? answer.value : [];
+
+        if (selected.length !== maxSelections) {
+          errors[question.id] =
+            `Please select exactly ${maxSelections} option${maxSelections === 1 ? "" : "s"}.`;
+        }
+      }
+    }
+
+    return errors;
+  }
+
+  function getNumericFieldErrors(): Record<string, string> {
     const errors: Record<string, string> = {};
 
     for (const section of sections) {
@@ -521,8 +575,18 @@ export default function QuestionnaireForm({
       }
     }
 
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
+    return errors;
+  }
+
+  function validateCurrentPageFields(): boolean {
+    const checkboxErrors = getCheckboxSelectionErrors();
+    const numericErrors = getNumericFieldErrors();
+    const nextErrors = { ...checkboxErrors, ...numericErrors };
+
+    // Always write one deterministic error map so validation behavior never
+    // depends on validator call order.
+    setFieldErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -548,8 +612,14 @@ export default function QuestionnaireForm({
 
           // For CHECKBOXES, pass available options so ALL must be checked
           const checkboxOptions =
-            question.type === "CHECKBOXES" && Array.isArray(question.options)
-              ? (question.options as unknown[])
+            question.type === "CHECKBOXES"
+              ? Array.isArray(question.options)
+                ? (question.options as unknown[])
+                : question.options !== null &&
+                    typeof question.options === "object" &&
+                    "options" in question.options
+                  ? (question.options as CheckboxOptions).options
+                  : undefined
               : undefined;
 
           // Check if the answer is affirmative
@@ -564,8 +634,8 @@ export default function QuestionnaireForm({
       }
     }
 
-    // Validate numeric TEXT fields before saving
-    if (!validateNumericFields()) {
+    // Validate all field-level rules in one pass to avoid order-dependent errors.
+    if (!validateCurrentPageFields()) {
       setStatus("Please fix the highlighted errors before continuing.");
       return;
     }
@@ -843,10 +913,27 @@ export default function QuestionnaireForm({
               );
             }
             if (question.type === "CHECKBOXES") {
-              const options = Array.isArray(question.options)
-                ? question.options
-                : [];
+              const checkboxOpts = question.options as
+                | CheckboxOptions
+                | string[]
+                | null;
+              const options = Array.isArray(checkboxOpts)
+                ? checkboxOpts
+                : checkboxOpts !== null &&
+                    typeof checkboxOpts === "object" &&
+                    "options" in checkboxOpts
+                  ? checkboxOpts.options
+                  : [];
+              const maxSelections =
+                !Array.isArray(checkboxOpts) &&
+                checkboxOpts !== null &&
+                typeof checkboxOpts === "object" &&
+                "maxSelections" in checkboxOpts
+                  ? checkboxOpts.maxSelections
+                  : undefined;
               const selected = Array.isArray(answer.value) ? answer.value : [];
+              const limitReached =
+                maxSelections !== undefined && selected.length >= maxSelections;
               return (
                 <div key={question.id} className="space-y-2">
                   <label className="text-sm font-medium text-navy-muted">
@@ -857,26 +944,49 @@ export default function QuestionnaireForm({
                       {question.helperText}
                     </p>
                   ) : null}
+                  {maxSelections !== undefined ? (
+                    <p className="text-xs text-navy-soft">
+                      Select exactly {maxSelections} ({selected.length}/
+                      {maxSelections} selected)
+                    </p>
+                  ) : null}
                   <div className="space-y-2">
-                    {options.map((option) => (
-                      <label
-                        key={option}
-                        className="flex items-center gap-2 text-sm text-navy-soft"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selected.includes(option)}
-                          onChange={(event) => {
-                            const next = event.target.checked
-                              ? [...selected, option]
-                              : selected.filter((item) => item !== option);
-                            updateAnswer(question.id, { value: next });
-                          }}
-                        />
-                        {option}
-                      </label>
-                    ))}
+                    {options.map((option) => {
+                      const isChecked = selected.includes(option);
+                      const isDisabled = limitReached && !isChecked;
+                      return (
+                        <label
+                          key={option}
+                          className={`flex items-center gap-2 text-sm ${isDisabled ? "opacity-40 cursor-not-allowed" : "text-navy-soft"}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            disabled={isDisabled}
+                            onChange={(event) => {
+                              const next = event.target.checked
+                                ? [...selected, option]
+                                : selected.filter((item) => item !== option);
+                              updateAnswer(question.id, { value: next });
+                              if (fieldErrors[question.id]) {
+                                setFieldErrors((prev) => {
+                                  const updated = { ...prev };
+                                  delete updated[question.id];
+                                  return updated;
+                                });
+                              }
+                            }}
+                          />
+                          {option}
+                        </label>
+                      );
+                    })}
                   </div>
+                  {fieldErrors[question.id] ? (
+                    <p className="text-xs text-red-500">
+                      {fieldErrors[question.id]}
+                    </p>
+                  ) : null}
                 </div>
               );
             }

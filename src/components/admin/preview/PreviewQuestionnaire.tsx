@@ -33,6 +33,11 @@ type RankingOptions = {
   items: string[];
 };
 
+type CheckboxOptions = {
+  options: string[];
+  maxSelections?: number;
+};
+
 type Question = {
   id: string;
   prompt: string;
@@ -40,6 +45,7 @@ type Question = {
   type: QuestionType;
   options:
     | string[]
+    | CheckboxOptions
     | NumberScaleOptions
     | PointAllocationOptions
     | RankingOptions
@@ -345,16 +351,30 @@ export default function PreviewQuestionnaire() {
             generatedMockAnswers[question.id] = { value: question.options[3] };
           }
           break;
-        case "CHECKBOXES":
-          // Select first and third options if available
-          if (Array.isArray(question.options) && question.options.length > 0) {
-            const selected = [question.options[0]];
-            if (question.options.length > 2) {
-              selected.push(question.options[2]);
-            }
+        case "CHECKBOXES": {
+          // Handle both legacy string[] and new CheckboxOptions object formats
+          const rawOpts = question.options;
+          const checkboxList = Array.isArray(rawOpts)
+            ? rawOpts
+            : rawOpts !== null &&
+                typeof rawOpts === "object" &&
+                "options" in (rawOpts as object)
+              ? (rawOpts as CheckboxOptions).options
+              : [];
+          const maxSel =
+            !Array.isArray(rawOpts) &&
+            rawOpts !== null &&
+            typeof rawOpts === "object" &&
+            "maxSelections" in (rawOpts as object)
+              ? (rawOpts as CheckboxOptions).maxSelections
+              : undefined;
+          if (checkboxList.length > 0) {
+            const limit = maxSel ?? checkboxList.length;
+            const selected = checkboxList.slice(0, Math.min(2, limit));
             generatedMockAnswers[question.id] = { value: selected };
           }
           break;
+        }
         case "NUMBER_SCALE":
           // Use value 7 for number scales
           generatedMockAnswers[question.id] = { value: 7 };

@@ -34,65 +34,35 @@ export default function PurposePage() {
           The Paradox of Choice
         </h2>
         <p className="mt-4 text-base leading-relaxed text-navy-soft">
-          Dating apps are dying — not from a lack of users, but from a
-          fundamental design flaw. They create an{" "}
+          Dating apps are dying. And it&apos;s not from a lack of users, but
+          from a fundamental design flaw. They create an{" "}
           <strong className="text-navy">illusion of infinite choice</strong>{" "}
-          that paralyzes decision-making and prevents real connection.
+          that paralyzes decision making and prevents real connections.
         </p>
 
         <div className="mt-10 grid gap-6 sm:grid-cols-2">
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-navy">
-              Infinite Options, Zero Urgency
+              Infinite Options
             </h3>
-            <p className="mt-2 text-sm leading-relaxed text-navy-soft">
-              Users believe someone better is always one swipe away. There is no
-              cost to waiting, no pressure to decide, and no reason to commit to
-              a conversation — let alone a date. The paradox of choice (Lenton
-              &amp; Francesconi, 2011) ensures that more options lead to less
-              satisfaction and greater confusion in mate selection.
-            </p>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-navy">
               Hidden Competition
             </h3>
-            <p className="mt-2 text-sm leading-relaxed text-navy-soft">
-              Women never see other women. Men compete in an invisible arena.
-              This hidden market distorts expectations and creates a
-              seller&rsquo;s market where standards detach from reality. Online
-              platforms enable sorting by superficial traits while masking the
-              true competitive landscape (Hitsch, Hortaçsu, &amp; Ariely, 2010).
-            </p>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-navy">
               Removed Feedback
             </h3>
-            <p className="mt-2 text-sm leading-relaxed text-navy-soft">
-              Apps strip away the social signals that guide human behavior. You
-              don&rsquo;t see who pairs off. You don&rsquo;t sense when
-              you&rsquo;re being passed by. Without feedback, people
-              miscalibrate their expectations and stagnate. Research confirms
-              that initial romantic desire is notoriously difficult to predict
-              from profile data alone (Joel, Eastwick, &amp; Finkel, 2017).
-            </p>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-navy">
               Low Conversion Rates
             </h3>
-            <p className="mt-2 text-sm leading-relaxed text-navy-soft">
-              The disillusionment from mismatched expectations means most app
-              interactions never convert into real dates. Critical analysis of
-              online dating reveals fundamental limitations of digital
-              mate-selection (Finkel, Eastwick, Karney, Reis, &amp; Sprecher,
-              2012) — the very information that matters most for attraction is
-              inaccessible through a screen.
-            </p>
           </div>
         </div>
       </section>
@@ -107,7 +77,7 @@ export default function PurposePage() {
             And the illusion breaks. You&rsquo;re not alone in the market. What
             you can see has changed. Choice has friction. You feel the cost of
             waiting. You notice who pairs off. You sense when you&rsquo;re
-            passed by. Dating apps hide the market —{" "}
+            passed by. Dating apps hide the market but{" "}
             <strong className="text-white">
               real life puts it back in front of you.
             </strong>
@@ -118,17 +88,17 @@ export default function PurposePage() {
       {/* The Solution */}
       <section className="mx-auto max-w-3xl px-6 py-16">
         <h2 className="text-3xl font-semibold text-navy">
-          Reality as the Killer Feature
+          Reality as the Key Feature
         </h2>
         <p className="mt-4 text-base leading-relaxed text-navy-soft">
           Reality Matchmaking reintroduces the physics of real-world dating into
           a curated, intentional experience. We simulate the dynamics of a
-          physical venue — visible competition, tangible scarcity, and immediate
-          feedback — through orchestrated events designed to produce meaningful
-          connections.
+          physical venue with visible competition, tangible scarcity, and
+          immediate feedback through orchestrated events designed to produce
+          meaningful connections.
         </p>
 
-        <div className="mt-10 space-y-6">
+        <div className="mt-10 grid gap-6 sm:grid-cols-2">
           <div className="flex gap-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-copper/10 text-lg font-bold text-copper">
               1
@@ -137,12 +107,6 @@ export default function PurposePage() {
               <h3 className="text-lg font-semibold text-navy">
                 Visible Competition
               </h3>
-              <p className="mt-1 text-sm leading-relaxed text-navy-soft">
-                Participants see exactly who else is in the market. First
-                impressions at zero acquaintance carry substantial weight in
-                interpersonal attraction (Back, Schmukle, &amp; Egloff, 2011),
-                and physical co-presence makes those impressions genuine.
-              </p>
             </div>
           </div>
 
@@ -152,12 +116,6 @@ export default function PurposePage() {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-navy">Real Scarcity</h3>
-              <p className="mt-1 text-sm leading-relaxed text-navy-soft">
-                Events are limited to 20 carefully selected participants. What
-                you see is what you get. This constraint mirrors the natural
-                limits of real-world social environments and creates the urgency
-                that apps have eliminated.
-              </p>
             </div>
           </div>
 
@@ -169,13 +127,6 @@ export default function PurposePage() {
               <h3 className="text-lg font-semibold text-navy">
                 Immediate Feedback
               </h3>
-              <p className="mt-1 text-sm leading-relaxed text-navy-soft">
-                You know instantly if someone is interested or if they pair off
-                with someone else. Social signals — the kind that drive real
-                human bonding — are restored. As Gottman, Coan, Carrere, and
-                Swanson (1998) demonstrated, observable interaction patterns are
-                powerful predictors of relationship outcomes.
-              </p>
             </div>
           </div>
 
@@ -187,15 +138,6 @@ export default function PurposePage() {
               <h3 className="text-lg font-semibold text-navy">
                 Personality First
               </h3>
-              <p className="mt-1 text-sm leading-relaxed text-navy-soft">
-                Inspired by the principles of blind dating, our event structure
-                prioritizes personality, communication style, and values before
-                appearance. Research consistently shows that personality traits
-                — particularly agreeableness, conscientiousness, and emotional
-                stability — are among the most robust predictors of relationship
-                quality (Joel et al., 2020; Malouff et al., 2010; Donnellan,
-                Conger, &amp; Bryant, 2004).
-              </p>
             </div>
           </div>
         </div>
@@ -224,19 +166,10 @@ export default function PurposePage() {
                 </h3>
               </div>
               <p className="mt-3 text-sm leading-relaxed text-navy-soft">
-                Every applicant completes a comprehensive profile covering
-                demographics, interests, values, relationship goals, and
-                lifestyle. A non-refundable application fee covers the cost of
-                rigorous screening: identity verification through iDenfy,
-                followed by a comprehensive background check via Checkr —
-                including SSN trace, national and 7-year county criminal search,
-                and a review of liens, judgments, and bankruptcies. This
-                financial vetting helps confirm honesty and lifestyle stability.
-                Socially desirable responding — the tendency to present an
-                unrealistically positive self-image — is a known challenge in
-                self-report assessments (Paulhus &amp; Reid, 1991). Our
-                multi-layered verification process is designed to cut through
-                it.
+                All members complete a comprehensive application and a rigorous
+                background screening: identity verification, SSN trace, 7-year
+                criminal search, liens, judgments, and bankruptcies. This helps
+                confirm honesty and lifestyle stability.
               </p>
             </div>
 
@@ -251,16 +184,10 @@ export default function PurposePage() {
                 </h3>
               </div>
               <p className="mt-3 text-sm leading-relaxed text-navy-soft">
-                Accepted applicants are scored for compatibility. When 10
-                compatible men and 10 compatible women are identified, event
-                invitations are sent. Curation draws on research into
-                assortative mating and ideal-partner standards — similarity in
-                values, warmth, and attractiveness predicts satisfaction
-                (Gonzaga, Carter, &amp; Buckwalter, 2010; Fletcher, Simpson,
-                Thomas, &amp; Giles, 1999). Attachment styles are also
-                considered, as secure attachment is strongly linked to
-                relationship success (Hazan &amp; Shaver, 1987; Simpson, Rholes,
-                &amp; Phillips, 1996).
+                Accepted applicants are scored for compatibility. When 20
+                compatible members are identified, event invitations are sent.
+                Our curation draws on research from assortative mating and ideal
+                partner standards.
               </p>
             </div>
 
@@ -291,9 +218,7 @@ export default function PurposePage() {
                     Physical partitions prevent visual contact. Participants
                     have 5-minute voice-only conversations with each potential
                     match, focusing entirely on personality, humor,
-                    communication style, and values. Speed-dating research
-                    confirms these rapid interactions generate meaningful
-                    attraction signals (Finkel &amp; Eastwick, 2008).
+                    communication style, and values.
                   </p>
                 </div>
 
@@ -305,12 +230,10 @@ export default function PurposePage() {
                     </span>
                   </p>
                   <p className="mt-1">
-                    Partitions come down. The same rotations happen again — now
-                    face-to-face. Participants can validate or revise their
+                    Partitions come down. The same rotations happen again but
+                    now face-to-face. Participants can validate or revise their
                     blind impressions, testing whether personality connection
-                    translates to physical chemistry. Actual similarity in
-                    personality matters for attraction (Montoya, Horton, &amp;
-                    Kirchner, 2008; Klohnen &amp; Luo, 2003).
+                    translates to physical chemistry.
                   </p>
                 </div>
 
@@ -323,12 +246,8 @@ export default function PurposePage() {
                   </p>
                   <p className="mt-1">
                     Curated match recommendations are delivered privately. The
-                    space opens for free mingling — appetizers, drinks, and
-                    deeper conversations. Visible pairing dynamics create the
-                    urgency and competition that drive real-world
-                    decision-making. Shared novel and arousing activities
-                    strengthen connection (Aron, Norman, Aron, McKenna, &amp;
-                    Heyman, 2000).
+                    space opens for free mingling with deeper conversations and
+                    the opportunity to participate in team building activities.
                   </p>
                 </div>
               </div>
@@ -345,12 +264,10 @@ export default function PurposePage() {
                 </h3>
               </div>
               <p className="mt-3 text-sm leading-relaxed text-navy-soft">
-                Within 24 hours, participants receive curated match results and
-                mutual-interest notifications. Matched pairs are connected
-                through a secure communication channel. Follow-up surveys at 30
-                days, 90 days, and 6 months track outcomes — first dates,
-                relationships formed, and long-term success. This data-driven
-                approach continuously refines our matching methodology.
+                The next day, attendees receive feedback and mutual-interest
+                notifications. Follow-up surveys at 30 days, 90 days, and 6
+                months track outcomes. This data-driven approach continuously
+                refines our matching methodology.
               </p>
             </div>
           </div>
@@ -368,44 +285,29 @@ export default function PurposePage() {
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-navy">
+            <p className="text-xs font-semibold text-center text-navy">
               Identity Verification
             </p>
-            <p className="mt-1 text-xs leading-relaxed text-navy-soft">
-              Automated ID check with liveness detection via iDenfy ensures
-              every applicant is who they claim to be.
-            </p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-navy">
+            <p className="text-xs font-semibold text-center text-navy">
               Criminal &amp; Financial Screening
             </p>
-            <p className="mt-1 text-xs leading-relaxed text-navy-soft">
-              Checkr provides SSN trace, national and county criminal searches,
-              plus liens, judgments, and bankruptcy review.
-            </p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-navy">
+            <p className="text-xs font-semibold text-center text-navy">
               Continuous Monitoring
-            </p>
-            <p className="mt-1 text-xs leading-relaxed text-navy-soft">
-              Ongoing monitoring flags new records after initial screening,
-              keeping the community safe over time.
             </p>
           </div>
         </div>
 
         <p className="mt-6 text-sm leading-relaxed text-navy-soft">
-          Financial screening is not about wealth — it&rsquo;s about honesty.
+          Financial screening is not about wealth, it&rsquo;s about honesty.
           Research shows that financial issues are a leading predictor of
-          relationship dissolution (Dew, Britt, &amp; Huston, 2012), and that
-          financial transparency strengthens relationship satisfaction
-          (Gladstone, Garbinsky, &amp; Mogilner, 2022). By verifying financial
-          standing upfront, we help ensure that participants are building
-          connections on a foundation of truthfulness. All screening processes
-          adhere to applicable privacy regulations, including the principles
-          outlined in HHS 45 CFR 46.
+          relationship dissolution, and that financial transparency strengthens
+          relationships. By verifying financial standing upfront, we help ensure
+          that participants are building connections on a foundation of
+          truthfulness.
         </p>
       </section>
 
@@ -419,20 +321,17 @@ export default function PurposePage() {
             Our approach is informed by decades of peer-reviewed research in
             psychology, interpersonal attraction, and relationship science. From
             Gottman&rsquo;s work on interaction patterns that predict marital
-            stability (Gottman &amp; Gottman, 2015; Navarra &amp; Gottman, 2018)
-            to large-scale machine-learning analyses identifying the most robust
-            predictors of relationship quality (Joel et al., 2020), our
-            methodology draws on the best available evidence.
+            stability to large-scale machine-learning analyses identifying the
+            most robust predictors of relationship quality, our methodology
+            draws on the best available evidence.
           </p>
           <p className="mt-4 text-base leading-relaxed text-navy-soft">
             We know that personality traits carry remarkable predictive power
-            for important life outcomes (Roberts, Kuncel, Shiner, Caspi, &amp;
-            Goldberg, 2007; Heller, Watson, &amp; Ilies, 2004), that love styles
-            and attachment patterns shape relationship dynamics (Hendrick &amp;
-            Hendrick, 1986; Hazan &amp; Shaver, 1987), and that
+            for important life outcomes, that love styles and attachment
+            patterns shape relationship dynamics, and that
             relationship-contingent self-esteem can influence how people show up
             in partnerships. We incorporate these insights into every layer of
-            our process — from the questions we ask to the matches we curate.
+            our process from the questions we ask to the matches we curate.
           </p>
         </div>
       </section>
@@ -446,7 +345,7 @@ export default function PurposePage() {
             addressing its core pain points: disillusionment from mismatched
             expectations and abysmal conversion rates to real dates. We are
             redefining dating by making{" "}
-            <strong className="text-white">reality</strong> the killer feature —
+            <strong className="text-white">reality</strong> the key feature,
             leading to more meaningful connections, higher retention, and
             relationships built to last.
           </p>
@@ -463,7 +362,9 @@ export default function PurposePage() {
 
       {/* Works Cited */}
       <section className="mx-auto max-w-3xl px-6 py-16">
-        <h2 className="text-2xl font-semibold text-navy">Works Cited</h2>
+        <h2 className="text-2xl font-semibold text-navy">
+          Supporting Research
+        </h2>
         <div className="mt-6 text-sm text-navy-soft">
           <p className="works-cited">
             Aron, A., Norman, C. C., Aron, E. N., McKenna, C., &amp; Heyman, R.

@@ -582,6 +582,8 @@ export default function AdminApplicationForm({
                     target="_blank"
                     rel="noopener noreferrer"
                   >
+                    {/* Intentional here because admin previews arbitrary external photo URLs */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={url.trim()}
                       alt={`Photo ${i + 1}`}
