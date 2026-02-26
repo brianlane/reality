@@ -131,7 +131,7 @@ async function requireInvitedApplicant(
     if (auth?.email) {
       if (auth.email.toLowerCase() !== applicant.user.email.toLowerCase()) {
         return {
-          error: "You can only access your own application.",
+          error: ERROR_MESSAGES.OWN_APPLICATION_ONLY,
           statusCode: 403,
         };
       }
@@ -148,14 +148,14 @@ async function requireInvitedApplicant(
   if (auth.email.toLowerCase() !== applicant.user.email.toLowerCase()) {
     // 403 = Forbidden (authenticated but insufficient permissions)
     return {
-      error: "You can only access your own application.",
+      error: ERROR_MESSAGES.OWN_APPLICATION_ONLY,
       statusCode: 403,
     };
   }
 
   if (!NON_RESEARCH_ALLOWED_STATUSES.includes(applicant.applicationStatus)) {
     return {
-      error: "Questionnaire access is not available for this status.",
+      error: ERROR_MESSAGES.QUESTIONNAIRE_STATUS_UNAVAILABLE,
       statusCode: 403,
     };
   }

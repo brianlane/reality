@@ -70,8 +70,7 @@
 7. Would you like to have children? `[DROPDOWN: Yes, No, Maybe, Already have children]`
 8. Describe your upbringing. `[TEXTAREA]`
 9. How has your upbringing shaped your perspective on money? `[TEXTAREA]`
-10. How would you describe your relationship with your family today? `[TEXTAREA]`
-11. What role do family values play in your life? `[TEXTAREA]`
+10. How would you rate your closeness to your family? (1 = Not close at all, 7 = Extremely close) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 
 ### Section C: Social Situation
 
@@ -99,7 +98,7 @@
 
 ### Section A: Personal Qualities
 
-19. Top three greatest qualities? `[TEXTAREA]`
+19. What are your top three greatest qualities? `[TEXTAREA]`
 20. Can you list two negative personality traits you possess and explain the specific steps you are taking to manage or improve them? `[TEXTAREA]`
 21. What are your top three pet peeves? `[CHECKBOXES:max=3: Being chronically late, Interrupting or talking over others, Being constantly on the phone, Canceling plans last minute, Being passive-aggressive, Chewing or eating loudly, Leaving messes for others to clean up, Not putting things back where they belong, Not listening when others speak, Being rude to service workers, Oversharing or gossiping, Complaining or being consistently negative, Not following through on commitments, One-upping others in conversation, Giving unsolicited advice, Being indecisive, Being dismissive of others' feelings, Having poor hygiene, Being helpless or refusing to figure things out, Having no hobbies or outside interests, Yelling or raising your voice, Lying or being dishonest, Acting entitled, Being lazy or unmotivated, Being a picky eater, Being judgmental, Smoking or vaping, Relying on parents' money, Being cheap, Not putting in equal effort, Lacking direction in life, Being a bad driver, Speaking too quietly to hear, Speaking too loudly in conversation]`
 22. When something unexpectedly reminds you of an ex-partner (a song, a place, a mutual friend), how much does it pull you out of the present? (1 = Not at all, 7 = Completely pulled out of the present) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
@@ -109,7 +108,7 @@
 23. How satisfied are you with your life and hobbies right now? (1 = Very dissatisfied, 7 = Very satisfied) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 24. If nothing changes in the next five years, describe how you would feel about your life? `[TEXTAREA]`
 25. Do you currently have the physical and emotional "margin" in your weekly schedule to prioritize a new partner, or would they have to fit into the gaps of an over-scheduled life? `[DROPDOWN: I have margin to prioritize a partner, They would have to fit into gaps, Somewhere in between]`
-26. Where do you see yourself living five years from now? `[TEXT]`
+26. Where do you see yourself living five years from now? (City, State) `[TEXT]`
 27. Given the right long-term partner, how open are you to relocating your professional base to a different city or state? (1 = Not open at all, 7 = Completely open) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 
 ---
@@ -129,7 +128,7 @@
 
 ### Section C: Physical Preferences
 
-33. What physical feature are you looking for in a partner? `[TEXTAREA]`
+33. What physical feature are you looking for in a partner? `[TEXT]`
 
 ---
 
@@ -220,8 +219,8 @@
 
 ### Section A: Decision Style
 
-78. How do you execute life decisions currently vs potentially with a life partner? (e.g., money stress, career changes, distance, kids)? `[TEXTAREA]`
-79. If a close friend had to choose between a "once-in-a-lifetime" career promotion in another city and staying near their aging parents, what specific advice would you give them? `[TEXTAREA]`
+78. How do you execute life decisions currently vs potentially with a life partner? (e.g., money stress, career changes, distance, kids)? `[DROPDOWN: I decide independently now and would still want final autonomy, I decide independently now but would shift to joint decision-making with a partner, I already use a collaborative process and would continue that with a partner, I prioritize practical constraints first (finances/logistics) before emotions, I prioritize shared values and long-term relationship fit before logistics, I use a staged process (solo reflection -> partner discussion -> time-bound trial decision)]`
+79. If a close friend had to choose between a "once-in-a-lifetime" career promotion in another city and staying near their aging parents, what specific advice would you give them? `[DROPDOWN: Take the promotion and build a concrete caregiving support plan for parents, Stay near parents and pursue career growth locally for now, Negotiate a delayed start or hybrid arrangement before deciding, Run a time-bound trial move with scheduled return checkpoints, Choose based on parent care urgency and reversibility of the career opportunity, Prioritize whichever path aligns most with their core long-term values and accept the trade-offs]`
 80. When making a major life decision (e.g., a career move or relocating), do you prefer to reach a conclusion individually before sharing it, or is your first instinct to consult a partner before your own mind is made up? `[DROPDOWN: Reach conclusion individually first, Consult partner before deciding, It depends on the decision]`
 81. How comfortable are you making a personal decision (e.g., a hobby purchase or a weekend plan) without first seeking your partner's guidance or approval? (1 = Very uncomfortable, 7 = Very comfortable) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
 82. How much weight should a partner's parents have in your major life decisions (e.g., buying a home or career changes)? (1 = No weight at all, 7 = Very significant weight) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`

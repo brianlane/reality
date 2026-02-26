@@ -306,7 +306,7 @@ export const questionnaireQuestionTypeSchema = z.enum([
 
 // Shared validation helper for questionnaire question schemas
 function validateQuestionnaireQuestionOptions(
-  data: { type?: string; options?: any },
+  data: { type?: string; options?: unknown },
   ctx: z.RefinementCtx,
 ) {
   // Validate RADIO_7 has exactly 7 options
@@ -328,14 +328,18 @@ function validateQuestionnaireQuestionOptions(
     data.options !== undefined
   ) {
     const opts = data.options;
+    const optsObject =
+      typeof opts === "object" && opts !== null && !Array.isArray(opts)
+        ? (opts as Record<string, unknown>)
+        : null;
     const maxSelections =
-      typeof opts === "object" && !Array.isArray(opts)
-        ? opts.maxSelections
+      optsObject && typeof optsObject.maxSelections === "number"
+        ? optsObject.maxSelections
         : undefined;
     const optionsList = Array.isArray(opts)
       ? opts
-      : typeof opts === "object" && Array.isArray(opts.options)
-        ? opts.options
+      : optsObject && Array.isArray(optsObject.options)
+        ? optsObject.options
         : null;
     if (maxSelections !== undefined) {
       if (!Number.isInteger(maxSelections) || maxSelections < 1) {

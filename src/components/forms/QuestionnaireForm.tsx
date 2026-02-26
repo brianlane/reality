@@ -333,10 +333,13 @@ export default function QuestionnaireForm({
             return;
           }
 
-          // 403 in non-research mode means the cached applicationId belongs to
-          // a different user (stale from a prior session). Clear it and let the
-          // first effect recover the correct ID from the authenticated session.
-          const isStaleId = res.status === 403 && !isResearchMode;
+          // Only clear cached applicationId for the explicit "wrong owner"
+          // case. Other 403s (e.g., status not allowed) must preserve state to
+          // avoid recovery loops.
+          const isStaleId =
+            res.status === 403 &&
+            !isResearchMode &&
+            json?.error?.message === ERROR_MESSAGES.OWN_APPLICATION_ONLY;
           if (isStaleId) {
             if (typeof window !== "undefined") {
               localStorage.removeItem("applicationId");

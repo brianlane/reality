@@ -3,6 +3,9 @@ export const ERROR_MESSAGES = {
   SIGN_IN_TO_CONTINUE: "Please sign in to continue.",
   SIGN_IN_TO_CONTINUE_APPLICATION:
     "Please sign in to continue your application.",
+  OWN_APPLICATION_ONLY: "You can only access your own application.",
+  QUESTIONNAIRE_STATUS_UNAVAILABLE:
+    "Questionnaire access is not available for this status.",
   INVALID_RESEARCH_INVITE: "Your research invite is not valid.",
   APP_NOT_FOUND_OR_INVITED: "Applicant not found or not invited.",
   FAILED_CREATE_SESSION: "Failed to create session. Please try again.",
