@@ -2,11 +2,17 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { logger } from "@/lib/logger";
+import { hasValidProlificParams, type ProlificParams } from "@/lib/research/prolific";
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const code = searchParams.get("code");
+    const body = await request.json();
+    const {
+      code,
+      prolificPid,
+      prolificStudyId,
+      prolificSessionId
+    }: { code: string } & ProlificParams = body;
 
     if (!code) {
       return errorResponse("MISSING_CODE", "Invite code is required", 400);
@@ -58,6 +64,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Prepare update data
+    const updateData: any = {
+      applicationStatus: "RESEARCH_IN_PROGRESS",
+      researchInviteUsedAt: applicant.researchInviteUsedAt ?? new Date(),
+    };
+
+    // Add Prolific data if params are valid
+    if (hasValidProlificParams({ prolificPid, prolificStudyId, prolificSessionId })) {
+      updateData.prolificPid = prolificPid;
+      updateData.prolificStudyId = prolificStudyId;
+      updateData.prolificSessionId = prolificSessionId;
+      // Note: Completion code will be set later based on relationship status answer
+    }
+
     if (
       applicant.applicationStatus === "RESEARCH_INVITED" ||
       (applicant.applicationStatus === "RESEARCH_IN_PROGRESS" &&
@@ -65,10 +85,7 @@ export async function GET(request: NextRequest) {
     ) {
       await db.applicant.update({
         where: { id: applicant.id },
-        data: {
-          applicationStatus: "RESEARCH_IN_PROGRESS",
-          researchInviteUsedAt: applicant.researchInviteUsedAt ?? new Date(),
-        },
+        data: updateData,
       });
     }
 

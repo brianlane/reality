@@ -6,28 +6,39 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CopperIcon } from "@/components/ui/copper-icon";
 import { resetResearchDraftContext } from "./researchDraftStorage";
+import { storeProlificParams, type ProlificParams } from "@/lib/research/prolific";
 
 type ResearchInviteGateProps = {
   code: string;
+  prolificParams: ProlificParams;
 };
 
 type ValidationResponse = {
   valid: boolean;
   firstName: string;
   applicationId: string;
+  prolificCompletionCode?: string;
 };
 
-export default function ResearchInviteGate({ code }: ResearchInviteGateProps) {
+export default function ResearchInviteGate({ code, prolificParams }: ResearchInviteGateProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Store Prolific params immediately
+    storeProlificParams(prolificParams);
+
     async function validateCode() {
       try {
-        const response = await fetch(
-          `/api/research/validate-invite?code=${code}`,
-        );
+        const response = await fetch("/api/research/validate-invite", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code,
+            ...prolificParams,
+          }),
+        });
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -47,6 +58,10 @@ export default function ResearchInviteGate({ code }: ResearchInviteGateProps) {
           localStorage.setItem("researchMode", "true");
           localStorage.setItem("researchInviteCode", code);
           localStorage.removeItem("waitlistInviteToken");
+
+          if (data.prolificCompletionCode) {
+            localStorage.setItem("prolificCompletionCode", data.prolificCompletionCode);
+          }
         }
 
         router.replace("/research/questionnaire");
@@ -59,7 +74,7 @@ export default function ResearchInviteGate({ code }: ResearchInviteGateProps) {
     }
 
     validateCode();
-  }, [code, router]);
+  }, [code, router, prolificParams]);
 
   if (isLoading) {
     return (

@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import { sendResearchInviteEmail } from "@/lib/email/research";
 import { logger } from "@/lib/logger";
 import { generateUniqueResearchInviteCode } from "@/lib/research/invite-code";
+import { hasValidProlificParams, type ProlificParams } from "@/lib/research/prolific";
 
 const RESEARCH_STATUSES = new Set([
   "RESEARCH_INVITED",
@@ -18,7 +19,18 @@ const RESEARCH_STATUSES = new Set([
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { firstName, lastName, email } = body;
+    const {
+      firstName,
+      lastName,
+      email,
+      prolificPid,
+      prolificStudyId,
+      prolificSessionId,
+    }: {
+      firstName: string;
+      lastName: string;
+      email: string;
+    } & ProlificParams = body;
 
     // Validate required fields
     if (!firstName || !lastName || !email) {
@@ -28,6 +40,12 @@ export async function POST(request: Request) {
         400,
       );
     }
+
+    const hasProlific = hasValidProlificParams({
+      prolificPid,
+      prolificStudyId,
+      prolificSessionId,
+    });
 
     // Check if user already exists with this email
     const existingUser = await db.user.findUnique({
@@ -55,6 +73,11 @@ export async function POST(request: Request) {
           applicationStatus: "RESEARCH_IN_PROGRESS",
           researchInvitedAt: new Date(),
           researchInviteCode: inviteCode,
+          ...(hasProlific && {
+            prolificPid,
+            prolificStudyId,
+            prolificSessionId,
+          }),
         },
       });
 
@@ -112,6 +135,11 @@ export async function POST(request: Request) {
         applicationStatus: "RESEARCH_IN_PROGRESS",
         researchInvitedAt: new Date(),
         researchInviteCode: inviteCode,
+        ...(hasProlific && {
+          prolificPid,
+          prolificStudyId,
+          prolificSessionId,
+        }),
         photos: [],
       },
     });
