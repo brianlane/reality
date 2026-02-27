@@ -579,11 +579,22 @@ async function upsertPages(pages: ParsedPage[]) {
         number,
         (typeof existingQuestions)[number]
       >();
-      // Pass 1: prompt matches
+
+      // Count prompt occurrences within this section. Questions whose prompt
+      // appears more than once (e.g. all "Is this a dealbreaker for you?"
+      // checkboxes) cannot be reliably matched by prompt — they are skipped in
+      // Pass 1 and handled by order-based matching in Pass 2 instead.
+      const promptCounts = new Map<string, number>();
+      for (const q of section.questions) {
+        promptCounts.set(q.prompt, (promptCounts.get(q.prompt) ?? 0) + 1);
+      }
+
+      // Pass 1: prompt matches (unique prompts only)
       for (let i = 0; i < section.questions.length; i++) {
+        const prompt = section.questions[i].prompt;
+        if ((promptCounts.get(prompt) ?? 0) > 1) continue; // defer to Pass 2
         const match = existingQuestions.find(
-          (q) =>
-            q.prompt === section.questions[i].prompt && !consumedIds.has(q.id),
+          (q) => q.prompt === prompt && !consumedIds.has(q.id),
         );
         if (match) {
           questionMatches.set(i, match);
