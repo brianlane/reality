@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import PaginationControls from "@/components/admin/PaginationControls";
 
 type UserRow = {
   id: string;
@@ -74,6 +75,8 @@ export default function AdminUsersTable() {
   });
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [filter, setFilter] = useState<"all" | "applicants">("all");
+  const [search, setSearch] = useState("");
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -88,8 +91,9 @@ export default function AdminUsersTable() {
           return;
         }
         const roleParam = filter === "applicants" ? "&role=APPLICANT" : "";
+        const searchParam = search ? `&search=${encodeURIComponent(search)}` : "";
         const res = await fetch(
-          `/api/admin/users?page=${page}&includeDeleted=${includeDeleted}${roleParam}`,
+          `/api/admin/users?page=${page}&includeDeleted=${includeDeleted}${roleParam}${searchParam}`,
           { headers, signal: controller.signal },
         );
         const json = await res.json();
@@ -120,7 +124,7 @@ export default function AdminUsersTable() {
     loadUsers();
 
     return () => controller.abort();
-  }, [page, includeDeleted, filter]);
+  }, [page, includeDeleted, filter, search]);
 
   return (
     <div className="space-y-4">
@@ -154,38 +158,33 @@ export default function AdminUsersTable() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => {
-            setFilter("all");
-            setPage(1);
+        <Input
+          placeholder="Search name or email…"
+          className="h-9 w-56 text-sm"
+          value={search}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (searchTimeout.current) clearTimeout(searchTimeout.current);
+            searchTimeout.current = setTimeout(() => {
+              setSearch(val);
+              setPage(1);
+            }, 300);
           }}
-          className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-            filter === "all"
-              ? "bg-navy text-white"
-              : "bg-slate-100 text-navy hover:bg-slate-200"
-          }`}
+        />
+        <button
+          onClick={() => { setFilter("all"); setPage(1); }}
+          className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${filter === "all" ? "bg-navy text-white" : "bg-slate-100 text-navy hover:bg-slate-200"}`}
         >
           All Users
         </button>
         <button
-          onClick={() => {
-            setFilter("applicants");
-            setPage(1);
-          }}
-          className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-            filter === "applicants"
-              ? "bg-navy text-white"
-              : "bg-slate-100 text-navy hover:bg-slate-200"
-          }`}
+          onClick={() => { setFilter("applicants"); setPage(1); }}
+          className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${filter === "applicants" ? "bg-navy text-white" : "bg-slate-100 text-navy hover:bg-slate-200"}`}
         >
           Applicants Only
         </button>
         <label className="ml-auto flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5 text-sm text-navy">
-          <input
-            type="checkbox"
-            checked={includeDeleted}
-            onChange={() => setIncludeDeleted((prev) => !prev)}
-          />
+          <input type="checkbox" checked={includeDeleted} onChange={() => setIncludeDeleted((prev) => !prev)} />
           Show deleted
         </label>
       </div>
@@ -307,29 +306,12 @@ export default function AdminUsersTable() {
             </Table>
           </div>
         )}
-        <div className="mt-4 flex items-center justify-between text-sm text-navy-soft">
-          <span>
-            Page {page} of {pages}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              disabled={page <= 1}
-            >
-              Prev
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setPage((prev) => Math.min(pages, prev + 1))}
-              disabled={page >= pages}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <PaginationControls
+          page={page}
+          pages={pages}
+          total={stats.total}
+          onPageChange={setPage}
+        />
       </Card>
     </div>
   );

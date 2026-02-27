@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import PaginationControls from "@/components/admin/PaginationControls";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -40,32 +41,40 @@ export default function AdminResearchInviteTable({
   const [isLoading, setIsLoading] = useState(false);
   const [sendingResumeId, setSendingResumeId] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(initialApplicants.length);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
     email: "",
   });
 
-  const loadResearchInvites = useCallback(async () => {
+  const loadResearchInvites = useCallback(async (p = page, q = search) => {
     try {
       const headers = await getAuthHeaders();
       if (!headers) {
         setError("Please sign in again.");
         return;
       }
-      const res = await fetch("/api/admin/research-invites", { headers });
+      const searchParam = q ? `&search=${encodeURIComponent(q)}` : "";
+      const res = await fetch(`/api/admin/research-invites?page=${p}${searchParam}`, { headers });
       const json = await res.json();
       if (!res.ok || json?.error) {
         setError("Failed to load research invites.");
         return;
       }
       setApplicants(json.applicants ?? []);
+      setPages(json.pagination?.pages ?? 1);
+      setTotal(json.pagination?.total ?? (json.applicants ?? []).length);
       setError(null);
     } catch (err) {
       console.error("Error loading research invites:", err);
       setError("Failed to load research invites.");
     }
-  }, []);
+  }, [page, search]);
 
   function updateField(name: string, value: string) {
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -206,11 +215,31 @@ export default function AdminResearchInviteTable({
     if (Number.isNaN(parsed.getTime())) {
       return "N/A";
     }
-    return parsed.toLocaleDateString("en-US", {
+    const date = parsed.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
     });
+    const time = parsed.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+    return `${date} ${time}`;
+  }
+
+  function formatDuration(startString: string | null, endString: string | null) {
+    if (!startString || !endString) return "N/A";
+    const start = new Date(startString);
+    const end = new Date(endString);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "N/A";
+    const diffMs = end.getTime() - start.getTime();
+    if (diffMs < 0) return "N/A";
+    const totalMinutes = Math.floor(diffMs / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours === 0) return `${minutes}m`;
+    return `${hours}h ${minutes}m`;
   }
 
   function getInviteUrl(code: string | null) {
@@ -304,11 +333,24 @@ export default function AdminResearchInviteTable({
       </Card>
 
       <Card>
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
           <h2 className="text-lg font-semibold text-navy">
-            Research Participants ({applicants.length})
+            Research Participants ({total})
           </h2>
-          <Button variant="outline" onClick={loadResearchInvites}>
+          <Input
+            placeholder="Search name or email…"
+            className="h-8 w-48 text-sm"
+            onChange={(e) => {
+              const val = e.target.value;
+              if (searchTimeout.current) clearTimeout(searchTimeout.current);
+              searchTimeout.current = setTimeout(() => {
+                setSearch(val);
+                setPage(1);
+                loadResearchInvites(1, val);
+              }, 300);
+            }}
+          />
+          <Button variant="outline" className="ml-auto" onClick={() => loadResearchInvites()}>
             Refresh
           </Button>
         </div>
@@ -319,7 +361,7 @@ export default function AdminResearchInviteTable({
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <Table className="mt-4 min-w-[980px]">
+            <Table className="mt-4 min-w-[1200px]">
               <thead>
                 <tr className="border-b text-xs uppercase tracking-wide text-slate-500">
                   <th className="px-3 py-3 text-left">Name</th>
@@ -328,6 +370,7 @@ export default function AdminResearchInviteTable({
                   <th className="px-3 py-3 text-left">Invited</th>
                   <th className="px-3 py-3 text-left">Started</th>
                   <th className="px-3 py-3 text-left">Completed</th>
+                  <th className="px-3 py-3 text-left">Duration</th>
                   <th className="px-3 py-3 text-left">Actions</th>
                 </tr>
               </thead>
@@ -354,6 +397,9 @@ export default function AdminResearchInviteTable({
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
                       {formatDate(applicant.researchCompletedAt)}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-slate-500">
+                      {formatDuration(applicant.researchInviteUsedAt, applicant.researchCompletedAt)}
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex flex-wrap gap-2">
@@ -414,6 +460,12 @@ export default function AdminResearchInviteTable({
             </Table>
           </div>
         )}
+        <PaginationControls
+          page={page}
+          pages={pages}
+          total={total}
+          onPageChange={(p) => { setPage(p); loadResearchInvites(p, search); }}
+        />
       </Card>
     </div>
   );

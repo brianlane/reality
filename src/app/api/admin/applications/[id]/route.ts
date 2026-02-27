@@ -28,8 +28,8 @@ export async function GET(request: Request, { params }: RouteContext) {
     where: { id, ...(includeDeleted ? {} : { deletedAt: null }) },
     include: {
       user: true,
-      questionnaire: true,
       payments: true,
+      questionnaireAnswers: { orderBy: { createdAt: "asc" }, take: 1, select: { createdAt: true } },
     },
   });
 
@@ -58,10 +58,14 @@ export async function GET(request: Request, { params }: RouteContext) {
       aboutYourself: applicant.aboutYourself,
       incomeVerified: applicant.incomeVerified,
       applicationStatus: applicant.applicationStatus,
+      createdAt: applicant.createdAt,
       submittedAt: applicant.submittedAt,
+      questionnaireStartedAt: applicant.questionnaireAnswers[0]?.createdAt ?? null,
+      reviewedAt: applicant.reviewedAt,
+      softRejectedAt: applicant.softRejectedAt,
+      invitedOffWaitlistAt: applicant.invitedOffWaitlistAt,
       photos: applicant.photos,
     },
-    questionnaire: applicant.questionnaire,
     screening: {
       screeningStatus: applicant.screeningStatus,
       idenfyStatus: applicant.idenfyStatus,

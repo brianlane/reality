@@ -5,7 +5,6 @@ type Transaction = Prisma.TransactionClient;
 
 async function deleteApplicantRelations(tx: Transaction, applicantId: string) {
   await tx.questionnaireAnswer.deleteMany({ where: { applicantId } });
-  await tx.questionnaire.deleteMany({ where: { applicantId } });
   await tx.payment.deleteMany({ where: { applicantId } });
   await tx.eventInvitation.deleteMany({ where: { applicantId } });
   await tx.match.deleteMany({
