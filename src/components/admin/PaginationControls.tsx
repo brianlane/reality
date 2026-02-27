@@ -44,7 +44,7 @@ export default function PaginationControls({
             <Button
               key={p}
               type="button"
-              variant={p === page ? "default" : "outline"}
+              variant={p === page ? "primary" : "outline"}
               className={`h-8 w-8 p-0 text-xs ${p === page ? "bg-navy text-white" : ""}`}
               onClick={() => onPageChange(p as number)}
             >
@@ -71,7 +71,11 @@ function buildPageNumbers(current: number, total: number): (number | "...")[] {
   const pages: (number | "...")[] = [];
   pages.push(1);
   if (current > 3) pages.push("...");
-  for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) {
+  for (
+    let p = Math.max(2, current - 1);
+    p <= Math.min(total - 1, current + 1);
+    p++
+  ) {
     pages.push(p);
   }
   if (current < total - 2) pages.push("...");

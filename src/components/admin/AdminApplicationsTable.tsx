@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import { formatDateTime, formatDuration } from "@/lib/admin/format";
 import PaginationControls from "@/components/admin/PaginationControls";
 
 type ApplicationItem = {
@@ -19,40 +20,6 @@ type ApplicationItem = {
   questionnaireStartedAt?: string | null;
   reviewedAt?: string | null;
 };
-
-function formatDate(dateVal: string | Date | null | undefined) {
-  if (!dateVal) return "N/A";
-  const parsed = new Date(dateVal);
-  if (Number.isNaN(parsed.getTime())) return "N/A";
-  const date = parsed.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-  const time = parsed.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-  return `${date} ${time}`;
-}
-
-function formatDuration(startVal: string | null | undefined, endVal: string | null | undefined) {
-  if (!startVal || !endVal) return "N/A";
-  const start = new Date(startVal);
-  const end = new Date(endVal);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "N/A";
-  const diffMs = end.getTime() - start.getTime();
-  if (diffMs < 0) return "N/A";
-  const totalMinutes = Math.floor(diffMs / 60000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours === 0) return `${minutes}m`;
-  const days = Math.floor(hours / 24);
-  const remHours = hours % 24;
-  if (days > 0) return `${days}d ${remHours}h`;
-  return `${hours}h ${minutes}m`;
-}
 
 export default function AdminApplicationsTable() {
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
@@ -74,11 +41,16 @@ export default function AdminApplicationsTable() {
           return;
         }
 
-        const searchParam = search ? `&search=${encodeURIComponent(search)}` : "";
-        const res = await fetch(`/api/admin/applications?page=${page}${searchParam}`, {
-          headers,
-          signal: controller.signal,
-        });
+        const searchParam = search
+          ? `&search=${encodeURIComponent(search)}`
+          : "";
+        const res = await fetch(
+          `/api/admin/applications?page=${page}${searchParam}`,
+          {
+            headers,
+            signal: controller.signal,
+          },
+        );
         const json = await res.json();
         if (!res.ok || json?.error) {
           setError("Failed to load applications.");
@@ -116,7 +88,10 @@ export default function AdminApplicationsTable() {
               }, 300);
             }}
           />
-          <Link href="/admin/applications/new" className="text-xs font-semibold text-copper hover:underline whitespace-nowrap">
+          <Link
+            href="/admin/applications/new"
+            className="text-xs font-semibold text-copper hover:underline whitespace-nowrap"
+          >
             New Application
           </Link>
         </div>
@@ -154,19 +129,22 @@ export default function AdminApplicationsTable() {
                     {app.screeningStatus ?? "N/A"}
                   </td>
                   <td className="py-2 px-6 whitespace-nowrap text-xs">
-                    {formatDate(app.submittedAt)}
+                    {formatDateTime(app.submittedAt) ?? "N/A"}
                   </td>
                   <td className="py-2 px-6 whitespace-nowrap text-xs">
-                    {formatDate(app.questionnaireStartedAt)}
+                    {formatDateTime(app.questionnaireStartedAt) ?? "N/A"}
                   </td>
                   <td className="py-2 px-6 whitespace-nowrap text-xs text-slate-500">
-                    {formatDuration(app.questionnaireStartedAt, app.reviewedAt)}
+                    {formatDuration(
+                      app.questionnaireStartedAt,
+                      app.reviewedAt,
+                    ) ?? "N/A"}
                   </td>
                   <td className="py-2 px-6 whitespace-nowrap text-xs">
-                    {formatDate(app.reviewedAt)}
+                    {formatDateTime(app.reviewedAt) ?? "N/A"}
                   </td>
                   <td className="py-2 px-6 whitespace-nowrap text-xs text-slate-500">
-                    {formatDuration(app.submittedAt, app.reviewedAt)}
+                    {formatDuration(app.submittedAt, app.reviewedAt) ?? "N/A"}
                   </td>
                   <td className="py-2 pl-6 whitespace-nowrap">
                     <Link
@@ -182,7 +160,12 @@ export default function AdminApplicationsTable() {
           </Table>
         </div>
       )}
-      <PaginationControls page={page} pages={pages} total={total} onPageChange={setPage} />
+      <PaginationControls
+        page={page}
+        pages={pages}
+        total={total}
+        onPageChange={setPage}
+      />
     </Card>
   );
 }

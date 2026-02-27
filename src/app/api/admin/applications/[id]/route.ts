@@ -29,7 +29,11 @@ export async function GET(request: Request, { params }: RouteContext) {
     include: {
       user: true,
       payments: true,
-      questionnaireAnswers: { orderBy: { createdAt: "asc" }, take: 1, select: { createdAt: true } },
+      questionnaireAnswers: {
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: { createdAt: true },
+      },
     },
   });
 
@@ -60,7 +64,8 @@ export async function GET(request: Request, { params }: RouteContext) {
       applicationStatus: applicant.applicationStatus,
       createdAt: applicant.createdAt,
       submittedAt: applicant.submittedAt,
-      questionnaireStartedAt: applicant.questionnaireAnswers[0]?.createdAt ?? null,
+      questionnaireStartedAt:
+        applicant.questionnaireAnswers[0]?.createdAt ?? null,
       reviewedAt: applicant.reviewedAt,
       softRejectedAt: applicant.softRejectedAt,
       invitedOffWaitlistAt: applicant.invitedOffWaitlistAt,

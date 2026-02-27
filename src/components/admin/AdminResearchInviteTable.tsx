@@ -7,6 +7,7 @@ import { Table } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import { formatDateTime, formatDuration } from "@/lib/admin/format";
 import PaginationControls from "@/components/admin/PaginationControls";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -52,29 +53,35 @@ export default function AdminResearchInviteTable({
     email: "",
   });
 
-  const loadResearchInvites = useCallback(async (p = page, q = search) => {
-    try {
-      const headers = await getAuthHeaders();
-      if (!headers) {
-        setError("Please sign in again.");
-        return;
-      }
-      const searchParam = q ? `&search=${encodeURIComponent(q)}` : "";
-      const res = await fetch(`/api/admin/research-invites?page=${p}${searchParam}`, { headers });
-      const json = await res.json();
-      if (!res.ok || json?.error) {
+  const loadResearchInvites = useCallback(
+    async (p = page, q = search) => {
+      try {
+        const headers = await getAuthHeaders();
+        if (!headers) {
+          setError("Please sign in again.");
+          return;
+        }
+        const searchParam = q ? `&search=${encodeURIComponent(q)}` : "";
+        const res = await fetch(
+          `/api/admin/research-invites?page=${p}${searchParam}`,
+          { headers },
+        );
+        const json = await res.json();
+        if (!res.ok || json?.error) {
+          setError("Failed to load research invites.");
+          return;
+        }
+        setApplicants(json.applicants ?? []);
+        setPages(json.pagination?.pages ?? 1);
+        setTotal(json.pagination?.total ?? (json.applicants ?? []).length);
+        setError(null);
+      } catch (err) {
+        console.error("Error loading research invites:", err);
         setError("Failed to load research invites.");
-        return;
       }
-      setApplicants(json.applicants ?? []);
-      setPages(json.pagination?.pages ?? 1);
-      setTotal(json.pagination?.total ?? (json.applicants ?? []).length);
-      setError(null);
-    } catch (err) {
-      console.error("Error loading research invites:", err);
-      setError("Failed to load research invites.");
-    }
-  }, [page, search]);
+    },
+    [page, search],
+  );
 
   function updateField(name: string, value: string) {
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -207,41 +214,6 @@ export default function AdminResearchInviteTable({
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  function formatDate(dateString: string | null) {
-    if (!dateString) {
-      return "N/A";
-    }
-    const parsed = new Date(dateString);
-    if (Number.isNaN(parsed.getTime())) {
-      return "N/A";
-    }
-    const date = parsed.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-    const time = parsed.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-    return `${date} ${time}`;
-  }
-
-  function formatDuration(startString: string | null, endString: string | null) {
-    if (!startString || !endString) return "N/A";
-    const start = new Date(startString);
-    const end = new Date(endString);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "N/A";
-    const diffMs = end.getTime() - start.getTime();
-    if (diffMs < 0) return "N/A";
-    const totalMinutes = Math.floor(diffMs / 60000);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    if (hours === 0) return `${minutes}m`;
-    return `${hours}h ${minutes}m`;
-  }
-
   function getInviteUrl(code: string | null) {
     if (!code) return null;
     return `${APP_URL}/research?code=${code}`;
@@ -350,7 +322,11 @@ export default function AdminResearchInviteTable({
               }, 300);
             }}
           />
-          <Button variant="outline" className="ml-auto" onClick={() => loadResearchInvites()}>
+          <Button
+            variant="outline"
+            className="ml-auto"
+            onClick={() => loadResearchInvites()}
+          >
             Refresh
           </Button>
         </div>
@@ -390,16 +366,19 @@ export default function AdminResearchInviteTable({
                       </span>
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      {formatDate(applicant.researchInvitedAt)}
+                      {formatDateTime(applicant.researchInvitedAt) ?? "N/A"}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      {formatDate(applicant.researchInviteUsedAt)}
+                      {formatDateTime(applicant.researchInviteUsedAt) ?? "N/A"}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      {formatDate(applicant.researchCompletedAt)}
+                      {formatDateTime(applicant.researchCompletedAt) ?? "N/A"}
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-slate-500">
-                      {formatDuration(applicant.researchInviteUsedAt, applicant.researchCompletedAt)}
+                      {formatDuration(
+                        applicant.researchInviteUsedAt,
+                        applicant.researchCompletedAt,
+                      ) ?? "N/A"}
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex flex-wrap gap-2">
@@ -464,7 +443,10 @@ export default function AdminResearchInviteTable({
           page={page}
           pages={pages}
           total={total}
-          onPageChange={(p) => { setPage(p); loadResearchInvites(p, search); }}
+          onPageChange={(p) => {
+            setPage(p);
+            loadResearchInvites(p, search);
+          }}
         />
       </Card>
     </div>

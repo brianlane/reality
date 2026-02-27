@@ -35,8 +35,12 @@ export async function GET(request: Request) {
         ? {
             user: {
               OR: [
-                { firstName: { contains: search, mode: "insensitive" as const } },
-                { lastName: { contains: search, mode: "insensitive" as const } },
+                {
+                  firstName: { contains: search, mode: "insensitive" as const },
+                },
+                {
+                  lastName: { contains: search, mode: "insensitive" as const },
+                },
                 { email: { contains: search, mode: "insensitive" as const } },
               ],
             },

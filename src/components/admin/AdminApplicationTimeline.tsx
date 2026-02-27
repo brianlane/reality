@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import { formatDateTime, formatDuration } from "@/lib/admin/format";
 
 type TimelineData = {
   createdAt: string | null;
@@ -12,41 +13,6 @@ type TimelineData = {
   invitedOffWaitlistAt: string | null;
   softRejectedAt: string | null;
 };
-
-function formatDateTime(val: string | null | undefined) {
-  if (!val) return null;
-  const d = new Date(val);
-  if (Number.isNaN(d.getTime())) return null;
-  const date = d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-  const time = d.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-  return `${date} ${time}`;
-}
-
-function formatDuration(startVal: string | null, endVal: string | null) {
-  if (!startVal || !endVal) return null;
-  const start = new Date(startVal);
-  const end = new Date(endVal);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
-  const diffMs = end.getTime() - start.getTime();
-  if (diffMs < 0) return null;
-  const totalMinutes = Math.floor(diffMs / 60000);
-  if (totalMinutes < 1) return "< 1m";
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours === 0) return `${minutes}m`;
-  const days = Math.floor(hours / 24);
-  const remHours = hours % 24;
-  if (days > 0) return `${days}d ${remHours}h`;
-  return `${hours}h ${minutes}m`;
-}
 
 type Stage = {
   label: string;
@@ -67,13 +33,19 @@ export default function AdminApplicationTimeline({
     const load = async () => {
       try {
         const headers = await getAuthHeaders();
-        if (!headers) { setError("Please sign in again."); return; }
+        if (!headers) {
+          setError("Please sign in again.");
+          return;
+        }
         const res = await fetch(
           `/api/admin/applications/${applicationId}?includeDeleted=true`,
           { headers, signal: controller.signal },
         );
         const json = await res.json();
-        if (!res.ok || json?.error) { setError("Failed to load timeline."); return; }
+        if (!res.ok || json?.error) {
+          setError("Failed to load timeline.");
+          return;
+        }
         const a = json.applicant;
         setData({
           createdAt: a.createdAt ?? null,
@@ -84,7 +56,8 @@ export default function AdminApplicationTimeline({
           softRejectedAt: a.softRejectedAt ?? null,
         });
       } catch (err) {
-        if ((err as Error).name !== "AbortError") setError("Failed to load timeline.");
+        if ((err as Error).name !== "AbortError")
+          setError("Failed to load timeline.");
       }
     };
     load();
@@ -96,18 +69,40 @@ export default function AdminApplicationTimeline({
 
   const stages: Stage[] = [
     { label: "Account Created", timestamp: data.createdAt, durationFrom: null },
-    { label: "Application Submitted", timestamp: data.submittedAt, durationFrom: data.createdAt },
-    { label: "Questionnaire Started", timestamp: data.questionnaireStartedAt, durationFrom: data.submittedAt },
-    { label: "Reviewed", timestamp: data.reviewedAt, durationFrom: data.questionnaireStartedAt ?? data.submittedAt },
-    { label: "Invited Off Waitlist", timestamp: data.invitedOffWaitlistAt, durationFrom: data.reviewedAt },
-    { label: "Soft Rejected", timestamp: data.softRejectedAt, durationFrom: data.reviewedAt },
+    {
+      label: "Application Submitted",
+      timestamp: data.submittedAt,
+      durationFrom: data.createdAt,
+    },
+    {
+      label: "Questionnaire Started",
+      timestamp: data.questionnaireStartedAt,
+      durationFrom: data.submittedAt,
+    },
+    {
+      label: "Reviewed",
+      timestamp: data.reviewedAt,
+      durationFrom: data.questionnaireStartedAt ?? data.submittedAt,
+    },
+    {
+      label: "Invited Off Waitlist",
+      timestamp: data.invitedOffWaitlistAt,
+      durationFrom: data.reviewedAt,
+    },
+    {
+      label: "Soft Rejected",
+      timestamp: data.softRejectedAt,
+      durationFrom: data.reviewedAt,
+    },
   ].filter((s) => s.timestamp !== null);
 
   if (stages.length === 0) return null;
 
   return (
     <Card className="space-y-3">
-      <h2 className="text-base font-semibold text-navy">Application Timeline</h2>
+      <h2 className="text-base font-semibold text-navy">
+        Application Timeline
+      </h2>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -119,7 +114,10 @@ export default function AdminApplicationTimeline({
           </thead>
           <tbody>
             {stages.map((stage, i) => {
-              const duration = formatDuration(stage.durationFrom, stage.timestamp);
+              const duration = formatDuration(
+                stage.durationFrom,
+                stage.timestamp,
+              );
               return (
                 <tr key={stage.label} className="border-b last:border-0">
                   <td className="py-2 pr-6 font-medium text-navy whitespace-nowrap">

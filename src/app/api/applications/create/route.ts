@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createApplicationSchema } from "@/lib/validations";
 import { errorResponse, successResponse } from "@/lib/api-response";

@@ -61,7 +61,14 @@ export async function GET(request: Request) {
   const [applications, total] = await Promise.all([
     db.applicant.findMany({
       where,
-      include: { user: true, questionnaireAnswers: { orderBy: { createdAt: "asc" }, take: 1, select: { createdAt: true } } },
+      include: {
+        user: true,
+        questionnaireAnswers: {
+          orderBy: { createdAt: "asc" },
+          take: 1,
+          select: { createdAt: true },
+        },
+      },
       orderBy: { [sortBy]: sortOrder },
       skip: (page - 1) * limit,
       take: limit,
@@ -93,7 +100,8 @@ export async function GET(request: Request) {
       screeningStatus: applicant.screeningStatus,
       compatibilityScore: applicant.compatibilityScore,
       submittedAt: applicant.submittedAt,
-      questionnaireStartedAt: applicant.questionnaireAnswers[0]?.createdAt ?? null,
+      questionnaireStartedAt:
+        applicant.questionnaireAnswers[0]?.createdAt ?? null,
       reviewedAt: applicant.reviewedAt,
     })),
     pagination: {

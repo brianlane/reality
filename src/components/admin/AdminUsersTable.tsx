@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import { formatDateTime } from "@/lib/admin/format";
 import PaginationControls from "@/components/admin/PaginationControls";
 
 type UserRow = {
@@ -31,18 +32,6 @@ type Stats = {
   applicants: number;
   admins: number;
 };
-
-function formatDate(dateString: string | null): string {
-  if (!dateString) return "Never";
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
-}
 
 function getTimeSince(dateString: string | null): string {
   if (!dateString) return "Never";
@@ -91,7 +80,9 @@ export default function AdminUsersTable() {
           return;
         }
         const roleParam = filter === "applicants" ? "&role=APPLICANT" : "";
-        const searchParam = search ? `&search=${encodeURIComponent(search)}` : "";
+        const searchParam = search
+          ? `&search=${encodeURIComponent(search)}`
+          : "";
         const res = await fetch(
           `/api/admin/users?page=${page}&includeDeleted=${includeDeleted}${roleParam}${searchParam}`,
           { headers, signal: controller.signal },
@@ -161,7 +152,6 @@ export default function AdminUsersTable() {
         <Input
           placeholder="Search name or email…"
           className="h-9 w-56 text-sm"
-          value={search}
           onChange={(e) => {
             const val = e.target.value;
             if (searchTimeout.current) clearTimeout(searchTimeout.current);
@@ -172,19 +162,29 @@ export default function AdminUsersTable() {
           }}
         />
         <button
-          onClick={() => { setFilter("all"); setPage(1); }}
+          onClick={() => {
+            setFilter("all");
+            setPage(1);
+          }}
           className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${filter === "all" ? "bg-navy text-white" : "bg-slate-100 text-navy hover:bg-slate-200"}`}
         >
           All Users
         </button>
         <button
-          onClick={() => { setFilter("applicants"); setPage(1); }}
+          onClick={() => {
+            setFilter("applicants");
+            setPage(1);
+          }}
           className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${filter === "applicants" ? "bg-navy text-white" : "bg-slate-100 text-navy hover:bg-slate-200"}`}
         >
           Applicants Only
         </button>
         <label className="ml-auto flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5 text-sm text-navy">
-          <input type="checkbox" checked={includeDeleted} onChange={() => setIncludeDeleted((prev) => !prev)} />
+          <input
+            type="checkbox"
+            checked={includeDeleted}
+            onChange={() => setIncludeDeleted((prev) => !prev)}
+          />
           Show deleted
         </label>
       </div>
@@ -274,7 +274,7 @@ export default function AdminUsersTable() {
                               {getTimeSince(user.lastSignIn)}
                             </span>
                             <span className="text-xs text-slate-400">
-                              {formatDate(user.lastSignIn)}
+                              {formatDateTime(user.lastSignIn) ?? "Never"}
                             </span>
                           </div>
                         ) : (
@@ -282,7 +282,7 @@ export default function AdminUsersTable() {
                         )}
                       </td>
                       <td className="py-3 px-6 text-navy-soft">
-                        {formatDate(user.createdAt)}
+                        {formatDateTime(user.createdAt) ?? "N/A"}
                       </td>
                       <td className="py-3 px-6">
                         {user.emailConfirmed ? (
