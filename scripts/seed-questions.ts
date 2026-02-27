@@ -25,7 +25,7 @@ interface ParsedQuestion {
   type: QuestionnaireQuestionType;
   options:
     | string[]
-    | { options: string[]; maxSelections?: number }
+    | { options: string[]; maxSelections?: number; isDealbreaker?: boolean }
     | { min: number; max: number; step: number }
     | { minAge: number; maxAge: number }
     | { items: string[]; total: number }
@@ -33,6 +33,7 @@ interface ParsedQuestion {
     | { validation: string; min?: number; max?: number }
     | null;
   helperText: string | null;
+  isRequired: boolean;
 }
 
 interface ParsedSection {
@@ -67,7 +68,7 @@ function parseAnnotation(line: string): {
   type: QuestionnaireQuestionType;
   options:
     | string[]
-    | { options: string[]; maxSelections?: number }
+    | { options: string[]; maxSelections?: number; isDealbreaker?: boolean }
     | { min: number; max: number; step: number }
     | { minAge: number; maxAge: number }
     | { items: string[]; total: number }
@@ -75,6 +76,7 @@ function parseAnnotation(line: string): {
     | { validation: string; min?: number; max?: number }
     | null;
   cleanPrompt: string;
+  isRequired: boolean;
 } {
   // Match the annotation pattern: `[TYPE]` or `[TYPE: options]`
   const annotationMatch = line.match(/`\[([^\]]+)\]`/);
@@ -85,6 +87,7 @@ function parseAnnotation(line: string): {
       type: "TEXT",
       options: null,
       cleanPrompt: line.replace(/^\d+\.\s*/, "").trim(),
+      isRequired: true,
     };
   }
 
@@ -106,8 +109,24 @@ function parseAnnotation(line: string): {
           step: 1,
         },
         cleanPrompt,
+        isRequired: true,
       };
     }
+  }
+
+  // Parse DEALBREAKER_CHECKBOX type: single checkbox "Is this a dealbreaker?"
+  // Stored as CHECKBOXES with one option and isDealbreaker:true marker in options.
+  // isRequired=false so leaving it unchecked (= "no") is a valid submission.
+  if (annotation === "DEALBREAKER_CHECKBOX") {
+    return {
+      type: "CHECKBOXES",
+      options: {
+        options: ["Yes, this is a dealbreaker for me"],
+        isDealbreaker: true,
+      },
+      cleanPrompt,
+      isRequired: false,
+    };
   }
 
   // Parse DROPDOWN type: DROPDOWN: opt1, opt2, opt3
@@ -118,6 +137,7 @@ function parseAnnotation(line: string): {
       type: "DROPDOWN",
       options,
       cleanPrompt,
+      isRequired: true,
     };
   }
 
@@ -138,6 +158,7 @@ function parseAnnotation(line: string): {
         type: "CHECKBOXES",
         options: { options, maxSelections },
         cleanPrompt,
+        isRequired: true,
       };
     }
     const options = rest
@@ -148,6 +169,7 @@ function parseAnnotation(line: string): {
       type: "CHECKBOXES",
       options: { options },
       cleanPrompt,
+      isRequired: true,
     };
   }
 
@@ -159,6 +181,7 @@ function parseAnnotation(line: string): {
       type: "RADIO_7",
       options,
       cleanPrompt,
+      isRequired: true,
     };
   }
 
@@ -174,6 +197,7 @@ function parseAnnotation(line: string): {
         type: "POINT_ALLOCATION",
         options: { items, total: isNaN(total) ? 100 : total },
         cleanPrompt,
+        isRequired: true,
       };
     }
   }
@@ -186,6 +210,7 @@ function parseAnnotation(line: string): {
       type: "RANKING",
       options: { items },
       cleanPrompt,
+      isRequired: true,
     };
   }
 
@@ -195,6 +220,7 @@ function parseAnnotation(line: string): {
       type: "AGE_RANGE",
       options: { minAge: 18, maxAge: 80 },
       cleanPrompt,
+      isRequired: true,
     };
   }
 
@@ -206,6 +232,7 @@ function parseAnnotation(line: string): {
       type: "TEXT",
       options: { validation: "number", min: 0 },
       cleanPrompt,
+      isRequired: true,
     };
   }
 
@@ -224,6 +251,7 @@ function parseAnnotation(line: string): {
     type,
     options: null,
     cleanPrompt,
+    isRequired: true,
   };
 }
 
@@ -301,7 +329,8 @@ function parseMarkdown(content: string): ParsedPage[] {
       const questionNum = parseInt(questionMatch[1], 10);
       const questionText = questionMatch[2];
 
-      const { type, options, cleanPrompt } = parseAnnotation(questionText);
+      const { type, options, cleanPrompt, isRequired } =
+        parseAnnotation(questionText);
 
       // Look ahead for helper text (indented lines starting with -)
       const helperLines: string[] = [];
@@ -331,6 +360,7 @@ function parseMarkdown(content: string): ParsedPage[] {
         type,
         options,
         helperText,
+        isRequired,
       });
 
       continue;
@@ -585,7 +615,7 @@ async function upsertPages(pages: ParsedPage[]) {
               helperText: question.helperText,
               type: question.type,
               options: question.options ?? undefined,
-              isRequired: true,
+              isRequired: question.isRequired,
               order: i,
               isActive: true,
               deletedAt: null, // Restore if previously soft-deleted
@@ -602,7 +632,7 @@ async function upsertPages(pages: ParsedPage[]) {
               helperText: question.helperText,
               type: question.type,
               options: question.options ?? undefined,
-              isRequired: true,
+              isRequired: question.isRequired,
               order: i,
               isActive: true,
               mlWeight: 1.0,

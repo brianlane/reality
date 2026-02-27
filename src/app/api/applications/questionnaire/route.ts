@@ -123,19 +123,8 @@ async function requireInvitedApplicant(
         statusCode: 404,
       };
     }
-    // If the caller has an authenticated session, verify they own this record.
-    // This prevents a regular user with a stale research applicationId in
-    // localStorage from loading another person's research questionnaire.
-    // Unauthenticated research links (auth=null) are still allowed through.
-    const auth = await getAuthUser();
-    if (auth?.email) {
-      if (auth.email.toLowerCase() !== applicant.user.email.toLowerCase()) {
-        return {
-          error: ERROR_MESSAGES.OWN_APPLICATION_ONLY,
-          statusCode: 403,
-        };
-      }
-    }
+    // Research access is invite/application-id based and must remain usable
+    // even when a browser is currently signed in as a different app account.
     return { applicant, isResearchMode: true };
   }
 
