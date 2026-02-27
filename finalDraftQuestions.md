@@ -264,7 +264,6 @@
 12. How much are you expecting a potential partner to spend on a first or second date? `[TEXT:number]`
 13. Is this a dealbreaker for you? `[DEALBREAKER_CHECKBOX]`
 
-
 ### Section C: Work-Life Balance
 
 14. On average, how many hours per week do you dedicate to your professional endeavors, including "after-hours" emails or obligations? `[TEXT:number]`
@@ -424,15 +423,15 @@
 
 8. What is your religious or spiritual affiliation? `[DROPDOWN: Christianity - Catholic, Christianity - Protestant, Christianity - Orthodox, Christianity - Other, Judaism, Islam, Buddhism, Hinduism, Sikhism, Atheist, Agnostic, Spiritual but not religious, No religious or spiritual affiliation, Prefer not to say]`
 9. How important is religious or spiritual alignment with your partner? (1 = Not important, 7 = Extremely important) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-11. Is this a dealbreaker for you? `[DEALBREAKER_CHECKBOX]`
-12. How many days per week do you participate in spiritual or religious activities? `[DROPDOWN: 0 days, 1 day, 2 days, 3 days, 4 days, 5 days, 6 days, 7 days]`
-13. Is this a dealbreaker for you? `[DEALBREAKER_CHECKBOX]`
-14. Which religious or spiritual practices do you engage in? (Select all that apply) `[CHECKBOXES: Prayer or meditation, Attending religious services or gatherings, Reading sacred or spiritual texts, Yoga or mindfulness practice, Community service or charity work, Fasting or dietary observances, Sabbath or day of rest observance, Pilgrimage or spiritual retreats, Study groups or religious classes, None]`
-15. Is this a dealbreaker for you? `[DEALBREAKER_CHECKBOX]`
-16. How important is it that your partner is driven/goal-oriented and willing to grow? (1 = Not important, 7 = Extremely important) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-17. Is this a dealbreaker for you? `[DEALBREAKER_CHECKBOX]`
-18. How important is independence level compatibility? (1 = Not important, 7 = Extremely important) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
-19. Is this a dealbreaker for you? `[DEALBREAKER_CHECKBOX]`
+10. Is this a dealbreaker for you? `[DEALBREAKER_CHECKBOX]`
+11. How many days per week do you participate in spiritual or religious activities? `[DROPDOWN: 0 days, 1 day, 2 days, 3 days, 4 days, 5 days, 6 days, 7 days]`
+12. Is this a dealbreaker for you? `[DEALBREAKER_CHECKBOX]`
+13. Which religious or spiritual practices do you engage in? (Select all that apply) `[CHECKBOXES: Prayer or meditation, Attending religious services or gatherings, Reading sacred or spiritual texts, Yoga or mindfulness practice, Community service or charity work, Fasting or dietary observances, Sabbath or day of rest observance, Pilgrimage or spiritual retreats, Study groups or religious classes, None]`
+14. Is this a dealbreaker for you? `[DEALBREAKER_CHECKBOX]`
+15. How important is it that your partner is driven/goal-oriented and willing to grow? (1 = Not important, 7 = Extremely important) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+16. Is this a dealbreaker for you? `[DEALBREAKER_CHECKBOX]`
+17. How important is independence level compatibility? (1 = Not important, 7 = Extremely important) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7]`
+18. Is this a dealbreaker for you? `[DEALBREAKER_CHECKBOX]`
 
 ### Section C: Rate the Importance of Similarities
 

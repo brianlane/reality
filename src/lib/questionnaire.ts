@@ -34,6 +34,7 @@ export type TextOptions = {
 export type CheckboxOptions = {
   options: string[];
   maxSelections?: number;
+  isDealbreaker?: boolean;
 };
 
 export type QuestionnaireOptions =
@@ -106,6 +107,7 @@ export async function normalizeQuestionOptions(
     // Accept either a plain string[] (legacy) or a CheckboxOptions object
     let optionsArray: string[];
     let maxSelections: number | undefined;
+    let isDealbreaker: boolean | undefined;
 
     if (Array.isArray(options)) {
       optionsArray = options.map((item) => String(item).trim()).filter(Boolean);
@@ -129,6 +131,9 @@ export async function normalizeQuestionOptions(
         }
         maxSelections = max;
       }
+      if (raw.isDealbreaker === true) {
+        isDealbreaker = true;
+      }
     } else {
       return {
         ok: false,
@@ -151,6 +156,7 @@ export async function normalizeQuestionOptions(
 
     const result: CheckboxOptions = { options: optionsArray };
     if (maxSelections !== undefined) result.maxSelections = maxSelections;
+    if (isDealbreaker) result.isDealbreaker = true;
     return { ok: true, value: result };
   }
 
