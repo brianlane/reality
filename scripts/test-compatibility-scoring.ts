@@ -590,7 +590,7 @@ async function testRealData() {
       deletedAt: null,
     },
     include: {
-      questionnaire: true,
+      questionnaireAnswers: true,
     },
     take: 2,
   });

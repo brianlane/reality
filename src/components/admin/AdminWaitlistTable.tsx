@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import { formatDateOnly } from "@/lib/admin/format";
+import PaginationControls from "@/components/admin/PaginationControls";
 
 type WaitlistApplicant = {
   id: string;
@@ -37,45 +40,58 @@ export default function AdminWaitlistTable({
   const [error, setError] = useState<string | null>(initialError);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(initialApplicants.length);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadWaitlist = useCallback(async () => {
-    try {
-      const headers = await getAuthHeaders();
-      if (!headers) {
-        setError("Please sign in again.");
-        return;
-      }
-
-      const res = await fetch("/api/admin/waitlist", { headers });
-      const json = await res.json();
-
-      if (!res.ok || json?.error) {
-        setError("Failed to load waitlist.");
-        return;
-      }
-
-      const waitlistApplicants = (json.applicants ?? []) as WaitlistApplicant[];
-      setApplicants(waitlistApplicants);
-      setSelectedIds((prev) => {
-        if (prev.size === 0) {
-          return prev;
+  const loadWaitlist = useCallback(
+    async (p = page, q = search) => {
+      try {
+        const headers = await getAuthHeaders();
+        if (!headers) {
+          setError("Please sign in again.");
+          return;
         }
-        const uninvitedIds = new Set(
-          waitlistApplicants
-            .filter((applicant) => !applicant.invitedOffWaitlistAt)
-            .map((applicant) => applicant.id),
-        );
-        const next = new Set(
-          Array.from(prev).filter((id) => uninvitedIds.has(id)),
-        );
-        return next.size === prev.size ? prev : next;
-      });
-      setError(null);
-    } catch (err) {
-      console.error("Error loading waitlist:", err);
-      setError("Failed to load waitlist.");
-    }
-  }, []);
+        const searchParam = q ? `&search=${encodeURIComponent(q)}` : "";
+        const res = await fetch(`/api/admin/waitlist?page=${p}${searchParam}`, {
+          headers,
+        });
+        const json = await res.json();
+
+        if (!res.ok || json?.error) {
+          setError("Failed to load waitlist.");
+          return;
+        }
+
+        const waitlistApplicants = (json.applicants ??
+          []) as WaitlistApplicant[];
+        setApplicants(waitlistApplicants);
+        setPages(json.pagination?.pages ?? 1);
+        setTotal(json.pagination?.total ?? waitlistApplicants.length);
+        setSelectedIds((prev) => {
+          if (prev.size === 0) {
+            return prev;
+          }
+          const uninvitedIds = new Set(
+            waitlistApplicants
+              .filter((applicant) => !applicant.invitedOffWaitlistAt)
+              .map((applicant) => applicant.id),
+          );
+          const next = new Set(
+            Array.from(prev).filter((id) => uninvitedIds.has(id)),
+          );
+          return next.size === prev.size ? prev : next;
+        });
+        setError(null);
+      } catch (err) {
+        console.error("Error loading waitlist:", err);
+        setError("Failed to load waitlist.");
+      }
+    },
+    [page, search],
+  );
 
   function toggleSelection(id: string) {
     const applicant = applicants.find((candidate) => candidate.id === id);
@@ -211,32 +227,28 @@ export default function AdminWaitlistTable({
     }
   }
 
-  function formatDate(dateString: string | null) {
-    if (!dateString) {
-      return "N/A";
-    }
-    const parsed = new Date(dateString);
-    if (Number.isNaN(parsed.getTime())) {
-      return "N/A";
-    }
-    return parsed.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  }
-
   return (
     <Card>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-navy">
-          Waitlist ({applicants.length})
-        </h2>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <h2 className="text-lg font-semibold text-navy">Waitlist ({total})</h2>
+        <Input
+          placeholder="Search name or email…"
+          className="h-8 w-48 text-sm"
+          onChange={(e) => {
+            const val = e.target.value;
+            if (searchTimeout.current) clearTimeout(searchTimeout.current);
+            searchTimeout.current = setTimeout(() => {
+              setSearch(val);
+              setPage(1);
+              loadWaitlist(1, val);
+            }, 300);
+          }}
+        />
         {selectedIds.size > 0 && (
           <Button
             onClick={inviteBatch}
             disabled={isLoading}
-            className="bg-copper hover:bg-copper/90"
+            className="ml-auto bg-copper hover:bg-copper/90"
           >
             {isLoading ? "Sending..." : `Invite ${selectedIds.size} Selected`}
           </Button>
@@ -308,7 +320,9 @@ export default function AdminWaitlistTable({
                   <td className="py-2">{applicant.user.email}</td>
                   <td className="py-2">{applicant.location}</td>
                   <td className="py-2">{applicant.age}</td>
-                  <td className="py-2">{formatDate(applicant.waitlistedAt)}</td>
+                  <td className="py-2">
+                    {formatDateOnly(applicant.waitlistedAt) ?? "N/A"}
+                  </td>
                   <td className="py-2">
                     {applicant.invitedOffWaitlistAt ? (
                       <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700">
@@ -332,7 +346,8 @@ export default function AdminWaitlistTable({
                       </button>
                     ) : (
                       <span className="text-xs text-gray-400">
-                        {formatDate(applicant.invitedOffWaitlistAt)}
+                        {formatDateOnly(applicant.invitedOffWaitlistAt) ??
+                          "N/A"}
                       </span>
                     )}
                     <div>
@@ -350,6 +365,15 @@ export default function AdminWaitlistTable({
           </Table>
         </div>
       )}
+      <PaginationControls
+        page={page}
+        pages={pages}
+        total={total}
+        onPageChange={(p) => {
+          setPage(p);
+          loadWaitlist(p, search);
+        }}
+      />
     </Card>
   );
 }

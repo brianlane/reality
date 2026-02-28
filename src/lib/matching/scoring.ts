@@ -1,9 +1,7 @@
-import { Applicant, Questionnaire } from "@prisma/client";
+import { Applicant } from "@prisma/client";
 import { calculateWeightedCompatibility } from "./weighted-compatibility";
 
-type ApplicantWithQuestionnaire = Applicant & {
-  questionnaire?: Questionnaire | null;
-};
+type ApplicantWithQuestionnaire = Applicant;
 
 /**
  * Score a match between two applicants using weighted compatibility algorithm
