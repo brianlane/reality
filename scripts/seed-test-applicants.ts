@@ -610,16 +610,18 @@ function pickClosest(opts: string[], target: string): string {
 /**
  * Pick a value based on a 0–1 bias for different question types.
  */
-function biasedPick(
-  question: QuestionnaireQuestion,
-  bias: number,
-): unknown {
+function biasedPick(question: QuestionnaireQuestion, bias: number): unknown {
   const opts = question.options as Record<string, unknown> | null;
 
   switch (question.type as QuestionnaireQuestionType) {
     case "RADIO_7": {
-      // bias 0-1 → integer 1-7
-      return Math.round(clamp(bias) * 6) + 1;
+      // Pick the option string that matches the bias position.
+      // Must return the label string (not an integer) so that the stored value
+      // matches what the form saves — the scorer uses strict === equality.
+      const options = Array.isArray(opts) ? (opts as unknown as string[]) : [];
+      if (options.length === 0) return null;
+      const idx = Math.round(clamp(bias) * (options.length - 1));
+      return options[idx];
     }
 
     case "NUMBER_SCALE": {
@@ -657,8 +659,10 @@ function biasedPick(
     }
 
     case "POINT_ALLOCATION": {
-      const items = (opts as { items?: string[]; total?: number } | null)?.items ?? [];
-      const total = (opts as { items?: string[]; total?: number } | null)?.total ?? 100;
+      const items =
+        (opts as { items?: string[]; total?: number } | null)?.items ?? [];
+      const total =
+        (opts as { items?: string[]; total?: number } | null)?.total ?? 100;
       if (items.length === 0) return {};
       // Distribute points, more to bias-aligned (later) items
       const weights = items.map((_, i) => {
@@ -718,16 +722,27 @@ function generateAnswer(
   }
 
   // Kids / children
-  if (prompt.includes("children") || prompt.includes("kids") || prompt.includes("child")) {
+  if (
+    prompt.includes("children") ||
+    prompt.includes("kids") ||
+    prompt.includes("child")
+  ) {
     const opts = question.options as string[] | { options: string[] } | null;
-    const optArr = Array.isArray(opts) ? opts : (opts as { options?: string[] } | null)?.options ?? [];
+    const optArr = Array.isArray(opts)
+      ? opts
+      : ((opts as { options?: string[] } | null)?.options ?? []);
     if (optArr.length > 0) return pickClosest(optArr, profile.wantsKids);
   }
 
   // Relocation
-  if (prompt.includes("reloc") || prompt.includes("move") && prompt.includes("city")) {
+  if (
+    prompt.includes("reloc") ||
+    (prompt.includes("move") && prompt.includes("city"))
+  ) {
     const opts = question.options as string[] | { options: string[] } | null;
-    const optArr = Array.isArray(opts) ? opts : (opts as { options?: string[] } | null)?.options ?? [];
+    const optArr = Array.isArray(opts)
+      ? opts
+      : ((opts as { options?: string[] } | null)?.options ?? []);
     if (optArr.length > 0) return pickClosest(optArr, profile.relocation);
   }
 
@@ -740,7 +755,9 @@ function generateAnswer(
     prompt.includes("tobacco")
   ) {
     const opts = question.options as string[] | { options: string[] } | null;
-    const optArr = Array.isArray(opts) ? opts : (opts as { options?: string[] } | null)?.options ?? [];
+    const optArr = Array.isArray(opts)
+      ? opts
+      : ((opts as { options?: string[] } | null)?.options ?? []);
     if (optArr.length > 0) return pickClosest(optArr, profile.smoking);
   }
 
@@ -777,7 +794,9 @@ function generateAnswer(
     prompt.includes("budget")
   ) {
     const opts = question.options as string[] | { options: string[] } | null;
-    const optArr = Array.isArray(opts) ? opts : (opts as { options?: string[] } | null)?.options ?? [];
+    const optArr = Array.isArray(opts)
+      ? opts
+      : ((opts as { options?: string[] } | null)?.options ?? []);
     if (optArr.length > 0) return pickClosest(optArr, profile.spending);
   }
 
@@ -825,7 +844,9 @@ async function main() {
 
     // Skip if already exists
     if (existingEmails.has(email)) {
-      console.log(`  ⏭  Skipping ${persona.firstName} ${persona.lastName} (already exists)`);
+      console.log(
+        `  ⏭  Skipping ${persona.firstName} ${persona.lastName} (already exists)`,
+      );
 
       // Still need to collect their applicant ID for invitations
       const user = await db.user.findUnique({
@@ -907,9 +928,7 @@ async function main() {
     );
   }
 
-  console.log(
-    `\n📊 Created: ${menIds.length} men, ${womenIds.length} women\n`,
-  );
+  console.log(`\n📊 Created: ${menIds.length} men, ${womenIds.length} women\n`);
 
   // ── 4. Invite first 10 men + first 10 women to February event ─────────
   const first10Men = menIds.slice(0, 10);

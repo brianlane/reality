@@ -597,9 +597,11 @@ export default function QuestionnaireForm({
         if (question.type === "RANKING") {
           const options = question.options as RankingOptions | null;
           const items = options?.items ?? [];
+          // Default to natural order (same as the renderer) so a question the
+          // user never touched is treated as answered with the displayed order.
           const rankedItems = Array.isArray(answerValue)
             ? (answerValue as string[])
-            : [];
+            : [...items];
 
           if (question.isRequired && rankedItems.length !== items.length) {
             errors[question.id] = "Please rank all items before continuing.";

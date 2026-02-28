@@ -45,12 +45,12 @@
 1. I confirm that I am at least 18 years of age and legally able to enter into this agreement. `[CHECKBOXES: I confirm | w=0]`
 
 2. I agree to the Terms of Service and Community Guidelines, and I understand that violation of these terms may result in termination of my membership. `[CHECKBOXES: I agree | w=0]`
-    - Terms include respectful conduct toward other members and staff
-    - Misrepresentation or fraudulent information is grounds for termination
+   - Terms include respectful conduct toward other members and staff
+   - Misrepresentation or fraudulent information is grounds for termination
 
 3. I understand that I may withdraw my consent and request deletion of my data at any time by contacting contact@realitymatchmaking.com, and that such withdrawal may affect my ability to use the service. `[CHECKBOXES: I understand | w=0]`
-    - Data deletion requests are processed within 30 days
-    - Some data may be retained as required by law
+   - Data deletion requests are processed within 30 days
+   - Some data may be retained as required by law
 
 ---
 

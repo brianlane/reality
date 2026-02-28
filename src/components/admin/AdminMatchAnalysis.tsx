@@ -60,7 +60,9 @@ type AdminMatchAnalysisProps = {
   matchId: string;
 };
 
-export default function AdminMatchAnalysis({ matchId }: AdminMatchAnalysisProps) {
+export default function AdminMatchAnalysis({
+  matchId,
+}: AdminMatchAnalysisProps) {
   const [data, setData] = useState<AnalysisData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -131,7 +133,9 @@ export default function AdminMatchAnalysis({ matchId }: AdminMatchAnalysisProps)
       return impactB - impactA;
     });
 
-  const excludedCount = data.breakdown.filter((item) => item.weight === 0).length;
+  const excludedCount = data.breakdown.filter(
+    (item) => item.weight === 0,
+  ).length;
 
   return (
     <Card className="space-y-6">

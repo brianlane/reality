@@ -32,10 +32,7 @@ function ScoreBar({ score }: { score: number }) {
   return (
     <span className="inline-flex gap-0.5 font-mono text-xs">
       {Array.from({ length: 10 }, (_, i) => (
-        <span
-          key={i}
-          className={i < filled ? "text-copper" : "text-stone-300"}
-        >
+        <span key={i} className={i < filled ? "text-copper" : "text-stone-300"}>
           █
         </span>
       ))}
@@ -129,18 +126,15 @@ export default function AdminEventMatchingPanel({
         return;
       }
 
-      const res = await fetch(
-        `/api/admin/events/${eventId}/generate-matches`,
-        {
-          method: "POST",
-          headers: { ...headers, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            minScore,
-            maxPerApplicant,
-            createMatches: false,
-          }),
-        },
-      );
+      const res = await fetch(`/api/admin/events/${eventId}/generate-matches`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          minScore,
+          maxPerApplicant,
+          createMatches: false,
+        }),
+      });
       const json = await res.json();
 
       if (!res.ok || json?.error) {
@@ -192,18 +186,15 @@ export default function AdminEventMatchingPanel({
         return;
       }
 
-      const res = await fetch(
-        `/api/admin/events/${eventId}/generate-matches`,
-        {
-          method: "POST",
-          headers: { ...headers, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            minScore,
-            maxPerApplicant,
-            createMatches: true,
-          }),
-        },
-      );
+      const res = await fetch(`/api/admin/events/${eventId}/generate-matches`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          minScore,
+          maxPerApplicant,
+          createMatches: true,
+        }),
+      });
       const json = await res.json();
 
       if (!res.ok || json?.error) {
@@ -332,7 +323,9 @@ export default function AdminEventMatchingPanel({
                       <th className="px-3 py-2 text-left font-semibold text-stone-600">
                         Person A
                       </th>
-                      <th className="px-1 py-2 text-center text-stone-400">↔</th>
+                      <th className="px-1 py-2 text-center text-stone-400">
+                        ↔
+                      </th>
                       <th className="px-3 py-2 text-left font-semibold text-stone-600">
                         Person B
                       </th>
