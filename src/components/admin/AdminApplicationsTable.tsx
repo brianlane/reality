@@ -109,7 +109,7 @@ export default function AdminApplicationsTable() {
                 <th className="py-2 px-6 text-left">Screening</th>
                 <th className="py-2 px-6 text-left">Submitted</th>
                 <th className="py-2 px-6 text-left">Questionnaire Started</th>
-                <th className="py-2 px-6 text-left">Questionnaire Duration</th>
+                <th className="py-2 px-6 text-left">Q Started → Reviewed</th>
                 <th className="py-2 px-6 text-left">Reviewed</th>
                 <th className="py-2 px-6 text-left">Total Duration</th>
                 <th className="py-2 pl-6 text-left">Actions</th>
