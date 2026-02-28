@@ -34,6 +34,8 @@ interface ParsedQuestion {
     | null;
   helperText: string | null;
   isRequired: boolean;
+  mlWeight: number;
+  isDealbreaker: boolean;
 }
 
 interface ParsedSection {
@@ -77,6 +79,8 @@ function parseAnnotation(line: string): {
     | null;
   cleanPrompt: string;
   isRequired: boolean;
+  mlWeight: number;
+  isDealbreaker: boolean;
 } {
   // Match the annotation pattern: `[TYPE]` or `[TYPE: options]`
   const annotationMatch = line.match(/`\[([^\]]+)\]`/);
@@ -88,10 +92,32 @@ function parseAnnotation(line: string): {
       options: null,
       cleanPrompt: line.replace(/^\d+\.\s*/, "").trim(),
       isRequired: true,
+      mlWeight: 1.0,
+      isDealbreaker: false,
     };
   }
 
-  const annotation = annotationMatch[1];
+  const annotationRaw = annotationMatch[1];
+  const [annotation, ...metaTokens] = annotationRaw
+    .split("|")
+    .map((token) => token.trim())
+    .filter(Boolean);
+  let mlWeight = 1.0;
+  let isDealbreaker = false;
+  for (const token of metaTokens) {
+    const weightMatch = token.match(/^w(?:eight)?=(\d*\.?\d+)$/i);
+    if (weightMatch) {
+      const parsed = Number(weightMatch[1]);
+      if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 1) {
+        mlWeight = parsed;
+      }
+      continue;
+    }
+    const dealbreakerMatch = token.match(/^dealbreaker=(true|false)$/i);
+    if (dealbreakerMatch) {
+      isDealbreaker = dealbreakerMatch[1].toLowerCase() === "true";
+    }
+  }
   const cleanPrompt = line
     .replace(/`\[[^\]]+\]`/, "")
     .replace(/^\d+\.\s*/, "")
@@ -110,6 +136,8 @@ function parseAnnotation(line: string): {
         },
         cleanPrompt,
         isRequired: true,
+        mlWeight,
+        isDealbreaker,
       };
     }
   }
@@ -118,6 +146,7 @@ function parseAnnotation(line: string): {
   // Stored as CHECKBOXES with one option and isDealbreaker:true marker in options.
   // isRequired=false so leaving it unchecked (= "no") is a valid submission.
   if (annotation === "DEALBREAKER_CHECKBOX") {
+    isDealbreaker = true;
     return {
       type: "CHECKBOXES",
       options: {
@@ -126,6 +155,8 @@ function parseAnnotation(line: string): {
       },
       cleanPrompt,
       isRequired: false,
+      mlWeight,
+      isDealbreaker,
     };
   }
 
@@ -138,6 +169,8 @@ function parseAnnotation(line: string): {
       options,
       cleanPrompt,
       isRequired: true,
+      mlWeight,
+      isDealbreaker,
     };
   }
 
@@ -159,6 +192,8 @@ function parseAnnotation(line: string): {
         options: { options, maxSelections },
         cleanPrompt,
         isRequired: true,
+        mlWeight,
+        isDealbreaker,
       };
     }
     const options = rest
@@ -170,6 +205,8 @@ function parseAnnotation(line: string): {
       options: { options },
       cleanPrompt,
       isRequired: true,
+      mlWeight,
+      isDealbreaker,
     };
   }
 
@@ -182,6 +219,8 @@ function parseAnnotation(line: string): {
       options,
       cleanPrompt,
       isRequired: true,
+      mlWeight,
+      isDealbreaker,
     };
   }
 
@@ -198,6 +237,8 @@ function parseAnnotation(line: string): {
         options: { items, total: isNaN(total) ? 100 : total },
         cleanPrompt,
         isRequired: true,
+        mlWeight,
+        isDealbreaker,
       };
     }
   }
@@ -211,6 +252,8 @@ function parseAnnotation(line: string): {
       options: { items },
       cleanPrompt,
       isRequired: true,
+      mlWeight,
+      isDealbreaker,
     };
   }
 
@@ -221,6 +264,8 @@ function parseAnnotation(line: string): {
       options: { minAge: 18, maxAge: 80 },
       cleanPrompt,
       isRequired: true,
+      mlWeight,
+      isDealbreaker,
     };
   }
 
@@ -233,6 +278,8 @@ function parseAnnotation(line: string): {
       options: { validation: "number", min: 0 },
       cleanPrompt,
       isRequired: true,
+      mlWeight,
+      isDealbreaker,
     };
   }
 
@@ -252,6 +299,8 @@ function parseAnnotation(line: string): {
     options: null,
     cleanPrompt,
     isRequired: true,
+    mlWeight,
+    isDealbreaker,
   };
 }
 
@@ -329,8 +378,14 @@ function parseMarkdown(content: string): ParsedPage[] {
       const questionNum = parseInt(questionMatch[1], 10);
       const questionText = questionMatch[2];
 
-      const { type, options, cleanPrompt, isRequired } =
-        parseAnnotation(questionText);
+      const {
+        type,
+        options,
+        cleanPrompt,
+        isRequired,
+        mlWeight,
+        isDealbreaker,
+      } = parseAnnotation(questionText);
 
       // Look ahead for helper text (indented lines starting with -)
       const helperLines: string[] = [];
@@ -361,6 +416,8 @@ function parseMarkdown(content: string): ParsedPage[] {
         options,
         helperText,
         isRequired,
+        mlWeight,
+        isDealbreaker,
       });
 
       continue;
@@ -627,6 +684,8 @@ async function upsertPages(pages: ParsedPage[]) {
               type: question.type,
               options: question.options ?? undefined,
               isRequired: question.isRequired,
+              mlWeight: question.mlWeight,
+              isDealbreaker: question.isDealbreaker,
               order: i,
               isActive: true,
               deletedAt: null, // Restore if previously soft-deleted
@@ -646,8 +705,8 @@ async function upsertPages(pages: ParsedPage[]) {
               isRequired: question.isRequired,
               order: i,
               isActive: true,
-              mlWeight: 1.0,
-              isDealbreaker: false,
+              mlWeight: question.mlWeight,
+              isDealbreaker: question.isDealbreaker,
             },
           });
           activeQuestionIds.push(created.id);

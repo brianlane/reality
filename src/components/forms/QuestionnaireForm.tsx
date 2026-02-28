@@ -495,6 +495,15 @@ export default function QuestionnaireForm({
     }));
   }
 
+  function clearFieldError(questionId: string) {
+    if (!fieldErrors[questionId]) return;
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next[questionId];
+      return next;
+    });
+  }
+
   function getTextOptions(question: Question): TextOptions | null {
     if (
       question.type === "TEXT" &&
@@ -578,10 +587,80 @@ export default function QuestionnaireForm({
     return errors;
   }
 
+  function getStructuredFieldErrors(): Record<string, string> {
+    const errors: Record<string, string> = {};
+
+    for (const section of sections) {
+      for (const question of section.questions) {
+        const answerValue = answers[question.id]?.value;
+
+        if (question.type === "RANKING") {
+          const options = question.options as RankingOptions | null;
+          const items = options?.items ?? [];
+          const rankedItems = Array.isArray(answerValue)
+            ? (answerValue as string[])
+            : [];
+
+          if (question.isRequired && rankedItems.length !== items.length) {
+            errors[question.id] = "Please rank all items before continuing.";
+            continue;
+          }
+
+          if (rankedItems.length > 0) {
+            const unique = new Set(rankedItems);
+            if (unique.size !== rankedItems.length) {
+              errors[question.id] = "Each item can only be ranked once.";
+              continue;
+            }
+            const validItems = new Set(items);
+            const hasInvalidItem = rankedItems.some(
+              (item) => !validItems.has(item),
+            );
+            if (hasInvalidItem) {
+              errors[question.id] = "One or more ranked items are invalid.";
+            }
+          }
+        }
+
+        if (question.type === "POINT_ALLOCATION") {
+          const options = question.options as PointAllocationOptions | null;
+          if (!options) continue;
+          const allocations =
+            answerValue &&
+            typeof answerValue === "object" &&
+            !Array.isArray(answerValue)
+              ? (answerValue as Record<string, unknown>)
+              : {};
+          const total = Object.values(allocations).reduce(
+            (sum: number, val) => sum + (Number(val) || 0),
+            0,
+          );
+
+          if (total > options.total) {
+            errors[question.id] =
+              `Points cannot exceed ${options.total}. Currently: ${total}.`;
+            continue;
+          }
+          if (question.isRequired && total !== options.total) {
+            errors[question.id] =
+              `Points must total exactly ${options.total}. Currently: ${total}.`;
+          }
+        }
+      }
+    }
+
+    return errors;
+  }
+
   function validateCurrentPageFields(): boolean {
     const checkboxErrors = getCheckboxSelectionErrors();
     const numericErrors = getNumericFieldErrors();
-    const nextErrors = { ...checkboxErrors, ...numericErrors };
+    const structuredErrors = getStructuredFieldErrors();
+    const nextErrors = {
+      ...checkboxErrors,
+      ...numericErrors,
+      ...structuredErrors,
+    };
 
     // Always write one deterministic error map so validation behavior never
     // depends on validator call order.
@@ -1163,6 +1242,7 @@ export default function QuestionnaireForm({
                                 updateAnswer(question.id, {
                                   value: { ...allocations, [item]: newValue },
                                 });
+                                clearFieldError(question.id);
                               }}
                             />
                             <span className="text-sm text-navy-soft">pts</span>
@@ -1183,6 +1263,11 @@ export default function QuestionnaireForm({
                       </span>
                     </div>
                   </div>
+                  {fieldErrors[question.id] ? (
+                    <p className="text-xs text-red-500">
+                      {fieldErrors[question.id]}
+                    </p>
+                  ) : null}
                 </div>
               );
             }
@@ -1235,6 +1320,7 @@ export default function QuestionnaireForm({
                 const [draggedItem] = newItems.splice(dragIndex, 1);
                 newItems.splice(dropIndex, 0, draggedItem);
                 updateAnswer(question.id, { value: newItems });
+                clearFieldError(question.id);
               };
 
               return (
@@ -1293,6 +1379,11 @@ export default function QuestionnaireForm({
                       ))}
                     </div>
                   </div>
+                  {fieldErrors[question.id] ? (
+                    <p className="text-xs text-red-500">
+                      {fieldErrors[question.id]}
+                    </p>
+                  ) : null}
                 </div>
               );
             }
