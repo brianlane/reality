@@ -257,7 +257,11 @@ export default function AdminEventMatchingPanel({
             min={0}
             max={100}
             value={minScore}
-            onChange={(e) => setMinScore(Number(e.target.value))}
+            onChange={(e) => {
+              setMinScore(Number(e.target.value));
+              setPreview(null);
+              setPreviewAvgScore(null);
+            }}
           />
         </div>
         <div className="space-y-1">
@@ -269,7 +273,11 @@ export default function AdminEventMatchingPanel({
             min={1}
             max={20}
             value={maxPerApplicant}
-            onChange={(e) => setMaxPerApplicant(Number(e.target.value))}
+            onChange={(e) => {
+              setMaxPerApplicant(Number(e.target.value));
+              setPreview(null);
+              setPreviewAvgScore(null);
+            }}
           />
         </div>
       </div>
