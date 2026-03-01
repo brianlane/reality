@@ -71,6 +71,97 @@ function simTextColor(sim: number): string {
   return "text-red-600";
 }
 
+function SectionDivider({
+  label,
+  color,
+  note,
+}: {
+  label: string;
+  color: string;
+  note?: string;
+}) {
+  return (
+    <tr>
+      <td colSpan={5} className="px-0 pt-5 pb-1">
+        <div className="flex items-baseline gap-2">
+          <span
+            className={`text-xs font-semibold uppercase tracking-wide ${color}`}
+          >
+            {label}
+          </span>
+          {note && <span className="text-xs text-stone-400">{note}</span>}
+        </div>
+        <div
+          className={`mt-1 h-px ${
+            color.includes("red")
+              ? "bg-red-200"
+              : color.includes("amber")
+                ? "bg-amber-200"
+                : color.includes("green")
+                  ? "bg-green-200"
+                  : "bg-stone-200"
+          }`}
+        />
+      </td>
+    </tr>
+  );
+}
+
+function QuestionRow({ item }: { item: BreakdownItem }) {
+  return (
+    <tr
+      className={`border-b ${
+        item.dealbreakerViolated
+          ? "bg-red-50"
+          : item.isDealbreakerQuestion && item.similarity < 1
+            ? "bg-amber-50"
+            : ""
+      }`}
+    >
+      <td className="py-2 pr-6">
+        <p className="max-w-xs text-sm text-navy leading-snug">{item.prompt}</p>
+        {item.dealbreakerViolated ? (
+          <span className="text-xs font-medium text-red-600">
+            ★ dealbreaker — violated
+          </span>
+        ) : item.isDealbreakerQuestion && item.similarity < 1 ? (
+          <span className="text-xs text-amber-600">
+            ★ dealbreaker · near threshold
+          </span>
+        ) : null}
+      </td>
+      <td className="py-2 pr-4 max-w-[140px]">
+        <span className="block truncate text-sm text-navy-soft">
+          {formatValue(item.answerA, item.questionType)}
+        </span>
+      </td>
+      <td className="py-2 pr-6 max-w-[140px]">
+        <span className="block truncate text-sm text-navy-soft">
+          {formatValue(item.answerB, item.questionType)}
+        </span>
+      </td>
+      <td className="py-2 pr-4">
+        <div className="flex items-center gap-2">
+          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className={`h-full rounded-full ${simBarColor(item.similarity)}`}
+              style={{ width: `${Math.round(item.similarity * 100)}%` }}
+            />
+          </div>
+          <span
+            className={`text-xs font-medium tabular-nums ${simTextColor(item.similarity)}`}
+          >
+            {Math.round(item.similarity * 100)}%
+          </span>
+        </div>
+      </td>
+      <td className="py-2 text-xs text-navy-soft tabular-nums">
+        {item.weight.toFixed(1)}
+      </td>
+    </tr>
+  );
+}
+
 type AdminMatchAnalysisProps = {
   matchId: string;
 };
@@ -171,89 +262,6 @@ export default function AdminMatchAnalysis({
     (item) => item.weight === 0,
   ).length;
 
-  function SectionDivider({
-    label,
-    color,
-    note,
-  }: {
-    label: string;
-    color: string;
-    note?: string;
-  }) {
-    return (
-      <tr>
-        <td colSpan={5} className={`px-0 pt-5 pb-1`}>
-          <div className="flex items-baseline gap-2">
-            <span className={`text-xs font-semibold uppercase tracking-wide ${color}`}>
-              {label}
-            </span>
-            {note && (
-              <span className="text-xs text-stone-400">{note}</span>
-            )}
-          </div>
-          <div className={`mt-1 h-px ${color.includes("red") ? "bg-red-200" : color.includes("amber") ? "bg-amber-200" : color.includes("green") ? "bg-green-200" : "bg-stone-200"}`} />
-        </td>
-      </tr>
-    );
-  }
-
-  function QuestionRow({ item }: { item: BreakdownItem }) {
-    return (
-      <tr
-        className={`border-b ${
-          item.dealbreakerViolated
-            ? "bg-red-50"
-            : item.isDealbreakerQuestion && item.similarity < 1
-              ? "bg-amber-50"
-              : ""
-        }`}
-      >
-        <td className="py-2 pr-6">
-          <p className="max-w-xs text-sm text-navy leading-snug">
-            {item.prompt}
-          </p>
-          {item.dealbreakerViolated ? (
-            <span className="text-xs font-medium text-red-600">
-              ★ dealbreaker — violated
-            </span>
-          ) : item.isDealbreakerQuestion && item.similarity < 1 ? (
-            <span className="text-xs text-amber-600">
-              ★ dealbreaker · near threshold
-            </span>
-          ) : null}
-        </td>
-        <td className="py-2 pr-4 max-w-[140px]">
-          <span className="block truncate text-sm text-navy-soft">
-            {formatValue(item.answerA, item.questionType)}
-          </span>
-        </td>
-        <td className="py-2 pr-6 max-w-[140px]">
-          <span className="block truncate text-sm text-navy-soft">
-            {formatValue(item.answerB, item.questionType)}
-          </span>
-        </td>
-        <td className="py-2 pr-4">
-          <div className="flex items-center gap-2">
-            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
-              <div
-                className={`h-full rounded-full ${simBarColor(item.similarity)}`}
-                style={{ width: `${Math.round(item.similarity * 100)}%` }}
-              />
-            </div>
-            <span
-              className={`text-xs font-medium tabular-nums ${simTextColor(item.similarity)}`}
-            >
-              {Math.round(item.similarity * 100)}%
-            </span>
-          </div>
-        </td>
-        <td className="py-2 text-xs text-navy-soft tabular-nums">
-          {item.weight.toFixed(1)}
-        </td>
-      </tr>
-    );
-  }
-
   return (
     <Card className="space-y-6">
       {/* Header */}
@@ -297,22 +305,31 @@ export default function AdminMatchAnalysis({
           <tbody>
             {violated.length > 0 && (
               <>
-                <SectionDivider label="Dealbreakers violated" color="text-red-600" />
-                {violated.map((item) => <QuestionRow key={item.questionId} item={item} />)}
+                <SectionDivider
+                  label="Dealbreakers violated"
+                  color="text-red-600"
+                />
+                {violated.map((item) => (
+                  <QuestionRow key={item.questionId} item={item} />
+                ))}
               </>
             )}
 
             {compatible.length > 0 && (
               <>
                 <SectionDivider label="Compatible" color="text-green-700" />
-                {compatible.map((item) => <QuestionRow key={item.questionId} item={item} />)}
+                {compatible.map((item) => (
+                  <QuestionRow key={item.questionId} item={item} />
+                ))}
               </>
             )}
 
             {partial.length > 0 && (
               <>
                 <SectionDivider label="Partial match" color="text-amber-700" />
-                {partial.map((item) => <QuestionRow key={item.questionId} item={item} />)}
+                {partial.map((item) => (
+                  <QuestionRow key={item.questionId} item={item} />
+                ))}
               </>
             )}
 
@@ -323,14 +340,21 @@ export default function AdminMatchAnalysis({
                   color="text-amber-700"
                   note="— high-weight questions with no overlap · verify if any should be dealbreakers"
                 />
-                {significantGaps.map((item) => <QuestionRow key={item.questionId} item={item} />)}
+                {significantGaps.map((item) => (
+                  <QuestionRow key={item.questionId} item={item} />
+                ))}
               </>
             )}
 
             {minorDiffs.length > 0 && (
               <>
-                <SectionDivider label="Minor differences" color="text-stone-400" />
-                {minorDiffs.map((item) => <QuestionRow key={item.questionId} item={item} />)}
+                <SectionDivider
+                  label="Minor differences"
+                  color="text-stone-400"
+                />
+                {minorDiffs.map((item) => (
+                  <QuestionRow key={item.questionId} item={item} />
+                ))}
               </>
             )}
           </tbody>
