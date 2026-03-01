@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 
 type MatchItem = {
@@ -39,11 +40,16 @@ export default function ApplicantMatchesList() {
       ) : (
         <ul className="mt-4 space-y-2 text-sm text-navy-soft">
           {matches.map((match) => (
-            <li key={match.id} className="flex items-center justify-between">
-              <span>
-                {match.partner.firstName} · {match.eventName}
-              </span>
-              <span className="text-navy-soft">{match.outcome}</span>
+            <li key={match.id}>
+              <Link
+                href={`/matches/${match.id}`}
+                className="flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-stone-50 transition-colors"
+              >
+                <span className="font-medium text-navy">
+                  {match.partner.firstName} · {match.eventName}
+                </span>
+                <span className="text-navy-soft">{match.outcome}</span>
+              </Link>
             </li>
           ))}
         </ul>
