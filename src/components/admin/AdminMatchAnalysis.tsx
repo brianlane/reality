@@ -11,6 +11,7 @@ type BreakdownItem = {
   similarity: number;
   weight: number;
   weightedScore: number;
+  questionType: string | null;
   isDealbreakerQuestion: boolean;
   dealbreakerViolated: boolean;
   answerA: unknown;
@@ -26,13 +27,27 @@ type AnalysisData = {
   breakdown: BreakdownItem[];
 };
 
-function formatValue(val: unknown): string {
+function formatValue(val: unknown, questionType?: string | null): string {
   if (val === null || val === undefined) return "—";
+
+  // AGE_RANGE is stored as { min, max } — render as "18–26" not as a key-value dump
+  if (
+    questionType === "AGE_RANGE" &&
+    typeof val === "object" &&
+    !Array.isArray(val)
+  ) {
+    const range = val as { min?: number; max?: number };
+    if (range.min !== undefined && range.max !== undefined) {
+      return `${range.min}–${range.max}`;
+    }
+  }
+
   if (Array.isArray(val)) {
     if (val.length === 0) return "—";
     return (val as string[]).join(", ");
   }
   if (typeof val === "object") {
+    // POINT_ALLOCATION: { item: points } — sort by points descending
     return (
       Object.entries(val as Record<string, number>)
         .filter(([, v]) => v > 0)
@@ -200,12 +215,12 @@ export default function AdminMatchAnalysis({
                 </td>
                 <td className="py-2 pr-4 max-w-[140px]">
                   <span className="block truncate text-sm text-navy-soft">
-                    {formatValue(item.answerA)}
+                    {formatValue(item.answerA, item.questionType)}
                   </span>
                 </td>
                 <td className="py-2 pr-6 max-w-[140px]">
                   <span className="block truncate text-sm text-navy-soft">
-                    {formatValue(item.answerB)}
+                    {formatValue(item.answerB, item.questionType)}
                   </span>
                 </td>
                 <td className="py-2 pr-4">

@@ -38,7 +38,7 @@ export async function GET(_: Request, { params }: RouteContext) {
 
   const questionIds = scoring.breakdown.map((b) => b.questionId);
 
-  const [answers, dealbreakerQuestions] = await Promise.all([
+  const [answers, questionMeta] = await Promise.all([
     db.questionnaireAnswer.findMany({
       where: {
         applicantId: { in: [match.applicantId, match.partnerId] },
@@ -47,12 +47,15 @@ export async function GET(_: Request, { params }: RouteContext) {
       select: { applicantId: true, questionId: true, value: true },
     }),
     db.questionnaireQuestion.findMany({
-      where: { id: { in: questionIds }, isDealbreaker: true },
-      select: { id: true },
+      where: { id: { in: questionIds } },
+      select: { id: true, isDealbreaker: true, type: true },
     }),
   ]);
 
-  const dealbreakerSet = new Set(dealbreakerQuestions.map((q) => q.id));
+  const dealbreakerSet = new Set(
+    questionMeta.filter((q) => q.isDealbreaker).map((q) => q.id),
+  );
+  const typeMap = new Map(questionMeta.map((q) => [q.id, q.type]));
 
   const answerMap = new Map<
     string,
@@ -75,6 +78,7 @@ export async function GET(_: Request, { params }: RouteContext) {
 
   const breakdown = scoring.breakdown.map((item) => ({
     ...item,
+    questionType: typeMap.get(item.questionId) ?? null,
     isDealbreakerQuestion: dealbreakerSet.has(item.questionId),
     dealbreakerViolated: scoring.dealbreakersViolated.includes(item.questionId),
     answerA: answerMap.get(item.questionId)?.applicantValue ?? null,
