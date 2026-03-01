@@ -1,10 +1,8 @@
-import { Applicant, Questionnaire } from "@prisma/client";
+import { Applicant } from "@prisma/client";
 import { scoreApplicantMatch } from "./scoring";
 import { applyFilters } from "./filters";
 
-type ApplicantWithQuestionnaire = Applicant & {
-  questionnaire?: Questionnaire | null;
-};
+type ApplicantWithQuestionnaire = Applicant;
 
 export interface RecommendationOptions {
   maxResults?: number;

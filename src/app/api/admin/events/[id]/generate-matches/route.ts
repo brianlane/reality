@@ -63,9 +63,7 @@ export async function POST(
       applicationStatus: ApplicationStatus.APPROVED,
       screeningStatus: ScreeningStatus.PASSED,
       deletedAt: null,
-      questionnaire: {
-        isNot: null,
-      },
+      questionnaireAnswers: { some: {} },
       eventInvitations: {
         some: {
           eventId: eventId,
@@ -75,9 +73,7 @@ export async function POST(
         },
       },
     },
-    include: {
-      questionnaire: true,
-    },
+    include: {},
   });
 
   if (applicants.length < 2) {

@@ -147,7 +147,6 @@ model Applicant {
   deletedAt             DateTime?
   deletedBy             String?
   
-  questionnaire         Questionnaire?
   questionnaireAnswers  QuestionnaireAnswer[]
   payments              Payment[]
   eventInvitations      EventInvitation[]
@@ -266,57 +265,6 @@ model QuestionnaireAnswer {
   @@index([questionId])
 }
 
-model Questionnaire {
-  id            String    @id @default(cuid())
-  applicantId   String    @unique
-  applicant     Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
-  
-  // Values & Beliefs (scored 1-5)
-  religionImportance      Int
-  politicalAlignment      String
-  familyImportance        Int
-  careerAmbition          Int
-  financialGoals          String
-  
-  // Lifestyle
-  fitnessLevel            String
-  diet                    String
-  drinking                String
-  smoking                 String
-  drugs                   String
-  pets                    String
-  
-  // Relationship Goals
-  relationshipGoal        String    // Marriage, Long-term, etc.
-  wantsChildren           String    // Yes, No, Maybe, Already have
-  childrenTimeline        String?
-  movingWillingness       String
-  
-  // Interests & Hobbies
-  hobbies                 String[]  // Array of interests
-  travelFrequency         String
-  favoriteActivities      String[]
-  
-  // Communication & Personality
-  loveLanguage            String
-  conflictStyle           String
-  introvertExtrovert      Int       // 1-10 scale
-  spontaneityPlanning     Int       // 1-10 scale
-  
-  // Deal-breakers
-  dealBreakers            String[]
-  
-  // Open-ended
-  aboutMe                 String    @db.Text
-  idealPartner            String    @db.Text
-  perfectDate             String    @db.Text
-  
-  // Raw JSON for flexibility
-  responses               Json      // Full questionnaire responses
-  
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
-}
 
 // ============================================
 // PAYMENTS
@@ -497,6 +445,9 @@ model Match {
   // Detailed analytics data
   analytics       MatchAnalytics?
 
+  // Notification tracking
+  notifiedAt      DateTime?     // set when admin notifies participants; null = not yet revealed
+
   // Contact exchange
   contactExchanged Boolean      @default(false)
   contactExchangedAt DateTime?
@@ -571,6 +522,7 @@ enum AdminActionType {
   INVITE_OFF_WAITLIST
   BATCH_INVITE_WAITLIST
   INVITE_RESEARCH
+  NOTIFY_MATCHES
 }
 
 model AdminAction {

@@ -25,35 +25,43 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const outcome = url.searchParams.get("outcome");
 
-  const matches = await db.match.findMany({
+  const rawMatches = await db.match.findMany({
     where: {
-      applicantId: applicant.id,
+      OR: [{ applicantId: applicant.id }, { partnerId: applicant.id }],
+      notifiedAt: { not: null },
+      deletedAt: null,
       ...(outcome ? { outcome: outcome as never } : {}),
     },
     include: {
       event: true,
+      applicant: { include: { user: true } },
       partner: { include: { user: true } },
     },
     orderBy: { createdAt: "desc" },
   });
 
   return successResponse({
-    matches: matches.map((match) => ({
-      id: match.id,
-      eventId: match.eventId,
-      eventName: match.event.name,
-      partner: {
-        id: match.partnerId,
-        firstName: match.partner.user.firstName,
-        age: match.partner.age,
-        occupation: match.partner.occupation,
-        photos: match.partner.photos,
-      },
-      type: match.type,
-      compatibilityScore: match.compatibilityScore,
-      outcome: match.outcome,
-      contactExchanged: match.contactExchanged,
-      createdAt: match.createdAt,
-    })),
+    matches: rawMatches.map((match) => {
+      const isApplicant = match.applicantId === applicant.id;
+      const partnerRecord = isApplicant ? match.partner : match.applicant;
+      return {
+        id: match.id,
+        eventId: match.eventId,
+        eventName: match.event.name,
+        partner: {
+          id: partnerRecord.id,
+          firstName: partnerRecord.user.firstName,
+          age: partnerRecord.age,
+          occupation: partnerRecord.occupation,
+          photos: partnerRecord.photos,
+        },
+        type: match.type,
+        compatibilityScore: match.compatibilityScore,
+        outcome: match.outcome,
+        contactExchanged: match.contactExchanged,
+        notifiedAt: match.notifiedAt,
+        createdAt: match.createdAt,
+      };
+    }),
   });
 }

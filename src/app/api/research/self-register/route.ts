@@ -86,6 +86,7 @@ export async function POST(request: Request) {
         data: {
           applicationStatus: "RESEARCH_IN_PROGRESS",
           researchInvitedAt: new Date(),
+          researchInviteUsedAt: new Date(),
           researchCompletedAt: null,
           prolificCompletionCode: null,
           prolificPartnerPid: null,
@@ -159,6 +160,7 @@ export async function POST(request: Request) {
         incomeRange: "Unknown",
         applicationStatus: "RESEARCH_IN_PROGRESS",
         researchInvitedAt: new Date(),
+        researchInviteUsedAt: new Date(),
         researchInviteCode: inviteCode,
         ...(hasProlific && {
           prolificPid,

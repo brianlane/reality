@@ -48,7 +48,10 @@ async function main() {
   await prisma.eventInvitation.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.event.deleteMany();
-  await prisma.questionnaire.deleteMany();
+  await prisma.questionnaireAnswer.deleteMany();
+  await prisma.questionnaireQuestion.deleteMany();
+  await prisma.questionnaireSection.deleteMany();
+  await prisma.questionnairePage.deleteMany();
   await prisma.applicant.deleteMany();
   await prisma.adminAction.deleteMany();
   await prisma.user.deleteMany();
@@ -84,7 +87,7 @@ async function main() {
     },
   });
 
-  const mockApplicant = await prisma.applicant.create({
+  await prisma.applicant.create({
     data: {
       userId: mockApplicantUser.id,
       age: 28,
@@ -101,39 +104,6 @@ async function main() {
       idenfyStatus: "PENDING",
       checkrStatus: "PENDING",
       photos: ["https://i.pravatar.cc/300?img=64"],
-    },
-  });
-
-  await prisma.questionnaire.create({
-    data: {
-      applicantId: mockApplicant.id,
-      religionImportance: 3,
-      politicalAlignment: "moderate",
-      familyImportance: 4,
-      careerAmbition: 4,
-      financialGoals: "Build wealth",
-      fitnessLevel: "Moderately active",
-      diet: "Omnivore",
-      drinking: "Socially",
-      smoking: "No",
-      drugs: "No",
-      pets: "Dog lover",
-      relationshipGoal: "Long-term",
-      wantsChildren: "Maybe",
-      childrenTimeline: "2-5 years",
-      movingWillingness: "Open to relocating",
-      hobbies: ["Hiking", "Cooking"],
-      travelFrequency: "Once or twice a year",
-      favoriteActivities: ["Foodie experiences"],
-      loveLanguage: "Quality Time",
-      conflictStyle: "Discuss calmly",
-      introvertExtrovert: 6,
-      spontaneityPlanning: 5,
-      dealBreakers: ["Dishonesty"],
-      aboutMe: "I love meaningful connections and great conversations.",
-      idealPartner: "Someone kind, ambitious, and adventurous.",
-      perfectDate: "Sunset hike and a cozy dinner downtown.",
-      responses: {},
     },
   });
 
@@ -331,116 +301,6 @@ async function main() {
   }
 
   console.log("✓ Created 15 female applicants");
-
-  // ============================================
-  // QUESTIONNAIRES
-  // ============================================
-
-  const hobbiesOptions = [
-    ["Hiking", "Photography", "Cooking"],
-    ["Reading", "Yoga", "Traveling"],
-    ["Running", "Music", "Wine Tasting"],
-    ["Skiing", "Art", "Fine Dining"],
-    ["Golf", "Theater", "Gardening"],
-  ];
-
-  const dealBreakersOptions = [
-    ["Smoking", "No desire for children"],
-    ["Political extremism", "Dishonesty"],
-    ["Addiction", "Lack of ambition"],
-    ["Poor hygiene", "Disrespect"],
-    ["Infidelity", "Controlling behavior"],
-  ];
-
-  for (let i = 0; i < applicants.length; i++) {
-    await prisma.questionnaire.create({
-      data: {
-        applicantId: applicants[i].id,
-        religionImportance: Math.floor(Math.random() * 5) + 1,
-        politicalAlignment: ["liberal", "moderate", "conservative"][
-          Math.floor(Math.random() * 3)
-        ],
-        familyImportance: Math.floor(Math.random() * 5) + 1,
-        careerAmbition: Math.floor(Math.random() * 5) + 1,
-        financialGoals: [
-          "Save for retirement",
-          "Build wealth",
-          "Work-life balance",
-        ][Math.floor(Math.random() * 3)],
-        fitnessLevel: [
-          "Very active",
-          "Moderately active",
-          "Occasionally active",
-        ][Math.floor(Math.random() * 3)],
-        diet: ["Omnivore", "Vegetarian", "Pescatarian"][
-          Math.floor(Math.random() * 3)
-        ],
-        drinking: ["Socially", "Occasionally", "Rarely"][
-          Math.floor(Math.random() * 3)
-        ],
-        smoking: "No",
-        drugs: "No",
-        pets: ["Dog lover", "Cat lover", "No pets", "Love all animals"][
-          Math.floor(Math.random() * 4)
-        ],
-        relationshipGoal: "Marriage within 2-3 years",
-        wantsChildren: ["Yes, definitely", "Maybe", "Open to discussion"][
-          Math.floor(Math.random() * 3)
-        ],
-        childrenTimeline: "2-5 years",
-        movingWillingness: [
-          "Open to relocating",
-          "Prefer to stay in Phoenix",
-          "Would consider for the right person",
-        ][Math.floor(Math.random() * 3)],
-        hobbies: hobbiesOptions[i % hobbiesOptions.length],
-        travelFrequency: [
-          "Several times a year",
-          "Once or twice a year",
-          "Love to travel",
-        ][Math.floor(Math.random() * 3)],
-        favoriteActivities: [
-          "Outdoor adventures",
-          "Cultural experiences",
-          "Foodie experiences",
-        ],
-        loveLanguage: [
-          "Quality Time",
-          "Words of Affirmation",
-          "Physical Touch",
-          "Acts of Service",
-        ][Math.floor(Math.random() * 4)],
-        conflictStyle: [
-          "Direct communication",
-          "Take time to process",
-          "Discuss calmly",
-        ][Math.floor(Math.random() * 3)],
-        introvertExtrovert: Math.floor(Math.random() * 10) + 1,
-        spontaneityPlanning: Math.floor(Math.random() * 10) + 1,
-        dealBreakers: dealBreakersOptions[i % dealBreakersOptions.length],
-        aboutMe: `I'm a passionate ${applicants[i].occupation.toLowerCase()} who loves exploring new experiences. I value honesty, ambition, and a good sense of humor. In my free time, you'll find me staying active and trying new restaurants around Phoenix.`,
-        idealPartner:
-          "Someone who is emotionally intelligent, has their life together, and is ready for a serious relationship. I value good communication, shared values, and someone who can make me laugh.",
-        perfectDate:
-          "Starting with a scenic hike at Camelback Mountain, followed by brunch at a local cafe, then exploring a new art gallery or museum, and ending with sunset cocktails on a rooftop.",
-        responses: {
-          // Full questionnaire as JSON
-          values: {
-            religion: Math.floor(Math.random() * 5) + 1,
-            politics: "moderate",
-            family: Math.floor(Math.random() * 5) + 1,
-          },
-          lifestyle: {
-            fitness: "active",
-            diet: "omnivore",
-            drinking: "socially",
-          },
-        },
-      },
-    });
-  }
-
-  console.log("✓ Created 30 questionnaires");
 
   // ============================================
   // PAYMENTS
@@ -757,7 +617,7 @@ async function main() {
   const counts = {
     users: await prisma.user.count(),
     applicants: await prisma.applicant.count(),
-    questionnaires: await prisma.questionnaire.count(),
+    questionnaireAnswers: await prisma.questionnaireAnswer.count(),
     payments: await prisma.payment.count(),
     events: await prisma.event.count(),
     eventInvitations: await prisma.eventInvitation.count(),
@@ -771,7 +631,7 @@ async function main() {
     `   Users: ${counts.users} (1 admin, ${counts.users - 1} applicants)`,
   );
   console.log(`   Applicants: ${counts.applicants} (15 male, 15 female)`);
-  console.log(`   Questionnaires: ${counts.questionnaires}`);
+  console.log(`   Questionnaire Answers: ${counts.questionnaireAnswers}`);
   console.log(`   Payments: ${counts.payments}`);
   console.log(`   Events: ${counts.events} (1 past, 1 upcoming)`);
   console.log(`   Event Invitations: ${counts.eventInvitations}`);

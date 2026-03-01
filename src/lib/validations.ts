@@ -38,39 +38,6 @@ export const demographicsSchema = z.object({
   aboutYourself: z.string().min(50).max(500),
 });
 
-export const questionnaireSchema = z
-  .object({
-    religionImportance: z.number().int().min(1).max(5),
-    politicalAlignment: z.string().min(1),
-    familyImportance: z.number().int().min(1).max(5),
-    careerAmbition: z.number().int().min(1).max(5),
-    financialGoals: z.string().min(1),
-    fitnessLevel: z.string().min(1),
-    diet: z.string().min(1),
-    drinking: z.string().min(1),
-    smoking: z.string().min(1),
-    drugs: z.string().min(1),
-    pets: z.string().min(1),
-    relationshipGoal: z.string().min(1),
-    wantsChildren: z.string().min(1),
-    childrenTimeline: z.string().optional().nullable(),
-    movingWillingness: z.string().min(1),
-    hobbies: z.array(z.string()).default([]),
-    travelFrequency: z.string().min(1),
-    favoriteActivities: z.array(z.string()).default([]),
-    loveLanguage: z.string().min(1),
-    conflictStyle: z.string().min(1),
-    introvertExtrovert: z.number().int().min(1).max(10),
-    spontaneityPlanning: z.number().int().min(1).max(10),
-    dealBreakers: z.array(z.string()).default([]),
-    aboutMe: z.string().min(1),
-    idealPartner: z.string().min(1),
-    perfectDate: z.string().min(1),
-    responses: z.record(z.string(), z.any()).default({}),
-  })
-  .partial()
-  .default({});
-
 export const createApplicationSchema = z.object({
   applicant: z.object({
     firstName: z.string().min(1),
@@ -84,7 +51,6 @@ export const createApplicationSchema = z.object({
   applicationId: z.string().min(1).optional(),
   inviteToken: z.string().optional(), // For waitlist validation
   demographics: demographicsSchema,
-  questionnaire: questionnaireSchema.optional(),
 });
 
 export const submitApplicationSchema = z.object({

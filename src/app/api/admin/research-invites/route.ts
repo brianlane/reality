@@ -23,6 +23,9 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const includeDeleted = url.searchParams.get("includeDeleted") === "true";
+  const search = url.searchParams.get("search") ?? undefined;
+  const page = Number(url.searchParams.get("page") ?? "1");
+  const limit = Number(url.searchParams.get("limit") ?? "25");
 
   const researchStatuses: ApplicationStatus[] = [
     "RESEARCH_INVITED",
@@ -30,22 +33,40 @@ export async function GET(request: Request) {
     "RESEARCH_COMPLETED",
   ];
 
-  const applicants = await db.applicant.findMany({
-    where: {
-      applicationStatus: { in: researchStatuses },
-      ...(includeDeleted ? {} : { deletedAt: null }),
-    },
-    include: {
-      user: {
-        select: {
-          firstName: true,
-          lastName: true,
-          email: true,
+  const where = {
+    applicationStatus: { in: researchStatuses },
+    ...(includeDeleted ? {} : { deletedAt: null }),
+    ...(search
+      ? {
+          user: {
+            OR: [
+              { firstName: { contains: search, mode: "insensitive" as const } },
+              { lastName: { contains: search, mode: "insensitive" as const } },
+              { email: { contains: search, mode: "insensitive" as const } },
+            ],
+          },
+        }
+      : {}),
+  };
+
+  const [applicants, total] = await Promise.all([
+    db.applicant.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
         },
       },
-    },
-    orderBy: { researchInvitedAt: "desc" },
-  });
+      orderBy: { researchInvitedAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    db.applicant.count({ where }),
+  ]);
 
   return successResponse({
     applicants: applicants.map((applicant) => ({
@@ -57,7 +78,12 @@ export async function GET(request: Request) {
       researchInviteUsedAt: applicant.researchInviteUsedAt,
       researchCompletedAt: applicant.researchCompletedAt,
     })),
-    count: applicants.length,
+    pagination: {
+      total,
+      pages: Math.ceil(total / limit),
+      currentPage: page,
+      perPage: limit,
+    },
   });
 }
 

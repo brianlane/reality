@@ -24,12 +24,28 @@ export async function GET(request: Request) {
     const page = Number(url.searchParams.get("page") ?? "1");
     const limit = Number(url.searchParams.get("limit") ?? "50");
     const includeDeleted = url.searchParams.get("includeDeleted") === "true";
+    const search = url.searchParams.get("search") ?? undefined;
 
     const where = {
       applicationStatus: {
         in: [ApplicationStatus.WAITLIST, ApplicationStatus.WAITLIST_INVITED],
       },
       ...(includeDeleted ? {} : { deletedAt: null }),
+      ...(search
+        ? {
+            user: {
+              OR: [
+                {
+                  firstName: { contains: search, mode: "insensitive" as const },
+                },
+                {
+                  lastName: { contains: search, mode: "insensitive" as const },
+                },
+                { email: { contains: search, mode: "insensitive" as const } },
+              ],
+            },
+          }
+        : {}),
     };
 
     const [waitlistApplicants, total] = await Promise.all([

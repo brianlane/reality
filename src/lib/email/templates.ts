@@ -157,6 +157,70 @@ export function getEventInvitationHTML(params: {
   });
 }
 
+export function getMatchNotificationHTML(params: {
+  firstName: string;
+  partnerFirstName: string;
+  eventName: string;
+  compatibilityScore: number | null;
+  matchesUrl: string;
+}) {
+  const score =
+    params.compatibilityScore !== null
+      ? Math.round(params.compatibilityScore)
+      : null;
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You have a new match!</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
+  <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <div style="padding: 40px 32px; text-align: center;">
+      <img
+        src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+        alt="Reality Matchmaking logo"
+        width="60"
+        height="60"
+        style="display: inline-block; margin-bottom: 24px; border: 0; outline: none; text-decoration: none;"
+      />
+
+      <h1 style="color: #1a2332; margin: 0 0 8px; font-size: 28px; font-weight: 600;">
+        You have a new match, ${params.firstName}!
+      </h1>
+
+      <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 32px;">
+        We found a great connection for you at <strong>${params.eventName}</strong>.
+      </p>
+
+      <div style="background-color: #f8f9fa; border-radius: 8px; padding: 24px; margin: 0 0 32px; text-align: left;">
+        <p style="color: #718096; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px;">Your Match</p>
+        <p style="color: #1a2332; font-size: 22px; font-weight: 600; margin: 0 0 16px;">${params.partnerFirstName}</p>
+        ${score !== null ? `<p style="color: #718096; font-size: 14px; margin: 0;">Compatibility: <strong style="color: #1a2332;">${score} / 100</strong></p>` : ""}
+      </div>
+
+      <a href="${params.matchesUrl}" style="display: inline-block; background-color: #1a2332; color: white; text-decoration: none; padding: 16px 32px; border-radius: 6px; font-size: 16px; font-weight: 500;">
+        View Your Match
+      </a>
+    </div>
+
+    <div style="background-color: #f8f9fa; padding: 24px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
+      <p style="color: #718096; font-size: 12px; margin: 0 0 8px;">
+        <a href="https://www.realitymatchmaking.com" style="color: #718096; text-decoration: none;">Reality Matchmaking</a>
+      </p>
+      <p style="color: #a0aec0; font-size: 11px; margin: 0;">
+        You received this email because you are a member of Reality Matchmaking
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
 export function getStatusUpdateHTML(params: {
   firstName: string;
   status: string;
