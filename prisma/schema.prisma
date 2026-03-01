@@ -445,6 +445,9 @@ model Match {
   // Detailed analytics data
   analytics       MatchAnalytics?
 
+  // Notification tracking
+  notifiedAt      DateTime?     // set when admin notifies participants; null = not yet revealed
+
   // Contact exchange
   contactExchanged Boolean      @default(false)
   contactExchangedAt DateTime?
@@ -519,6 +522,7 @@ enum AdminActionType {
   INVITE_OFF_WAITLIST
   BATCH_INVITE_WAITLIST
   INVITE_RESEARCH
+  NOTIFY_MATCHES
 }
 
 model AdminAction {

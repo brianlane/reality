@@ -139,13 +139,13 @@ export default function AdminMatchAnalysis({
     );
   }
 
-  // Scored questions sorted by impact (biggest drags on score first)
+  // Scored questions sorted by impact (best-matching areas first)
   const scored = data.breakdown
     .filter((item) => item.weight > 0)
     .sort((a, b) => {
       const impactA = a.weight * (1 - a.similarity);
       const impactB = b.weight * (1 - b.similarity);
-      return impactB - impactA;
+      return impactA - impactB;
     });
 
   const excludedCount = data.breakdown.filter(

@@ -27,7 +27,18 @@ export async function GET(request: Request, { params }: RouteContext) {
     where: { id, ...(includeDeleted ? {} : { deletedAt: null }) },
     include: {
       invitations: { include: { applicant: { include: { user: true } } } },
-      matches: true,
+      matches: {
+        where: { deletedAt: null },
+        include: {
+          applicant: {
+            include: { user: { select: { firstName: true, lastName: true } } },
+          },
+          partner: {
+            include: { user: { select: { firstName: true, lastName: true } } },
+          },
+        },
+        orderBy: { compatibilityScore: "desc" },
+      },
     },
   });
 
@@ -75,9 +86,12 @@ export async function GET(request: Request, { params }: RouteContext) {
     matches: event.matches.map((match) => ({
       id: match.id,
       applicantId: match.applicantId,
+      applicantName: `${match.applicant.user.firstName} ${match.applicant.user.lastName}`,
       partnerId: match.partnerId,
+      partnerName: `${match.partner.user.firstName} ${match.partner.user.lastName}`,
       type: match.type,
       compatibilityScore: match.compatibilityScore,
+      notifiedAt: match.notifiedAt,
     })),
     stats: {
       invitationsSent: event.invitations.length,
