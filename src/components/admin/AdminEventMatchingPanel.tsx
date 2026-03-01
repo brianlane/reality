@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -452,6 +453,7 @@ export default function AdminEventMatchingPanel({
                   <th className="px-3 py-2 text-left font-semibold text-stone-600">
                     Notified
                   </th>
+                  <th className="px-3 py-2" />
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -477,6 +479,14 @@ export default function AdminEventMatchingPanel({
                       ) : (
                         <span className="text-xs text-stone-400">—</span>
                       )}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Link
+                        href={`/admin/matches/${match.id}`}
+                        className="text-xs font-medium text-copper hover:underline"
+                      >
+                        View →
+                      </Link>
                     </td>
                   </tr>
                 ))}
