@@ -139,13 +139,12 @@ export default function AdminMatchAnalysis({
     );
   }
 
-  // Scored questions sorted by impact (best-matching areas first)
+  // Scored questions: best similarity first, then highest weight within same similarity
   const scored = data.breakdown
     .filter((item) => item.weight > 0)
     .sort((a, b) => {
-      const impactA = a.weight * (1 - a.similarity);
-      const impactB = b.weight * (1 - b.similarity);
-      return impactA - impactB;
+      if (b.similarity !== a.similarity) return b.similarity - a.similarity;
+      return b.weight - a.weight;
     });
 
   const excludedCount = data.breakdown.filter(
@@ -196,22 +195,31 @@ export default function AdminMatchAnalysis({
             {scored.map((item) => (
               <tr
                 key={item.questionId}
-                className={`border-b ${item.dealbreakerViolated ? "bg-red-50" : ""}`}
+                className={`border-b ${
+                  item.dealbreakerViolated
+                    ? "bg-red-50"
+                    : item.isDealbreakerQuestion && item.similarity < 1
+                      ? "bg-amber-50"
+                      : ""
+                }`}
               >
                 <td className="py-2 pr-6">
                   <p className="max-w-xs text-sm text-navy leading-snug">
                     {item.prompt}
                   </p>
-                  {item.isDealbreakerQuestion && (
+                  {item.dealbreakerViolated ? (
+                    <span className="text-xs font-medium text-red-600">
+                      ★ dealbreaker — violated
+                    </span>
+                  ) : item.isDealbreakerQuestion && item.similarity < 1 ? (
                     <span className="text-xs text-amber-600">
-                      ★ dealbreaker
+                      ★ dealbreaker · near threshold
                     </span>
-                  )}
-                  {item.dealbreakerViolated && (
-                    <span className="ml-1 text-xs font-medium text-red-600">
-                      — violated
+                  ) : !item.isDealbreakerQuestion && item.similarity === 0 ? (
+                    <span className="text-xs text-stone-400">
+                      · no dealbreaker marked
                     </span>
-                  )}
+                  ) : null}
                 </td>
                 <td className="py-2 pr-4 max-w-[140px]">
                   <span className="block truncate text-sm text-navy-soft">
