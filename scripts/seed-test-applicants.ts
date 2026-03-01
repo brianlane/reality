@@ -734,16 +734,19 @@ function generateAnswer(
     if (optArr.length > 0) return pickClosest(optArr, profile.wantsKids);
   }
 
-  // Relocation
-  if (
-    prompt.includes("reloc") ||
-    (prompt.includes("move") && prompt.includes("city"))
-  ) {
-    const opts = question.options as string[] | { options: string[] } | null;
-    const optArr = Array.isArray(opts)
-      ? opts
-      : ((opts as { options?: string[] } | null)?.options ?? []);
-    if (optArr.length > 0) return pickClosest(optArr, profile.relocation);
+  // Relocation openness — RADIO_7 numeric scale ("1"–"7", not text labels).
+  // pickClosest("Very open" vs ["1".."7"]) always falls back to "1", so we
+  // must use biasedPick with a bias derived from the profile string instead.
+  // The condition is intentionally specific to avoid matching the unrelated
+  // decision-making question ("e.g., a career move or relocating").
+  if (prompt.includes("how open are you to relocat")) {
+    const relocBias =
+      profile.relocation === "Not open"
+        ? 0.0
+        : profile.relocation === "Somewhat open"
+          ? 0.5
+          : 1.0; // "Very open"
+    return biasedPick(question, relocBias);
   }
 
   // Smoking / nicotine / vaping

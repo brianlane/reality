@@ -369,6 +369,14 @@ export default function AdminEventMatchingPanel({
                 </table>
               </div>
 
+              {eventStats && eventStats.existingMatches > 0 ? (
+                <p className="text-xs text-amber-600">
+                  ⚠ This event already has {eventStats.existingMatches} match
+                  {eventStats.existingMatches !== 1 ? "es" : ""}. New matches
+                  will be added alongside them (exact duplicates are skipped).
+                </p>
+              ) : null}
+
               <Button
                 type="button"
                 onClick={handleCreate}
