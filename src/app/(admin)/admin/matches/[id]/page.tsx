@@ -1,4 +1,5 @@
 import AdminMatchForm from "@/components/admin/AdminMatchForm";
+import AdminMatchAnalysis from "@/components/admin/AdminMatchAnalysis";
 
 type AdminMatchDetailProps = {
   params: Promise<{ id: string }>;
@@ -13,6 +14,7 @@ export default async function AdminMatchDetailPage({
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold text-navy">Match Detail</h1>
       <AdminMatchForm mode="edit" matchId={id} />
+      <AdminMatchAnalysis matchId={id} />
     </div>
   );
 }

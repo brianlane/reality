@@ -69,8 +69,10 @@ export async function calculateWeightedCompatibility(
       answerB.value,
     );
 
+    const isDealbreakerQuestion = question.isDealbreaker;
+
     // Check dealbreaker - collect all violations, don't return immediately
-    if (question.isDealbreaker && similarity < 0.5) {
+    if (isDealbreakerQuestion && similarity < 0.5) {
       dealbreakersViolated.push(question.id);
     }
 
