@@ -16,7 +16,7 @@ export async function sendMatchNotificationEmail(params: {
   eventName: string;
   compatibilityScore: number | null;
   applicantId?: string;
-}): Promise<{ success: boolean; error?: string }> {
+}): Promise<void> {
   const matchesUrl = `${APP_URL}/matches`;
   const html = getMatchNotificationHTML({
     firstName: params.firstName,
@@ -37,17 +37,12 @@ export async function sendMatchNotificationEmail(params: {
     "We hope this connection leads to something meaningful!\n\n" +
     "— The Reality Matchmaking Team";
 
-  try {
-    await sendEmail({
-      to: params.to,
-      subject: `You have a new match at ${params.eventName}!`,
-      html,
-      text,
-      emailType: "MATCH_NOTIFICATION",
-      applicantId: params.applicantId,
-    });
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: (error as Error).message };
-  }
+  await sendEmail({
+    to: params.to,
+    subject: `You have a new match at ${params.eventName}!`,
+    html,
+    text,
+    emailType: "MATCH_NOTIFICATION",
+    applicantId: params.applicantId,
+  });
 }

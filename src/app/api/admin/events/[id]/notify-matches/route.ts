@@ -49,7 +49,11 @@ export async function POST(_request: Request, { params }: RouteContext) {
   });
 
   if (unnotifiedMatches.length === 0) {
-    return successResponse({ notified: 0, skipped: 0, message: "No unnotified matches found" });
+    return successResponse({
+      notified: 0,
+      skipped: 0,
+      message: "No unnotified matches found",
+    });
   }
 
   // Build a set of applicant IDs who actually attended the event
@@ -57,7 +61,9 @@ export async function POST(_request: Request, { params }: RouteContext) {
     where: { eventId: id, status: "ATTENDED" },
     select: { applicantId: true },
   });
-  const attendedIds = new Set(attendedInvitations.map((inv) => inv.applicantId));
+  const attendedIds = new Set(
+    attendedInvitations.map((inv) => inv.applicantId),
+  );
 
   // Only notify matches where both participants attended
   const eligible = unnotifiedMatches.filter(
@@ -69,11 +75,11 @@ export async function POST(_request: Request, { params }: RouteContext) {
     return successResponse({
       notified: 0,
       skipped: skippedCount,
-      message: "No matches with both attendees present — check attendance status",
+      message:
+        "No matches with both attendees present — check attendance status",
     });
   }
 
-  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   let notifiedCount = 0;
   let failedCount = 0;
 
@@ -90,7 +96,9 @@ export async function POST(_request: Request, { params }: RouteContext) {
       });
       notifiedCount++;
     } catch {
-      console.error(`Failed to notify applicant ${match.applicantId} for match ${match.id}`);
+      console.error(
+        `Failed to notify applicant ${match.applicantId} for match ${match.id}`,
+      );
       failedCount++;
     }
 
@@ -106,7 +114,9 @@ export async function POST(_request: Request, { params }: RouteContext) {
       });
       notifiedCount++;
     } catch {
-      console.error(`Failed to notify partner ${match.partnerId} for match ${match.id}`);
+      console.error(
+        `Failed to notify partner ${match.partnerId} for match ${match.id}`,
+      );
       failedCount++;
     }
   }

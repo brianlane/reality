@@ -46,7 +46,9 @@ function OutcomeBadge({ outcome }: { outcome: string }) {
         : "bg-green-50 text-green-700";
 
   return (
-    <span className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${color}`}>
+    <span
+      className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${color}`}
+    >
       {label}
     </span>
   );
@@ -92,7 +94,10 @@ export default function ApplicantMatchDetailPage() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <Link href="/matches" className="text-sm text-navy-soft hover:text-navy">
+        <Link
+          href="/matches"
+          className="text-sm text-navy-soft hover:text-navy"
+        >
           ← Back to matches
         </Link>
         <p className="text-sm text-navy-soft">Loading match…</p>
@@ -103,11 +108,16 @@ export default function ApplicantMatchDetailPage() {
   if (error || !match) {
     return (
       <div className="space-y-4">
-        <Link href="/matches" className="text-sm text-navy-soft hover:text-navy">
+        <Link
+          href="/matches"
+          className="text-sm text-navy-soft hover:text-navy"
+        >
           ← Back to matches
         </Link>
         <Card>
-          <p className="text-sm text-navy-soft">{error ?? "Match not found."}</p>
+          <p className="text-sm text-navy-soft">
+            {error ?? "Match not found."}
+          </p>
         </Card>
       </div>
     );

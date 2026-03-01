@@ -30,8 +30,12 @@ export async function GET(request: Request, { params }: RouteContext) {
       matches: {
         where: { deletedAt: null },
         include: {
-          applicant: { include: { user: { select: { firstName: true, lastName: true } } } },
-          partner: { include: { user: { select: { firstName: true, lastName: true } } } },
+          applicant: {
+            include: { user: { select: { firstName: true, lastName: true } } },
+          },
+          partner: {
+            include: { user: { select: { firstName: true, lastName: true } } },
+          },
         },
         orderBy: { compatibilityScore: "desc" },
       },

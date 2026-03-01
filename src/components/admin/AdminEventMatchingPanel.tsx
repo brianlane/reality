@@ -107,7 +107,9 @@ export default function AdminEventMatchingPanel({
 
   const [eventStats, setEventStats] = useState<EventStats | null>(null);
   const [existingMatchList, setExistingMatchList] = useState<MatchRecord[]>([]);
-  const [invitationMap, setInvitationMap] = useState<Record<string, string>>({});
+  const [invitationMap, setInvitationMap] = useState<Record<string, string>>(
+    {},
+  );
   const [nameMap, setNameMap] = useState<Record<string, string>>({});
 
   const [preview, setPreview] = useState<PreviewMatch[] | null>(null);
@@ -320,7 +322,11 @@ export default function AdminEventMatchingPanel({
       const res = await fetch(`/api/admin/events/${eventId}/generate-matches`, {
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({ minScore, maxPerApplicant, createMatches: false }),
+        body: JSON.stringify({
+          minScore,
+          maxPerApplicant,
+          createMatches: false,
+        }),
       });
       const json = await res.json();
       if (!res.ok || json?.error) {
@@ -369,7 +375,11 @@ export default function AdminEventMatchingPanel({
       const res = await fetch(`/api/admin/events/${eventId}/generate-matches`, {
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({ minScore, maxPerApplicant, createMatches: true }),
+        body: JSON.stringify({
+          minScore,
+          maxPerApplicant,
+          createMatches: true,
+        }),
       });
       const json = await res.json();
       if (!res.ok || json?.error) {
