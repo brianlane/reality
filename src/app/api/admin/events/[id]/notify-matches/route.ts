@@ -82,8 +82,13 @@ export async function POST(_request: Request, { params }: RouteContext) {
 
   let notifiedCount = 0;
   let failedCount = 0;
+  // Only stamp notifiedAt on matches where both emails delivered successfully
+  const fullyNotifiedIds: string[] = [];
 
   for (const match of eligible) {
+    let applicantSent = false;
+    let partnerSent = false;
+
     // Email applicant about their partner
     try {
       await sendMatchNotificationEmail({
@@ -94,6 +99,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
         compatibilityScore: match.compatibilityScore,
         applicantId: match.applicantId,
       });
+      applicantSent = true;
       notifiedCount++;
     } catch {
       console.error(
@@ -112,6 +118,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
         compatibilityScore: match.compatibilityScore,
         applicantId: match.partnerId,
       });
+      partnerSent = true;
       notifiedCount++;
     } catch {
       console.error(
@@ -119,14 +126,21 @@ export async function POST(_request: Request, { params }: RouteContext) {
       );
       failedCount++;
     }
+
+    // Only reveal the match if both participants received their email
+    if (applicantSent && partnerSent) {
+      fullyNotifiedIds.push(match.id);
+    }
   }
 
-  // Mark only eligible matches as notified; leave non-attendee matches untouched
-  const eligibleIds = eligible.map((m) => m.id);
-  await db.match.updateMany({
-    where: { id: { in: eligibleIds } },
-    data: { notifiedAt: new Date() },
-  });
+  // Stamp notifiedAt only on fully-delivered matches so failed ones remain
+  // retryable and don't become visible to users without notification
+  if (fullyNotifiedIds.length > 0) {
+    await db.match.updateMany({
+      where: { id: { in: fullyNotifiedIds } },
+      data: { notifiedAt: new Date() },
+    });
+  }
 
   // Record admin action
   await db.adminAction.create({
@@ -135,7 +149,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       type: "NOTIFY_MATCHES",
       targetId: id,
       targetType: "event",
-      description: `Notified participants for ${eligible.length} match${eligible.length !== 1 ? "es" : ""}`,
+      description: `Notified participants for ${fullyNotifiedIds.length} match${fullyNotifiedIds.length !== 1 ? "es" : ""}`,
       metadata: {
         matchCount: unnotifiedMatches.length,
         eligible: eligible.length,
@@ -149,7 +163,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
   return successResponse({
     notified: notifiedCount,
     failed: failedCount,
-    matchesNotified: eligible.length,
+    matchesNotified: fullyNotifiedIds.length,
     skipped: skippedCount,
   });
 }
