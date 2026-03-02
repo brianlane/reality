@@ -465,7 +465,10 @@ export default function AdminEventMatchingPanel({
           buffer = lines.pop() ?? "";
 
           for (const line of lines) {
-            if (line.startsWith("event: ")) {
+            if (line === "") {
+              // Blank line = SSE event boundary; reset type per spec
+              eventType = "";
+            } else if (line.startsWith("event: ")) {
               eventType = line.slice(7);
             } else if (line.startsWith("data: ")) {
               const data = JSON.parse(line.slice(6));
@@ -495,6 +498,12 @@ export default function AdminEventMatchingPanel({
                 if (data.distinctMatches) {
                   setDistinctPreview(data.distinctMatches as PreviewMatch[]);
                 }
+              } else if (eventType === "error") {
+                setScoringProgress(null);
+                setError(
+                  (data as { message?: string }).message ??
+                    "Scoring failed unexpectedly.",
+                );
               }
             }
           }
