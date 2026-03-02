@@ -239,7 +239,7 @@ export async function POST(
     const allIds = [...men.map((m) => m.id), ...women.map((w) => w.id)];
     const cache = await preloadAnswerCache(allIds);
 
-    const { allScores, recommendations } = scoreAllPairs(
+    const { allScores, recommendations } = await scoreAllPairs(
       men,
       women,
       cache,

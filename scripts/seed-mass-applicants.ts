@@ -553,7 +553,10 @@ async function main() {
     );
     let email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${suffix > 0 ? suffix : ""}@masstest.reality.app`;
 
-    while (usedEmails.has(email) || existingEmails.has(email)) {
+    // Only deduplicate within this session. The existingEmails check below
+    // handles re-use of users from a previous run. Including existingEmails
+    // here would make that check unreachable (email guaranteed not in the set).
+    while (usedEmails.has(email)) {
       suffix++;
       email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${suffix}@masstest.reality.app`;
     }

@@ -99,23 +99,31 @@ export async function POST(
 
       const startTime = Date.now();
 
-      // Stream progress every 10 pairs to avoid flooding
-      const { allScores, recommendations: allRecommendations } = scoreAllPairs(
-        men,
-        women,
-        cache,
-        minScore,
-        (scored, total) => {
-          if (scored % 10 === 0 || scored === total) {
-            send("progress", {
-              scored,
-              totalPairs: total,
-              pct: Math.round((scored / total) * 100),
-              elapsedMs: Date.now() - startTime,
-            });
-          }
-        },
-      );
+      // Stream progress every 10 pairs to avoid flooding.
+      // The callback is async so the event loop yields between batches,
+      // allowing the ReadableStream controller to actually flush chunks
+      // to the client instead of buffering everything until scoring finishes.
+      const { allScores, recommendations: allRecommendations } =
+        await scoreAllPairs(
+          men,
+          women,
+          cache,
+          minScore,
+          async (scored, total) => {
+            if (scored % 10 === 0 || scored === total) {
+              send("progress", {
+                scored,
+                totalPairs: total,
+                pct: Math.round((scored / total) * 100),
+                elapsedMs: Date.now() - startTime,
+              });
+              // Yield the event loop so the enqueued chunk is flushed before
+              // scoring continues. Without this await all enqueues happen
+              // synchronously and the client receives them all at once.
+              await new Promise<void>((resolve) => setImmediate(resolve));
+            }
+          },
+        );
 
       // Compute distinct matches
       const sortedRecs = [...allRecommendations].sort(

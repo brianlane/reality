@@ -98,7 +98,7 @@ export async function POST(
   const allIds = [...men.map((m) => m.id), ...women.map((w) => w.id)];
   const cache = await preloadAnswerCache(allIds);
 
-  const { allScores } = scoreAllPairs(men, women, cache, minScore);
+  const { allScores } = await scoreAllPairs(men, women, cache, minScore);
 
   // Attach names from the men/women arrays (scoreAllPairs only needs id + location)
   const nameById = new Map<string, string>(

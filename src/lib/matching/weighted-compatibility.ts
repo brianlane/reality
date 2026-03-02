@@ -181,15 +181,19 @@ export interface ScoredPairsResult {
  * Applies a location proximity bonus (LOCATION_WEIGHT) when both locations are known
  * and no dealbreakers are violated.
  *
- * @param onProgress - optional callback invoked after each pair is scored
+ * @param onProgress - optional async callback invoked after each pair is scored.
+ *   For SSE streaming routes, yield the event loop here (e.g. via setImmediate) so
+ *   enqueued chunks are actually flushed between progress updates. Without an await
+ *   the ReadableStream controller buffers all enqueues synchronously and the client
+ *   receives everything in one batch at the end.
  */
-export function scoreAllPairs(
+export async function scoreAllPairs(
   men: Array<{ id: string; location: string | null }>,
   women: Array<{ id: string; location: string | null }>,
   cache: AnswerCache,
   minScore: number,
-  onProgress?: (scored: number, total: number) => void,
-): ScoredPairsResult {
+  onProgress?: (scored: number, total: number) => void | Promise<void>,
+): Promise<ScoredPairsResult> {
   const allScores: PairScore[] = [];
   const recommendations: ScoredPairsResult["recommendations"] = [];
   const total = men.length * women.length;
@@ -249,7 +253,7 @@ export function scoreAllPairs(
       }
 
       scored++;
-      onProgress?.(scored, total);
+      await onProgress?.(scored, total);
     }
   }
 
