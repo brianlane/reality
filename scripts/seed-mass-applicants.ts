@@ -21,7 +21,9 @@ import type {
   QuestionnaireQuestion,
 } from "@prisma/client";
 
-const FEBRUARY_EVENT_ID = "cmlqropt800376v54xz2k7ovu";
+const FEBRUARY_EVENT_ID =
+  process.argv.find((a) => a.startsWith("--event="))?.split("=")[1] ??
+  "cmlqropt800376v54xz2k7ovu";
 
 const TARGET_MEN = 500;
 const TARGET_WOMEN = 500;

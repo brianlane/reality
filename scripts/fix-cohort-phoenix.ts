@@ -9,7 +9,9 @@
 import "dotenv/config";
 import { db } from "../src/lib/db";
 
-const FEBRUARY_EVENT_ID = "cmlqropt800376v54xz2k7ovu";
+const FEBRUARY_EVENT_ID =
+  process.argv.find((a) => a.startsWith("--event="))?.split("=")[1] ??
+  "cmlqropt800376v54xz2k7ovu";
 const TARGET_CITY = "Phoenix, AZ";
 const PER_GENDER = 15;
 

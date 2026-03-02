@@ -3,8 +3,7 @@ import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import {
   preloadAnswerCache,
-  scorePairFromCache,
-  locationSimilarity,
+  scoreAllPairs,
 } from "@/lib/matching/weighted-compatibility";
 import { ApplicationStatus, ScreeningStatus } from "@prisma/client";
 import { z } from "zod";
@@ -99,63 +98,20 @@ export async function POST(
   const allIds = [...men.map((m) => m.id), ...women.map((w) => w.id)];
   const cache = await preloadAnswerCache(allIds);
 
-  const LOCATION_WEIGHT = 0.1;
+  const { allScores } = scoreAllPairs(men, women, cache, minScore);
 
-  const matrix: Array<{
-    manId: string;
-    manName: string;
-    womanId: string;
-    womanName: string;
-    score: number;
-    dealbreakersViolated: string[];
-  }> = [];
-
-  for (const man of men) {
-    const manAnswers = cache.answersByApplicant.get(man.id) ?? new Map();
-    for (const woman of women) {
-      try {
-        const womanAnswers =
-          cache.answersByApplicant.get(woman.id) ?? new Map();
-        const result = scorePairFromCache(
-          cache.questions,
-          manAnswers,
-          womanAnswers,
-        );
-
-        let adjustedScore = result.score;
-        if (
-          result.dealbreakersViolated.length === 0 &&
-          man.location &&
-          woman.location
-        ) {
-          const locSim = locationSimilarity(man.location, woman.location);
-          adjustedScore = Math.round(
-            result.score * (1 - LOCATION_WEIGHT) +
-              locSim * 100 * LOCATION_WEIGHT,
-          );
-        }
-
-        matrix.push({
-          manId: man.id,
-          manName: man.name,
-          womanId: woman.id,
-          womanName: woman.name,
-          score: adjustedScore,
-          dealbreakersViolated: result.dealbreakersViolated,
-        });
-      } catch (error) {
-        console.error(`Failed to score pair ${man.id} x ${woman.id}:`, error);
-        matrix.push({
-          manId: man.id,
-          manName: man.name,
-          womanId: woman.id,
-          womanName: woman.name,
-          score: 0,
-          dealbreakersViolated: [],
-        });
-      }
-    }
-  }
+  // Attach names from the men/women arrays (scoreAllPairs only needs id + location)
+  const nameById = new Map<string, string>(
+    [...men, ...women].map((p) => [p.id, p.name]),
+  );
+  const matrix = allScores.map((ps) => ({
+    manId: ps.manId,
+    manName: nameById.get(ps.manId) ?? ps.manId,
+    womanId: ps.womanId,
+    womanName: nameById.get(ps.womanId) ?? ps.womanId,
+    score: ps.score,
+    dealbreakersViolated: ps.dealbreakersViolated,
+  }));
 
   const belowThreshold = matrix.filter((p) => p.score < minScore);
   const scores = matrix.map((p) => p.score);

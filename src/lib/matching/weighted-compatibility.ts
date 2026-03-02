@@ -155,6 +155,106 @@ export function scorePairFromCache(
 
 // Re-export shared location scoring
 export { locationSimilarity } from "@/lib/locations";
+import { locationSimilarity } from "@/lib/locations";
+
+export const LOCATION_WEIGHT = 0.1;
+
+export interface PairScore {
+  manId: string;
+  womanId: string;
+  score: number;
+  dealbreakersViolated: string[];
+}
+
+export interface ScoredPairsResult {
+  allScores: PairScore[];
+  recommendations: Array<{
+    applicantId: string;
+    partnerId: string;
+    score: number;
+    dealbreakers: string[];
+  }>;
+}
+
+/**
+ * Score every man×woman pair using a pre-loaded cache. No DB calls.
+ * Applies a location proximity bonus (LOCATION_WEIGHT) when both locations are known
+ * and no dealbreakers are violated.
+ *
+ * @param onProgress - optional callback invoked after each pair is scored
+ */
+export function scoreAllPairs(
+  men: Array<{ id: string; location: string | null }>,
+  women: Array<{ id: string; location: string | null }>,
+  cache: AnswerCache,
+  minScore: number,
+  onProgress?: (scored: number, total: number) => void,
+): ScoredPairsResult {
+  const allScores: PairScore[] = [];
+  const recommendations: ScoredPairsResult["recommendations"] = [];
+  const total = men.length * women.length;
+  let scored = 0;
+
+  for (const man of men) {
+    const manAnswers = cache.answersByApplicant.get(man.id) ?? new Map();
+    for (const woman of women) {
+      try {
+        const womanAnswers =
+          cache.answersByApplicant.get(woman.id) ?? new Map();
+        const result = scorePairFromCache(
+          cache.questions,
+          manAnswers,
+          womanAnswers,
+        );
+
+        let adjustedScore = result.score;
+        if (
+          result.dealbreakersViolated.length === 0 &&
+          man.location &&
+          woman.location
+        ) {
+          const locSim = locationSimilarity(man.location, woman.location);
+          adjustedScore = Math.round(
+            result.score * (1 - LOCATION_WEIGHT) +
+              locSim * 100 * LOCATION_WEIGHT,
+          );
+        }
+
+        allScores.push({
+          manId: man.id,
+          womanId: woman.id,
+          score: adjustedScore,
+          dealbreakersViolated: result.dealbreakersViolated,
+        });
+
+        if (
+          adjustedScore >= minScore &&
+          result.dealbreakersViolated.length === 0
+        ) {
+          recommendations.push({
+            applicantId: man.id,
+            partnerId: woman.id,
+            score: adjustedScore,
+            dealbreakers: result.dealbreakersViolated,
+          });
+        }
+      } catch (error) {
+        console.error(`Failed to score pair ${man.id} x ${woman.id}:`, error);
+        allScores.push({
+          manId: man.id,
+          womanId: woman.id,
+          score: 0,
+          dealbreakersViolated: [],
+        });
+      }
+
+      scored++;
+      onProgress?.(scored, total);
+    }
+  }
+
+  return { allScores, recommendations };
+}
 
 /**
  * Calculate similarity between two answer values based on question type

@@ -11,7 +11,9 @@
 import "dotenv/config";
 import { db } from "../src/lib/db";
 
-const FEBRUARY_EVENT_ID = "cmlqropt800376v54xz2k7ovu";
+const FEBRUARY_EVENT_ID =
+  process.argv.find((a) => a.startsWith("--event="))?.split("=")[1] ??
+  "cmlqropt800376v54xz2k7ovu";
 const TARGET_CITY = "Phoenix, AZ";
 const PER_GENDER = 15;
 
@@ -112,14 +114,14 @@ async function main() {
         },
         take: needMen,
         orderBy: { id: "asc" },
+        select: { id: true },
       });
-      for (const m of extraMen) {
-        await db.applicant.update({
-          where: { id: m.id },
-          data: { location: TARGET_CITY },
-        });
-        phoenixMen.push(m as (typeof phoenixMen)[0]);
-      }
+      const extraMenIds = extraMen.map((m) => m.id);
+      await db.applicant.updateMany({
+        where: { id: { in: extraMenIds } },
+        data: { location: TARGET_CITY },
+      });
+      phoenixMen.push(...(extraMen as unknown as typeof phoenixMen));
       console.log(`  Reassigned ${extraMen.length} men to Phoenix`);
     }
 
@@ -136,14 +138,14 @@ async function main() {
         },
         take: needWomen,
         orderBy: { id: "asc" },
+        select: { id: true },
       });
-      for (const w of extraWomen) {
-        await db.applicant.update({
-          where: { id: w.id },
-          data: { location: TARGET_CITY },
-        });
-        phoenixWomen.push(w as (typeof phoenixWomen)[0]);
-      }
+      const extraWomenIds = extraWomen.map((w) => w.id);
+      await db.applicant.updateMany({
+        where: { id: { in: extraWomenIds } },
+        data: { location: TARGET_CITY },
+      });
+      phoenixWomen.push(...(extraWomen as unknown as typeof phoenixWomen));
       console.log(`  Reassigned ${extraWomen.length} women to Phoenix`);
     }
   }

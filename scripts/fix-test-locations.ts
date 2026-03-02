@@ -7,21 +7,7 @@
 
 import "dotenv/config";
 import { db } from "../src/lib/db";
-
-const CITIES = [
-  "New York City, NY",
-  "Los Angeles, CA",
-  "Chicago, IL",
-  "Dallas, TX",
-  "Phoenix, AZ",
-  "San Francisco, CA",
-  "Miami, FL",
-  "Denver, CO",
-  "Atlanta, GA",
-  "Las Vegas, NV",
-  "Seattle, WA",
-  "Portland, OR",
-];
+import { CITIES } from "../src/lib/locations";
 
 async function main() {
   // Find all test applicants

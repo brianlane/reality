@@ -451,6 +451,10 @@ export default function AdminEventMatchingPanel({
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
+        // eventType must live outside the read loop so it persists across chunk
+        // boundaries where the "event:" line and its "data:" line may arrive in
+        // separate chunks.
+        let eventType = "";
 
         while (true) {
           const { done, value } = await reader.read();
@@ -460,7 +464,6 @@ export default function AdminEventMatchingPanel({
           const lines = buffer.split("\n");
           buffer = lines.pop() ?? "";
 
-          let eventType = "";
           for (const line of lines) {
             if (line.startsWith("event: ")) {
               eventType = line.slice(7);
@@ -607,17 +610,13 @@ export default function AdminEventMatchingPanel({
         setError("Please sign in again.");
         return;
       }
+      // Pass the pre-computed pairs directly — server skips re-scoring
       const res = await fetch(`/api/admin/events/${eventId}/generate-matches`, {
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({
-          minScore,
-          maxPerApplicant,
           createMatches: true,
-          mode: matchMode,
-          maxPerGender,
-          distinct: true,
-          ...(locationFilter ? { location: locationFilter } : {}),
+          explicitPairs: distinctPreview,
         }),
       });
       const json = await res.json();
@@ -1287,10 +1286,7 @@ export default function AdminEventMatchingPanel({
                             {resolveName(dm.partnerId)}
                           </td>
                           <td
-                            className="px-3 py-1.5 font-semibold"
-                            style={{
-                              color: scoreColor(dm.score, minScore),
-                            }}
+                            className={`px-3 py-1.5 font-semibold ${scoreColor(dm.score, minScore)}`}
                           >
                             {dm.score}
                           </td>

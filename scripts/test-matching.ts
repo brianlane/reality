@@ -18,7 +18,9 @@ import {
 } from "../src/lib/matching/weighted-compatibility";
 import { ApplicationStatus, ScreeningStatus } from "@prisma/client";
 
-const FEBRUARY_EVENT_ID = "cmlqropt800376v54xz2k7ovu";
+const FEBRUARY_EVENT_ID =
+  process.argv.find((a) => a.startsWith("--event="))?.split("=")[1] ??
+  "cmlqropt800376v54xz2k7ovu";
 const MIN_SCORE = 60;
 const MAX_PER_GENDER = 15;
 const LOCATION_ARG = process.argv.find((a) => a.startsWith("--location="));

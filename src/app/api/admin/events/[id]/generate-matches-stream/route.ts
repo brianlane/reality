@@ -2,8 +2,7 @@ import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   preloadAnswerCache,
-  scorePairFromCache,
-  locationSimilarity,
+  scoreAllPairs,
 } from "@/lib/matching/weighted-compatibility";
 import { ApplicationStatus, ScreeningStatus } from "@prisma/client";
 import { z } from "zod";
@@ -80,8 +79,6 @@ export async function POST(
   const allIds = [...men.map((m) => m.id), ...women.map((w) => w.id)];
   const cache = await preloadAnswerCache(allIds);
 
-  const LOCATION_WEIGHT = 0.1;
-
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -100,87 +97,25 @@ export async function POST(
         totalWomen: allWomen.length,
       });
 
-      const allScores: Array<{
-        manId: string;
-        womanId: string;
-        score: number;
-        dealbreakersViolated: string[];
-      }> = [];
-
-      const allRecommendations: Array<{
-        applicantId: string;
-        partnerId: string;
-        score: number;
-        dealbreakers: string[];
-      }> = [];
-
-      let scored = 0;
       const startTime = Date.now();
 
-      for (const man of men) {
-        const manAnswers = cache.answersByApplicant.get(man.id) ?? new Map();
-        for (const woman of women) {
-          try {
-            const womanAnswers =
-              cache.answersByApplicant.get(woman.id) ?? new Map();
-            const result = scorePairFromCache(
-              cache.questions,
-              manAnswers,
-              womanAnswers,
-            );
-
-            let adjustedScore = result.score;
-            if (
-              result.dealbreakersViolated.length === 0 &&
-              man.location &&
-              woman.location
-            ) {
-              const locSim = locationSimilarity(man.location, woman.location);
-              adjustedScore = Math.round(
-                result.score * (1 - LOCATION_WEIGHT) +
-                  locSim * 100 * LOCATION_WEIGHT,
-              );
-            }
-
-            allScores.push({
-              manId: man.id,
-              womanId: woman.id,
-              score: adjustedScore,
-              dealbreakersViolated: result.dealbreakersViolated,
-            });
-
-            if (
-              adjustedScore >= minScore &&
-              result.dealbreakersViolated.length === 0
-            ) {
-              allRecommendations.push({
-                applicantId: man.id,
-                partnerId: woman.id,
-                score: adjustedScore,
-                dealbreakers: result.dealbreakersViolated,
-              });
-            }
-          } catch {
-            allScores.push({
-              manId: man.id,
-              womanId: woman.id,
-              score: 0,
-              dealbreakersViolated: [],
-            });
-          }
-
-          scored++;
-          // Stream progress every 10 pairs or on last pair to avoid flooding
-          if (scored % 10 === 0 || scored === totalPairs) {
+      // Stream progress every 10 pairs to avoid flooding
+      const { allScores, recommendations: allRecommendations } = scoreAllPairs(
+        men,
+        women,
+        cache,
+        minScore,
+        (scored, total) => {
+          if (scored % 10 === 0 || scored === total) {
             send("progress", {
               scored,
-              totalPairs,
-              pct: Math.round((scored / totalPairs) * 100),
+              totalPairs: total,
+              pct: Math.round((scored / total) * 100),
               elapsedMs: Date.now() - startTime,
             });
           }
-        }
-      }
+        },
+      );
 
       // Compute distinct matches
       const sortedRecs = [...allRecommendations].sort(

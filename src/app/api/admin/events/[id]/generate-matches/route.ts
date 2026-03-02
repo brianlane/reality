@@ -4,8 +4,7 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { getRecommendations } from "@/lib/matching/recommendations";
 import {
   preloadAnswerCache,
-  scorePairFromCache,
-  locationSimilarity,
+  scoreAllPairs,
 } from "@/lib/matching/weighted-compatibility";
 import { ApplicationStatus, ScreeningStatus } from "@prisma/client";
 import { z } from "zod";
@@ -18,6 +17,16 @@ const generateMatchesSchema = z.object({
   maxPerGender: z.number().int().min(1).max(100).optional().default(50),
   distinct: z.boolean().optional().default(false),
   location: z.string().optional(),
+  /** Pre-computed pairs from a preview — skips scoring and creates these directly. */
+  explicitPairs: z
+    .array(
+      z.object({
+        applicantId: z.string(),
+        partnerId: z.string(),
+        score: z.number(),
+      }),
+    )
+    .optional(),
 });
 
 /**
@@ -39,18 +48,17 @@ function computeDistinctMatches(
   dealbreakers: string[];
 }> {
   const sorted = [...pairs].sort((a, b) => b.score - a.score);
-  const usedApplicants = new Set<string>();
-  const usedPartners = new Set<string>();
+  // Single set covers both roles: in top_n mode the same person can appear as
+  // applicantId in their own recs and as partnerId in a partner's recs.
+  // Two separate sets would allow the same person to be matched twice.
+  const usedPeople = new Set<string>();
   const result: typeof pairs = [];
 
   for (const pair of sorted) {
-    if (
-      !usedApplicants.has(pair.applicantId) &&
-      !usedPartners.has(pair.partnerId)
-    ) {
+    if (!usedPeople.has(pair.applicantId) && !usedPeople.has(pair.partnerId)) {
       result.push(pair);
-      usedApplicants.add(pair.applicantId);
-      usedPartners.add(pair.partnerId);
+      usedPeople.add(pair.applicantId);
+      usedPeople.add(pair.partnerId);
     }
   }
 
@@ -96,6 +104,7 @@ export async function POST(
     maxPerGender,
     distinct,
     location,
+    explicitPairs,
   } = body;
 
   // 3. Verify event exists
@@ -105,6 +114,61 @@ export async function POST(
 
   if (!event) {
     return errorResponse("NOT_FOUND", "Event not found", 404);
+  }
+
+  // 3b. If the caller already has pre-computed pairs (from a preview), skip scoring
+  //     and go straight to DB creation. This avoids re-running O(N×M) scoring.
+  if (explicitPairs && explicitPairs.length > 0 && createMatches) {
+    const seen = new Set<string>();
+    const matchesToCreate: Array<{
+      eventId: string;
+      applicantId: string;
+      partnerId: string;
+      type: "CURATED";
+      compatibilityScore: number;
+    }> = [];
+    for (const pair of explicitPairs) {
+      const [a, b] =
+        pair.applicantId < pair.partnerId
+          ? [pair.applicantId, pair.partnerId]
+          : [pair.partnerId, pair.applicantId];
+      const key = `${a}:${b}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        matchesToCreate.push({
+          eventId,
+          applicantId: a,
+          partnerId: b,
+          type: "CURATED",
+          compatibilityScore: pair.score,
+        });
+      }
+    }
+    try {
+      const result = await db.match.createMany({
+        data: matchesToCreate,
+        skipDuplicates: true,
+      });
+      return successResponse({
+        event: { id: event.id, name: event.name },
+        mode: "explicit",
+        matchesCreated: result.count,
+        avgScore:
+          explicitPairs.length > 0
+            ? Math.round(
+                explicitPairs.reduce((s, p) => s + p.score, 0) /
+                  explicitPairs.length,
+              )
+            : 0,
+      });
+    } catch (error) {
+      console.error("Failed to create explicit matches:", error);
+      return errorResponse(
+        "DATABASE_ERROR",
+        "Failed to create matches in database",
+        500,
+      );
+    }
   }
 
   // 4. Get all approved applicants with completed questionnaires
@@ -172,66 +236,16 @@ export async function POST(
     const women = womenExceeded ? allWomen.slice(0, maxPerGender) : allWomen;
     const truncated = menExceeded || womenExceeded;
 
-    // Batch-load all questions + answers in 2 queries instead of N*M
     const allIds = [...men.map((m) => m.id), ...women.map((w) => w.id)];
     const cache = await preloadAnswerCache(allIds);
 
-    const allScores: Array<{
-      manId: string;
-      womanId: string;
-      score: number;
-      dealbreakersViolated: string[];
-    }> = [];
-
-    const LOCATION_WEIGHT = 0.1;
-
-    for (const man of men) {
-      const manAnswers = cache.answersByApplicant.get(man.id) ?? new Map();
-      for (const woman of women) {
-        try {
-          const womanAnswers =
-            cache.answersByApplicant.get(woman.id) ?? new Map();
-          const result = scorePairFromCache(
-            cache.questions,
-            manAnswers,
-            womanAnswers,
-          );
-
-          let adjustedScore = result.score;
-          if (
-            result.dealbreakersViolated.length === 0 &&
-            man.location &&
-            woman.location
-          ) {
-            const locSim = locationSimilarity(man.location, woman.location);
-            adjustedScore = Math.round(
-              result.score * (1 - LOCATION_WEIGHT) +
-                locSim * 100 * LOCATION_WEIGHT,
-            );
-          }
-
-          allScores.push({
-            manId: man.id,
-            womanId: woman.id,
-            score: adjustedScore,
-            dealbreakersViolated: result.dealbreakersViolated,
-          });
-          if (
-            adjustedScore >= minScore &&
-            result.dealbreakersViolated.length === 0
-          ) {
-            allRecommendations.push({
-              applicantId: man.id,
-              partnerId: woman.id,
-              score: adjustedScore,
-              dealbreakers: result.dealbreakersViolated,
-            });
-          }
-        } catch (error) {
-          console.error(`Failed to score pair ${man.id} x ${woman.id}:`, error);
-        }
-      }
-    }
+    const { allScores, recommendations } = scoreAllPairs(
+      men,
+      women,
+      cache,
+      minScore,
+    );
+    allRecommendations.push(...recommendations);
 
     matrixData = {
       men: men.map((m) => ({

@@ -25,14 +25,14 @@ export type CityOption = (typeof CITIES)[number];
 export const CITY_OPTIONS = [...CITIES, "Other"] as const;
 
 /**
- * Metro area groupings for location proximity scoring.
- * Cities in the same metro get a 0.85 similarity bonus.
- * Cities in the same state get 0.6.
+ * Regional groupings for location proximity scoring.
+ * Cities in the same group score 0.7 similarity (same region).
+ * Cities in different groups score 0.3.
  */
 export const METRO_GROUPS: Record<string, string[]> = {
-  "Southern California": ["Los Angeles, CA", "San Francisco, CA"],
+  California: ["Los Angeles, CA", "San Francisco, CA"],
   Texas: ["Dallas, TX"],
-  Arizona: ["Phoenix, AZ", "Las Vegas, NV"],
+  "Desert Southwest": ["Phoenix, AZ", "Las Vegas, NV"],
   "Pacific Northwest": ["Seattle, WA", "Portland, OR"],
   Southeast: ["Miami, FL", "Atlanta, GA"],
   Northeast: ["New York City, NY"],
