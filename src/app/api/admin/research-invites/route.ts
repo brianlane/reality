@@ -24,6 +24,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const includeDeleted = url.searchParams.get("includeDeleted") === "true";
   const search = url.searchParams.get("search") ?? undefined;
+  const location = url.searchParams.get("location") ?? undefined;
   const page = Number(url.searchParams.get("page") ?? "1");
   const limit = Number(url.searchParams.get("limit") ?? "25");
 
@@ -35,6 +36,7 @@ export async function GET(request: Request) {
 
   const where = {
     applicationStatus: { in: researchStatuses },
+    ...(location ? { location } : {}),
     ...(includeDeleted ? {} : { deletedAt: null }),
     ...(search
       ? {

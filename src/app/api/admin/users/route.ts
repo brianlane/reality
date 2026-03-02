@@ -21,6 +21,7 @@ export async function GET(request: Request) {
   const limit = Number(url.searchParams.get("limit") ?? "20");
   const role = url.searchParams.get("role") ?? undefined;
   const search = url.searchParams.get("search") ?? undefined;
+  const location = url.searchParams.get("location") ?? undefined;
   const includeDeleted = url.searchParams.get("includeDeleted") === "true";
 
   // Base where clause for stats (excludes role filter to get global counts)
@@ -37,10 +38,11 @@ export async function GET(request: Request) {
       : {}),
   };
 
-  // Where clause for user list (includes role filter if provided)
+  // Where clause for user list (includes role and location filters if provided)
   const where = {
     ...baseWhere,
     ...(role ? { role: role as never } : {}),
+    ...(location ? { applicant: { location } } : {}),
   };
 
   const [users, total, totalApplicants, totalAdmins] = await Promise.all([

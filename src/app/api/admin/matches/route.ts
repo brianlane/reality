@@ -23,6 +23,7 @@ export async function GET(request: Request) {
   const partnerId = url.searchParams.get("partnerId") ?? undefined;
   const type = url.searchParams.get("type") ?? undefined;
   const outcome = url.searchParams.get("outcome") ?? undefined;
+  const location = url.searchParams.get("location") ?? undefined;
   const includeDeleted = url.searchParams.get("includeDeleted") === "true";
 
   // Validate pagination parameters
@@ -47,6 +48,11 @@ export async function GET(request: Request) {
     ...(partnerId ? { partnerId } : {}),
     ...(type ? { type: type as never } : {}),
     ...(outcome ? { outcome: outcome as never } : {}),
+    ...(location
+      ? {
+          OR: [{ applicant: { location } }, { partner: { location } }],
+        }
+      : {}),
     ...(includeDeleted ? {} : { deletedAt: null }),
   };
 

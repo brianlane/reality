@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 import { formatDateOnly } from "@/lib/admin/format";
 import PaginationControls from "@/components/admin/PaginationControls";
+import LocationFilter from "@/components/admin/LocationFilter";
 
 type WaitlistApplicant = {
   id: string;
@@ -41,23 +42,36 @@ export default function AdminWaitlistTable({
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [location, setLocation] = useState("");
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(initialApplicants.length);
+  const [refreshKey, setRefreshKey] = useState(0);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadWaitlist = useCallback(
-    async (p = page, q = search) => {
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadWaitlist = async () => {
       try {
         const headers = await getAuthHeaders();
         if (!headers) {
           setError("Please sign in again.");
           return;
         }
-        const searchParam = q ? `&search=${encodeURIComponent(q)}` : "";
-        const res = await fetch(`/api/admin/waitlist?page=${p}${searchParam}`, {
-          headers,
-        });
+        const searchParam = search
+          ? `&search=${encodeURIComponent(search)}`
+          : "";
+        const locationParam = location
+          ? `&location=${encodeURIComponent(location)}`
+          : "";
+        const res = await fetch(
+          `/api/admin/waitlist?page=${page}${searchParam}${locationParam}`,
+          {
+            headers,
+            signal: controller.signal,
+          },
+        );
         const json = await res.json();
 
         if (!res.ok || json?.error) {
@@ -86,12 +100,17 @@ export default function AdminWaitlistTable({
         });
         setError(null);
       } catch (err) {
-        console.error("Error loading waitlist:", err);
-        setError("Failed to load waitlist.");
+        if ((err as Error).name !== "AbortError") {
+          console.error("Error loading waitlist:", err);
+          setError("Failed to load waitlist.");
+        }
       }
-    },
-    [page, search],
-  );
+    };
+
+    loadWaitlist();
+
+    return () => controller.abort();
+  }, [page, search, location, refreshKey]);
 
   function toggleSelection(id: string) {
     const applicant = applicants.find((candidate) => candidate.id === id);
@@ -160,7 +179,7 @@ export default function AdminWaitlistTable({
       }
 
       setSuccess("Invitation sent successfully!");
-      await loadWaitlist();
+      setRefreshKey((k) => k + 1);
       setIsLoading(false);
     } catch (err) {
       console.error("Error inviting applicant:", err);
@@ -218,7 +237,7 @@ export default function AdminWaitlistTable({
         `Successfully invited ${data.summary.succeeded} applicant(s). ${failedSummary}`,
       );
       setSelectedIds(new Set());
-      await loadWaitlist();
+      setRefreshKey((k) => k + 1);
       setIsLoading(false);
     } catch (err) {
       console.error("Error batch inviting:", err);
@@ -231,6 +250,13 @@ export default function AdminWaitlistTable({
     <Card>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <h2 className="text-lg font-semibold text-navy">Waitlist ({total})</h2>
+        <LocationFilter
+          value={location}
+          onChange={(val) => {
+            setLocation(val);
+            setPage(1);
+          }}
+        />
         <Input
           placeholder="Search name or email…"
           className="h-8 w-48 text-sm"
@@ -240,7 +266,6 @@ export default function AdminWaitlistTable({
             searchTimeout.current = setTimeout(() => {
               setSearch(val);
               setPage(1);
-              loadWaitlist(1, val);
             }, 300);
           }}
         />
@@ -369,10 +394,7 @@ export default function AdminWaitlistTable({
         page={page}
         pages={pages}
         total={total}
-        onPageChange={(p) => {
-          setPage(p);
-          loadWaitlist(p, search);
-        }}
+        onPageChange={setPage}
       />
     </Card>
   );

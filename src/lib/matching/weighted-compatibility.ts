@@ -43,40 +43,88 @@ export async function calculateWeightedCompatibility(
     orderBy: { order: "asc" },
   });
 
+  // Build answer maps and delegate to pure scoring
+  const answersA = new Map<string, unknown>();
+  const answersB = new Map<string, unknown>();
+  for (const q of questions) {
+    for (const a of q.answers) {
+      if (a.value === null) continue;
+      if (a.applicantId === applicantId) answersA.set(q.id, a.value);
+      else if (a.applicantId === candidateId) answersB.set(q.id, a.value);
+    }
+  }
+
+  return scorePairFromCache(questions, answersA, answersB);
+}
+
+// ── Pre-loaded cache for batch scoring ─────────────────────────────────────
+
+export interface AnswerCache {
+  questions: QuestionnaireQuestion[];
+  answersByApplicant: Map<string, Map<string, unknown>>;
+}
+
+/**
+ * Load all questions + answers for a set of applicant IDs in two queries.
+ * Returns a cache that can be passed to scorePairFromCache for O(Q) in-memory
+ * scoring with zero additional DB round-trips.
+ */
+export async function preloadAnswerCache(
+  applicantIds: string[],
+): Promise<AnswerCache> {
+  const [questions, answers] = await Promise.all([
+    db.questionnaireQuestion.findMany({
+      where: { isActive: true, deletedAt: null },
+      orderBy: { order: "asc" },
+    }),
+    db.questionnaireAnswer.findMany({
+      where: {
+        applicantId: { in: applicantIds },
+        question: { isActive: true, deletedAt: null },
+      },
+      select: { applicantId: true, questionId: true, value: true },
+    }),
+  ]);
+
+  const answersByApplicant = new Map<string, Map<string, unknown>>();
+  for (const a of answers) {
+    if (a.value === null) continue;
+    let map = answersByApplicant.get(a.applicantId);
+    if (!map) {
+      map = new Map();
+      answersByApplicant.set(a.applicantId, map);
+    }
+    map.set(a.questionId, a.value);
+  }
+
+  return { questions, answersByApplicant };
+}
+
+/**
+ * Pure in-memory scoring using pre-loaded data. No DB calls.
+ */
+export function scorePairFromCache(
+  questions: QuestionnaireQuestion[],
+  answersA: Map<string, unknown>,
+  answersB: Map<string, unknown>,
+): ScoringResult {
   const dealbreakersViolated: string[] = [];
   const breakdown: QuestionBreakdown[] = [];
   let totalWeightedScore = 0;
   let totalWeight = 0;
 
-  // 2. For each question, calculate weighted score
   for (const question of questions) {
-    const answerA = question.answers.find((a) => a.applicantId === applicantId);
-    const answerB = question.answers.find((a) => a.applicantId === candidateId);
+    const valA = answersA.get(question.id);
+    const valB = answersB.get(question.id);
 
-    // Skip if either didn't answer OR if either value is null
-    if (
-      !answerA ||
-      !answerB ||
-      answerA.value === null ||
-      answerB.value === null
-    )
-      continue;
+    if (valA === undefined || valB === undefined) continue;
 
-    // Calculate similarity based on question type
-    const similarity = calculateSimilarity(
-      question,
-      answerA.value,
-      answerB.value,
-    );
+    const similarity = calculateSimilarity(question, valA, valB);
 
-    const isDealbreakerQuestion = question.isDealbreaker;
-
-    // Check dealbreaker - collect all violations, don't return immediately
-    if (isDealbreakerQuestion && similarity < 0.5) {
+    if (question.isDealbreaker && similarity < 0.5) {
       dealbreakersViolated.push(question.id);
     }
 
-    // Apply weight
     const weightedScore = similarity * question.mlWeight;
     totalWeightedScore += weightedScore;
     totalWeight += question.mlWeight;
@@ -90,11 +138,9 @@ export async function calculateWeightedCompatibility(
     });
   }
 
-  // 3. Calculate final score (weighted average)
   let score =
-    totalWeight > 0 ? Math.round((totalWeightedScore / totalWeight) * 100) : 50; // Default if no questions answered
+    totalWeight > 0 ? Math.round((totalWeightedScore / totalWeight) * 100) : 50;
 
-  // 4. If any dealbreakers were violated, set score to 0
   if (dealbreakersViolated.length > 0) {
     score = 0;
   }
@@ -106,6 +152,9 @@ export async function calculateWeightedCompatibility(
     breakdown,
   };
 }
+
+// Re-export shared location scoring
+export { locationSimilarity } from "@/lib/locations";
 
 /**
  * Calculate similarity between two answer values based on question type

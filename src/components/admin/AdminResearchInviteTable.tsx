@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 import { formatDateTime, formatDuration } from "@/lib/admin/format";
 import PaginationControls from "@/components/admin/PaginationControls";
+import LocationFilter from "@/components/admin/LocationFilter";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -43,6 +44,7 @@ export default function AdminResearchInviteTable({
   const [sendingResumeId, setSendingResumeId] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [location, setLocation] = useState("");
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(initialApplicants.length);
@@ -62,8 +64,11 @@ export default function AdminResearchInviteTable({
           return;
         }
         const searchParam = q ? `&search=${encodeURIComponent(q)}` : "";
+        const locationParam = location
+          ? `&location=${encodeURIComponent(location)}`
+          : "";
         const res = await fetch(
-          `/api/admin/research-invites?page=${p}${searchParam}`,
+          `/api/admin/research-invites?page=${p}${searchParam}${locationParam}`,
           { headers },
         );
         const json = await res.json();
@@ -80,8 +85,13 @@ export default function AdminResearchInviteTable({
         setError("Failed to load research invites.");
       }
     },
-    [page, search],
+    [page, search, location],
   );
+
+  useEffect(() => {
+    loadResearchInvites();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only reload when location changes
+  }, [location]);
 
   function updateField(name: string, value: string) {
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -309,6 +319,13 @@ export default function AdminResearchInviteTable({
           <h2 className="text-lg font-semibold text-navy">
             Research Participants ({total})
           </h2>
+          <LocationFilter
+            value={location}
+            onChange={(val) => {
+              setLocation(val);
+              setPage(1);
+            }}
+          />
           <Input
             placeholder="Search name or email…"
             className="h-8 w-48 text-sm"
