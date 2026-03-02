@@ -1,6 +1,7 @@
 import { Applicant } from "@prisma/client";
 import { scoreApplicantMatch } from "./scoring";
 import { applyFilters } from "./filters";
+import { locationSimilarity, LOCATION_WEIGHT } from "./weighted-compatibility";
 
 type ApplicantWithQuestionnaire = Applicant;
 
@@ -31,14 +32,26 @@ export async function getRecommendations(
   // 1. Apply pre-filters (gender/seeking/status)
   const filtered = applyFilters(applicant, candidates);
 
-  // 2. Score all filtered candidates
+  // 2. Score all filtered candidates, applying the same location proximity bonus
+  //    used in all_pairs mode so scores are consistent across match modes.
   const scored = await Promise.all(
     filtered.map(async (candidate) => {
       const result = await scoreApplicantMatch(applicant, candidate);
-      return {
-        candidate,
-        result,
-      };
+      let adjustedScore = result.score;
+      if (
+        result.dealbreakersViolated.length === 0 &&
+        applicant.location &&
+        candidate.location
+      ) {
+        const locSim = locationSimilarity(
+          applicant.location,
+          candidate.location,
+        );
+        adjustedScore = Math.round(
+          result.score * (1 - LOCATION_WEIGHT) + locSim * 100 * LOCATION_WEIGHT,
+        );
+      }
+      return { candidate, result, adjustedScore };
     }),
   );
 
@@ -50,16 +63,16 @@ export async function getRecommendations(
 
   // 4. Filter by minimum score
   const qualifying = withoutDealbreakers.filter(
-    (s) => s.result.score >= minScore,
+    (s) => s.adjustedScore >= minScore,
   );
 
   // 5. Sort by score (descending)
-  qualifying.sort((a, b) => b.result.score - a.result.score);
+  qualifying.sort((a, b) => b.adjustedScore - a.adjustedScore);
 
   // 6. Return top N recommendations
   return qualifying.slice(0, maxResults).map((s) => ({
     applicantId: s.candidate.id,
-    compatibilityScore: s.result.score,
+    compatibilityScore: s.adjustedScore,
     dealbreakersViolated: s.result.dealbreakersViolated,
     questionsScored: s.result.questionsScored,
   }));

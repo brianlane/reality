@@ -838,7 +838,7 @@ export default function AdminEventMatchingPanel({
           universal compatibility ensures every conversation has high potential.
         </p>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-navy-soft">
               Min Compatibility Score (0–100)
@@ -853,6 +853,8 @@ export default function AdminEventMatchingPanel({
                 setCohortResult(null);
                 setPreview(null);
                 setPreviewAvgScore(null);
+                setPreviewMatrix(null);
+                setDistinctPreview(null);
               }}
             />
           </div>
@@ -1008,6 +1010,7 @@ export default function AdminEventMatchingPanel({
                   setPreview(null);
                   setPreviewAvgScore(null);
                   setPreviewMatrix(null);
+                  setDistinctPreview(null);
                 }}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                   matchMode === "all_pairs"
@@ -1024,6 +1027,7 @@ export default function AdminEventMatchingPanel({
                   setPreview(null);
                   setPreviewAvgScore(null);
                   setPreviewMatrix(null);
+                  setDistinctPreview(null);
                 }}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                   matchMode === "top_n"
@@ -1056,6 +1060,7 @@ export default function AdminEventMatchingPanel({
                   setPreview(null);
                   setPreviewAvgScore(null);
                   setPreviewMatrix(null);
+                  setDistinctPreview(null);
                 }}
               />
               <p className="text-xs text-stone-400">
@@ -1077,6 +1082,8 @@ export default function AdminEventMatchingPanel({
                   setMaxPerApplicant(Number(e.target.value));
                   setPreview(null);
                   setPreviewAvgScore(null);
+                  setPreviewMatrix(null);
+                  setDistinctPreview(null);
                 }}
               />
             </div>

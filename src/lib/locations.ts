@@ -88,6 +88,9 @@ function normalizeCity(raw: string): string | null {
   const cityPart = lower
     .replace(/,?\s*(az|ca|ny|tx|fl|co|ga|nv|wa|or|il)$/i, "")
     .trim();
+  // Guard against an empty string after stripping the state — every city starts
+  // with "" so the find would always return the first city incorrectly.
+  if (!cityPart) return null;
   const partial = CITIES.find((c) => c.toLowerCase().startsWith(cityPart));
   if (partial) return partial;
 
