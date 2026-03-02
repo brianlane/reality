@@ -125,18 +125,21 @@ export async function POST(
           },
         );
 
-      // Compute distinct matches
+      // Compute distinct matches — single set covers both roles so the same
+      // person cannot appear in two matches regardless of which side they're on.
       const sortedRecs = [...allRecommendations].sort(
         (a, b) => b.score - a.score,
       );
-      const usedA = new Set<string>();
-      const usedB = new Set<string>();
+      const usedPeople = new Set<string>();
       const distinctMatches: typeof allRecommendations = [];
       for (const pair of sortedRecs) {
-        if (!usedA.has(pair.applicantId) && !usedB.has(pair.partnerId)) {
+        if (
+          !usedPeople.has(pair.applicantId) &&
+          !usedPeople.has(pair.partnerId)
+        ) {
           distinctMatches.push(pair);
-          usedA.add(pair.applicantId);
-          usedB.add(pair.partnerId);
+          usedPeople.add(pair.applicantId);
+          usedPeople.add(pair.partnerId);
         }
       }
 
