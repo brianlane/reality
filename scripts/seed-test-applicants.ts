@@ -755,11 +755,19 @@ function generateAnswer(
   // TEXT questions with mlWeight > 0 are scored numerically (proximity or cross-pair)
   if (question.type === "TEXT") {
     const spendingBias =
-      profile.spending === "Saver" ? 0.2 : profile.spending === "Balanced" ? 0.5 : 0.8;
+      profile.spending === "Saver"
+        ? 0.2
+        : profile.spending === "Balanced"
+          ? 0.5
+          : 0.8;
     if (prompt.includes("willing to spend") && prompt.includes("date")) {
       return String(Math.round(20 + spendingBias * 180));
     }
-    if (prompt.includes("expecting") && prompt.includes("spend") && prompt.includes("date")) {
+    if (
+      prompt.includes("expecting") &&
+      prompt.includes("spend") &&
+      prompt.includes("date")
+    ) {
       return String(Math.round(20 + spendingBias * 130));
     }
     if (prompt.includes("hours per week") && prompt.includes("professional")) {

@@ -421,17 +421,23 @@ function generateAnswer(
 
   if (question.type === "TEXT") {
     if (prompt.includes("willing to spend") && prompt.includes("date")) {
-      return profile.noNoise ? "75" : String(Math.round(20 + profile.bias * 180));
+      return profile.noNoise
+        ? "75"
+        : String(Math.round(20 + profile.bias * 180));
     }
     if (
       prompt.includes("expecting") &&
       prompt.includes("spend") &&
       prompt.includes("date")
     ) {
-      return profile.noNoise ? "60" : String(Math.round(15 + profile.bias * 135));
+      return profile.noNoise
+        ? "60"
+        : String(Math.round(15 + profile.bias * 135));
     }
     if (prompt.includes("hours per week") && prompt.includes("professional")) {
-      return profile.noNoise ? "40" : String(Math.round(10 + profile.bias * 60));
+      return profile.noNoise
+        ? "40"
+        : String(Math.round(10 + profile.bias * 60));
     }
     if (prompt.includes("screen time")) {
       return profile.noNoise ? "4" : String(Math.round(1 + profile.bias * 10));

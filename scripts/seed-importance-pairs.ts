@@ -80,7 +80,7 @@ async function main() {
 
   let updated = 0;
   let skipped = 0;
-  const errors = 0;
+  let errors = 0;
 
   for (const pair of IMPORTANCE_PAIRS) {
     // Find the importance (modifier) question
@@ -122,13 +122,20 @@ async function main() {
         continue;
       }
 
-      await db.questionnaireQuestion.update({
-        where: { id: targetQuestion.id },
-        data: { importanceModifierForId: importanceQuestion.id },
-      });
-
-      console.log(`  ✓ Linked: "${targetQuestion.prompt.slice(0, 60)}..."`);
-      updated++;
+      try {
+        await db.questionnaireQuestion.update({
+          where: { id: targetQuestion.id },
+          data: { importanceModifierForId: importanceQuestion.id },
+        });
+        console.log(`  ✓ Linked: "${targetQuestion.prompt.slice(0, 60)}..."`);
+        updated++;
+      } catch (err) {
+        console.error(
+          `  ✗ Failed to link "${targetQuestion.prompt.slice(0, 60)}...":`,
+          err,
+        );
+        errors++;
+      }
     }
 
     console.log();
