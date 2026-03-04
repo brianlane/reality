@@ -11,12 +11,11 @@ import { z } from "zod";
 const streamMatchesSchema = z.object({
   minScore: z.number().min(0).max(100).optional().default(60),
   maxPerGender: z.number().int().min(1).max(100).optional().default(50),
-  location: z.string().optional(),
 });
 
 /**
  * SSE endpoint that streams match scoring progress in real time.
- * Sends events: "progress" (pair scored), "complete" (all done with results).
+ * Pulls from the approved applicant pool in the event's city (not invitations).
  */
 export async function POST(
   request: Request,
@@ -43,31 +42,48 @@ export async function POST(
     return new Response("Invalid request body", { status: 400 });
   }
 
-  const { minScore, maxPerGender, location } = body;
+  const { minScore, maxPerGender } = body;
 
   const event = await db.event.findUnique({ where: { id: eventId } });
   if (!event) {
     return new Response("Event not found", { status: 404 });
   }
 
+  if (!event.location) {
+    return new Response(
+      "Event must have a location set before generating matches",
+      { status: 400 },
+    );
+  }
+
+  // Pool-based: all approved applicants in the event's city.
+  // Ordered by fewest events attended (newcomers first), then oldest
+  // applicants first (longest-waiting get priority when capped).
   const applicants = await db.applicant.findMany({
     where: {
       applicationStatus: ApplicationStatus.APPROVED,
       screeningStatus: ScreeningStatus.PASSED,
       deletedAt: null,
       questionnaireAnswers: { some: {} },
-      ...(location ? { location } : {}),
-      eventInvitations: {
-        some: {
-          eventId,
-          status: { notIn: ["DECLINED", "NO_SHOW"] },
-        },
-      },
+      location: event.location,
     },
     include: {
       user: { select: { firstName: true, lastName: true } },
+      _count: {
+        select: {
+          eventInvitations: {
+            where: { status: "ATTENDED" },
+          },
+        },
+      },
     },
+    orderBy: [{ createdAt: "asc" }],
   });
+
+  // Stable sort: fewest events attended first (preserves createdAt ASC within each bucket)
+  applicants.sort(
+    (a, b) => a._count.eventInvitations - b._count.eventInvitations,
+  );
 
   const allMen = applicants.filter((a) => a.gender === "MAN");
   const allWomen = applicants.filter((a) => a.gender === "WOMAN");
@@ -103,10 +119,6 @@ export async function POST(
 
         const startTime = Date.now();
 
-        // Stream progress every 10 pairs to avoid flooding.
-        // The callback is async so the event loop yields between batches,
-        // allowing the ReadableStream controller to actually flush chunks
-        // to the client instead of buffering everything until scoring finishes.
         const { allScores, recommendations: allRecommendations } =
           await scoreAllPairs(
             men,
@@ -114,7 +126,6 @@ export async function POST(
             cache,
             minScore,
             async (scored, total) => {
-              // Stop scoring if the client has disconnected.
               if (signal.aborted) throw new Error("Client disconnected");
 
               if (scored % 10 === 0 || scored === total) {
@@ -124,9 +135,6 @@ export async function POST(
                   pct: Math.round((scored / total) * 100),
                   elapsedMs: Date.now() - startTime,
                 });
-                // Yield the event loop so the enqueued chunk is flushed before
-                // scoring continues. Without this await all enqueues happen
-                // synchronously and the client receives them all at once.
                 await new Promise<void>((resolve) => setImmediate(resolve));
               }
             },
@@ -143,10 +151,12 @@ export async function POST(
             men: men.map((m) => ({
               id: m.id,
               name: `${m.user.firstName} ${m.user.lastName}`,
+              eventsAttended: m._count.eventInvitations,
             })),
             women: women.map((w) => ({
               id: w.id,
               name: `${w.user.firstName} ${w.user.lastName}`,
+              eventsAttended: w._count.eventInvitations,
             })),
             allPairScores: allScores,
             truncated,

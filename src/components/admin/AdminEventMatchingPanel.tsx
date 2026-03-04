@@ -6,17 +6,24 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
-import LocationFilter from "@/components/admin/LocationFilter";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-type EventStats = {
+type PoolStats = {
+  total: number;
+  men: number;
+  women: number;
+};
+
+type EventInfo = {
+  location: string | null;
+  existingMatches: number;
   invited: number;
   men: number;
   women: number;
-  existingMatches: number;
+  pool: PoolStats | null;
 };
 
 type MatchRecord = {
@@ -35,39 +42,11 @@ type PreviewMatch = {
   score: number;
 };
 
-type CohortPerson = { id: string; name: string };
-
-type CohortPairScore = {
-  manId: string;
-  manName: string;
-  womanId: string;
-  womanName: string;
-  score: number;
-  dealbreakersViolated: string[];
-};
-
-type CohortResult = {
-  valid: boolean;
-  minScore: number;
-  men: CohortPerson[];
-  women: CohortPerson[];
-  matrix: CohortPairScore[];
-  belowThreshold: CohortPairScore[];
-  stats: {
-    totalPairs: number;
-    passingPairs: number;
-    failingPairs: number;
-    lowestScore: number;
-    highestScore: number;
-    avgScore: number;
-  };
-};
-
-type MatchMode = "top_n" | "all_pairs";
+type MatrixPerson = { id: string; name: string; eventsAttended?: number };
 
 type PreviewMatrixData = {
-  men: CohortPerson[];
-  women: CohortPerson[];
+  men: MatrixPerson[];
+  women: MatrixPerson[];
   allPairScores: Array<{
     manId: string;
     womanId: string;
@@ -78,6 +57,8 @@ type PreviewMatrixData = {
   totalMen: number;
   totalWomen: number;
 };
+
+type MatchMode = "top_n" | "all_pairs";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -141,8 +122,8 @@ function MatrixTable({
   scoreMap,
   threshold,
 }: {
-  men: CohortPerson[];
-  women: CohortPerson[];
+  men: MatrixPerson[];
+  women: MatrixPerson[];
   scoreMap: Map<string, number>;
   threshold: number;
 }) {
@@ -158,8 +139,18 @@ function MatrixTable({
               <th
                 key={w.id}
                 className="bg-stone-50 px-2 py-1.5 text-center font-medium text-navy whitespace-nowrap"
+                title={
+                  w.eventsAttended !== undefined
+                    ? `${w.name} (${w.eventsAttended} events attended)`
+                    : w.name
+                }
               >
                 {abbrev(w.name)}
+                {w.eventsAttended !== undefined && w.eventsAttended > 0 ? (
+                  <span className="ml-0.5 text-[10px] text-stone-400">
+                    ({w.eventsAttended})
+                  </span>
+                ) : null}
               </th>
             ))}
           </tr>
@@ -167,8 +158,20 @@ function MatrixTable({
         <tbody className="divide-y">
           {men.map((m) => (
             <tr key={m.id}>
-              <td className="sticky left-0 z-10 bg-stone-50 px-2 py-1.5 font-medium text-navy whitespace-nowrap">
+              <td
+                className="sticky left-0 z-10 bg-stone-50 px-2 py-1.5 font-medium text-navy whitespace-nowrap"
+                title={
+                  m.eventsAttended !== undefined
+                    ? `${m.name} (${m.eventsAttended} events attended)`
+                    : m.name
+                }
+              >
                 {abbrev(m.name)}
+                {m.eventsAttended !== undefined && m.eventsAttended > 0 ? (
+                  <span className="ml-0.5 text-[10px] text-stone-400">
+                    ({m.eventsAttended})
+                  </span>
+                ) : null}
               </td>
               {women.map((w) => {
                 const s = scoreMap.get(`${m.id}:${w.id}`) ?? 0;
@@ -212,9 +215,8 @@ export default function AdminEventMatchingPanel({
   const [maxPerApplicant, setMaxPerApplicant] = useState(5);
   const [maxPerGender, setMaxPerGender] = useState(15);
   const [matchMode, setMatchMode] = useState<MatchMode>("all_pairs");
-  const [locationFilter, setLocationFilter] = useState("");
 
-  const [eventStats, setEventStats] = useState<EventStats | null>(null);
+  const [eventInfo, setEventInfo] = useState<EventInfo | null>(null);
   const [existingMatchList, setExistingMatchList] = useState<MatchRecord[]>([]);
   const [invitationMap, setInvitationMap] = useState<Record<string, string>>(
     {},
@@ -230,16 +232,6 @@ export default function AdminEventMatchingPanel({
     null,
   );
 
-  const [cohortResult, setCohortResult] = useState<CohortResult | null>(null);
-
-  // O(1) score lookups for matrix rendering — avoids O(N) .find() per cell.
-  const cohortScoreMap = useMemo(
-    () =>
-      new Map(
-        cohortResult?.matrix.map((p) => [`${p.manId}:${p.womanId}`, p.score]),
-      ),
-    [cohortResult],
-  );
   const previewScoreMap = useMemo(
     () =>
       new Map(
@@ -250,7 +242,6 @@ export default function AdminEventMatchingPanel({
       ),
     [previewMatrix],
   );
-  const [isValidatingCohort, setIsValidatingCohort] = useState(false);
 
   const [scoringProgress, setScoringProgress] = useState<{
     scored: number;
@@ -283,7 +274,6 @@ export default function AdminEventMatchingPanel({
         result.push({ id: match.partnerId, name: match.partnerName });
       }
     }
-    // Uninvited first, then alphabetical within each group
     return result.sort((a, b) => {
       const aInvited = !!invitationMap[a.id];
       const bInvited = !!invitationMap[b.id];
@@ -315,13 +305,15 @@ export default function AdminEventMatchingPanel({
         return;
       }
 
-      const { stats, invitations, matches } = json;
+      const { event, pool, stats, invitations, matches } = json;
 
-      setEventStats({
+      setEventInfo({
+        location: event?.location ?? null,
+        existingMatches: matches?.length ?? 0,
         invited: stats.invitationsSent,
         men: stats.genderBalance?.male ?? 0,
         women: stats.genderBalance?.female ?? 0,
-        existingMatches: matches?.length ?? 0,
+        pool: pool ?? null,
       });
 
       setExistingMatchList(matches ?? []);
@@ -450,39 +442,6 @@ export default function AdminEventMatchingPanel({
     }
   }
 
-  // ── Validate cohort ──────────────────────────────────────────────────────
-  async function handleValidateCohort() {
-    setIsValidatingCohort(true);
-    setError(null);
-    setSuccess(null);
-    setCohortResult(null);
-    try {
-      const headers = await getAuthHeaders();
-      if (!headers) {
-        setError("Please sign in again.");
-        return;
-      }
-      const res = await fetch(`/api/admin/events/${eventId}/validate-cohort`, {
-        method: "POST",
-        headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          minScore,
-          ...(locationFilter ? { location: locationFilter } : {}),
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok || json?.error) {
-        setError(json?.error?.message ?? "Cohort validation failed.");
-        return;
-      }
-      setCohortResult(json as CohortResult);
-    } catch {
-      setError("Cohort validation failed.");
-    } finally {
-      setIsValidatingCohort(false);
-    }
-  }
-
   // ── Preview matches ──────────────────────────────────────────────────────
   async function handlePreview() {
     setIsPreviewing(true);
@@ -502,7 +461,6 @@ export default function AdminEventMatchingPanel({
       }
 
       if (matchMode === "all_pairs") {
-        // Use SSE streaming for real-time progress
         const res = await fetch(
           `/api/admin/events/${eventId}/generate-matches-stream`,
           {
@@ -511,7 +469,6 @@ export default function AdminEventMatchingPanel({
             body: JSON.stringify({
               minScore,
               maxPerGender,
-              ...(locationFilter ? { location: locationFilter } : {}),
             }),
           },
         );
@@ -524,9 +481,6 @@ export default function AdminEventMatchingPanel({
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
-        // eventType must live outside the read loop so it persists across chunk
-        // boundaries where the "event:" line and its "data:" line may arrive in
-        // separate chunks.
         let eventType = "";
 
         while (true) {
@@ -539,7 +493,6 @@ export default function AdminEventMatchingPanel({
 
           for (const line of lines) {
             if (line === "") {
-              // Blank line = SSE event boundary; reset type per spec
               eventType = "";
             } else if (line.startsWith("event: ")) {
               eventType = line.slice(7);
@@ -567,6 +520,15 @@ export default function AdminEventMatchingPanel({
                 setPreviewAvgScore(data.avgScore ?? 0);
                 if (data.matrix) {
                   setPreviewMatrix(data.matrix as PreviewMatrixData);
+                  // Build name map from matrix people for resolveName()
+                  const nMap: Record<string, string> = {};
+                  for (const p of [
+                    ...((data.matrix as PreviewMatrixData).men ?? []),
+                    ...((data.matrix as PreviewMatrixData).women ?? []),
+                  ]) {
+                    nMap[p.id] = p.name;
+                  }
+                  setNameMap((prev) => ({ ...prev, ...nMap }));
                 }
                 if (data.distinctMatches) {
                   setDistinctPreview(data.distinctMatches as PreviewMatch[]);
@@ -582,7 +544,6 @@ export default function AdminEventMatchingPanel({
           }
         }
       } else {
-        // Top-N mode: regular request
         const res = await fetch(
           `/api/admin/events/${eventId}/generate-matches`,
           {
@@ -594,7 +555,6 @@ export default function AdminEventMatchingPanel({
               createMatches: false,
               mode: matchMode,
               maxPerGender,
-              ...(locationFilter ? { location: locationFilter } : {}),
             }),
           },
         );
@@ -688,7 +648,6 @@ export default function AdminEventMatchingPanel({
         setError("Please sign in again.");
         return;
       }
-      // Pass the pre-computed pairs directly — server skips re-scoring
       const res = await fetch(`/api/admin/events/${eventId}/generate-matches`, {
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
@@ -724,30 +683,54 @@ export default function AdminEventMatchingPanel({
   }
 
   const isBusy =
-    isPreviewing ||
-    isCreating ||
-    isNotifying ||
-    isInvitingAll ||
-    isValidatingCohort ||
-    !!invitingId;
+    isPreviewing || isCreating || isNotifying || isInvitingAll || !!invitingId;
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <Card className="space-y-6">
       <h2 className="text-lg font-semibold text-navy">Match Generation</h2>
 
-      {/* ── Stats ── */}
+      {/* ── Event Info ── */}
       {isLoadingStats ? (
-        <p className="text-sm text-stone-500">Loading event stats…</p>
-      ) : eventStats ? (
-        <div className="rounded-md bg-stone-50 px-4 py-3 text-sm text-stone-700">
-          <span className="font-medium">{eventStats.invited} invited</span>
-          {" · "}
-          <span>{eventStats.men} men</span>
-          {" · "}
-          <span>{eventStats.women} women</span>
-          {" · "}
-          <span>{eventStats.existingMatches} existing matches</span>
+        <p className="text-sm text-stone-500">Loading event info…</p>
+      ) : eventInfo ? (
+        <div className="space-y-2">
+          <div className="rounded-md bg-stone-50 px-4 py-3 text-sm text-stone-700">
+            {eventInfo.location ? (
+              <span className="mr-3 rounded-full bg-navy/10 px-2.5 py-0.5 text-xs font-semibold text-navy">
+                {eventInfo.location}
+              </span>
+            ) : (
+              <span className="mr-3 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+                No location set
+              </span>
+            )}
+            {eventInfo.pool ? (
+              <>
+                <span className="font-medium">
+                  {eventInfo.pool.total} in pool
+                </span>
+                <span className="text-stone-400">
+                  {" "}
+                  ({eventInfo.pool.men}M / {eventInfo.pool.women}W)
+                </span>
+              </>
+            ) : null}
+            {" · "}
+            <span>{eventInfo.existingMatches} matches</span>
+            {eventInfo.invited > 0 ? (
+              <>
+                {" · "}
+                <span>{eventInfo.invited} invited</span>
+              </>
+            ) : null}
+          </div>
+
+          {!eventInfo.location ? (
+            <p className="text-xs text-red-600">
+              Set a city on the event form above before generating matches.
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -905,18 +888,17 @@ export default function AdminEventMatchingPanel({
         </div>
       ) : null}
 
-      {/* ── Cohort Compatibility ── */}
+      {/* ── Generate New Matches ── */}
       <div className="space-y-4 border-t pt-4">
         <h3 className="text-sm font-semibold text-navy-soft uppercase tracking-wide">
-          Cohort Compatibility
+          Generate New Matches
         </h3>
         <p className="text-xs text-stone-500">
-          Validate that every man–woman pair at this event meets the minimum
-          compatibility threshold. All attendees speed-date each other, so
-          universal compatibility ensures every conversation has high potential.
+          Scores all approved applicants in the event&apos;s city. Create
+          matches first, then invite the matched individuals to the event.
         </p>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-3">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-navy-soft">
               Min Compatibility Score (0–100)
@@ -928,7 +910,6 @@ export default function AdminEventMatchingPanel({
               value={minScore}
               onChange={(e) => {
                 setMinScore(Number(e.target.value));
-                setCohortResult(null);
                 setPreview(null);
                 setPreviewAvgScore(null);
                 setPreviewMatrix(null);
@@ -936,110 +917,7 @@ export default function AdminEventMatchingPanel({
               }}
             />
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-navy-soft">
-              Filter by City
-            </label>
-            <LocationFilter
-              value={locationFilter}
-              onChange={(val) => {
-                setLocationFilter(val);
-                setCohortResult(null);
-                setPreview(null);
-                setPreviewAvgScore(null);
-                setPreviewMatrix(null);
-                setDistinctPreview(null);
-              }}
-            />
-          </div>
-        </div>
 
-        <Button
-          type="button"
-          onClick={handleValidateCohort}
-          disabled={isBusy}
-          variant="outline"
-          className="bg-navy/10 hover:bg-navy/20 text-navy border-navy"
-        >
-          {isValidatingCohort ? "Validating…" : "Validate Cohort"}
-        </Button>
-
-        {cohortResult ? (
-          <div className="space-y-4">
-            {/* Summary */}
-            <div
-              className={`rounded-md px-4 py-3 text-sm font-medium ${
-                cohortResult.valid
-                  ? "bg-green-50 text-green-800"
-                  : "bg-red-50 text-red-800"
-              }`}
-            >
-              {cohortResult.valid ? (
-                <>
-                  All {cohortResult.stats.totalPairs} pairs pass at{" "}
-                  {cohortResult.minScore}% threshold
-                </>
-              ) : (
-                <>
-                  {cohortResult.stats.failingPairs} of{" "}
-                  {cohortResult.stats.totalPairs} pairs below{" "}
-                  {cohortResult.minScore}% threshold
-                </>
-              )}
-              <span className="ml-3 font-normal text-stone-600">
-                Avg: {cohortResult.stats.avgScore} · Low:{" "}
-                {cohortResult.stats.lowestScore} · High:{" "}
-                {cohortResult.stats.highestScore}
-              </span>
-            </div>
-
-            {/* Matrix grid */}
-            {cohortResult.men.length > 0 && cohortResult.women.length > 0 ? (
-              <MatrixTable
-                men={cohortResult.men}
-                women={cohortResult.women}
-                scoreMap={cohortScoreMap}
-                threshold={cohortResult.minScore}
-              />
-            ) : null}
-
-            {/* Failing pairs */}
-            {cohortResult.belowThreshold.length > 0 ? (
-              <div className="space-y-2">
-                <h4 className="text-xs font-semibold text-red-700 uppercase tracking-wide">
-                  Pairs Below Threshold
-                </h4>
-                <div className="divide-y rounded-md border border-red-200">
-                  {cohortResult.belowThreshold.map((pair) => (
-                    <div
-                      key={`${pair.manId}:${pair.womanId}`}
-                      className="flex items-center justify-between px-3 py-2 text-sm"
-                    >
-                      <span className="text-navy">
-                        {abbrev(pair.manName)} ↔ {abbrev(pair.womanName)}
-                      </span>
-                      <span className="font-semibold text-red-600 tabular-nums">
-                        {pair.score}
-                        {pair.dealbreakersViolated.length > 0
-                          ? " (dealbreaker)"
-                          : ""}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-
-      {/* ── Generate New Matches ── */}
-      <div className="space-y-4 border-t pt-4">
-        <h3 className="text-sm font-semibold text-navy-soft uppercase tracking-wide">
-          Generate New Matches
-        </h3>
-
-        <div className="space-y-3">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-navy-soft">
               Match Mode
@@ -1082,7 +960,7 @@ export default function AdminEventMatchingPanel({
             </div>
             <p className="text-xs text-stone-400">
               {matchMode === "all_pairs"
-                ? "Creates a match for every cross-gender pair above the threshold."
+                ? "Scores every cross-gender pair above the threshold from the city pool."
                 : "Selects the top N highest-scoring matches per person."}
             </p>
           </div>
@@ -1135,7 +1013,7 @@ export default function AdminEventMatchingPanel({
         <Button
           type="button"
           onClick={handlePreview}
-          disabled={isBusy}
+          disabled={isBusy || !eventInfo?.location}
           variant="outline"
           className="bg-copper/10 hover:bg-copper/20 text-copper border-copper"
         >

@@ -17,7 +17,6 @@ const generateMatchesSchema = z.object({
   mode: z.enum(["top_n", "all_pairs"]).optional().default("top_n"),
   maxPerGender: z.number().int().min(1).max(100).optional().default(50),
   distinct: z.boolean().optional().default(false),
-  location: z.string().optional(),
   /** Pre-computed pairs from a preview — skips scoring and creates these directly. */
   explicitPairs: z
     .array(
@@ -36,7 +35,6 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  // 1. Authenticate and authorize
   const auth = await getAuthUser();
   if (!auth) {
     return errorResponse("UNAUTHORIZED", "User not authenticated", 401);
@@ -50,7 +48,6 @@ export async function POST(
 
   const { id: eventId } = await params;
 
-  // 2. Parse and validate request body
   let body: GenerateMatchesRequest;
   try {
     const rawBody = await request.json().catch(() => ({}));
@@ -68,11 +65,9 @@ export async function POST(
     mode,
     maxPerGender,
     distinct,
-    location,
     explicitPairs,
   } = body;
 
-  // 3. Verify event exists
   const event = await db.event.findUnique({
     where: { id: eventId },
   });
@@ -81,10 +76,16 @@ export async function POST(
     return errorResponse("NOT_FOUND", "Event not found", 404);
   }
 
-  // 3b. If the caller already has pre-computed pairs (from a preview), skip scoring
-  //     and go straight to DB creation. This avoids re-running O(N×M) scoring.
+  if (!event.location) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "Event must have a location set before generating matches",
+      400,
+    );
+  }
+
+  // ── Explicit pairs shortcut (from preview) ──────────────────────────────
   if (explicitPairs && explicitPairs.length > 0 && createMatches) {
-    // Verify all applicant IDs exist and are still invited to this event.
     const allPairIds = new Set(
       explicitPairs.flatMap((p) => [p.applicantId, p.partnerId]),
     );
@@ -92,9 +93,7 @@ export async function POST(
       where: {
         id: { in: [...allPairIds] },
         deletedAt: null,
-        eventInvitations: {
-          some: { eventId, status: { notIn: ["DECLINED", "NO_SHOW"] } },
-        },
+        applicationStatus: ApplicationStatus.APPROVED,
       },
       select: { id: true },
     });
@@ -103,7 +102,7 @@ export async function POST(
     if (invalidIds.length > 0) {
       return errorResponse(
         "VALIDATION_ERROR",
-        `${invalidIds.length} applicant ID(s) not found or not invited to this event`,
+        `${invalidIds.length} applicant ID(s) not found or not approved`,
         400,
       );
     }
@@ -160,37 +159,44 @@ export async function POST(
     }
   }
 
-  // 4. Get all approved applicants with completed questionnaires
+  // ── Pool-based applicant query (by event location, not invitations) ─────
+  // Ordered by fewest events attended (newcomers first), then oldest
+  // applicants first (longest-waiting get priority when capped).
   const applicants = await db.applicant.findMany({
     where: {
       applicationStatus: ApplicationStatus.APPROVED,
       screeningStatus: ScreeningStatus.PASSED,
       deletedAt: null,
       questionnaireAnswers: { some: {} },
-      ...(location ? { location } : {}),
-      eventInvitations: {
-        some: {
-          eventId: eventId,
-          status: {
-            notIn: ["DECLINED", "NO_SHOW"],
+      location: event.location,
+    },
+    include: {
+      user: { select: { firstName: true, lastName: true } },
+      _count: {
+        select: {
+          eventInvitations: {
+            where: { status: "ATTENDED" },
           },
         },
       },
     },
-    include: {
-      user: { select: { firstName: true, lastName: true } },
-    },
+    orderBy: [{ createdAt: "asc" }],
   });
+
+  // Stable sort: fewest events attended first (preserves createdAt ASC within each bucket)
+  applicants.sort(
+    (a, b) => a._count.eventInvitations - b._count.eventInvitations,
+  );
 
   if (applicants.length < 2) {
     return errorResponse(
       "INSUFFICIENT_DATA",
-      "Need at least 2 approved applicants with completed questionnaires",
+      `Need at least 2 approved applicants in ${event.location} with completed questionnaires (found ${applicants.length})`,
       400,
     );
   }
 
-  // 5. Generate recommendations based on mode
+  // ── Generate recommendations ────────────────────────────────────────────
   const allRecommendations: Array<{
     applicantId: string;
     partnerId: string;
@@ -198,11 +204,10 @@ export async function POST(
     dealbreakers: string[];
   }> = [];
 
-  // Matrix data returned for all_pairs preview
   let matrixData:
     | {
-        men: Array<{ id: string; name: string }>;
-        women: Array<{ id: string; name: string }>;
+        men: Array<{ id: string; name: string; eventsAttended: number }>;
+        women: Array<{ id: string; name: string; eventsAttended: number }>;
         allPairScores: Array<{
           manId: string;
           womanId: string;
@@ -240,10 +245,12 @@ export async function POST(
       men: men.map((m) => ({
         id: m.id,
         name: `${m.user.firstName} ${m.user.lastName}`,
+        eventsAttended: m._count.eventInvitations,
       })),
       women: women.map((w) => ({
         id: w.id,
         name: `${w.user.firstName} ${w.user.lastName}`,
+        eventsAttended: w._count.eventInvitations,
       })),
       allPairScores: allScores,
       truncated,
@@ -251,7 +258,6 @@ export async function POST(
       totalWomen: allWomen.length,
     };
   } else {
-    // Top-N mode: per-applicant recommendations (original behavior)
     for (const applicant of applicants) {
       try {
         const recommendations = await getRecommendations(
@@ -280,10 +286,7 @@ export async function POST(
     }
   }
 
-  // 6. Compute distinct (1:1) matches from all qualifying pairs
   const distinctMatchList = computeDistinctMatches(allRecommendations);
-
-  // 7. Determine which set to create
   const matchSource = distinct ? distinctMatchList : allRecommendations;
 
   let matchesCreated = 0;
@@ -346,11 +349,11 @@ export async function POST(
     }
   }
 
-  // 8. Return summary
   return successResponse({
     event: {
       id: event.id,
       name: event.name,
+      location: event.location,
     },
     mode,
     distinct,

@@ -24,29 +24,40 @@ export async function GET(request: Request) {
   const location = url.searchParams.get("location") ?? undefined;
   const includeDeleted = url.searchParams.get("includeDeleted") === "true";
 
-  // Base where clause for stats (excludes role filter to get global counts)
+  // Reusable search OR array — shared between baseWhere and where so there's
+  // a single source of truth and no duplication.
+  const searchOR = search
+    ? [
+        { email: { contains: search, mode: "insensitive" as const } },
+        { firstName: { contains: search, mode: "insensitive" as const } },
+        { lastName: { contains: search, mode: "insensitive" as const } },
+      ]
+    : null;
+
+  // Location filter: include users whose applicant record matches, OR users
+  // who have no applicant record (admin users) so they are not silently dropped.
+  const locationClause = location
+    ? { OR: [{ applicant: { location } }, { applicant: { is: null } }] }
+    : null;
+
+  // Base where clause for stats (excludes role/location filters to get global counts)
   const baseWhere = {
     ...(includeDeleted ? {} : { deletedAt: null }),
-    ...(search
-      ? {
-          OR: [
-            { email: { contains: search, mode: "insensitive" as const } },
-            { firstName: { contains: search, mode: "insensitive" as const } },
-            { lastName: { contains: search, mode: "insensitive" as const } },
-          ],
-        }
-      : {}),
+    ...(searchOR ? { OR: searchOR } : {}),
   };
 
-  // Where clause for user list (includes role and location filters if provided)
+  // Where clause for user list (includes role and location filters if provided).
+  // Search and location each need OR internally; when both are active they must
+  // be wrapped in AND — spreading two objects with the same OR key would silently
+  // discard the first one (the search filter).
   const where = {
-    ...baseWhere,
+    ...(includeDeleted ? {} : { deletedAt: null }),
     ...(role ? { role: role as never } : {}),
-    // Location filter: include users whose applicant record matches, OR users
-    // who have no applicant record (admin users) so they are not silently dropped.
-    ...(location
-      ? { OR: [{ applicant: { location } }, { applicant: { is: null } }] }
-      : {}),
+    ...(searchOR && locationClause
+      ? { AND: [{ OR: searchOR }, locationClause] }
+      : searchOR
+        ? { OR: searchOR }
+        : locationClause ?? {}),
   };
 
   const [users, total, totalApplicants, totalAdmins] = await Promise.all([

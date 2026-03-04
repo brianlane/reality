@@ -338,6 +338,7 @@ model Event {
   
   venue             String
   venueAddress      String
+  location          String?           // Canonical city from CITIES constant (e.g. "Phoenix, AZ")
   capacity          Int               @default(20)
   
   status            EventStatus       @default(DRAFT)
