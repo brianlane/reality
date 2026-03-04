@@ -1,6 +1,7 @@
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
+  computeDistinctMatches,
   preloadAnswerCache,
   scoreAllPairs,
 } from "@/lib/matching/weighted-compatibility";
@@ -79,6 +80,8 @@ export async function POST(
   const allIds = [...men.map((m) => m.id), ...women.map((w) => w.id)];
   const cache = await preloadAnswerCache(allIds);
 
+  const signal = request.signal;
+
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -111,6 +114,9 @@ export async function POST(
             cache,
             minScore,
             async (scored, total) => {
+              // Stop scoring if the client has disconnected.
+              if (signal.aborted) throw new Error("Client disconnected");
+
               if (scored % 10 === 0 || scored === total) {
                 send("progress", {
                   scored,
@@ -126,23 +132,7 @@ export async function POST(
             },
           );
 
-        // Compute distinct matches — single set covers both roles so the same
-        // person cannot appear in two matches regardless of which side they're on.
-        const sortedRecs = [...allRecommendations].sort(
-          (a, b) => b.score - a.score,
-        );
-        const usedPeople = new Set<string>();
-        const distinctMatches: typeof allRecommendations = [];
-        for (const pair of sortedRecs) {
-          if (
-            !usedPeople.has(pair.applicantId) &&
-            !usedPeople.has(pair.partnerId)
-          ) {
-            distinctMatches.push(pair);
-            usedPeople.add(pair.applicantId);
-            usedPeople.add(pair.partnerId);
-          }
-        }
+        const distinctMatches = computeDistinctMatches(allRecommendations);
 
         send("complete", {
           elapsedMs: Date.now() - startTime,
@@ -172,11 +162,13 @@ export async function POST(
               : 0,
         });
       } catch (error) {
-        console.error("SSE match scoring error:", error);
-        try {
-          send("error", { message: "Scoring failed unexpectedly." });
-        } catch {
-          // controller may already be closed
+        if (!signal.aborted) {
+          console.error("SSE match scoring error:", error);
+          try {
+            send("error", { message: "Scoring failed unexpectedly." });
+          } catch {
+            // controller may already be closed
+          }
         }
       }
 

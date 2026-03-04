@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { getRecommendations } from "@/lib/matching/recommendations";
 import {
+  computeDistinctMatches,
   preloadAnswerCache,
   scoreAllPairs,
 } from "@/lib/matching/weighted-compatibility";
@@ -28,42 +29,6 @@ const generateMatchesSchema = z.object({
     )
     .optional(),
 });
-
-/**
- * Greedy 1:1 assignment: sort all qualifying pairs by score descending,
- * then assign each pair only if neither person is already taken.
- * Produces min(men, women) matches at most.
- */
-function computeDistinctMatches(
-  pairs: Array<{
-    applicantId: string;
-    partnerId: string;
-    score: number;
-    dealbreakers: string[];
-  }>,
-): Array<{
-  applicantId: string;
-  partnerId: string;
-  score: number;
-  dealbreakers: string[];
-}> {
-  const sorted = [...pairs].sort((a, b) => b.score - a.score);
-  // Single set covers both roles: in top_n mode the same person can appear as
-  // applicantId in their own recs and as partnerId in a partner's recs.
-  // Two separate sets would allow the same person to be matched twice.
-  const usedPeople = new Set<string>();
-  const result: typeof pairs = [];
-
-  for (const pair of sorted) {
-    if (!usedPeople.has(pair.applicantId) && !usedPeople.has(pair.partnerId)) {
-      result.push(pair);
-      usedPeople.add(pair.applicantId);
-      usedPeople.add(pair.partnerId);
-    }
-  }
-
-  return result;
-}
 
 type GenerateMatchesRequest = z.infer<typeof generateMatchesSchema>;
 
@@ -119,6 +84,30 @@ export async function POST(
   // 3b. If the caller already has pre-computed pairs (from a preview), skip scoring
   //     and go straight to DB creation. This avoids re-running O(N×M) scoring.
   if (explicitPairs && explicitPairs.length > 0 && createMatches) {
+    // Verify all applicant IDs exist and are still invited to this event.
+    const allPairIds = new Set(
+      explicitPairs.flatMap((p) => [p.applicantId, p.partnerId]),
+    );
+    const validApplicants = await db.applicant.findMany({
+      where: {
+        id: { in: [...allPairIds] },
+        deletedAt: null,
+        eventInvitations: {
+          some: { eventId, status: { notIn: ["DECLINED", "NO_SHOW"] } },
+        },
+      },
+      select: { id: true },
+    });
+    const validIds = new Set(validApplicants.map((a) => a.id));
+    const invalidIds = [...allPairIds].filter((id) => !validIds.has(id));
+    if (invalidIds.length > 0) {
+      return errorResponse(
+        "VALIDATION_ERROR",
+        `${invalidIds.length} applicant ID(s) not found or not invited to this event`,
+        400,
+      );
+    }
+
     const seen = new Set<string>();
     const matchesToCreate: Array<{
       eventId: string;

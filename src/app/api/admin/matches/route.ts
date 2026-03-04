@@ -48,6 +48,8 @@ export async function GET(request: Request) {
     ...(partnerId ? { partnerId } : {}),
     ...(type ? { type: type as never } : {}),
     ...(outcome ? { outcome: outcome as never } : {}),
+    // OR: returns a match if either participant is in the specified city,
+    // since a match spans two people who may be in different cities.
     ...(location
       ? {
           OR: [{ applicant: { location } }, { partner: { location } }],

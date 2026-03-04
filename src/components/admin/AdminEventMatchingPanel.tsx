@@ -135,6 +135,60 @@ function scoreColor(score: number, threshold: number): string {
   return "bg-red-100 text-red-800";
 }
 
+function MatrixTable({
+  men,
+  women,
+  scoreMap,
+  threshold,
+}: {
+  men: CohortPerson[];
+  women: CohortPerson[];
+  scoreMap: Map<string, number>;
+  threshold: number;
+}) {
+  return (
+    <div className="overflow-x-auto rounded-md border">
+      <table className="text-xs">
+        <thead>
+          <tr>
+            <th className="sticky left-0 z-10 bg-stone-100 px-2 py-1.5 text-left font-semibold text-stone-500">
+              Men \ Women
+            </th>
+            {women.map((w) => (
+              <th
+                key={w.id}
+                className="bg-stone-50 px-2 py-1.5 text-center font-medium text-navy whitespace-nowrap"
+              >
+                {abbrev(w.name)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {men.map((m) => (
+            <tr key={m.id}>
+              <td className="sticky left-0 z-10 bg-stone-50 px-2 py-1.5 font-medium text-navy whitespace-nowrap">
+                {abbrev(m.name)}
+              </td>
+              {women.map((w) => {
+                const s = scoreMap.get(`${m.id}:${w.id}`) ?? 0;
+                return (
+                  <td
+                    key={w.id}
+                    className={`px-2 py-1.5 text-center font-semibold tabular-nums ${scoreColor(s, threshold)}`}
+                  >
+                    {s}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function abbrev(fullName: string): string {
   const parts = fullName.trim().split(" ");
   const first = parts[0] ?? "";
@@ -177,6 +231,25 @@ export default function AdminEventMatchingPanel({
   );
 
   const [cohortResult, setCohortResult] = useState<CohortResult | null>(null);
+
+  // O(1) score lookups for matrix rendering — avoids O(N) .find() per cell.
+  const cohortScoreMap = useMemo(
+    () =>
+      new Map(
+        cohortResult?.matrix.map((p) => [`${p.manId}:${p.womanId}`, p.score]),
+      ),
+    [cohortResult],
+  );
+  const previewScoreMap = useMemo(
+    () =>
+      new Map(
+        previewMatrix?.allPairScores.map((p) => [
+          `${p.manId}:${p.womanId}`,
+          p.score,
+        ]),
+      ),
+    [previewMatrix],
+  );
   const [isValidatingCohort, setIsValidatingCohort] = useState(false);
 
   const [scoringProgress, setScoringProgress] = useState<{
@@ -922,48 +995,12 @@ export default function AdminEventMatchingPanel({
 
             {/* Matrix grid */}
             {cohortResult.men.length > 0 && cohortResult.women.length > 0 ? (
-              <div className="overflow-x-auto rounded-md border">
-                <table className="text-xs">
-                  <thead>
-                    <tr>
-                      <th className="sticky left-0 z-10 bg-stone-100 px-2 py-1.5 text-left font-semibold text-stone-500">
-                        Men \ Women
-                      </th>
-                      {cohortResult.women.map((w) => (
-                        <th
-                          key={w.id}
-                          className="bg-stone-50 px-2 py-1.5 text-center font-medium text-navy whitespace-nowrap"
-                        >
-                          {abbrev(w.name)}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {cohortResult.men.map((m) => (
-                      <tr key={m.id}>
-                        <td className="sticky left-0 z-10 bg-stone-50 px-2 py-1.5 font-medium text-navy whitespace-nowrap">
-                          {abbrev(m.name)}
-                        </td>
-                        {cohortResult.women.map((w) => {
-                          const pair = cohortResult.matrix.find(
-                            (p) => p.manId === m.id && p.womanId === w.id,
-                          );
-                          const s = pair?.score ?? 0;
-                          return (
-                            <td
-                              key={w.id}
-                              className={`px-2 py-1.5 text-center font-semibold tabular-nums ${scoreColor(s, cohortResult.minScore)}`}
-                            >
-                              {s}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <MatrixTable
+                men={cohortResult.men}
+                women={cohortResult.women}
+                scoreMap={cohortScoreMap}
+                threshold={cohortResult.minScore}
+              />
             ) : null}
 
             {/* Failing pairs */}
@@ -1164,50 +1201,12 @@ export default function AdminEventMatchingPanel({
             {previewMatrix &&
             previewMatrix.men.length > 0 &&
             previewMatrix.women.length > 0 ? (
-              <div className="space-y-3">
-                <div className="overflow-x-auto rounded-md border">
-                  <table className="text-xs">
-                    <thead>
-                      <tr>
-                        <th className="sticky left-0 z-10 bg-stone-100 px-2 py-1.5 text-left font-semibold text-stone-500">
-                          Men \ Women
-                        </th>
-                        {previewMatrix.women.map((w) => (
-                          <th
-                            key={w.id}
-                            className="bg-stone-50 px-2 py-1.5 text-center font-medium text-navy whitespace-nowrap"
-                          >
-                            {abbrev(w.name)}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {previewMatrix.men.map((m) => (
-                        <tr key={m.id}>
-                          <td className="sticky left-0 z-10 bg-stone-50 px-2 py-1.5 font-medium text-navy whitespace-nowrap">
-                            {abbrev(m.name)}
-                          </td>
-                          {previewMatrix.women.map((w) => {
-                            const pair = previewMatrix.allPairScores.find(
-                              (p) => p.manId === m.id && p.womanId === w.id,
-                            );
-                            const s = pair?.score ?? 0;
-                            return (
-                              <td
-                                key={w.id}
-                                className={`px-2 py-1.5 text-center font-semibold tabular-nums ${scoreColor(s, minScore)}`}
-                              >
-                                {s}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <MatrixTable
+                men={previewMatrix.men}
+                women={previewMatrix.women}
+                scoreMap={previewScoreMap}
+                threshold={minScore}
+              />
             ) : null}
 
             {/* Flat list for top_n mode (or fallback) */}

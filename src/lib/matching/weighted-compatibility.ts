@@ -4,6 +4,7 @@ import {
   QuestionnaireQuestionType,
 } from "@prisma/client";
 import {
+  CrossPairIndex,
   CROSS_APPLICANT_PAIRS,
   buildCrossPairIndex,
 } from "./cross-pair-scoring";
@@ -67,6 +68,8 @@ export async function calculateWeightedCompatibility(
 export interface AnswerCache {
   questions: QuestionnaireQuestion[];
   answersByApplicant: Map<string, Map<string, unknown>>;
+  /** Cross-pair index built once on load — passed into scorePairFromCache to avoid rebuilding per pair. */
+  crossPairIndex: CrossPairIndex;
 }
 
 /**
@@ -102,7 +105,11 @@ export async function preloadAnswerCache(
     map.set(a.questionId, a.value);
   }
 
-  return { questions, answersByApplicant };
+  return {
+    questions,
+    answersByApplicant,
+    crossPairIndex: buildCrossPairIndex(questions),
+  };
 }
 
 /**
@@ -128,6 +135,7 @@ export function scorePairFromCache(
   questions: QuestionnaireQuestion[],
   answersA: Map<string, unknown>,
   answersB: Map<string, unknown>,
+  prebuiltCrossPairIndex?: CrossPairIndex,
 ): ScoringResult {
   const dealbreakersViolated: string[] = [];
   const breakdown: QuestionBreakdown[] = [];
@@ -135,7 +143,9 @@ export function scorePairFromCache(
   let totalWeight = 0;
 
   // ── Mode 1: Cross-applicant pairs ──────────────────────────────────────
+  // Use pre-built index when available (batch path) to avoid rebuilding per pair.
   const { resolved: crossPairs, coveredIds: crossPairIds } =
+    prebuiltCrossPairIndex ??
     buildCrossPairIndex(questions, CROSS_APPLICANT_PAIRS);
 
   for (const pair of crossPairs) {
@@ -192,8 +202,8 @@ export function scorePairFromCache(
     const impId = question.importanceModifierForId;
     const valA = answersA.get(impId);
     const valB = answersB.get(impId);
-    const numA = valA !== undefined ? Number(valA) : 4;
-    const numB = valB !== undefined ? Number(valB) : 4;
+    const numA = valA !== undefined ? Number(valA) : 7;
+    const numB = valB !== undefined ? Number(valB) : 7;
     importanceFactors.set(question.id, (numA + numB) / 2 / 7);
   }
 
@@ -292,25 +302,24 @@ export async function scoreAllPairs(
           cache.questions,
           manAnswers,
           womanAnswers,
+          cache.crossPairIndex,
         );
-
-        const adjustedScore = result.score;
 
         allScores.push({
           manId: man.id,
           womanId: woman.id,
-          score: adjustedScore,
+          score: result.score,
           dealbreakersViolated: result.dealbreakersViolated,
         });
 
         if (
-          adjustedScore >= minScore &&
+          result.score >= minScore &&
           result.dealbreakersViolated.length === 0
         ) {
           recommendations.push({
             applicantId: man.id,
             partnerId: woman.id,
-            score: adjustedScore,
+            score: result.score,
             dealbreakers: result.dealbreakersViolated,
           });
         }
@@ -325,11 +334,35 @@ export async function scoreAllPairs(
       }
 
       scored++;
-      await onProgress?.(scored, total);
+      if (onProgress) await onProgress(scored, total);
     }
   }
 
   return { allScores, recommendations };
+}
+
+/**
+ * Greedy 1:1 assignment: sort all qualifying pairs by score descending,
+ * then assign each pair only if neither person is already taken.
+ * A single Set covers both roles so the same person cannot appear twice
+ * regardless of which side they're on.
+ */
+export function computeDistinctMatches<
+  T extends { applicantId: string; partnerId: string; score: number },
+>(pairs: T[]): T[] {
+  const sorted = [...pairs].sort((a, b) => b.score - a.score);
+  const usedPeople = new Set<string>();
+  const result: T[] = [];
+
+  for (const pair of sorted) {
+    if (!usedPeople.has(pair.applicantId) && !usedPeople.has(pair.partnerId)) {
+      result.push(pair);
+      usedPeople.add(pair.applicantId);
+      usedPeople.add(pair.partnerId);
+    }
+  }
+
+  return result;
 }
 
 /**

@@ -25,21 +25,27 @@ async function main() {
 
   console.log(`Found ${testApplicants.length} test applicants to update\n`);
 
-  const counts: Record<string, number> = {};
-  for (const city of CITIES) counts[city] = 0;
+  // Group applicants by their assigned city (round-robin)
+  const cityGroups = new Map<string, string[]>();
+  for (const city of CITIES) cityGroups.set(city, []);
 
   for (let i = 0; i < testApplicants.length; i++) {
     const city = CITIES[i % CITIES.length]!;
-    await db.applicant.update({
-      where: { id: testApplicants[i]!.id },
+    cityGroups.get(city)!.push(testApplicants[i]!.id);
+  }
+
+  // Batch update per city — 12 queries instead of N individual updates
+  for (const [city, ids] of cityGroups) {
+    if (ids.length === 0) continue;
+    await db.applicant.updateMany({
+      where: { id: { in: ids } },
       data: { location: city },
     });
-    counts[city]!++;
   }
 
   console.log("Location distribution:");
-  for (const [city, count] of Object.entries(counts)) {
-    console.log(`  ${city.padEnd(22)} ${count}`);
+  for (const [city, ids] of cityGroups) {
+    console.log(`  ${city.padEnd(22)} ${ids.length}`);
   }
 
   console.log(`\nUpdated ${testApplicants.length} applicants.`);

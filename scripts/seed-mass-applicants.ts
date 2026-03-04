@@ -22,9 +22,15 @@ import type {
   QuestionnaireQuestion,
 } from "@prisma/client";
 
-const FEBRUARY_EVENT_ID =
-  process.argv.find((a) => a.startsWith("--event="))?.split("=")[1] ??
-  "cmlqropt800376v54xz2k7ovu";
+const eventArg = process.argv
+  .find((a) => a.startsWith("--event="))
+  ?.split("=")[1];
+if (!eventArg) {
+  console.warn(
+    "⚠  No --event= argument provided; falling back to hardcoded event ID.",
+  );
+}
+const FEBRUARY_EVENT_ID = eventArg ?? "cmlqropt800376v54xz2k7ovu";
 
 const TARGET_MEN = 500;
 const TARGET_WOMEN = 500;
@@ -256,7 +262,7 @@ const LAST_NAMES = [
   "Kim",
 ];
 
-const PRIMARY_CITY = CITIES[4]; // "Phoenix, AZ" — cohort members go here
+const PRIMARY_CITY = "Phoenix, AZ"; // cohort members go here
 
 const EDUCATION = [
   "High School Diploma",

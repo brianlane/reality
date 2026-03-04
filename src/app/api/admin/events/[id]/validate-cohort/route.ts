@@ -9,7 +9,7 @@ import { ApplicationStatus, ScreeningStatus } from "@prisma/client";
 import { z } from "zod";
 
 const validateCohortSchema = z.object({
-  minScore: z.number().min(0).max(100).optional().default(65),
+  minScore: z.number().min(0).max(100).optional().default(60),
   location: z.string().optional(),
 });
 

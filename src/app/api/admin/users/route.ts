@@ -42,7 +42,11 @@ export async function GET(request: Request) {
   const where = {
     ...baseWhere,
     ...(role ? { role: role as never } : {}),
-    ...(location ? { applicant: { location } } : {}),
+    // Location filter: include users whose applicant record matches, OR users
+    // who have no applicant record (admin users) so they are not silently dropped.
+    ...(location
+      ? { OR: [{ applicant: { location } }, { applicant: { is: null } }] }
+      : {}),
   };
 
   const [users, total, totalApplicants, totalAdmins] = await Promise.all([
