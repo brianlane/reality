@@ -352,6 +352,7 @@ export const adminQuestionnaireQuestionUpdateSchema = z
     isActive: z.boolean().optional(),
     mlWeight: z.number().min(0).max(1).optional(),
     isDealbreaker: z.boolean().optional(),
+    importanceModifierForId: z.string().nullable().optional(),
   })
   .superRefine(validateQuestionnaireQuestionOptions);
 

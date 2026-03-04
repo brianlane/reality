@@ -16,6 +16,7 @@
 
 import "dotenv/config";
 import { db } from "../src/lib/db";
+import { CITIES } from "../src/lib/locations";
 import type {
   QuestionnaireQuestionType,
   QuestionnaireQuestion,
@@ -255,16 +256,7 @@ const LAST_NAMES = [
   "Kim",
 ];
 
-const LOCATIONS = [
-  "Phoenix",
-  "Scottsdale",
-  "Tempe",
-  "Mesa",
-  "Chandler",
-  "Gilbert",
-  "Glendale",
-  "Peoria",
-];
+const PRIMARY_CITY = CITIES[4]; // "Phoenix, AZ" — cohort members go here
 
 const EDUCATION = [
   "High School Diploma",
@@ -421,15 +413,31 @@ function generateAnswer(
   personAge: number,
 ): unknown {
   if (question.mlWeight === 0) return null;
-  if (
-    question.type === "TEXT" ||
-    question.type === "TEXTAREA" ||
-    question.type === "RICH_TEXT"
-  ) {
+  if (question.type === "TEXTAREA" || question.type === "RICH_TEXT") {
     return null;
   }
 
   const prompt = question.prompt.toLowerCase();
+
+  if (question.type === "TEXT") {
+    if (prompt.includes("willing to spend") && prompt.includes("date")) {
+      return profile.noNoise ? "75" : String(Math.round(20 + profile.bias * 180));
+    }
+    if (
+      prompt.includes("expecting") &&
+      prompt.includes("spend") &&
+      prompt.includes("date")
+    ) {
+      return profile.noNoise ? "60" : String(Math.round(15 + profile.bias * 135));
+    }
+    if (prompt.includes("hours per week") && prompt.includes("professional")) {
+      return profile.noNoise ? "40" : String(Math.round(10 + profile.bias * 60));
+    }
+    if (prompt.includes("screen time")) {
+      return profile.noNoise ? "4" : String(Math.round(1 + profile.bias * 10));
+    }
+    return null;
+  }
 
   if (question.type === "AGE_RANGE" || prompt.includes("age range")) {
     return { min: Math.max(18, personAge - 6), max: personAge + 8 };
@@ -444,7 +452,17 @@ function generateAnswer(
     const optArr = Array.isArray(opts)
       ? opts
       : ((opts as { options?: string[] } | null)?.options ?? []);
-    if (optArr.length > 0) return pickClosest(optArr, profile.wantsKids);
+    if (optArr.length === 0) return null;
+    if (prompt.includes("would you date")) {
+      const wouldDate =
+        profile.wantsKids === "Yes"
+          ? "Yes"
+          : profile.wantsKids === "No"
+            ? "No"
+            : "It depends";
+      return pickClosest(optArr, wouldDate);
+    }
+    return pickClosest(optArr, profile.wantsKids);
   }
 
   if (prompt.includes("how open are you to relocat")) {
@@ -600,7 +618,9 @@ async function main() {
         age,
         gender,
         seeking,
-        location: `${pick(LOCATIONS)}, AZ`,
+        location: isInvitedCohort
+          ? PRIMARY_CITY
+          : CITIES[Math.floor(rng() * CITIES.length)]!,
         occupation: "Test Occupation",
         education: pick(EDUCATION),
         incomeRange: pick(INCOME),

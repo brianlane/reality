@@ -15,6 +15,7 @@
 
 import "dotenv/config";
 import { db } from "../src/lib/db";
+import { CITIES } from "../src/lib/locations";
 import type {
   QuestionnaireQuestionType,
   QuestionnaireQuestion,
@@ -41,6 +42,12 @@ interface Profile {
   defaultBias: number; // 0-1
   education: string;
   incomeRange: string;
+  hasPets: boolean;
+  petComfort: string;
+  musicGenre: string;
+  movieGenre: string;
+  bookGenre: string;
+  activityType: string;
 }
 
 const PROFILES: Record<string, Profile> = {
@@ -55,6 +62,12 @@ const PROFILES: Record<string, Profile> = {
     defaultBias: 0.7,
     education: "Bachelor's Degree",
     incomeRange: "$75,000–$99,999",
+    hasPets: true,
+    petComfort: "Very comfortable - I love pets",
+    musicGenre: "Country",
+    movieGenre: "Romance",
+    bookGenre: "Historical Fiction",
+    activityType: "Cooking & Food",
   },
   career: {
     name: "Career Professional",
@@ -67,6 +80,12 @@ const PROFILES: Record<string, Profile> = {
     defaultBias: 0.4,
     education: "Master's Degree",
     incomeRange: "$100,000–$149,999",
+    hasPets: false,
+    petComfort: "Neutral",
+    musicGenre: "R&B/Soul",
+    movieGenre: "Action/Thriller",
+    bookGenre: "Business/Finance",
+    activityType: "Fitness/Sports",
   },
   adventurer: {
     name: "Social Adventurer",
@@ -79,6 +98,12 @@ const PROFILES: Record<string, Profile> = {
     defaultBias: 0.5,
     education: "Bachelor's Degree",
     incomeRange: "$75,000–$99,999",
+    hasPets: true,
+    petComfort: "Very comfortable - I love pets",
+    musicGenre: "Hip-Hop/Rap",
+    movieGenre: "Comedy",
+    bookGenre: "Science Fiction/Fantasy",
+    activityType: "Outdoor/Adventure",
   },
   homebody: {
     name: "Homebody Nester",
@@ -91,6 +116,12 @@ const PROFILES: Record<string, Profile> = {
     defaultBias: 0.75,
     education: "Bachelor's Degree",
     incomeRange: "$75,000–$99,999",
+    hasPets: true,
+    petComfort: "Very comfortable - I love pets",
+    musicGenre: "Country",
+    movieGenre: "Drama",
+    bookGenre: "Romance",
+    activityType: "Cooking & Food",
   },
   spiritual: {
     name: "Spiritual Mindful",
@@ -103,6 +134,12 @@ const PROFILES: Record<string, Profile> = {
     defaultBias: 0.5,
     education: "Bachelor's Degree",
     incomeRange: "$75,000–$99,999",
+    hasPets: false,
+    petComfort: "Comfortable - I'm open to pets",
+    musicGenre: "Classical",
+    movieGenre: "Documentary",
+    bookGenre: "Self-Help/Psychology",
+    activityType: "Wellness & Mindfulness",
   },
   intellectual: {
     name: "Independent Intellectual",
@@ -115,6 +152,12 @@ const PROFILES: Record<string, Profile> = {
     defaultBias: 0.3,
     education: "Master's Degree",
     incomeRange: "$100,000–$149,999",
+    hasPets: false,
+    petComfort: "Uncomfortable - I'd prefer no pets",
+    musicGenre: "Jazz",
+    movieGenre: "Documentary",
+    bookGenre: "Narrative Nonfiction",
+    activityType: "Reading & Learning",
   },
 };
 
@@ -134,12 +177,12 @@ interface PersonaSpec {
 
 const PERSONAS: PersonaSpec[] = [
   // ── Men ────────────────────────────────────────────────────────────────
-  // Traditional Family
+  // Traditional Family — concentrated in Phoenix for event testing
   {
     firstName: "James",
     lastName: "Caldwell",
     age: 32,
-    location: "Phoenix",
+    location: CITIES[4], // Phoenix, AZ
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "traditional",
@@ -148,7 +191,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Robert",
     lastName: "Harmon",
     age: 36,
-    location: "Scottsdale",
+    location: CITIES[4], // Phoenix, AZ
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "traditional",
@@ -157,7 +200,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Tyler",
     lastName: "Merritt",
     age: 29,
-    location: "Gilbert",
+    location: CITIES[4], // Phoenix, AZ
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "traditional",
@@ -166,7 +209,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Brian",
     lastName: "Stafford",
     age: 41,
-    location: "Mesa",
+    location: CITIES[4], // Phoenix, AZ
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "traditional",
@@ -176,7 +219,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Nathan",
     lastName: "Wells",
     age: 34,
-    location: "Scottsdale",
+    location: CITIES[4], // Phoenix, AZ
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "career",
@@ -185,7 +228,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Kevin",
     lastName: "Marsh",
     age: 28,
-    location: "Tempe",
+    location: CITIES[4], // Phoenix, AZ
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "career",
@@ -194,7 +237,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Derek",
     lastName: "Hollis",
     age: 38,
-    location: "Phoenix",
+    location: CITIES[4], // Phoenix, AZ
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "career",
@@ -203,7 +246,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Austin",
     lastName: "Fleming",
     age: 31,
-    location: "Chandler",
+    location: CITIES[4], // Phoenix, AZ
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "career",
@@ -213,7 +256,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Marcus",
     lastName: "Cole",
     age: 30,
-    location: "Tempe",
+    location: CITIES[4], // Phoenix, AZ
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "adventurer",
@@ -222,7 +265,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Jordan",
     lastName: "Reyes",
     age: 33,
-    location: "Phoenix",
+    location: CITIES[4], // Phoenix, AZ
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "adventurer",
@@ -231,7 +274,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Ethan",
     lastName: "Shea",
     age: 27,
-    location: "Scottsdale",
+    location: CITIES[9], // Las Vegas, NV
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "adventurer",
@@ -240,7 +283,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Caleb",
     lastName: "Ross",
     age: 35,
-    location: "Peoria",
+    location: CITIES[9], // Las Vegas, NV
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "adventurer",
@@ -250,7 +293,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Scott",
     lastName: "Raines",
     age: 37,
-    location: "Chandler",
+    location: CITIES[4], // Phoenix, AZ
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "homebody",
@@ -259,7 +302,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Greg",
     lastName: "Payne",
     age: 40,
-    location: "Gilbert",
+    location: CITIES[4], // Phoenix, AZ
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "homebody",
@@ -268,7 +311,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Ryan",
     lastName: "Brooks",
     age: 29,
-    location: "Mesa",
+    location: CITIES[3], // Dallas, TX
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "homebody",
@@ -277,7 +320,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Paul",
     lastName: "Garrett",
     age: 44,
-    location: "Glendale",
+    location: CITIES[3], // Dallas, TX
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "homebody",
@@ -287,7 +330,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Alex",
     lastName: "Rivera",
     age: 32,
-    location: "Phoenix",
+    location: CITIES[4], // Phoenix, AZ
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "spiritual",
@@ -296,7 +339,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Daniel",
     lastName: "Chen",
     age: 36,
-    location: "Scottsdale",
+    location: CITIES[4], // Phoenix, AZ
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "spiritual",
@@ -305,7 +348,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Ian",
     lastName: "Walsh",
     age: 28,
-    location: "Tempe",
+    location: CITIES[1], // Los Angeles, CA
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "spiritual",
@@ -314,7 +357,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Chris",
     lastName: "Navarro",
     age: 39,
-    location: "Chandler",
+    location: CITIES[1], // Los Angeles, CA
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "spiritual",
@@ -324,7 +367,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Ben",
     lastName: "Thornton",
     age: 31,
-    location: "Phoenix",
+    location: CITIES[4], // Phoenix, AZ
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "intellectual",
@@ -333,7 +376,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Sam",
     lastName: "Kowalski",
     age: 35,
-    location: "Tempe",
+    location: CITIES[4], // Phoenix, AZ
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "intellectual",
@@ -342,7 +385,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Luke",
     lastName: "Donovan",
     age: 42,
-    location: "Scottsdale",
+    location: CITIES[0], // New York City, NY
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "intellectual",
@@ -351,18 +394,18 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Noah",
     lastName: "Kramer",
     age: 27,
-    location: "Mesa",
+    location: CITIES[0], // New York City, NY
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "intellectual",
   },
   // ── Women ──────────────────────────────────────────────────────────────
-  // Traditional Family
+  // Traditional Family — concentrated in Phoenix for event testing
   {
     firstName: "Rachel",
     lastName: "Holt",
     age: 29,
-    location: "Phoenix",
+    location: CITIES[4], // Phoenix, AZ
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "traditional",
@@ -371,7 +414,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Maria",
     lastName: "Estrada",
     age: 34,
-    location: "Gilbert",
+    location: CITIES[4], // Phoenix, AZ
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "traditional",
@@ -380,7 +423,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Claire",
     lastName: "Sutton",
     age: 31,
-    location: "Mesa",
+    location: CITIES[4], // Phoenix, AZ
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "traditional",
@@ -389,7 +432,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Diane",
     lastName: "Foster",
     age: 38,
-    location: "Scottsdale",
+    location: CITIES[4], // Phoenix, AZ
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "traditional",
@@ -399,7 +442,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Megan",
     lastName: "Blake",
     age: 28,
-    location: "Scottsdale",
+    location: CITIES[4], // Phoenix, AZ
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "career",
@@ -408,7 +451,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Taylor",
     lastName: "Jennings",
     age: 33,
-    location: "Tempe",
+    location: CITIES[4], // Phoenix, AZ
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "career",
@@ -417,7 +460,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Lauren",
     lastName: "Cross",
     age: 36,
-    location: "Phoenix",
+    location: CITIES[4], // Phoenix, AZ
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "career",
@@ -426,7 +469,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Priya",
     lastName: "Shah",
     age: 30,
-    location: "Chandler",
+    location: CITIES[4], // Phoenix, AZ
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "career",
@@ -436,7 +479,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Vanessa",
     lastName: "Park",
     age: 27,
-    location: "Tempe",
+    location: CITIES[4], // Phoenix, AZ
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "adventurer",
@@ -445,7 +488,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Kayla",
     lastName: "Rhodes",
     age: 31,
-    location: "Phoenix",
+    location: CITIES[4], // Phoenix, AZ
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "adventurer",
@@ -454,7 +497,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Nicole",
     lastName: "Rivera",
     age: 29,
-    location: "Scottsdale",
+    location: CITIES[9], // Las Vegas, NV
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "adventurer",
@@ -463,7 +506,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Jenna",
     lastName: "Owens",
     age: 35,
-    location: "Peoria",
+    location: CITIES[9], // Las Vegas, NV
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "adventurer",
@@ -473,7 +516,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Amanda",
     lastName: "Hicks",
     age: 30,
-    location: "Chandler",
+    location: CITIES[4], // Phoenix, AZ
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "homebody",
@@ -482,7 +525,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Beth",
     lastName: "Lawson",
     age: 38,
-    location: "Gilbert",
+    location: CITIES[4], // Phoenix, AZ
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "homebody",
@@ -491,7 +534,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Sandra",
     lastName: "Ruiz",
     age: 26,
-    location: "Mesa",
+    location: CITIES[3], // Dallas, TX
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "homebody",
@@ -500,7 +543,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Diane",
     lastName: "Coleman",
     age: 42,
-    location: "Glendale",
+    location: CITIES[3], // Dallas, TX
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "homebody",
@@ -510,7 +553,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Sophia",
     lastName: "Wells",
     age: 29,
-    location: "Phoenix",
+    location: CITIES[4], // Phoenix, AZ
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "spiritual",
@@ -519,7 +562,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Lily",
     lastName: "Torres",
     age: 33,
-    location: "Scottsdale",
+    location: CITIES[4], // Phoenix, AZ
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "spiritual",
@@ -528,7 +571,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Grace",
     lastName: "Kim",
     age: 31,
-    location: "Tempe",
+    location: CITIES[1], // Los Angeles, CA
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "spiritual",
@@ -537,7 +580,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Maya",
     lastName: "Patel",
     age: 36,
-    location: "Chandler",
+    location: CITIES[1], // Los Angeles, CA
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "spiritual",
@@ -547,7 +590,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Zoe",
     lastName: "Fitch",
     age: 28,
-    location: "Phoenix",
+    location: CITIES[4], // Phoenix, AZ
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "intellectual",
@@ -556,7 +599,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Caitlin",
     lastName: "Moore",
     age: 32,
-    location: "Tempe",
+    location: CITIES[4], // Phoenix, AZ
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "intellectual",
@@ -565,7 +608,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Abby",
     lastName: "Larson",
     age: 39,
-    location: "Scottsdale",
+    location: CITIES[0], // New York City, NY
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "intellectual",
@@ -574,7 +617,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Hazel",
     lastName: "Dunn",
     age: 26,
-    location: "Mesa",
+    location: CITIES[0], // New York City, NY
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "intellectual",
@@ -702,23 +745,46 @@ function generateAnswer(
   profile: Profile,
   personAge: number,
 ): unknown {
-  // Skip TEXT/TEXTAREA questions (mlWeight === 0 means no scoring value)
   if (question.mlWeight === 0) return null;
-
-  // Also skip TEXT/TEXTAREA/RICH_TEXT types outright
-  if (
-    question.type === "TEXT" ||
-    question.type === "TEXTAREA" ||
-    question.type === "RICH_TEXT"
-  ) {
+  if (question.type === "TEXTAREA" || question.type === "RICH_TEXT") {
     return null;
   }
 
   const prompt = question.prompt.toLowerCase();
 
+  // TEXT questions with mlWeight > 0 are scored numerically (proximity or cross-pair)
+  if (question.type === "TEXT") {
+    const spendingBias =
+      profile.spending === "Saver" ? 0.2 : profile.spending === "Balanced" ? 0.5 : 0.8;
+    if (prompt.includes("willing to spend") && prompt.includes("date")) {
+      return String(Math.round(20 + spendingBias * 180));
+    }
+    if (prompt.includes("expecting") && prompt.includes("spend") && prompt.includes("date")) {
+      return String(Math.round(20 + spendingBias * 130));
+    }
+    if (prompt.includes("hours per week") && prompt.includes("professional")) {
+      const workBias = profile.defaultBias;
+      return String(Math.round(25 + workBias * 35));
+    }
+    if (prompt.includes("screen time")) {
+      return String(Math.round(2 + profile.defaultBias * 6));
+    }
+    return null;
+  }
+
   // Age range question
   if (question.type === "AGE_RANGE" || prompt.includes("age range")) {
     return { min: Math.max(18, personAge - 6), max: personAge + 8 };
+  }
+
+  // Pets status
+  if (prompt === "do you have pets?") {
+    return profile.hasPets ? "Yes" : "No";
+  }
+
+  // Pet comfort (partner having pets)
+  if (prompt.includes("feel about a partner having pets")) {
+    return profile.petComfort;
   }
 
   // Kids / children
@@ -731,7 +797,18 @@ function generateAnswer(
     const optArr = Array.isArray(opts)
       ? opts
       : ((opts as { options?: string[] } | null)?.options ?? []);
-    if (optArr.length > 0) return pickClosest(optArr, profile.wantsKids);
+    if (optArr.length === 0) return null;
+    // "Would you date someone with children?" has an "It depends" option
+    if (prompt.includes("would you date")) {
+      const wouldDate =
+        profile.wantsKids === "Yes"
+          ? "Yes"
+          : profile.wantsKids === "No"
+            ? "No"
+            : "It depends";
+      return pickClosest(optArr, wouldDate);
+    }
+    return pickClosest(optArr, profile.wantsKids);
   }
 
   // Relocation openness — RADIO_7 numeric scale ("1"–"7", not text labels).
@@ -747,6 +824,20 @@ function generateAnswer(
           ? 0.5
           : 1.0; // "Very open"
     return biasedPick(question, relocBias);
+  }
+
+  // Genre preferences (Section C dropdowns)
+  if (prompt.includes("favorite genre of music")) {
+    return profile.musicGenre;
+  }
+  if (prompt.includes("favorite movie") || prompt.includes("favorite tv")) {
+    return profile.movieGenre;
+  }
+  if (prompt.includes("favorite book genre")) {
+    return profile.bookGenre;
+  }
+  if (prompt.includes("favorite type of activity")) {
+    return profile.activityType;
   }
 
   // Smoking / nicotine / vaping
@@ -883,7 +974,7 @@ async function main() {
         age: persona.age,
         gender: persona.gender,
         seeking: persona.seeking,
-        location: `${persona.location}, AZ`,
+        location: persona.location,
         occupation: profile.name,
         education: profile.education,
         incomeRange: profile.incomeRange,

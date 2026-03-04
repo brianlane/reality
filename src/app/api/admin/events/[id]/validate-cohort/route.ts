@@ -77,13 +77,11 @@ export async function POST(
   const men = menApplicants.map((a) => ({
     id: a.id,
     name: `${a.user.firstName} ${a.user.lastName}`,
-    location: a.location,
   }));
 
   const women = womenApplicants.map((a) => ({
     id: a.id,
     name: `${a.user.firstName} ${a.user.lastName}`,
-    location: a.location,
   }));
 
   if (men.length === 0 || women.length === 0) {
@@ -100,7 +98,7 @@ export async function POST(
 
   const { allScores } = await scoreAllPairs(men, women, cache, minScore);
 
-  // Attach names from the men/women arrays (scoreAllPairs only needs id + location)
+  // Attach names from the men/women arrays
   const nameById = new Map<string, string>(
     [...men, ...women].map((p) => [p.id, p.name]),
   );

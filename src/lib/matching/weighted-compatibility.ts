@@ -3,12 +3,17 @@ import {
   QuestionnaireQuestion,
   QuestionnaireQuestionType,
 } from "@prisma/client";
+import {
+  CROSS_APPLICANT_PAIRS,
+  buildCrossPairIndex,
+} from "./cross-pair-scoring";
 
 export interface QuestionBreakdown {
   questionId: string;
   prompt: string;
   similarity: number;
   weight: number;
+  effectiveWeight: number; // weight after importance modulation (may equal weight)
   weightedScore: number;
 }
 
@@ -102,6 +107,22 @@ export async function preloadAnswerCache(
 
 /**
  * Pure in-memory scoring using pre-loaded data. No DB calls.
+ *
+ * Three scoring modes are applied in order:
+ *
+ * 1. **Cross-applicant pairs** (pets, children): Questions where the meaningful
+ *    check is Person A's status ("do you have pets?") against Person B's
+ *    preference ("are you ok with partner's pets?"), and vice versa.
+ *    These are resolved by prompt substring and handled separately; both
+ *    questions are excluded from the main loop.
+ *
+ * 2. **Importance-modulated questions** (`importanceModifierForId` set): The
+ *    question's effective weight is scaled by the average of both applicants'
+ *    importance ratings (RADIO_7 1–7 → factor 0.14–1.0). Importance questions
+ *    themselves are still scored normally.
+ *
+ * 3. **Regular questions**: Scored by comparing both applicants' answers with
+ *    their configured `mlWeight`.
  */
 export function scorePairFromCache(
   questions: QuestionnaireQuestion[],
@@ -113,7 +134,74 @@ export function scorePairFromCache(
   let totalWeightedScore = 0;
   let totalWeight = 0;
 
+  // ── Mode 1: Cross-applicant pairs ──────────────────────────────────────
+  const { resolved: crossPairs, coveredIds: crossPairIds } =
+    buildCrossPairIndex(questions, CROSS_APPLICANT_PAIRS);
+
+  for (const pair of crossPairs) {
+    const statusA = answersA.get(pair.statusQuestionId);
+    const statusB = answersB.get(pair.statusQuestionId);
+    const prefA = answersA.get(pair.preferenceQuestionId);
+    const prefB = answersB.get(pair.preferenceQuestionId);
+
+    // Skip if we cannot compute at least one complete direction
+    const canScoreAtoB = statusA !== undefined && prefB !== undefined;
+    const canScoreBtoA = statusB !== undefined && prefA !== undefined;
+    if (!canScoreAtoB && !canScoreBtoA) continue;
+
+    const scoreAtoB = canScoreAtoB
+      ? pair.config.scoreOneSide(statusA, prefB)
+      : 0.5;
+    const scoreBtoA = canScoreBtoA
+      ? pair.config.scoreOneSide(statusB, prefA)
+      : 0.5;
+
+    const crossScore = (scoreAtoB + scoreBtoA) / 2;
+
+    // Each question contributes with its own weight; combined weight replaces
+    // what the two questions would have contributed independently.
+    const sw = pair.statusWeight;
+    const pw = pair.preferenceWeight;
+
+    totalWeightedScore += crossScore * (sw + pw);
+    totalWeight += sw + pw;
+
+    breakdown.push({
+      questionId: pair.statusQuestionId,
+      prompt: `[Cross-pair: ${pair.config.name}] ${questions.find((q) => q.id === pair.statusQuestionId)?.prompt ?? pair.statusQuestionId}`,
+      similarity: crossScore,
+      weight: sw,
+      effectiveWeight: sw,
+      weightedScore: crossScore * sw,
+    });
+    breakdown.push({
+      questionId: pair.preferenceQuestionId,
+      prompt: `[Cross-pair: ${pair.config.name}] ${questions.find((q) => q.id === pair.preferenceQuestionId)?.prompt ?? pair.preferenceQuestionId}`,
+      similarity: crossScore,
+      weight: pw,
+      effectiveWeight: pw,
+      weightedScore: crossScore * pw,
+    });
+  }
+
+  // ── Mode 2 pre-pass: Importance factors ────────────────────────────────
+  // targetQuestionId → 0–1 multiplier based on average importance rating.
+  const importanceFactors = new Map<string, number>();
   for (const question of questions) {
+    if (!question.importanceModifierForId) continue;
+    const impId = question.importanceModifierForId;
+    const valA = answersA.get(impId);
+    const valB = answersB.get(impId);
+    const numA = valA !== undefined ? Number(valA) : 4;
+    const numB = valB !== undefined ? Number(valB) : 4;
+    importanceFactors.set(question.id, (numA + numB) / 2 / 7);
+  }
+
+  // ── Modes 2 + 3: Regular + importance-modulated questions ──────────────
+  for (const question of questions) {
+    // Skip questions handled by cross-pair scoring above
+    if (crossPairIds.has(question.id)) continue;
+
     const valA = answersA.get(question.id);
     const valB = answersB.get(question.id);
 
@@ -125,15 +213,18 @@ export function scorePairFromCache(
       dealbreakersViolated.push(question.id);
     }
 
-    const weightedScore = similarity * question.mlWeight;
+    const importanceFactor = importanceFactors.get(question.id) ?? 1.0;
+    const effectiveWeight = question.mlWeight * importanceFactor;
+    const weightedScore = similarity * effectiveWeight;
     totalWeightedScore += weightedScore;
-    totalWeight += question.mlWeight;
+    totalWeight += effectiveWeight;
 
     breakdown.push({
       questionId: question.id,
       prompt: question.prompt,
       similarity,
       weight: question.mlWeight,
+      effectiveWeight,
       weightedScore,
     });
   }
@@ -152,12 +243,6 @@ export function scorePairFromCache(
     breakdown,
   };
 }
-
-// Re-export shared location scoring
-export { locationSimilarity } from "@/lib/locations";
-import { locationSimilarity } from "@/lib/locations";
-
-export const LOCATION_WEIGHT = 0.1;
 
 export interface PairScore {
   manId: string;
@@ -178,8 +263,6 @@ export interface ScoredPairsResult {
 
 /**
  * Score every man×woman pair using a pre-loaded cache. No DB calls.
- * Applies a location proximity bonus (LOCATION_WEIGHT) when both locations are known
- * and no dealbreakers are violated.
  *
  * @param onProgress - optional async callback invoked after each pair is scored.
  *   For SSE streaming routes, yield the event loop here (e.g. via setImmediate) so
@@ -188,8 +271,8 @@ export interface ScoredPairsResult {
  *   receives everything in one batch at the end.
  */
 export async function scoreAllPairs(
-  men: Array<{ id: string; location: string | null }>,
-  women: Array<{ id: string; location: string | null }>,
+  men: Array<{ id: string }>,
+  women: Array<{ id: string }>,
   cache: AnswerCache,
   minScore: number,
   onProgress?: (scored: number, total: number) => void | Promise<void>,
@@ -211,18 +294,7 @@ export async function scoreAllPairs(
           womanAnswers,
         );
 
-        let adjustedScore = result.score;
-        if (
-          result.dealbreakersViolated.length === 0 &&
-          man.location &&
-          woman.location
-        ) {
-          const locSim = locationSimilarity(man.location, woman.location);
-          adjustedScore = Math.round(
-            result.score * (1 - LOCATION_WEIGHT) +
-              locSim * 100 * LOCATION_WEIGHT,
-          );
-        }
+        const adjustedScore = result.score;
 
         allScores.push({
           manId: man.id,
@@ -324,11 +396,29 @@ function calculateSimilarity(
       return intersection.size / union.size;
     }
 
-    case QuestionnaireQuestionType.TEXT:
+    case QuestionnaireQuestionType.TEXT: {
+      // Numeric proximity scoring for TEXT:number questions.
+      // If the question's options include { numericMaxDelta: N }, both values
+      // are parsed as numbers and scored by distance: 1 - |a - b| / maxDelta.
+      // This enables lifestyle-proximity questions (work hours, screen time)
+      // to be scored without converting their DB type to NUMBER_SCALE.
+      const opts = question.options as Record<string, unknown> | null;
+      const maxDelta =
+        opts && typeof opts["numericMaxDelta"] === "number"
+          ? (opts["numericMaxDelta"] as number)
+          : null;
+      if (maxDelta !== null && maxDelta > 0) {
+        const a = Number(valueA);
+        const b = Number(valueB);
+        if (!isNaN(a) && !isNaN(b)) {
+          return Math.max(0, 1 - Math.abs(a - b) / maxDelta);
+        }
+      }
+      return 0.5;
+    }
+
     case QuestionnaireQuestionType.TEXTAREA:
     case QuestionnaireQuestionType.RICH_TEXT: {
-      // For text fields, we could use string similarity in the future
-      // For now, just return neutral (0.5)
       return 0.5;
     }
 

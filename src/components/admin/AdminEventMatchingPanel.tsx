@@ -580,12 +580,8 @@ export default function AdminEventMatchingPanel({
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({
-          minScore,
-          maxPerApplicant,
           createMatches: true,
-          mode: matchMode,
-          maxPerGender,
-          ...(locationFilter ? { location: locationFilter } : {}),
+          explicitPairs: preview,
         }),
       });
       const json = await res.json();

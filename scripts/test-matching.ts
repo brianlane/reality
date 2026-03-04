@@ -14,7 +14,6 @@ import {
   calculateWeightedCompatibility,
   preloadAnswerCache,
   scorePairFromCache,
-  locationSimilarity,
 } from "../src/lib/matching/weighted-compatibility";
 import { ApplicationStatus, ScreeningStatus } from "@prisma/client";
 
@@ -132,7 +131,6 @@ async function main() {
     `  Cache loaded in ${cacheMs}ms (${cache.questions.length} questions, ${allIds.length} applicants)`,
   );
 
-  const LOCATION_WEIGHT = 0.1;
   const allPairs: Array<{
     manId: string;
     manName: string;
@@ -152,23 +150,12 @@ async function main() {
         manAnswers,
         womanAnswers,
       );
-      let adjustedScore = result.score;
-      if (
-        result.dealbreakersViolated.length === 0 &&
-        man.location &&
-        woman.location
-      ) {
-        const locSim = locationSimilarity(man.location, woman.location);
-        adjustedScore = Math.round(
-          result.score * (1 - LOCATION_WEIGHT) + locSim * 100 * LOCATION_WEIGHT,
-        );
-      }
       allPairs.push({
         manId: man.id,
         manName: `${man.user.firstName} ${man.user.lastName}`,
         womanId: woman.id,
         womanName: `${woman.user.firstName} ${woman.user.lastName}`,
-        score: adjustedScore,
+        score: result.score,
         dealbreakers: result.dealbreakersViolated,
       });
     }

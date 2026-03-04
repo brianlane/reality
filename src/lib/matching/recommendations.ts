@@ -1,7 +1,6 @@
 import { Applicant } from "@prisma/client";
 import { scoreApplicantMatch } from "./scoring";
 import { applyFilters } from "./filters";
-import { locationSimilarity, LOCATION_WEIGHT } from "./weighted-compatibility";
 
 type ApplicantWithQuestionnaire = Applicant;
 
@@ -32,26 +31,11 @@ export async function getRecommendations(
   // 1. Apply pre-filters (gender/seeking/status)
   const filtered = applyFilters(applicant, candidates);
 
-  // 2. Score all filtered candidates, applying the same location proximity bonus
-  //    used in all_pairs mode so scores are consistent across match modes.
+  // 2. Score all filtered candidates
   const scored = await Promise.all(
     filtered.map(async (candidate) => {
       const result = await scoreApplicantMatch(applicant, candidate);
-      let adjustedScore = result.score;
-      if (
-        result.dealbreakersViolated.length === 0 &&
-        applicant.location &&
-        candidate.location
-      ) {
-        const locSim = locationSimilarity(
-          applicant.location,
-          candidate.location,
-        );
-        adjustedScore = Math.round(
-          result.score * (1 - LOCATION_WEIGHT) + locSim * 100 * LOCATION_WEIGHT,
-        );
-      }
-      return { candidate, result, adjustedScore };
+      return { candidate, result, adjustedScore: result.score };
     }),
   );
 
