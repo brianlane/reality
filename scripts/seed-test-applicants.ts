@@ -15,7 +15,7 @@
 
 import "dotenv/config";
 import { db } from "../src/lib/db";
-import { CITIES } from "../src/lib/locations";
+import { CityOption } from "../src/lib/locations";
 import type {
   QuestionnaireQuestionType,
   QuestionnaireQuestion,
@@ -169,7 +169,7 @@ interface PersonaSpec {
   firstName: string;
   lastName: string;
   age: number;
-  location: string;
+  location: CityOption;
   gender: "MAN" | "WOMAN";
   seeking: "WOMAN" | "MAN";
   profileKey: string;
@@ -182,7 +182,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "James",
     lastName: "Caldwell",
     age: 32,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "traditional",
@@ -191,7 +191,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Robert",
     lastName: "Harmon",
     age: 36,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "traditional",
@@ -200,7 +200,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Tyler",
     lastName: "Merritt",
     age: 29,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "traditional",
@@ -209,7 +209,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Brian",
     lastName: "Stafford",
     age: 41,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "traditional",
@@ -219,7 +219,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Nathan",
     lastName: "Wells",
     age: 34,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "career",
@@ -228,7 +228,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Kevin",
     lastName: "Marsh",
     age: 28,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "career",
@@ -237,7 +237,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Derek",
     lastName: "Hollis",
     age: 38,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "career",
@@ -246,7 +246,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Austin",
     lastName: "Fleming",
     age: 31,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "career",
@@ -256,7 +256,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Marcus",
     lastName: "Cole",
     age: 30,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "adventurer",
@@ -265,7 +265,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Jordan",
     lastName: "Reyes",
     age: 33,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "adventurer",
@@ -274,7 +274,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Ethan",
     lastName: "Shea",
     age: 27,
-    location: CITIES[9], // Las Vegas, NV
+    location: "Las Vegas, NV",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "adventurer",
@@ -283,7 +283,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Caleb",
     lastName: "Ross",
     age: 35,
-    location: CITIES[9], // Las Vegas, NV
+    location: "Las Vegas, NV",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "adventurer",
@@ -293,7 +293,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Scott",
     lastName: "Raines",
     age: 37,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "homebody",
@@ -302,7 +302,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Greg",
     lastName: "Payne",
     age: 40,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "homebody",
@@ -311,7 +311,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Ryan",
     lastName: "Brooks",
     age: 29,
-    location: CITIES[3], // Dallas, TX
+    location: "Dallas, TX",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "homebody",
@@ -320,7 +320,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Paul",
     lastName: "Garrett",
     age: 44,
-    location: CITIES[3], // Dallas, TX
+    location: "Dallas, TX",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "homebody",
@@ -330,7 +330,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Alex",
     lastName: "Rivera",
     age: 32,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "spiritual",
@@ -339,7 +339,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Daniel",
     lastName: "Chen",
     age: 36,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "spiritual",
@@ -348,7 +348,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Ian",
     lastName: "Walsh",
     age: 28,
-    location: CITIES[1], // Los Angeles, CA
+    location: "Los Angeles, CA",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "spiritual",
@@ -357,7 +357,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Chris",
     lastName: "Navarro",
     age: 39,
-    location: CITIES[1], // Los Angeles, CA
+    location: "Los Angeles, CA",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "spiritual",
@@ -367,7 +367,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Ben",
     lastName: "Thornton",
     age: 31,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "intellectual",
@@ -376,7 +376,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Sam",
     lastName: "Kowalski",
     age: 35,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "intellectual",
@@ -385,7 +385,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Luke",
     lastName: "Donovan",
     age: 42,
-    location: CITIES[0], // New York City, NY
+    location: "New York City, NY",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "intellectual",
@@ -394,7 +394,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Noah",
     lastName: "Kramer",
     age: 27,
-    location: CITIES[0], // New York City, NY
+    location: "New York City, NY",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "intellectual",
@@ -405,7 +405,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Rachel",
     lastName: "Holt",
     age: 29,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "traditional",
@@ -414,7 +414,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Maria",
     lastName: "Estrada",
     age: 34,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "traditional",
@@ -423,7 +423,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Claire",
     lastName: "Sutton",
     age: 31,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "traditional",
@@ -432,7 +432,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Diane",
     lastName: "Foster",
     age: 38,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "traditional",
@@ -442,7 +442,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Megan",
     lastName: "Blake",
     age: 28,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "career",
@@ -451,7 +451,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Taylor",
     lastName: "Jennings",
     age: 33,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "career",
@@ -460,7 +460,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Lauren",
     lastName: "Cross",
     age: 36,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "career",
@@ -469,7 +469,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Priya",
     lastName: "Shah",
     age: 30,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "career",
@@ -479,7 +479,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Vanessa",
     lastName: "Park",
     age: 27,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "adventurer",
@@ -488,7 +488,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Kayla",
     lastName: "Rhodes",
     age: 31,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "adventurer",
@@ -497,7 +497,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Nicole",
     lastName: "Rivera",
     age: 29,
-    location: CITIES[9], // Las Vegas, NV
+    location: "Las Vegas, NV",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "adventurer",
@@ -506,7 +506,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Jenna",
     lastName: "Owens",
     age: 35,
-    location: CITIES[9], // Las Vegas, NV
+    location: "Las Vegas, NV",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "adventurer",
@@ -516,7 +516,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Amanda",
     lastName: "Hicks",
     age: 30,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "homebody",
@@ -525,7 +525,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Beth",
     lastName: "Lawson",
     age: 38,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "homebody",
@@ -534,7 +534,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Sandra",
     lastName: "Ruiz",
     age: 26,
-    location: CITIES[3], // Dallas, TX
+    location: "Dallas, TX",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "homebody",
@@ -543,7 +543,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Diane",
     lastName: "Coleman",
     age: 42,
-    location: CITIES[3], // Dallas, TX
+    location: "Dallas, TX",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "homebody",
@@ -553,7 +553,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Sophia",
     lastName: "Wells",
     age: 29,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "spiritual",
@@ -562,7 +562,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Lily",
     lastName: "Torres",
     age: 33,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "spiritual",
@@ -571,7 +571,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Grace",
     lastName: "Kim",
     age: 31,
-    location: CITIES[1], // Los Angeles, CA
+    location: "Los Angeles, CA",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "spiritual",
@@ -580,7 +580,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Maya",
     lastName: "Patel",
     age: 36,
-    location: CITIES[1], // Los Angeles, CA
+    location: "Los Angeles, CA",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "spiritual",
@@ -590,7 +590,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Zoe",
     lastName: "Fitch",
     age: 28,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "intellectual",
@@ -599,7 +599,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Caitlin",
     lastName: "Moore",
     age: 32,
-    location: CITIES[4], // Phoenix, AZ
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "intellectual",
@@ -608,7 +608,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Abby",
     lastName: "Larson",
     age: 39,
-    location: CITIES[0], // New York City, NY
+    location: "New York City, NY",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "intellectual",
@@ -617,7 +617,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Hazel",
     lastName: "Dunn",
     age: 26,
-    location: CITIES[0], // New York City, NY
+    location: "New York City, NY",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "intellectual",
