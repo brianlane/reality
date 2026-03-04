@@ -630,9 +630,10 @@ async function main() {
         age,
         gender,
         seeking,
-        location: isInvitedCohort
-          ? PRIMARY_CITY
-          : CITIES[Math.floor(rng() * CITIES.length)]!,
+        location:
+          isInvitedCohort || rng() < 0.6
+            ? PRIMARY_CITY
+            : CITIES[Math.floor(rng() * CITIES.length)]!,
         occupation: "Test Occupation",
         education: pick(EDUCATION),
         incomeRange: pick(INCOME),

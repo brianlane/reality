@@ -22,12 +22,6 @@ import type {
 } from "@prisma/client";
 
 // ============================================
-// FEBRUARY EVENT ID
-// ============================================
-
-const FEBRUARY_EVENT_ID = "cmlqropt800376v54xz2k7ovu";
-
-// ============================================
 // PERSONALITY PROFILES
 // ============================================
 
@@ -274,7 +268,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Ethan",
     lastName: "Shea",
     age: 27,
-    location: "Las Vegas, NV",
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "adventurer",
@@ -283,7 +277,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Caleb",
     lastName: "Ross",
     age: 35,
-    location: "Las Vegas, NV",
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "adventurer",
@@ -311,7 +305,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Ryan",
     lastName: "Brooks",
     age: 29,
-    location: "Dallas, TX",
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "homebody",
@@ -320,7 +314,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Paul",
     lastName: "Garrett",
     age: 44,
-    location: "Dallas, TX",
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "homebody",
@@ -348,7 +342,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Ian",
     lastName: "Walsh",
     age: 28,
-    location: "Los Angeles, CA",
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "spiritual",
@@ -357,7 +351,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Chris",
     lastName: "Navarro",
     age: 39,
-    location: "Los Angeles, CA",
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "spiritual",
@@ -385,7 +379,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Luke",
     lastName: "Donovan",
     age: 42,
-    location: "New York City, NY",
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "intellectual",
@@ -394,7 +388,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Noah",
     lastName: "Kramer",
     age: 27,
-    location: "New York City, NY",
+    location: "Phoenix, AZ",
     gender: "MAN",
     seeking: "WOMAN",
     profileKey: "intellectual",
@@ -497,7 +491,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Nicole",
     lastName: "Rivera",
     age: 29,
-    location: "Las Vegas, NV",
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "adventurer",
@@ -506,7 +500,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Jenna",
     lastName: "Owens",
     age: 35,
-    location: "Las Vegas, NV",
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "adventurer",
@@ -534,7 +528,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Sandra",
     lastName: "Ruiz",
     age: 26,
-    location: "Dallas, TX",
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "homebody",
@@ -543,7 +537,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Diane",
     lastName: "Coleman",
     age: 42,
-    location: "Dallas, TX",
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "homebody",
@@ -571,7 +565,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Grace",
     lastName: "Kim",
     age: 31,
-    location: "Los Angeles, CA",
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "spiritual",
@@ -580,7 +574,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Maya",
     lastName: "Patel",
     age: 36,
-    location: "Los Angeles, CA",
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "spiritual",
@@ -608,7 +602,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Abby",
     lastName: "Larson",
     age: 39,
-    location: "New York City, NY",
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "intellectual",
@@ -617,7 +611,7 @@ const PERSONAS: PersonaSpec[] = [
     firstName: "Hazel",
     lastName: "Dunn",
     age: 26,
-    location: "New York City, NY",
+    location: "Phoenix, AZ",
     gender: "WOMAN",
     seeking: "MAN",
     profileKey: "intellectual",
@@ -937,8 +931,8 @@ async function main() {
   console.log(`📋 Found ${questions.length} active questions\n`);
 
   // ── 3. Create personas ────────────────────────────────────────────────
-  const menIds: string[] = [];
-  const womenIds: string[] = [];
+  let menCount = 0;
+  let womenCount = 0;
 
   for (const persona of PERSONAS) {
     const email = `${persona.firstName.toLowerCase()}.${persona.lastName.toLowerCase()}@test.reality.app`;
@@ -949,16 +943,8 @@ async function main() {
       console.log(
         `  ⏭  Skipping ${persona.firstName} ${persona.lastName} (already exists)`,
       );
-
-      // Still need to collect their applicant ID for invitations
-      const user = await db.user.findUnique({
-        where: { email },
-        include: { applicant: true },
-      });
-      if (user?.applicant) {
-        if (persona.gender === "MAN") menIds.push(user.applicant.id);
-        else womenIds.push(user.applicant.id);
-      }
+      if (persona.gender === "MAN") menCount++;
+      else womenCount++;
       continue;
     }
 
@@ -993,8 +979,8 @@ async function main() {
       },
     });
 
-    if (persona.gender === "MAN") menIds.push(applicant.id);
-    else womenIds.push(applicant.id);
+    if (persona.gender === "MAN") menCount++;
+    else womenCount++;
 
     // Generate answers for each scoreable question
     const answersToCreate: Array<{
@@ -1030,29 +1016,12 @@ async function main() {
     );
   }
 
-  console.log(`\n📊 Created: ${menIds.length} men, ${womenIds.length} women\n`);
+  console.log(`\n📊 Created: ${menCount} men, ${womenCount} women`);
+  console.log(
+    `   (Not invited to any event — use seed-mass-applicants.ts for event cohort testing)\n`,
+  );
 
-  // ── 4. Invite first 10 men + first 10 women to February event ─────────
-  const first10Men = menIds.slice(0, 10);
-  const first10Women = womenIds.slice(0, 10);
-  const inviteeIds = [...first10Men, ...first10Women];
-
-  if (inviteeIds.length > 0) {
-    const result = await db.eventInvitation.createMany({
-      data: inviteeIds.map((applicantId) => ({
-        eventId: FEBRUARY_EVENT_ID,
-        applicantId,
-        status: "ACCEPTED" as const,
-      })),
-      skipDuplicates: true,
-    });
-
-    console.log(
-      `🎟  Invited ${result.count} applicants to February event (${first10Men.length} men + ${first10Women.length} women)`,
-    );
-  }
-
-  // ── 5. Verify ─────────────────────────────────────────────────────────
+  // ── 4. Verify ─────────────────────────────────────────────────────────
   const totalTestApplicants = await db.applicant.count({
     where: {
       user: { email: { endsWith: "@test.reality.app" } },
@@ -1067,20 +1036,10 @@ async function main() {
     },
   });
 
-  const totalInvitations = await db.eventInvitation.count({
-    where: {
-      eventId: FEBRUARY_EVENT_ID,
-      applicant: {
-        user: { email: { endsWith: "@test.reality.app" } },
-      },
-    },
-  });
-
-  console.log("\n✅ Seed complete!\n");
+  console.log("✅ Seed complete!\n");
   console.log("🔍 Verification:");
   console.log(`   Test applicants in DB: ${totalTestApplicants}`);
   console.log(`   Answers created:       ${totalAnswers}`);
-  console.log(`   Event invitations:     ${totalInvitations}`);
 
   await db.$disconnect();
 }
