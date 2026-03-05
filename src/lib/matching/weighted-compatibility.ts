@@ -506,6 +506,84 @@ export function buildCompatibleCohort(
 }
 
 /**
+ * Post-scoring cohort selection shared between the HTTP and SSE
+ * generate-matches routes.
+ *
+ * Encapsulates: pass-count ranking → 3× pre-selection → compatible cohort
+ * build with empty-result fallback → maxPerGender cap → recommendation filter.
+ *
+ * Keeping this logic in one place means a bug fix or tuning change is
+ * automatically reflected in both callers.
+ */
+export function selectCohortFromScores(
+  allScores: PairScore[],
+  men: Array<{ id: string }>,
+  women: Array<{ id: string }>,
+  minScore: number,
+  maxPerGender: number,
+): {
+  finalMenIds: string[];
+  finalWomenIds: string[];
+  finalMenSet: Set<string>;
+  finalWomenSet: Set<string>;
+  recommendations: CompatibleCohortResult["recommendations"];
+} {
+  const passScores = allScores.filter(
+    (s) => s.score >= minScore && s.dealbreakersViolated.length === 0,
+  );
+  const menPassCount = new Map<string, number>();
+  const womenPassCount = new Map<string, number>();
+  for (const m of men) menPassCount.set(m.id, 0);
+  for (const w of women) womenPassCount.set(w.id, 0);
+  for (const s of passScores) {
+    menPassCount.set(s.manId, (menPassCount.get(s.manId) ?? 0) + 1);
+    womenPassCount.set(s.womanId, (womenPassCount.get(s.womanId) ?? 0) + 1);
+  }
+
+  // Pre-select 3× maxPerGender candidates per gender (ranked by passing-partner count)
+  // to give the cohort builder a larger, higher-quality candidate pool.
+  const preselectCount = maxPerGender * 3;
+  const candidateMen = [...men]
+    .sort(
+      (a, b) =>
+        (menPassCount.get(b.id) ?? 0) - (menPassCount.get(a.id) ?? 0) ||
+        a.id.localeCompare(b.id),
+    )
+    .slice(0, preselectCount);
+  const candidateWomen = [...women]
+    .sort(
+      (a, b) =>
+        (womenPassCount.get(b.id) ?? 0) - (womenPassCount.get(a.id) ?? 0) ||
+        a.id.localeCompare(b.id),
+    )
+    .slice(0, preselectCount);
+  const candidateMenSet = new Set(candidateMen.map((m) => m.id));
+  const candidateWomenSet = new Set(candidateWomen.map((w) => w.id));
+  const candidateScores = allScores.filter(
+    (s) => candidateMenSet.has(s.manId) && candidateWomenSet.has(s.womanId),
+  );
+
+  let cohort = buildCompatibleCohort(
+    candidateScores,
+    candidateMen,
+    candidateWomen,
+    minScore,
+  );
+  if (cohort.menIds.length === 0 || cohort.womenIds.length === 0) {
+    cohort = buildCompatibleCohort(allScores, men, women, minScore);
+  }
+  const finalMenIds = cohort.menIds.slice(0, maxPerGender);
+  const finalWomenIds = cohort.womenIds.slice(0, maxPerGender);
+  const finalMenSet = new Set(finalMenIds);
+  const finalWomenSet = new Set(finalWomenIds);
+  const recommendations = cohort.recommendations.filter(
+    (r) => finalMenSet.has(r.applicantId) && finalWomenSet.has(r.partnerId),
+  );
+
+  return { finalMenIds, finalWomenIds, finalMenSet, finalWomenSet, recommendations };
+}
+
+/**
  * Greedy 1:1 assignment: sort all qualifying pairs by score descending,
  * then assign each pair only if neither person is already taken.
  * A single Set covers both roles so the same person cannot appear twice

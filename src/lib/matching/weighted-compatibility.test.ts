@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   scorePairFromCache,
   computeDistinctMatches,
+  selectCohortFromScores,
+  type PairScore,
 } from "./weighted-compatibility";
 import { buildCrossPairIndex } from "./cross-pair-scoring";
 import type { QuestionnaireQuestion } from "@prisma/client";
@@ -134,6 +136,101 @@ describe("scorePairFromCache", () => {
 
     // Both should produce the same score
     expect(withPrebuilt.score).toBe(withoutPrebuilt.score);
+  });
+});
+
+// ── selectCohortFromScores ────────────────────────────────────────────────────
+
+describe("selectCohortFromScores", () => {
+  function makeScore(
+    manId: string,
+    womanId: string,
+    score: number,
+  ): PairScore {
+    return { manId, womanId, score, dealbreakersViolated: [] };
+  }
+
+  it("returns empty cohort when no pairs meet minScore", () => {
+    const men = [{ id: "m1" }, { id: "m2" }];
+    const women = [{ id: "w1" }, { id: "w2" }];
+    const allScores: PairScore[] = [
+      makeScore("m1", "w1", 50),
+      makeScore("m1", "w2", 40),
+      makeScore("m2", "w1", 30),
+      makeScore("m2", "w2", 20),
+    ];
+    const result = selectCohortFromScores(allScores, men, women, 60, 10);
+    expect(result.finalMenIds).toHaveLength(0);
+    expect(result.finalWomenIds).toHaveLength(0);
+    expect(result.recommendations).toHaveLength(0);
+  });
+
+  it("builds a mutually compatible cohort", () => {
+    const men = [{ id: "m1" }, { id: "m2" }];
+    const women = [{ id: "w1" }, { id: "w2" }];
+    // All four pairs pass — full 2×2 cohort expected
+    const allScores: PairScore[] = [
+      makeScore("m1", "w1", 80),
+      makeScore("m1", "w2", 75),
+      makeScore("m2", "w1", 70),
+      makeScore("m2", "w2", 65),
+    ];
+    const result = selectCohortFromScores(allScores, men, women, 60, 10);
+    expect(result.finalMenIds).toHaveLength(2);
+    expect(result.finalWomenIds).toHaveLength(2);
+    expect(result.recommendations).toHaveLength(4);
+  });
+
+  it("respects maxPerGender cap", () => {
+    const men = Array.from({ length: 5 }, (_, i) => ({ id: `m${i + 1}` }));
+    const women = Array.from({ length: 5 }, (_, i) => ({ id: `w${i + 1}` }));
+    // All 25 pairs pass
+    const allScores: PairScore[] = men.flatMap((m) =>
+      women.map((w) => makeScore(m.id, w.id, 80)),
+    );
+    const result = selectCohortFromScores(allScores, men, women, 60, 2);
+    expect(result.finalMenIds.length).toBeLessThanOrEqual(2);
+    expect(result.finalWomenIds.length).toBeLessThanOrEqual(2);
+  });
+
+  it("handles unbalanced genders (more men than women)", () => {
+    const men = [{ id: "m1" }, { id: "m2" }, { id: "m3" }];
+    const women = [{ id: "w1" }];
+    const allScores: PairScore[] = men.map((m) => makeScore(m.id, "w1", 80));
+    const result = selectCohortFromScores(allScores, men, women, 60, 10);
+    expect(result.finalWomenIds).toHaveLength(1);
+    expect(result.finalWomenIds[0]).toBe("w1");
+    expect(result.finalMenIds.length).toBeGreaterThan(0);
+  });
+
+  it("produces deterministic output when passCount ties exist", () => {
+    // m1 and m2 both pass with w1 — tie in passCount; result should be stable
+    const men = [{ id: "m1" }, { id: "m2" }];
+    const women = [{ id: "w1" }];
+    const allScores: PairScore[] = [
+      makeScore("m1", "w1", 80),
+      makeScore("m2", "w1", 80),
+    ];
+    const result1 = selectCohortFromScores(allScores, men, women, 60, 10);
+    const result2 = selectCohortFromScores(allScores, men, women, 60, 10);
+    expect(result1.finalMenIds).toEqual(result2.finalMenIds);
+    expect(result1.finalWomenIds).toEqual(result2.finalWomenIds);
+  });
+
+  it("excludes pairs with dealbreaker violations from cohort", () => {
+    const men = [{ id: "m1" }];
+    const women = [{ id: "w1" }];
+    const allScores: PairScore[] = [
+      {
+        manId: "m1",
+        womanId: "w1",
+        score: 90,
+        dealbreakersViolated: ["q-dealbreaker"],
+      },
+    ];
+    const result = selectCohortFromScores(allScores, men, women, 60, 10);
+    expect(result.finalMenIds).toHaveLength(0);
+    expect(result.finalWomenIds).toHaveLength(0);
   });
 });
 

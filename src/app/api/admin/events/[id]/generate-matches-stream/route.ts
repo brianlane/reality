@@ -1,10 +1,10 @@
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
-  buildCompatibleCohort,
   computeDistinctMatches,
   preloadAnswerCache,
   scoreAllPairs,
+  selectCohortFromScores,
 } from "@/lib/matching/weighted-compatibility";
 import { ApplicationStatus, ScreeningStatus } from "@prisma/client";
 import { z } from "zod";
@@ -88,11 +88,9 @@ export async function POST(
 
   const allMen = applicants.filter((a) => a.gender === "MAN");
   const allWomen = applicants.filter((a) => a.gender === "WOMAN");
-  const men = allMen;
-  const women = allWomen;
-  const totalPairs = men.length * women.length;
+  const totalPairs = allMen.length * allWomen.length;
 
-  const allIds = [...men.map((m) => m.id), ...women.map((w) => w.id)];
+  const allIds = [...allMen.map((m) => m.id), ...allWomen.map((w) => w.id)];
   const cache = await preloadAnswerCache(allIds);
 
   const signal = request.signal;
@@ -109,8 +107,8 @@ export async function POST(
       try {
         send("init", {
           totalPairs,
-          menCount: men.length,
-          womenCount: women.length,
+          menCount: allMen.length,
+          womenCount: allWomen.length,
           truncated: false,
           totalMen: allMen.length,
           totalWomen: allWomen.length,
@@ -119,8 +117,8 @@ export async function POST(
         const startTime = Date.now();
 
         const { allScores } = await scoreAllPairs(
-          men,
-          women,
+          allMen,
+          allWomen,
           cache,
           minScore,
           async (scored, total) => {
@@ -138,63 +136,14 @@ export async function POST(
           },
         );
 
-        // Rank candidates by passing-partner counts, then build cohort from
-        // that higher-compatibility subset first.
-        const passScores = allScores.filter(
-          (s) => s.score >= minScore && s.dealbreakersViolated.length === 0,
-        );
-        const menPassCount = new Map<string, number>();
-        const womenPassCount = new Map<string, number>();
-        for (const m of men) menPassCount.set(m.id, 0);
-        for (const w of women) womenPassCount.set(w.id, 0);
-        for (const s of passScores) {
-          menPassCount.set(s.manId, (menPassCount.get(s.manId) ?? 0) + 1);
-          womenPassCount.set(
-            s.womanId,
-            (womenPassCount.get(s.womanId) ?? 0) + 1,
-          );
-        }
+        const {
+          finalMenIds,
+          finalMenSet,
+          finalWomenIds,
+          finalWomenSet,
+          recommendations: allRecommendations,
+        } = selectCohortFromScores(allScores, allMen, allWomen, minScore, maxPerGender);
 
-        // Pre-select 3× maxPerGender candidates per gender (ranked by passing-partner count)
-        // to give the cohort builder a larger, higher-quality candidate pool.
-        const preselectCount = maxPerGender * 3;
-        const candidateMen = [...men]
-          .sort(
-            (a, b) =>
-              (menPassCount.get(b.id) ?? 0) - (menPassCount.get(a.id) ?? 0),
-          )
-          .slice(0, preselectCount);
-        const candidateWomen = [...women]
-          .sort(
-            (a, b) =>
-              (womenPassCount.get(b.id) ?? 0) - (womenPassCount.get(a.id) ?? 0),
-          )
-          .slice(0, preselectCount);
-        const candidateMenSet = new Set(candidateMen.map((m) => m.id));
-        const candidateWomenSet = new Set(candidateWomen.map((w) => w.id));
-        const candidateScores = allScores.filter(
-          (s) =>
-            candidateMenSet.has(s.manId) && candidateWomenSet.has(s.womanId),
-        );
-
-        let cohort = buildCompatibleCohort(
-          candidateScores,
-          candidateMen,
-          candidateWomen,
-          minScore,
-        );
-        if (cohort.menIds.length === 0 || cohort.womenIds.length === 0) {
-          cohort = buildCompatibleCohort(allScores, men, women, minScore);
-        }
-        const finalMenIds = cohort.menIds.slice(0, maxPerGender);
-        const finalWomenIds = cohort.womenIds.slice(0, maxPerGender);
-        const finalMenSet = new Set(finalMenIds);
-        const finalWomenSet = new Set(finalWomenIds);
-
-        const allRecommendations = cohort.recommendations.filter(
-          (r) =>
-            finalMenSet.has(r.applicantId) && finalWomenSet.has(r.partnerId),
-        );
         const distinctMatches = computeDistinctMatches(allRecommendations);
 
         send("complete", {
@@ -205,14 +154,14 @@ export async function POST(
           cohortMenCount: finalMenIds.length,
           cohortWomenCount: finalWomenIds.length,
           matrix: {
-            men: men
+            men: allMen
               .filter((m) => finalMenSet.has(m.id))
               .map((m) => ({
                 id: m.id,
                 name: `${m.user.firstName} ${m.user.lastName}`,
                 eventsAttended: m._count.eventInvitations,
               })),
-            women: women
+            women: allWomen
               .filter((w) => finalWomenSet.has(w.id))
               .map((w) => ({
                 id: w.id,
@@ -225,8 +174,8 @@ export async function POST(
             truncated: false,
             totalMen: allMen.length,
             totalWomen: allWomen.length,
-            comparedMen: men.length,
-            comparedWomen: women.length,
+            comparedMen: allMen.length,
+            comparedWomen: allWomen.length,
           },
           avgScore:
             allRecommendations.length > 0

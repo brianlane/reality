@@ -71,22 +71,25 @@ export async function GET(request: Request) {
       .sort((a, b) => b.count - a.count);
   } else if (type === "matches") {
     // Events are location-based, so match counts are grouped by event location.
-    // This aligns with the new flow: event city -> generate matches -> invite.
-    const matches = await db.match.findMany({
+    // Use two aggregation queries instead of loading all match records into memory.
+    const matchCountsByEvent = await db.match.groupBy({
+      by: ["eventId"],
+      _count: true,
       where: { deletedAt: null },
-      select: {
-        id: true,
-        event: { select: { location: true } },
-      },
     });
-    const locationMatchIds: Record<string, Set<string>> = {};
-    for (const m of matches) {
-      const loc = m.event.location ?? "Unknown";
-      if (!locationMatchIds[loc]) locationMatchIds[loc] = new Set();
-      locationMatchIds[loc].add(m.id);
+    const eventIds = matchCountsByEvent.map((r) => r.eventId);
+    const events = await db.event.findMany({
+      where: { id: { in: eventIds } },
+      select: { id: true, location: true },
+    });
+    const locationById = new Map(events.map((e) => [e.id, e.location]));
+    const locationCounts = new Map<string, number>();
+    for (const row of matchCountsByEvent) {
+      const label = locationById.get(row.eventId) ?? "Unknown";
+      locationCounts.set(label, (locationCounts.get(label) ?? 0) + row._count);
     }
-    breakdown = Object.entries(locationMatchIds)
-      .map(([location, ids]) => ({ location, count: ids.size }))
+    breakdown = [...locationCounts.entries()]
+      .map(([location, count]) => ({ location, count }))
       .sort((a, b) => b.count - a.count);
   }
 
