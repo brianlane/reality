@@ -72,6 +72,12 @@ enum ScreeningStatus {
   FAILED
 }
 
+enum FlagSeverity {
+  GREEN
+  YELLOW
+  RED
+}
+
 model Applicant {
   id                    String            @id @default(cuid())
   userId                String            @unique
@@ -136,6 +142,15 @@ model Applicant {
   checkrReportId        String?           @unique
   backgroundCheckNotes  String?           // General notes, NOT sensitive data
   
+  // Questionnaire Screening Flags
+  relationshipReadinessFlag   FlagSeverity?
+  saScreeningFlag             FlagSeverity?
+  screeningFlagDetails        Json?
+  screeningFlagComputedAt     DateTime?
+  screeningFlagReviewedAt     DateTime?
+  screeningFlagReviewedBy     String?
+  screeningFlagOverride       Boolean           @default(false)
+
   // Compatibility & Matching
   compatibilityScore    Float?            // 0-100 calculated score
   
@@ -157,6 +172,8 @@ model Applicant {
   @@index([applicationStatus])
   @@index([gender])
   @@index([screeningStatus])
+  @@index([relationshipReadinessFlag])
+  @@index([saScreeningFlag])
   @@index([compatibilityScore])
   @@index([deletedAt])
   @@index([prolificStudyId])

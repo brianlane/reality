@@ -201,6 +201,99 @@ describe("POST /api/admin/events/[id]/generate-matches-stream", () => {
     });
   });
 
+  it("includes flagged exclusions in init event", async () => {
+    const { getAuthUser, requireAdmin } = await import("@/lib/auth");
+    const { db } = await import("@/lib/db");
+    const {
+      preloadAnswerCache,
+      scoreAllPairs,
+      selectCohortFromScores,
+      computeDistinctMatches,
+    } = await import("@/lib/matching/weighted-compatibility");
+
+    vi.mocked(getAuthUser).mockResolvedValue({
+      userId: "u1",
+      email: "admin@example.com",
+    } as never);
+    vi.mocked(requireAdmin).mockReturnValue(undefined);
+    vi.mocked(db.event.findUnique).mockResolvedValue({
+      id: "ev1",
+      location: "Phoenix, AZ",
+    } as never);
+    vi.mocked(db.applicant.findMany).mockResolvedValue([
+      {
+        id: "m-red",
+        gender: "MAN",
+        relationshipReadinessFlag: "RED",
+        saScreeningFlag: null,
+        screeningFlagOverride: false,
+        _count: { eventInvitations: 0 },
+        user: { firstName: "R", lastName: "M" },
+        createdAt: new Date(),
+      },
+      {
+        id: "m-ok",
+        gender: "MAN",
+        relationshipReadinessFlag: null,
+        saScreeningFlag: null,
+        screeningFlagOverride: false,
+        _count: { eventInvitations: 0 },
+        user: { firstName: "A", lastName: "B" },
+        createdAt: new Date(),
+      },
+      {
+        id: "w1",
+        gender: "WOMAN",
+        relationshipReadinessFlag: null,
+        saScreeningFlag: null,
+        screeningFlagOverride: false,
+        _count: { eventInvitations: 0 },
+        user: { firstName: "C", lastName: "D" },
+        createdAt: new Date(),
+      },
+    ] as never);
+    vi.mocked(preloadAnswerCache).mockResolvedValue({
+      questions: [],
+      answersByApplicant: new Map(),
+      crossPairIndex: { resolved: [], coveredIds: new Set() },
+    });
+    vi.mocked(scoreAllPairs).mockResolvedValue({
+      allScores: [
+        { manId: "m-ok", womanId: "w1", score: 80, dealbreakersViolated: [] },
+      ],
+      recommendations: [
+        { applicantId: "m-ok", partnerId: "w1", score: 80, dealbreakers: [] },
+      ],
+    });
+    vi.mocked(selectCohortFromScores).mockReturnValue({
+      finalMenIds: ["m-ok"],
+      finalWomenIds: ["w1"],
+      finalMenSet: new Set(["m-ok"]),
+      finalWomenSet: new Set(["w1"]),
+      recommendations: [
+        { applicantId: "m-ok", partnerId: "w1", score: 80, dealbreakers: [] },
+      ],
+    });
+    vi.mocked(computeDistinctMatches).mockReturnValue([
+      { applicantId: "m-ok", partnerId: "w1", score: 80 },
+    ] as never);
+
+    const res = await POST(makeRequest({ minScore: 60 }), {
+      params: Promise.resolve({ id: "ev1" }),
+    });
+
+    const events = await collectSSE(res);
+    const initEvent = events.find((e) => e.event === "init");
+    expect(initEvent).toBeDefined();
+    expect(initEvent?.data).toMatchObject({
+      applicantsExcludedByFlags: 1,
+    });
+    const initData = initEvent?.data as {
+      flaggedExclusions?: Array<{ applicantId: string }>;
+    };
+    expect(initData.flaggedExclusions?.[0]?.applicantId).toBe("m-red");
+  });
+
   it("sends error event when scoring throws", async () => {
     const { getAuthUser, requireAdmin } = await import("@/lib/auth");
     const { db } = await import("@/lib/db");

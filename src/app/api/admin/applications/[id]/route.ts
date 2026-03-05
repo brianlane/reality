@@ -79,6 +79,15 @@ export async function GET(request: Request, { params }: RouteContext) {
       checkrReportId: applicant.checkrReportId,
       backgroundCheckNotes: applicant.backgroundCheckNotes,
     },
+    screeningFlags: {
+      relationshipReadinessFlag: applicant.relationshipReadinessFlag,
+      saScreeningFlag: applicant.saScreeningFlag,
+      screeningFlagDetails: applicant.screeningFlagDetails,
+      screeningFlagComputedAt: applicant.screeningFlagComputedAt,
+      screeningFlagReviewedAt: applicant.screeningFlagReviewedAt,
+      screeningFlagReviewedBy: applicant.screeningFlagReviewedBy,
+      screeningFlagOverride: applicant.screeningFlagOverride,
+    },
     payments: applicant.payments,
   });
 }

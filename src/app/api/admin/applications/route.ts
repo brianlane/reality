@@ -101,6 +101,9 @@ export async function GET(request: Request) {
       location: applicant.location,
       applicationStatus: applicant.applicationStatus,
       screeningStatus: applicant.screeningStatus,
+      relationshipReadinessFlag: applicant.relationshipReadinessFlag,
+      saScreeningFlag: applicant.saScreeningFlag,
+      screeningFlagOverride: applicant.screeningFlagOverride,
       compatibilityScore: applicant.compatibilityScore,
       submittedAt: applicant.submittedAt,
       questionnaireStartedAt:

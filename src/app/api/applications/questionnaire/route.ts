@@ -13,6 +13,7 @@ import {
   QUESTIONNAIRE_NON_RESEARCH_ALLOWED_STATUSES,
 } from "@/lib/application-status";
 import { ERROR_MESSAGES } from "@/lib/error-messages";
+import { computeAndStoreScreeningFlags } from "@/lib/screening";
 const RESEARCH_ACCESS_STATUSES: ApplicationStatus[] = [
   APP_STATUS.RESEARCH_INVITED,
   APP_STATUS.RESEARCH_IN_PROGRESS,
@@ -518,6 +519,17 @@ export async function POST(request: NextRequest) {
       }),
     ),
   );
+
+  // Fire-and-forget: recompute screening flags after answers are saved.
+  // Non-blocking — failure here does NOT affect the save response, but flags
+  // will remain stale until the next successful compute (admin can trigger
+  // manually via the Recompute button on the application detail page).
+  computeAndStoreScreeningFlags(applicationId).catch((err) => {
+    console.error(
+      `[screening] Failed to recompute flags for applicant ${applicationId} after questionnaire save — flags may be stale. Error:`,
+      err,
+    );
+  });
 
   return successResponse({ saved: true });
 }

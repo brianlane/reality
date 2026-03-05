@@ -1,4 +1,9 @@
-import { Applicant, ApplicationStatus, ScreeningStatus } from "@prisma/client";
+import {
+  Applicant,
+  ApplicationStatus,
+  FlagSeverity,
+  ScreeningStatus,
+} from "@prisma/client";
 
 /**
  * Check if two applicants have mutual gender/seeking compatibility
@@ -32,8 +37,66 @@ export function filterByStatus(candidate: Applicant): boolean {
   );
 }
 
+export interface FlaggedExclusion {
+  applicantId: string;
+  reason: string;
+  flag: "relationshipReadiness" | "saRisk";
+  severity: FlagSeverity;
+}
+
 /**
- * Apply all filters to a list of candidates
+ * Minimal shape required by checkScreeningFlags — allows passing DB `select`
+ * results without needing the full Applicant type.
+ */
+export interface ScreeningFlagCandidate {
+  id: string;
+  screeningFlagOverride: boolean;
+  saScreeningFlag: FlagSeverity | null;
+  relationshipReadinessFlag: FlagSeverity | null;
+}
+
+/**
+ * Check if an applicant should be excluded from matching due to RED screening flags.
+ * Returns null if the applicant passes, or a FlaggedExclusion if they should be excluded.
+ * Applicants with screeningFlagOverride = true are never excluded.
+ */
+export function checkScreeningFlags(
+  candidate: ScreeningFlagCandidate,
+): FlaggedExclusion | null {
+  if (candidate.screeningFlagOverride) return null;
+
+  // SA risk is checked first. If an applicant has BOTH flags RED, only the
+  // SA exclusion is returned — the exclusion still takes effect regardless,
+  // and the admin can see all flags on the application detail page.
+  if (candidate.saScreeningFlag === FlagSeverity.RED) {
+    return {
+      applicantId: candidate.id,
+      reason: "RED SA screening flag — requires admin override to include",
+      flag: "saRisk",
+      severity: FlagSeverity.RED,
+    };
+  }
+
+  if (candidate.relationshipReadinessFlag === FlagSeverity.RED) {
+    return {
+      applicantId: candidate.id,
+      reason:
+        "RED relationship readiness flag — requires admin override to include",
+      flag: "relationshipReadiness",
+      severity: FlagSeverity.RED,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Apply compatibility filters (gender/seeking/status) to a list of candidates.
+ *
+ * NOTE: Screening flag exclusions (RED flags) are intentionally NOT applied here.
+ * Callers are responsible for pre-filtering with `checkScreeningFlags` so that
+ * exclusions can be collected and reported back to admins. Embedding the check
+ * here would silently drop applicants without any audit trail.
  */
 export function applyFilters(
   applicant: Applicant,

@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import type { FlaggedExclusion } from "@/lib/matching/filters";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -260,6 +261,10 @@ export default function AdminEventMatchingPanel({
     [previewMatrix],
   );
 
+  const [flaggedExclusions, setFlaggedExclusions] = useState<
+    FlaggedExclusion[]
+  >([]);
+
   const [scoringProgress, setScoringProgress] = useState<{
     scored: number;
     totalPairs: number;
@@ -469,6 +474,7 @@ export default function AdminEventMatchingPanel({
     setPreviewMatrix(null);
     setDistinctPreview(null);
     setScoringProgress(null);
+    setFlaggedExclusions([]);
 
     try {
       const headers = await getAuthHeaders();
@@ -520,7 +526,16 @@ export default function AdminEventMatchingPanel({
               } catch {
                 continue;
               }
-              if (eventType === "progress") {
+              if (eventType === "init") {
+                if (
+                  data.flaggedExclusions &&
+                  Array.isArray(data.flaggedExclusions)
+                ) {
+                  setFlaggedExclusions(
+                    data.flaggedExclusions as FlaggedExclusion[],
+                  );
+                }
+              } else if (eventType === "progress") {
                 setScoringProgress(
                   data as {
                     scored: number;
@@ -580,6 +595,9 @@ export default function AdminEventMatchingPanel({
         if (!res.ok || json?.error) {
           setError(json?.error?.message ?? "Preview failed.");
           return;
+        }
+        if (json.flaggedExclusions && Array.isArray(json.flaggedExclusions)) {
+          setFlaggedExclusions(json.flaggedExclusions as FlaggedExclusion[]);
         }
         const unique = deduplicatePairs(
           (json.recommendations ?? []) as PreviewMatch[],
@@ -904,6 +922,36 @@ export default function AdminEventMatchingPanel({
           Scores all approved applicants in the event&apos;s city. Create
           matches first, then invite the matched individuals to the event.
         </p>
+
+        {flaggedExclusions.length > 0 && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
+            <p className="text-sm font-medium text-amber-800">
+              {flaggedExclusions.length} applicant
+              {flaggedExclusions.length !== 1 ? "s" : ""} excluded by screening
+              flags
+            </p>
+            <ul className="space-y-1">
+              {flaggedExclusions.map((fe) => (
+                <li key={fe.applicantId} className="text-xs text-amber-700">
+                  <Link
+                    href={`/admin/applications/${fe.applicantId}`}
+                    className="font-medium underline hover:text-amber-900"
+                  >
+                    {fe.applicantId.slice(0, 8)}...
+                  </Link>
+                  {" — "}
+                  {fe.flag === "saRisk"
+                    ? "SA Risk"
+                    : "Relationship Readiness"}{" "}
+                  RED flag
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-amber-600">
+              Override flags on individual application pages to include them.
+            </p>
+          </div>
+        )}
 
         <div className="space-y-3">
           <div className="space-y-1">
