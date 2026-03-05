@@ -3,9 +3,17 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const BLOCKED_PATH_PREFIXES = ["/admin"];
 
-function isSafePath(path: string): boolean {
-  if (!path.startsWith("/") || path.startsWith("//")) return false;
-  return !BLOCKED_PATH_PREFIXES.some((prefix) => path.startsWith(prefix));
+function getSafePath(next: string): string {
+  // Reject non-relative and protocol-relative paths on the raw value first,
+  // before normalization strips the leading "//" (e.g. "//evil.com/foo").
+  if (!next.startsWith("/") || next.startsWith("//")) return "/";
+  // Normalize dot segments so "/foo/../admin" resolves to "/admin" before the
+  // blocked-prefix check, matching what the browser will actually navigate to.
+  const normalized = new URL(next, "http://n").pathname;
+  if (BLOCKED_PATH_PREFIXES.some((prefix) => normalized.startsWith(prefix))) {
+    return "/";
+  }
+  return normalized;
 }
 
 export async function GET(request: Request) {
@@ -13,7 +21,7 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/";
 
-  const safePath = isSafePath(next) ? next : "/";
+  const safePath = getSafePath(next);
 
   if (code) {
     const supabase = await createSupabaseServerClient();

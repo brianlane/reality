@@ -10,7 +10,9 @@ export default function ForgotPasswordPage() {
         password.
       </p>
 
-      <Suspense fallback={<p className="mt-8 text-sm text-navy-soft">Loading...</p>}>
+      <Suspense
+        fallback={<p className="mt-8 text-sm text-navy-soft">Loading...</p>}
+      >
         <ForgotPasswordForm />
       </Suspense>
     </section>

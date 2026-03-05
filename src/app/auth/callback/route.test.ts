@@ -117,8 +117,18 @@ describe("GET /auth/callback", () => {
     mockExchangeCodeForSession.mockResolvedValue({ error: null });
 
     const res = await GET(
+      makeRequest("http://localhost/auth/callback?code=abc&next=/admin/users"),
+    );
+
+    expect(res.headers.get("location")).toBe("http://localhost/");
+  });
+
+  it("blocks path traversal that resolves to an admin path", async () => {
+    mockExchangeCodeForSession.mockResolvedValue({ error: null });
+
+    const res = await GET(
       makeRequest(
-        "http://localhost/auth/callback?code=abc&next=/admin/users",
+        "http://localhost/auth/callback?code=abc&next=/foo/../admin/users",
       ),
     );
 
