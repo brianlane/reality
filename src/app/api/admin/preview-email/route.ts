@@ -87,7 +87,7 @@ export async function GET(request: Request) {
           eventTitle: "Spring Mixer at The Rooftop",
           eventDate,
           eventLocation: "The Rooftop Lounge",
-          eventAddress: "123 Main Street, San Francisco, CA 94102",
+          eventAddress: "6850 E Main St, Scottsdale, AZ 85251",
           startTime,
           endTime,
           rsvpUrl: "https://example.com/events/rsvp/test_123",

@@ -16,7 +16,6 @@ const EMAIL_ASSET_BASE_URL = (
   "https://www.realitymatchmaking.com"
 ).replace(/\/$/, "");
 
-
 interface EmailFailureParams {
   recipientEmail: string;
   emailType: string;
