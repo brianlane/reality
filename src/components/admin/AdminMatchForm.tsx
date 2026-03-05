@@ -76,7 +76,7 @@ function EventCombobox({
 
   // Debounced server-side search (no pre-load limit)
   useEffect(() => {
-    if (selected) return;
+    if (selected || !query.trim()) return;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true);
