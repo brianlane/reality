@@ -21,7 +21,7 @@ export default function Navbar() {
 
   const firstLink = isSignedIn
     ? { href: "/dashboard", label: "Dashboard", external: false }
-    : { href: "/apply", label: "Join Now", external: false };
+    : { href: "/apply", label: "Apply", external: false };
 
   const navLinks = [firstLink, ...staticLinks];
 

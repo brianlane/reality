@@ -23,7 +23,7 @@ export default function HomeCTA() {
         href="/apply"
         className="w-full rounded-md bg-navy px-8 py-4 text-center text-base font-medium text-white hover:bg-copper transition-colors"
       >
-        Join Now
+        Apply
       </Link>
       <Link
         href="/sign-in"
