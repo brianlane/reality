@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import Stage1QualificationForm from "@/components/forms/Stage1QualificationForm";
 import ExistingApplicationStatus from "@/components/apply/ExistingApplicationStatus";
 import { getAuthUser } from "@/lib/auth";
@@ -55,13 +56,49 @@ export default async function ApplyPage() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
-      <h1 className="text-3xl font-semibold text-navy sm:text-4xl">
-        Join the Waitlist
-      </h1>
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-        <Stage1QualificationForm />
-      </div>
-    </section>
+    <article className="overflow-x-hidden">
+      {/* Hero */}
+      <section>
+        <div className="mx-auto max-w-3xl px-6 pt-20 pb-8 text-center">
+          <p className="text-sm font-medium uppercase tracking-widest text-copper">
+            Apply for Membership
+          </p>
+          <h1 className="mt-4 text-4xl font-bold leading-tight text-navy sm:text-5xl">
+            Dating apps stopped making sense.
+            <br />
+            <span className="text-copper">Reality is waiting for you.</span>
+          </h1>
+        </div>
+      </section>
+
+      {/* Body copy + Form */}
+      <section className="mx-auto max-w-3xl px-6 pt-8 pb-16">
+        <div className="mb-10 space-y-4 text-base text-navy-soft leading-relaxed">
+          <p>Every member is background checked and manually reviewed.</p>
+          <p>
+            When we&apos;ve curated the right group, you&apos;ll receive a
+            personal invitation.
+          </p>
+          <p>
+            Events are designed for individuals who are serious about finding a
+            life partner — <em>not another match.</em>
+          </p>
+          <p>
+            Learn more about our{" "}
+            <Link
+              href="/purpose"
+              className="underline hover:text-copper transition-colors"
+            >
+              purpose
+            </Link>
+            .
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+          <Stage1QualificationForm />
+        </div>
+      </section>
+    </article>
   );
 }

@@ -444,9 +444,13 @@ export default function Stage1QualificationForm({
       {/* Submit Button */}
       <div className="space-y-2">
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? "Submitting..." : "Join the Waitlist"}
+          {isSubmitting ? "Submitting..." : "Apply for Membership"}
         </Button>
         {status && <p className="text-sm text-red-500 text-center">{status}</p>}
+        <p className="text-xs text-slate-400 text-center pt-1">
+          Application requires a one-time $199 application fee and background
+          verification. Payment does not guarantee membership.
+        </p>
       </div>
     </form>
   );

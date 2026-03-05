@@ -77,17 +77,17 @@ export async function GET(request: Request) {
         break;
 
       case "EVENT_INVITATION":
-        // Create test event dates
-        const eventDate = new Date("2026-03-15T19:00:00");
-        const startTime = new Date("2026-03-15T19:00:00");
-        const endTime = new Date("2026-03-15T22:00:00");
+        // Create test event dates in Arizona time (UTC-7, no DST)
+        const eventDate = new Date("2026-03-15T19:00:00-07:00");
+        const startTime = new Date("2026-03-15T19:00:00-07:00");
+        const endTime = new Date("2026-03-15T22:30:00-07:00");
 
         html = getEventInvitationHTML({
           firstName: "Test User",
           eventTitle: "Spring Mixer at The Rooftop",
           eventDate,
           eventLocation: "The Rooftop Lounge",
-          eventAddress: "123 Main Street, San Francisco, CA 94102",
+          eventAddress: "6850 E Main St, Scottsdale, AZ 85251",
           startTime,
           endTime,
           rsvpUrl: "https://example.com/events/rsvp/test_123",
