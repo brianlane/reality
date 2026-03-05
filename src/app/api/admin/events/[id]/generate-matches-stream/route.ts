@@ -195,7 +195,11 @@ export async function POST(
         if (!signal.aborted) {
           console.error("SSE match scoring error:", error);
           try {
-            send("error", { message: "Scoring failed unexpectedly." });
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Scoring failed unexpectedly.";
+            send("error", { message });
           } catch {
             // controller may already be closed
           }

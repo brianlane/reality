@@ -64,6 +64,23 @@ type MatchMode = "top_n" | "all_pairs";
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Deduplicate pairs by canonical key (lower ID first), sorted by score desc. */
+function deduplicatePairs(recs: PreviewMatch[]): PreviewMatch[] {
+  const seen = new Set<string>();
+  const unique: PreviewMatch[] = [];
+  for (const r of recs) {
+    const key =
+      r.applicantId < r.partnerId
+        ? `${r.applicantId}:${r.partnerId}`
+        : `${r.partnerId}:${r.applicantId}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(r);
+    }
+  }
+  return unique.sort((a, b) => b.score - a.score);
+}
+
 function ScoreBar({ score }: { score: number }) {
   const filled = Math.round((score / 100) * 10);
   return (
@@ -497,27 +514,28 @@ export default function AdminEventMatchingPanel({
             } else if (line.startsWith("event: ")) {
               eventType = line.slice(7);
             } else if (line.startsWith("data: ")) {
-              const data = JSON.parse(line.slice(6));
+              let data: Record<string, unknown>;
+              try {
+                data = JSON.parse(line.slice(6)) as Record<string, unknown>;
+              } catch {
+                continue;
+              }
               if (eventType === "progress") {
-                setScoringProgress(data);
+                setScoringProgress(
+                  data as {
+                    scored: number;
+                    totalPairs: number;
+                    pct: number;
+                    elapsedMs: number;
+                  },
+                );
               } else if (eventType === "complete") {
                 setScoringProgress(null);
-                const recs: PreviewMatch[] = data.recommendations ?? [];
-                const seen = new Set<string>();
-                const unique: PreviewMatch[] = [];
-                for (const r of recs) {
-                  const key =
-                    r.applicantId < r.partnerId
-                      ? `${r.applicantId}:${r.partnerId}`
-                      : `${r.partnerId}:${r.applicantId}`;
-                  if (!seen.has(key)) {
-                    seen.add(key);
-                    unique.push(r);
-                  }
-                }
-                unique.sort((a, b) => b.score - a.score);
+                const unique = deduplicatePairs(
+                  (data.recommendations ?? []) as PreviewMatch[],
+                );
                 setPreview(unique);
-                setPreviewAvgScore(data.avgScore ?? 0);
+                setPreviewAvgScore((data.avgScore as number) ?? 0);
                 if (data.matrix) {
                   setPreviewMatrix(data.matrix as PreviewMatrixData);
                   // Build name map from matrix people for resolveName()
@@ -563,20 +581,9 @@ export default function AdminEventMatchingPanel({
           setError(json?.error?.message ?? "Preview failed.");
           return;
         }
-        const recs: PreviewMatch[] = json.recommendations ?? [];
-        const seen = new Set<string>();
-        const unique: PreviewMatch[] = [];
-        for (const r of recs) {
-          const key =
-            r.applicantId < r.partnerId
-              ? `${r.applicantId}:${r.partnerId}`
-              : `${r.partnerId}:${r.applicantId}`;
-          if (!seen.has(key)) {
-            seen.add(key);
-            unique.push(r);
-          }
-        }
-        unique.sort((a, b) => b.score - a.score);
+        const unique = deduplicatePairs(
+          (json.recommendations ?? []) as PreviewMatch[],
+        );
         setPreview(unique);
         setPreviewAvgScore(
           unique.length > 0

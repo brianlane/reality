@@ -24,7 +24,7 @@ const generateMatchesSchema = z.object({
       z.object({
         applicantId: z.string(),
         partnerId: z.string(),
-        score: z.number(),
+        score: z.number().min(0).max(100),
       }),
     )
     .optional(),
@@ -97,7 +97,7 @@ export async function POST(
         applicationStatus: ApplicationStatus.APPROVED,
         screeningStatus: ScreeningStatus.PASSED,
       },
-      select: { id: true },
+      select: { id: true, location: true },
     });
     const validIds = new Set(validApplicants.map((a) => a.id));
     const invalidIds = [...allPairIds].filter((id) => !validIds.has(id));
@@ -105,6 +105,18 @@ export async function POST(
       return errorResponse(
         "VALIDATION_ERROR",
         `${invalidIds.length} applicant ID(s) not found or not approved`,
+        400,
+      );
+    }
+
+    // Ensure all explicit-pair applicants are in the event's city
+    const wrongCity = validApplicants.filter(
+      (a) => a.location !== event.location,
+    );
+    if (wrongCity.length > 0) {
+      return errorResponse(
+        "VALIDATION_ERROR",
+        `${wrongCity.length} applicant(s) are not in the event's city (${event.location})`,
         400,
       );
     }

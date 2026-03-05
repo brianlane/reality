@@ -10,7 +10,6 @@ import { z } from "zod";
 
 const validateCohortSchema = z.object({
   minScore: z.number().min(0).max(100).optional().default(60),
-  location: z.string().optional(),
 });
 
 type ValidateCohortRequest = z.infer<typeof validateCohortSchema>;
@@ -42,7 +41,7 @@ export async function POST(
     ]);
   }
 
-  const { minScore, location } = body;
+  const { minScore } = body;
 
   const event = await db.event.findUnique({
     where: { id: eventId },
@@ -52,19 +51,23 @@ export async function POST(
     return errorResponse("NOT_FOUND", "Event not found", 404);
   }
 
+  if (!event.location) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "Event must have a location set before validating cohort",
+      400,
+    );
+  }
+
+  // Pool-based: same applicant selection as generate-matches — all approved
+  // applicants in the event's city. This keeps the two endpoints consistent.
   const applicants = await db.applicant.findMany({
     where: {
       applicationStatus: ApplicationStatus.APPROVED,
       screeningStatus: ScreeningStatus.PASSED,
       deletedAt: null,
       questionnaireAnswers: { some: {} },
-      ...(location ? { location } : {}),
-      eventInvitations: {
-        some: {
-          eventId,
-          status: { notIn: ["DECLINED", "NO_SHOW"] },
-        },
-      },
+      location: event.location,
     },
     include: {
       user: { select: { firstName: true, lastName: true } },
@@ -87,7 +90,7 @@ export async function POST(
   if (men.length === 0 || women.length === 0) {
     return errorResponse(
       "INSUFFICIENT_DATA",
-      "Need at least 1 man and 1 woman invited to validate cohort",
+      `Need at least 1 man and 1 woman in the pool for ${event.location}`,
       400,
     );
   }

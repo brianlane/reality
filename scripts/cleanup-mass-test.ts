@@ -61,10 +61,11 @@ async function main() {
   console.log(`  Deleted ${users.count} users`);
 
   console.log("\nCleanup complete!");
-  await db.$disconnect();
 }
 
-main().catch((e) => {
-  console.error("Cleanup failed:", e);
-  process.exit(1);
-});
+main()
+  .catch((e) => {
+    console.error("Cleanup failed:", e);
+    process.exit(1);
+  })
+  .finally(() => db.$disconnect());

@@ -198,11 +198,11 @@ async function main() {
   )) {
     console.log(`  ${city.padEnd(22)} ${count}`);
   }
-
-  await db.$disconnect();
 }
 
-main().catch((e) => {
-  console.error("Failed:", e);
-  process.exit(1);
-});
+main()
+  .catch((e) => {
+    console.error("Failed:", e);
+    process.exit(1);
+  })
+  .finally(() => db.$disconnect());

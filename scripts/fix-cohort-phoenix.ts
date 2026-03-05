@@ -93,11 +93,11 @@ async function main() {
   });
   console.log(`\nTotal event invitations: ${finalInvites}`);
   console.log(`Total Phoenix test applicants: ${phoenixCount}`);
-
-  await db.$disconnect();
 }
 
-main().catch((e) => {
-  console.error("Failed:", e);
-  process.exit(1);
-});
+main()
+  .catch((e) => {
+    console.error("Failed:", e);
+    process.exit(1);
+  })
+  .finally(() => db.$disconnect());
