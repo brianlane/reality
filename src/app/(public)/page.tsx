@@ -5,25 +5,31 @@ import LogoCircles from "@/components/layout/LogoCircles";
 import HomeCTA from "@/components/layout/HomeCTA";
 
 export default function HomePage() {
-  const [reduceMotion] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-
-  const [logoIn, setLogoIn] = useState(reduceMotion);
-  const [contentIn, setContentIn] = useState(reduceMotion);
+  const [logoIn, setLogoIn] = useState(false);
+  const [contentIn, setContentIn] = useState(false);
+  // Tracks when the expand transition finishes so we can lift maxHeight/overflow constraints
+  const [expandDone, setExpandDone] = useState(false);
 
   useEffect(() => {
-    if (reduceMotion) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const t = setTimeout(() => {
+        setLogoIn(true);
+        setContentIn(true);
+        setExpandDone(true);
+      }, 0);
+      return () => clearTimeout(t);
+    }
 
     const t1 = setTimeout(() => setLogoIn(true), 300);
     const t2 = setTimeout(() => setContentIn(true), 1100);
+    // 1100ms delay + 900ms max-height transition + 100ms buffer
+    const t3 = setTimeout(() => setExpandDone(true), 2100);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      clearTimeout(t3);
     };
-  }, [reduceMotion]);
+  }, []);
 
   return (
     <section className="mx-auto flex min-h-screen w-full flex-col items-center justify-center px-6">
@@ -49,9 +55,9 @@ export default function HomePage() {
       {/* Copy + Buttons — expands below, pushing logo upward */}
       <div
         style={{
-          maxHeight: contentIn ? "400px" : "0",
+          maxHeight: expandDone ? "none" : contentIn ? "400px" : "0",
           opacity: contentIn ? 1 : 0,
-          overflow: "hidden",
+          overflow: expandDone ? "visible" : "hidden",
           marginTop: contentIn ? "3rem" : "0",
           transition:
             "max-height 0.9s ease-out, opacity 0.7s ease-out, margin-top 0.9s ease-out",
