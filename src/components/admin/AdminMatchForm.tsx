@@ -137,11 +137,8 @@ function EventCombobox({
       <label className="block text-xs font-medium text-slate-500 mb-1">
         Event
       </label>
-      {selected && !open ? (
-        <div
-          className="flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-          onClick={() => setOpen(true)}
-        >
+      {selected ? (
+        <div className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm">
           <span className="flex-1 font-medium">{selected.name}</span>
           <span className="shrink-0 text-xs text-slate-400">
             {selected.location ?? "—"}
