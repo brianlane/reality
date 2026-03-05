@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export default function ForgotPasswordForm() {
+  const searchParams = useSearchParams();
+  const linkExpired = searchParams.get("error") === "link-expired";
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [error, setError] = useState("");
@@ -29,7 +32,7 @@ export default function ForgotPasswordForm() {
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       email.trim().toLowerCase(),
       {
-        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin}/auth/callback?next=/reset-password`,
       },
     );
 
@@ -66,6 +69,14 @@ export default function ForgotPasswordForm() {
 
   return (
     <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
+      {linkExpired ? (
+        <div className="rounded-md bg-red-50 p-4">
+          <p className="text-sm text-red-800">
+            Your password reset link has expired. Enter your email below to
+            request a new one.
+          </p>
+        </div>
+      ) : null}
       <div>
         <label className="text-sm font-medium text-navy" htmlFor="email">
           Email
