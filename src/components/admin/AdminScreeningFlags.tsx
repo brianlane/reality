@@ -4,20 +4,18 @@ import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
-
-type FlagSeverity = "GREEN" | "YELLOW" | "RED" | null;
+import type { FlagSeverity } from "@prisma/client";
 
 type SignalDetail = {
   signalName: string;
   questionPrompt: string;
   severity: string;
   reason: string;
-  rawValue: unknown;
 };
 
 type ScreeningFlagsData = {
-  relationshipReadinessFlag: FlagSeverity;
-  saScreeningFlag: FlagSeverity;
+  relationshipReadinessFlag: FlagSeverity | null;
+  saScreeningFlag: FlagSeverity | null;
   screeningFlagDetails: {
     readiness: SignalDetail[];
     saRisk: SignalDetail[];
@@ -59,7 +57,7 @@ function FlagCard({
   signals,
 }: {
   title: string;
-  severity: FlagSeverity;
+  severity: FlagSeverity | null;
   signals: SignalDetail[];
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -134,12 +132,13 @@ export default function AdminScreeningFlags({
     try {
       const headers = await getAuthHeaders();
       if (!headers) return;
-      const res = await fetch(`/api/admin/applications/${applicantId}`, {
-        headers,
-      });
+      const res = await fetch(
+        `/api/admin/applications/${applicantId}/screening-flags`,
+        { headers },
+      );
       const json = await res.json();
-      if (json?.screeningFlags) {
-        setData(json.screeningFlags);
+      if (json?.data) {
+        setData(json.data);
       }
     } catch {
       setError("Failed to load screening flags");
@@ -177,6 +176,13 @@ export default function AdminScreeningFlags({
 
   const handleToggleOverride = async () => {
     if (!data) return;
+    // Confirm before removing an active override — this re-blocks the applicant.
+    if (data.screeningFlagOverride) {
+      const confirmed = window.confirm(
+        "Remove override? This applicant will be blocked from matching again until re-overridden.",
+      );
+      if (!confirmed) return;
+    }
     setToggling(true);
     setError(null);
     try {

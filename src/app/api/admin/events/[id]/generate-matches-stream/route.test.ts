@@ -225,6 +225,7 @@ describe("POST /api/admin/events/[id]/generate-matches-stream", () => {
         id: "m-red",
         gender: "MAN",
         relationshipReadinessFlag: "RED",
+        saScreeningFlag: null,
         screeningFlagOverride: false,
         _count: { eventInvitations: 0 },
         user: { firstName: "R", lastName: "M" },

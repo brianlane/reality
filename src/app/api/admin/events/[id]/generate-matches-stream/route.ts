@@ -101,6 +101,13 @@ export async function POST(
     return true;
   });
 
+  if (eligibleApplicants.length < 2) {
+    return new Response(
+      `Need at least 2 approved applicants in ${event.location} with completed questionnaires (found ${eligibleApplicants.length} eligible, ${flaggedExclusions.length} excluded by screening flags)`,
+      { status: 400 },
+    );
+  }
+
   const allMen = eligibleApplicants.filter((a) => a.gender === "MAN");
   const allWomen = eligibleApplicants.filter((a) => a.gender === "WOMAN");
   const totalPairs = allMen.length * allWomen.length;

@@ -5,7 +5,21 @@ export interface SignalResult {
   questionPrompt: string;
   severity: FlagSeverity;
   reason: string;
-  rawValue: unknown;
+}
+
+/**
+ * Shared factory for SignalResult — kept here to avoid duplication across
+ * relationship-readiness.ts and sa-risk.ts.
+ * The prompt is left as "" at construction time; callers overwrite it
+ * with the resolved question prompt after signal evaluation.
+ */
+export function makeSignalResult(
+  name: string,
+  prompt: string,
+  severity: FlagSeverity,
+  reason: string,
+): SignalResult {
+  return { signalName: name, questionPrompt: prompt, severity, reason };
 }
 
 export interface ScreeningResult {

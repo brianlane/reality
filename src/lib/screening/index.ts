@@ -25,7 +25,12 @@ function resolveSignals(
     const question = questions.find((q) =>
       q.prompt.toLowerCase().includes(signal.promptSubstring.toLowerCase()),
     );
-    if (!question) continue;
+    if (!question) {
+      console.warn(
+        `[screening] Signal "${signal.name}" could not be resolved — no active question matches prompt substring "${signal.promptSubstring}". Signal will be skipped.`,
+      );
+      continue;
+    }
 
     resolved.push({
       signal,
@@ -87,14 +92,28 @@ export async function computeAndStoreScreeningFlags(
 ): Promise<FullScreeningResult> {
   const result = await computeScreeningFlags(applicantId);
 
+  // Strip rawValue before persisting — it contains the raw applicant answer
+  // text which is sensitive and not needed for admin display.
+  const toStorable = (s: {
+    signalName: string;
+    questionPrompt: string;
+    severity: string;
+    reason: string;
+  }) => ({
+    signalName: s.signalName,
+    questionPrompt: s.questionPrompt,
+    severity: s.severity,
+    reason: s.reason,
+  });
+
   await db.applicant.update({
     where: { id: applicantId },
     data: {
       relationshipReadinessFlag: result.relationshipReadiness.flag,
       saScreeningFlag: result.saRisk.flag,
       screeningFlagDetails: {
-        readiness: result.relationshipReadiness.signals,
-        saRisk: result.saRisk.signals,
+        readiness: result.relationshipReadiness.signals.map(toStorable),
+        saRisk: result.saRisk.signals.map(toStorable),
       } as unknown as Prisma.InputJsonValue,
       screeningFlagComputedAt: new Date(),
     },

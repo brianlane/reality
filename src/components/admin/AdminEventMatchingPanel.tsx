@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import type { FlaggedExclusion } from "@/lib/matching/filters";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -56,13 +57,6 @@ type PreviewMatrixData = {
   truncated: boolean;
   totalMen: number;
   totalWomen: number;
-};
-
-type FlaggedExclusion = {
-  applicantId: string;
-  reason: string;
-  flag: "relationshipReadiness" | "saRisk";
-  severity: "RED";
 };
 
 type MatchMode = "top_n" | "all_pairs";

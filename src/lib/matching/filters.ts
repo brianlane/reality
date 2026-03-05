@@ -45,15 +45,29 @@ export interface FlaggedExclusion {
 }
 
 /**
+ * Minimal shape required by checkScreeningFlags — allows passing DB `select`
+ * results without needing the full Applicant type.
+ */
+export interface ScreeningFlagCandidate {
+  id: string;
+  screeningFlagOverride: boolean;
+  saScreeningFlag: FlagSeverity | null;
+  relationshipReadinessFlag: FlagSeverity | null;
+}
+
+/**
  * Check if an applicant should be excluded from matching due to RED screening flags.
  * Returns null if the applicant passes, or a FlaggedExclusion if they should be excluded.
  * Applicants with screeningFlagOverride = true are never excluded.
  */
 export function checkScreeningFlags(
-  candidate: Applicant,
+  candidate: ScreeningFlagCandidate,
 ): FlaggedExclusion | null {
   if (candidate.screeningFlagOverride) return null;
 
+  // SA risk is checked first. If an applicant has BOTH flags RED, only the
+  // SA exclusion is returned — the exclusion still takes effect regardless,
+  // and the admin can see all flags on the application detail page.
   if (candidate.saScreeningFlag === FlagSeverity.RED) {
     return {
       applicantId: candidate.id,

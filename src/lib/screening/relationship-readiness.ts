@@ -5,22 +5,7 @@ import type {
   ScreeningResult,
   ResolvedSignal,
 } from "./types";
-
-function makeSignalResult(
-  name: string,
-  prompt: string,
-  severity: FlagSeverity,
-  reason: string,
-  rawValue: unknown,
-): SignalResult {
-  return {
-    signalName: name,
-    questionPrompt: prompt,
-    severity,
-    reason,
-    rawValue,
-  };
-}
+import { makeSignalResult } from "./types";
 
 export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
   {
@@ -36,7 +21,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           `Score ${n}/7 — still significantly pulled out of the present by ex reminders`,
-          value,
         );
       if (n >= 5)
         return makeSignalResult(
@@ -44,7 +28,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           `Score ${n}/7 — moderately affected by ex reminders`,
-          value,
         );
       return null;
     },
@@ -62,7 +45,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           `Score ${n}/7 — very low life satisfaction may indicate unreadiness`,
-          value,
         );
       if (n <= 3)
         return makeSignalResult(
@@ -70,7 +52,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           `Score ${n}/7 — below-average life satisfaction`,
-          value,
         );
       return null;
     },
@@ -87,7 +68,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           "Partner would have to fit into gaps of an over-scheduled life",
-          value,
         );
       return null;
     },
@@ -104,7 +84,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           "Exclusively withdraws under stress — possible avoidant pattern",
-          value,
         );
       return null;
     },
@@ -122,7 +101,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           `Score ${n}/7 — immediately dismisses partner feedback, indicating emotional rigidity`,
-          value,
         );
       if (n >= 5)
         return makeSignalResult(
@@ -130,7 +108,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           `Score ${n}/7 — tends to dismiss partner feedback`,
-          value,
         );
       return null;
     },
@@ -148,7 +125,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           `Score ${n}/7 — strong tendency to suppress emotions`,
-          value,
         );
       return null;
     },
@@ -167,7 +143,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           `Score ${n}/7 — very low tolerance for partner's independent hobbies (enmeshment risk)`,
-          value,
         );
       if (n <= 3)
         return makeSignalResult(
@@ -175,7 +150,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           `Score ${n}/7 — low tolerance for partner's independent hobbies`,
-          value,
         );
       return null;
     },
@@ -192,7 +166,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           "Frustrated by partner spending a weekend on personal interests",
-          value,
         );
       return null;
     },
@@ -210,7 +183,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           `Score ${n}/7 — doesn't value partner having independent identity`,
-          value,
         );
       if (n <= 3)
         return makeSignalResult(
@@ -218,7 +190,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           `Score ${n}/7 — low value on partner's independent identity`,
-          value,
         );
       return null;
     },
@@ -235,7 +206,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           "Expects partner to fulfill all emotional and social needs (enmeshment risk)",
-          value,
         );
       return null;
     },
@@ -253,7 +223,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           `Score ${n}/7 — very low friend support network`,
-          value,
         );
       if (n <= 3)
         return makeSignalResult(
@@ -261,7 +230,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           `Score ${n}/7 — limited friend support network`,
-          value,
         );
       return null;
     },
@@ -279,7 +247,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           `Score ${n}/7 — very few people to share happiness and emotions with`,
-          value,
         );
       if (n <= 3)
         return makeSignalResult(
@@ -287,7 +254,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           `Score ${n}/7 — limited emotional sharing network`,
-          value,
         );
       return null;
     },
@@ -305,7 +271,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           `Score ${n}/7 — very dissatisfied with social support level`,
-          value,
         );
       if (n <= 3)
         return makeSignalResult(
@@ -313,7 +278,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           `Score ${n}/7 — below-average satisfaction with social support`,
-          value,
         );
       return null;
     },
@@ -331,7 +295,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           `Score ${n}/7 — very low self-awareness`,
-          value,
         );
       if (n <= 3)
         return makeSignalResult(
@@ -339,7 +302,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           `Score ${n}/7 — limited self-awareness`,
-          value,
         );
       return null;
     },
@@ -356,7 +318,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           "Would change their partner rather than adapt their own boundaries",
-          value,
         );
       if (s === "both")
         return makeSignalResult(
@@ -364,7 +325,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           "Mixed approach — may attempt to change partner alongside own boundaries",
-          value,
         );
       return null;
     },
@@ -381,7 +341,6 @@ export const RELATIONSHIP_READINESS_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           "Not therapy-positive — may resist emotional self-regulation work",
-          value,
         );
       return null;
     },

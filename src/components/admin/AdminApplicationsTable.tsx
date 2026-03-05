@@ -9,8 +9,7 @@ import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 import { formatDateTime, formatDuration } from "@/lib/admin/format";
 import PaginationControls from "@/components/admin/PaginationControls";
 import LocationFilter from "@/components/admin/LocationFilter";
-
-type FlagSeverity = "GREEN" | "YELLOW" | "RED" | null;
+import type { FlagSeverity } from "@prisma/client";
 
 type ApplicationItem = {
   id: string;
@@ -19,8 +18,8 @@ type ApplicationItem = {
   email: string;
   applicationStatus: string;
   screeningStatus?: string;
-  relationshipReadinessFlag?: FlagSeverity;
-  saScreeningFlag?: FlagSeverity;
+  relationshipReadinessFlag?: FlagSeverity | null;
+  saScreeningFlag?: FlagSeverity | null;
   screeningFlagOverride?: boolean;
   submittedAt?: string | null;
   questionnaireStartedAt?: string | null;
@@ -44,7 +43,7 @@ function FlagBadge({
   override,
   label,
 }: {
-  severity: FlagSeverity;
+  severity: FlagSeverity | null;
   override?: boolean;
   label: string;
 }) {

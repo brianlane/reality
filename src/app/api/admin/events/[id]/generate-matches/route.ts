@@ -101,7 +101,13 @@ export async function POST(
         applicationStatus: ApplicationStatus.APPROVED,
         screeningStatus: ScreeningStatus.PASSED,
       },
-      select: { id: true, location: true },
+      select: {
+        id: true,
+        location: true,
+        relationshipReadinessFlag: true,
+        saScreeningFlag: true,
+        screeningFlagOverride: true,
+      },
     });
     const validIds = new Set(validApplicants.map((a) => a.id));
     const invalidIds = [...allPairIds].filter((id) => !validIds.has(id));
@@ -109,6 +115,18 @@ export async function POST(
       return errorResponse(
         "VALIDATION_ERROR",
         `${invalidIds.length} applicant ID(s) not found or not approved`,
+        400,
+      );
+    }
+
+    // Apply the same screening flag gate as the pool-based path.
+    const flaggedInPairs = validApplicants.filter((a) =>
+      checkScreeningFlags(a),
+    );
+    if (flaggedInPairs.length > 0) {
+      return errorResponse(
+        "VALIDATION_ERROR",
+        `${flaggedInPairs.length} applicant(s) in the explicit pairs have RED screening flags and no override. Remove them from the pairs or apply an admin override first.`,
         400,
       );
     }

@@ -5,6 +5,7 @@ import type {
   ScreeningResult,
   ResolvedSignal,
 } from "./types";
+import { makeSignalResult } from "./types";
 import {
   DEROGATORY_EX_LABELS,
   BLAME_SHIFTING_MARKERS,
@@ -13,22 +14,6 @@ import {
   ABUSE_MINIMIZING_PATTERNS,
   countPatternMatches,
 } from "./patterns";
-
-function makeSignalResult(
-  name: string,
-  prompt: string,
-  severity: FlagSeverity,
-  reason: string,
-  rawValue: unknown,
-): SignalResult {
-  return {
-    signalName: name,
-    questionPrompt: prompt,
-    severity,
-    reason,
-    rawValue,
-  };
-}
 
 export const SA_RISK_SIGNALS: ScreeningSignal[] = [
   {
@@ -64,7 +49,6 @@ export const SA_RISK_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           `Multiple red-flag patterns detected (${allMatched.join(", ")})${hasAccountability ? " — some accountability noted but insufficient" : " — no accountability language present"}`,
-          value,
         );
       if (negativeCount >= 1)
         return makeSignalResult(
@@ -72,7 +56,6 @@ export const SA_RISK_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           `Concerning language detected (${allMatched.join(", ")})${hasAccountability ? " — some accountability noted" : " — no accountability language present"}`,
-          value,
         );
       return null;
     },
@@ -90,7 +73,6 @@ export const SA_RISK_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           "Unable or unwilling to identify personal negative traits",
-          value,
         );
 
       const blame = countPatternMatches(text, [
@@ -107,7 +89,6 @@ export const SA_RISK_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           `Deflects negative traits onto others (${blame.matched.join(", ")})`,
-          value,
         );
 
       if (text.length < 20)
@@ -116,7 +97,6 @@ export const SA_RISK_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           "Very brief response — may indicate reluctance to self-reflect",
-          value,
         );
 
       return null;
@@ -134,7 +114,6 @@ export const SA_RISK_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           "First instinct under hurt is to move against partner in defense",
-          value,
         );
       return null;
     },
@@ -151,7 +130,6 @@ export const SA_RISK_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           "Escalates arguments by matching energy rather than de-escalating",
-          value,
         );
       return null;
     },
@@ -169,7 +147,6 @@ export const SA_RISK_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           `Score ${n}/7 — immediately dismisses feedback, views partner's voice as threat`,
-          value,
         );
       if (n >= 5)
         return makeSignalResult(
@@ -177,7 +154,6 @@ export const SA_RISK_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           `Score ${n}/7 — tends toward dismissing partner feedback`,
-          value,
         );
       return null;
     },
@@ -194,7 +170,6 @@ export const SA_RISK_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           "Seeks to change partner rather than adjust own boundaries — control indicator",
-          value,
         );
       return null;
     },
@@ -214,7 +189,6 @@ export const SA_RISK_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.RED,
           `Uses minimizing language about relationship boundaries (${minimizing.matched.join(", ")})`,
-          value,
         );
       return null;
     },
@@ -232,14 +206,13 @@ export const SA_RISK_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           `Score ${n}/7 — extremely high relationship worry (potential for controlling behavior when combined with other signals)`,
-          value,
         );
       return null;
     },
   },
   {
-    name: "Conflict reset refusal",
-    promptSubstring: "reset",
+    name: "Forced immediate resolution",
+    promptSubstring: "reset after",
     questionType: QuestionnaireQuestionType.DROPDOWN,
     evaluate(value) {
       const s = String(value).toLowerCase();
@@ -249,7 +222,6 @@ export const SA_RISK_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           "Insists on immediate resolution — may indicate forced engagement during conflict",
-          value,
         );
       return null;
     },
@@ -266,7 +238,6 @@ export const SA_RISK_SIGNALS: ScreeningSignal[] = [
           "",
           FlagSeverity.YELLOW,
           "Views partner's bids for connection during conflict as distractions — may prioritize control over repair",
-          value,
         );
       return null;
     },

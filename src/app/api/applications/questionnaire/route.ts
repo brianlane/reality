@@ -521,10 +521,12 @@ export async function POST(request: NextRequest) {
   );
 
   // Fire-and-forget: recompute screening flags after answers are saved.
-  // Non-blocking so it doesn't slow the save response.
+  // Non-blocking — failure here does NOT affect the save response, but flags
+  // will remain stale until the next successful compute (admin can trigger
+  // manually via the Recompute button on the application detail page).
   computeAndStoreScreeningFlags(applicationId).catch((err) => {
     console.error(
-      `[screening] Failed to compute flags for ${applicationId}:`,
+      `[screening] Failed to recompute flags for applicant ${applicationId} after questionnaire save — flags may be stale. Error:`,
       err,
     );
   });
