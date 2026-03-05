@@ -10,6 +10,8 @@ import { formatDateTime, formatDuration } from "@/lib/admin/format";
 import PaginationControls from "@/components/admin/PaginationControls";
 import LocationFilter from "@/components/admin/LocationFilter";
 
+type FlagSeverity = "GREEN" | "YELLOW" | "RED" | null;
+
 type ApplicationItem = {
   id: string;
   firstName: string;
@@ -17,10 +19,50 @@ type ApplicationItem = {
   email: string;
   applicationStatus: string;
   screeningStatus?: string;
+  relationshipReadinessFlag?: FlagSeverity;
+  saScreeningFlag?: FlagSeverity;
+  screeningFlagOverride?: boolean;
   submittedAt?: string | null;
   questionnaireStartedAt?: string | null;
   reviewedAt?: string | null;
 };
+
+const FLAG_COLORS: Record<string, string> = {
+  GREEN: "bg-green-500",
+  YELLOW: "bg-yellow-400",
+  RED: "bg-red-500",
+};
+
+const FLAG_LABELS: Record<string, string> = {
+  GREEN: "Green",
+  YELLOW: "Yellow",
+  RED: "Red",
+};
+
+function FlagBadge({
+  severity,
+  override,
+  label,
+}: {
+  severity: FlagSeverity;
+  override?: boolean;
+  label: string;
+}) {
+  if (!severity) {
+    return <span className="text-slate-300">--</span>;
+  }
+  return (
+    <span
+      className="inline-flex items-center gap-1"
+      title={`${label}: ${FLAG_LABELS[severity]}${override ? " (overridden)" : ""}`}
+    >
+      <span
+        className={`inline-block h-2.5 w-2.5 rounded-full ${FLAG_COLORS[severity]}${override ? " ring-2 ring-offset-1 ring-slate-400" : ""}`}
+      />
+      {override && <span className="text-[10px] text-slate-400">OVR</span>}
+    </span>
+  );
+}
 
 export default function AdminApplicationsTable() {
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
@@ -119,6 +161,15 @@ export default function AdminApplicationsTable() {
                 <th className="py-2 px-6 text-left">Email</th>
                 <th className="py-2 px-6 text-left">Status</th>
                 <th className="py-2 px-6 text-left">Screening</th>
+                <th
+                  className="py-2 px-3 text-center"
+                  title="Relationship Readiness Flag"
+                >
+                  RR
+                </th>
+                <th className="py-2 px-3 text-center" title="SA Screening Flag">
+                  SA
+                </th>
                 <th className="py-2 px-6 text-left">Submitted</th>
                 <th className="py-2 px-6 text-left">Questionnaire Started</th>
                 <th className="py-2 px-6 text-left">Q Started → Reviewed</th>
@@ -139,6 +190,20 @@ export default function AdminApplicationsTable() {
                   </td>
                   <td className="py-2 px-6 whitespace-nowrap">
                     {app.screeningStatus ?? "N/A"}
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <FlagBadge
+                      severity={app.relationshipReadinessFlag ?? null}
+                      override={app.screeningFlagOverride}
+                      label="Relationship Readiness"
+                    />
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <FlagBadge
+                      severity={app.saScreeningFlag ?? null}
+                      override={app.screeningFlagOverride}
+                      label="SA Screening"
+                    />
                   </td>
                   <td className="py-2 px-6 whitespace-nowrap text-xs">
                     {formatDateTime(app.submittedAt) ?? "N/A"}

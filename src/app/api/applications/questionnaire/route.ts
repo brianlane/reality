@@ -13,6 +13,7 @@ import {
   QUESTIONNAIRE_NON_RESEARCH_ALLOWED_STATUSES,
 } from "@/lib/application-status";
 import { ERROR_MESSAGES } from "@/lib/error-messages";
+import { computeAndStoreScreeningFlags } from "@/lib/screening";
 const RESEARCH_ACCESS_STATUSES: ApplicationStatus[] = [
   APP_STATUS.RESEARCH_INVITED,
   APP_STATUS.RESEARCH_IN_PROGRESS,
@@ -518,6 +519,15 @@ export async function POST(request: NextRequest) {
       }),
     ),
   );
+
+  // Fire-and-forget: recompute screening flags after answers are saved.
+  // Non-blocking so it doesn't slow the save response.
+  computeAndStoreScreeningFlags(applicationId).catch((err) => {
+    console.error(
+      `[screening] Failed to compute flags for ${applicationId}:`,
+      err,
+    );
+  });
 
   return successResponse({ saved: true });
 }

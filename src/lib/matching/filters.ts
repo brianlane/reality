@@ -1,4 +1,9 @@
-import { Applicant, ApplicationStatus, ScreeningStatus } from "@prisma/client";
+import {
+  Applicant,
+  ApplicationStatus,
+  FlagSeverity,
+  ScreeningStatus,
+} from "@prisma/client";
 
 /**
  * Check if two applicants have mutual gender/seeking compatibility
@@ -30,6 +35,45 @@ export function filterByStatus(candidate: Applicant): boolean {
     candidate.screeningStatus === ScreeningStatus.PASSED &&
     candidate.deletedAt === null
   );
+}
+
+export interface FlaggedExclusion {
+  applicantId: string;
+  reason: string;
+  flag: "relationshipReadiness" | "saRisk";
+  severity: FlagSeverity;
+}
+
+/**
+ * Check if an applicant should be excluded from matching due to RED screening flags.
+ * Returns null if the applicant passes, or a FlaggedExclusion if they should be excluded.
+ * Applicants with screeningFlagOverride = true are never excluded.
+ */
+export function checkScreeningFlags(
+  candidate: Applicant,
+): FlaggedExclusion | null {
+  if (candidate.screeningFlagOverride) return null;
+
+  if (candidate.saScreeningFlag === FlagSeverity.RED) {
+    return {
+      applicantId: candidate.id,
+      reason: "RED SA screening flag — requires admin override to include",
+      flag: "saRisk",
+      severity: FlagSeverity.RED,
+    };
+  }
+
+  if (candidate.relationshipReadinessFlag === FlagSeverity.RED) {
+    return {
+      applicantId: candidate.id,
+      reason:
+        "RED relationship readiness flag — requires admin override to include",
+      flag: "relationshipReadiness",
+      severity: FlagSeverity.RED,
+    };
+  }
+
+  return null;
 }
 
 /**

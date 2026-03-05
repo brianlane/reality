@@ -10,6 +10,10 @@ import {
 } from "@/lib/matching/weighted-compatibility";
 import { ApplicationStatus, ScreeningStatus } from "@prisma/client";
 import { z } from "zod";
+import {
+  checkScreeningFlags,
+  type FlaggedExclusion,
+} from "@/lib/matching/filters";
 
 const generateMatchesSchema = z.object({
   maxPerApplicant: z.number().int().min(1).max(50).optional().default(5),
@@ -218,10 +222,22 @@ export async function POST(
     (a, b) => a._count.eventInvitations - b._count.eventInvitations,
   );
 
-  if (applicants.length < 2) {
+  // ── Screening flag gate ────────────────────────────────────────────────
+  // Exclude applicants with RED screening flags (unless admin-overridden).
+  const flaggedExclusions: FlaggedExclusion[] = [];
+  const eligibleApplicants = applicants.filter((a) => {
+    const exclusion = checkScreeningFlags(a);
+    if (exclusion) {
+      flaggedExclusions.push(exclusion);
+      return false;
+    }
+    return true;
+  });
+
+  if (eligibleApplicants.length < 2) {
     return errorResponse(
       "INSUFFICIENT_DATA",
-      `Need at least 2 approved applicants in ${event.location} with completed questionnaires (found ${applicants.length})`,
+      `Need at least 2 approved applicants in ${event.location} with completed questionnaires (found ${eligibleApplicants.length} eligible, ${flaggedExclusions.length} excluded by screening flags)`,
       400,
     );
   }
@@ -253,8 +269,8 @@ export async function POST(
     | undefined;
 
   if (mode === "all_pairs") {
-    const allMen = applicants.filter((a) => a.gender === "MAN");
-    const allWomen = applicants.filter((a) => a.gender === "WOMAN");
+    const allMen = eligibleApplicants.filter((a) => a.gender === "MAN");
+    const allWomen = eligibleApplicants.filter((a) => a.gender === "WOMAN");
 
     const allIds = [...allMen.map((m) => m.id), ...allWomen.map((w) => w.id)];
     const cache = await preloadAnswerCache(allIds);
@@ -301,11 +317,11 @@ export async function POST(
       comparedWomen: allWomen.length,
     };
   } else {
-    for (const applicant of applicants) {
+    for (const applicant of eligibleApplicants) {
       try {
         const recommendations = await getRecommendations(
           applicant,
-          applicants,
+          eligibleApplicants,
           {
             maxResults: maxPerApplicant,
             minScore,
@@ -400,7 +416,10 @@ export async function POST(
     },
     mode,
     distinct,
-    applicantsProcessed: applicants.length,
+    applicantsProcessed: eligibleApplicants.length,
+    applicantsExcludedByFlags: flaggedExclusions.length,
+    flaggedExclusions:
+      flaggedExclusions.length > 0 ? flaggedExclusions : undefined,
     recommendationsGenerated: allRecommendations.length,
     distinctCount: distinctMatchList.length,
     cohortMenCount: matrixData?.men.length ?? 0,

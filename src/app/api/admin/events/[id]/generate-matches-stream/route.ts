@@ -8,6 +8,10 @@ import {
 } from "@/lib/matching/weighted-compatibility";
 import { ApplicationStatus, ScreeningStatus } from "@prisma/client";
 import { z } from "zod";
+import {
+  checkScreeningFlags,
+  type FlaggedExclusion,
+} from "@/lib/matching/filters";
 
 const streamMatchesSchema = z.object({
   minScore: z.number().min(0).max(100).optional().default(60),
@@ -86,8 +90,19 @@ export async function POST(
     (a, b) => a._count.eventInvitations - b._count.eventInvitations,
   );
 
-  const allMen = applicants.filter((a) => a.gender === "MAN");
-  const allWomen = applicants.filter((a) => a.gender === "WOMAN");
+  // Screening flag gate: exclude RED-flagged applicants (unless overridden)
+  const flaggedExclusions: FlaggedExclusion[] = [];
+  const eligibleApplicants = applicants.filter((a) => {
+    const exclusion = checkScreeningFlags(a);
+    if (exclusion) {
+      flaggedExclusions.push(exclusion);
+      return false;
+    }
+    return true;
+  });
+
+  const allMen = eligibleApplicants.filter((a) => a.gender === "MAN");
+  const allWomen = eligibleApplicants.filter((a) => a.gender === "WOMAN");
   const totalPairs = allMen.length * allWomen.length;
 
   const allIds = [...allMen.map((m) => m.id), ...allWomen.map((w) => w.id)];
@@ -112,6 +127,9 @@ export async function POST(
           truncated: false,
           totalMen: allMen.length,
           totalWomen: allWomen.length,
+          flaggedExclusions:
+            flaggedExclusions.length > 0 ? flaggedExclusions : undefined,
+          applicantsExcludedByFlags: flaggedExclusions.length,
         });
 
         const startTime = Date.now();
