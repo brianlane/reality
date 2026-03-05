@@ -151,7 +151,7 @@ export default function AdminEventForm({ eventId, mode }: AdminEventFormProps) {
         endTime: new Date(form.endTime).toISOString(),
         venue: form.venue,
         venueAddress: form.venueAddress,
-        location: form.location,
+        location: form.location || null,
         capacity: Number(form.capacity),
         expectedRevenue: Number(form.expectedRevenue),
         costs: {

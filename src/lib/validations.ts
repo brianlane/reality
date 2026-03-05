@@ -160,7 +160,7 @@ export const adminEventCreateSchema = z.object({
   endTime: z.string().datetime(),
   venue: z.string().min(1),
   venueAddress: z.string().min(1),
-  location: z.string().min(1, "Location is required"),
+  location: z.string().min(1, "Location is required").nullable().optional(),
   capacity: z.number().int().min(1),
   costs: z.object({
     venue: z.number().int().min(0),
