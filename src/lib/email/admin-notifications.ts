@@ -8,6 +8,7 @@
  */
 
 import { sendEmail } from "./client";
+import { escapeHtml } from "./simple-status-view";
 
 const EMAIL_ASSET_BASE_URL = (
   process.env.EMAIL_ASSET_BASE_URL ||
@@ -15,17 +16,6 @@ const EMAIL_ASSET_BASE_URL = (
   "https://www.realitymatchmaking.com"
 ).replace(/\/$/, "");
 
-// Escape HTML to prevent injection when interpolating user data into email templates
-const escapeHtml = (str: string) => {
-  const htmlEscapes: Record<string, string> = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  };
-  return str.replace(/[&<>"']/g, (char) => htmlEscapes[char] ?? char);
-};
 
 interface EmailFailureParams {
   recipientEmail: string;

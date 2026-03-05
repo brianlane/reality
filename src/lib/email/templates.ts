@@ -14,20 +14,10 @@ import { EMAIL_STATUS_CONTENT, type StatusContentKey } from "../status-content";
 import {
   getSimpleStatusViewHTML,
   getSimpleEmailHTML,
+  escapeHtml,
 } from "./simple-status-view";
 import { getTimezoneForAddress } from "@/lib/locations";
 
-const htmlEscapes: Record<string, string> = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;",
-};
-
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (char) => htmlEscapes[char] ?? char);
-}
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const EMAIL_ASSET_BASE_URL = (
@@ -172,6 +162,9 @@ export function getEventInvitationHTML(params: {
   const eventLocation = escapeHtml(params.eventLocation);
   const eventAddress = escapeHtml(params.eventAddress);
   const rsvpUrl = escapeHtml(params.rsvpUrl);
+  const safeFormattedDate = escapeHtml(formattedDate);
+  const safeFormattedStartTime = escapeHtml(formattedStartTime);
+  const safeFormattedEndTime = escapeHtml(formattedEndTime);
 
   return `
 <!DOCTYPE html>
@@ -205,8 +198,8 @@ export function getEventInvitationHTML(params: {
     <div style="padding: 32px 40px; background-color: #fafaf9; border-bottom: 1px solid #e2e8f0;">
       <p style="color: #9d7d52; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; margin: 0 0 12px;">Event Details</p>
       <p style="color: #1a1a2e; font-size: 18px; font-weight: 700; margin: 0 0 8px;">${eventTitle}</p>
-      <p style="color: #4f4f66; font-size: 15px; margin: 0 0 4px;">${formattedDate}</p>
-      <p style="color: #4f4f66; font-size: 15px; margin: 0 0 16px;">${formattedStartTime} &ndash; ${formattedEndTime}</p>
+      <p style="color: #4f4f66; font-size: 15px; margin: 0 0 4px;">${safeFormattedDate}</p>
+      <p style="color: #4f4f66; font-size: 15px; margin: 0 0 16px;">${safeFormattedStartTime} &ndash; ${safeFormattedEndTime}</p>
       <p style="color: #1a1a2e; font-size: 15px; font-weight: 600; margin: 0 0 4px;">${eventLocation}</p>
       <p style="color: #4f4f66; font-size: 14px; margin: 0;">${eventAddress}</p>
     </div>
@@ -267,6 +260,10 @@ export function getMatchNotificationHTML(params: {
     params.compatibilityScore !== null
       ? Math.round(params.compatibilityScore)
       : null;
+  const firstName = escapeHtml(params.firstName);
+  const partnerFirstName = escapeHtml(params.partnerFirstName);
+  const eventName = escapeHtml(params.eventName);
+  const matchesUrl = escapeHtml(params.matchesUrl);
 
   return `
 <!DOCTYPE html>
@@ -288,20 +285,20 @@ export function getMatchNotificationHTML(params: {
       />
 
       <h1 style="color: #1a2332; margin: 0 0 8px; font-size: 28px; font-weight: 600;">
-        You have a new match, ${params.firstName}!
+        You have a new match, ${firstName}!
       </h1>
 
       <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 32px;">
-        We found a great connection for you at <strong>${params.eventName}</strong>.
+        We found a great connection for you at <strong>${eventName}</strong>.
       </p>
 
       <div style="background-color: #f8f9fa; border-radius: 8px; padding: 24px; margin: 0 0 32px; text-align: left;">
         <p style="color: #718096; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px;">Your Match</p>
-        <p style="color: #1a2332; font-size: 22px; font-weight: 600; margin: 0 0 16px;">${params.partnerFirstName}</p>
+        <p style="color: #1a2332; font-size: 22px; font-weight: 600; margin: 0 0 16px;">${partnerFirstName}</p>
         ${score !== null ? `<p style="color: #718096; font-size: 14px; margin: 0;">Compatibility: <strong style="color: #1a2332;">${score} / 100</strong></p>` : ""}
       </div>
 
-      <a href="${params.matchesUrl}" style="display: inline-block; background-color: #1a2332; color: white; text-decoration: none; padding: 16px 32px; border-radius: 6px; font-size: 16px; font-weight: 500;">
+      <a href="${matchesUrl}" style="display: inline-block; background-color: #1a2332; color: white; text-decoration: none; padding: 16px 32px; border-radius: 6px; font-size: 16px; font-weight: 500;">
         View Your Match
       </a>
     </div>
