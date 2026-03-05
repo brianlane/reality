@@ -271,6 +271,12 @@ export interface ScoredPairsResult {
   }>;
 }
 
+export interface CompatibleCohortResult {
+  menIds: string[];
+  womenIds: string[];
+  recommendations: ScoredPairsResult["recommendations"];
+}
+
 /**
  * Score every man×woman pair using a pre-loaded cache. No DB calls.
  *
@@ -339,6 +345,164 @@ export async function scoreAllPairs(
   }
 
   return { allScores, recommendations };
+}
+
+/**
+ * Build a mutually compatible cohort from scored man×woman pairs.
+ *
+ * Goal: every remaining man-woman pair in the cohort is >= minScore with no
+ * dealbreaker violations (i.e. a complete bipartite "all-talk-all" cohort).
+ *
+ * Strategy:
+ * - Start with all capped men/women
+ * - Repeatedly remove the participant involved in the most failing edges
+ * - Stop when no failing cross-pairs remain
+ */
+export function buildCompatibleCohort(
+  allScores: PairScore[],
+  men: Array<{ id: string }>,
+  women: Array<{ id: string }>,
+  minScore: number,
+): CompatibleCohortResult {
+  const menIdsUniverse = men.map((m) => m.id);
+  const womenIdsUniverse = women.map((w) => w.id);
+
+  const passingScores = allScores.filter(
+    (s) => s.score >= minScore && s.dealbreakersViolated.length === 0,
+  );
+  if (passingScores.length === 0) {
+    return { menIds: [], womenIds: [], recommendations: [] };
+  }
+
+  const passByMan = new Map<string, Set<string>>();
+  const scoreByKey = new Map<string, number>();
+  for (const mid of menIdsUniverse) passByMan.set(mid, new Set());
+  for (const s of passingScores) {
+    passByMan.get(s.manId)?.add(s.womanId);
+    scoreByKey.set(`${s.manId}:${s.womanId}`, s.score);
+  }
+
+  const canAddWoman = (wid: string, menSel: Set<string>) => {
+    for (const mid of menSel) {
+      if (!passByMan.get(mid)?.has(wid)) return false;
+    }
+    return true;
+  };
+  const canAddMan = (mid: string, womenSel: Set<string>) => {
+    for (const wid of womenSel) {
+      if (!passByMan.get(mid)?.has(wid)) return false;
+    }
+    return true;
+  };
+
+  const avgScoreWithMen = (wid: string, menSel: Set<string>) => {
+    let sum = 0;
+    for (const mid of menSel)
+      sum += scoreByKey.get(`${mid}:${wid}`) ?? minScore;
+    return sum / Math.max(1, menSel.size);
+  };
+  const avgScoreWithWomen = (mid: string, womenSel: Set<string>) => {
+    let sum = 0;
+    for (const wid of womenSel)
+      sum += scoreByKey.get(`${mid}:${wid}`) ?? minScore;
+    return sum / Math.max(1, womenSel.size);
+  };
+
+  const seedPairs = [...passingScores]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 200);
+
+  let bestMen = new Set<string>();
+  let bestWomen = new Set<string>();
+  let bestArea = 0;
+  let bestMinSide = 0;
+  let bestAvg = 0;
+
+  for (const seed of seedPairs) {
+    const menSel = new Set<string>([seed.manId]);
+    const womenSel = new Set<string>([seed.womanId]);
+
+    let grew = true;
+    while (grew) {
+      grew = false;
+
+      let bestWid: string | null = null;
+      let bestWidAvg = -1;
+      for (const wid of womenIdsUniverse) {
+        if (womenSel.has(wid)) continue;
+        if (!canAddWoman(wid, menSel)) continue;
+        const avg = avgScoreWithMen(wid, menSel);
+        if (avg > bestWidAvg) {
+          bestWidAvg = avg;
+          bestWid = wid;
+        }
+      }
+      if (bestWid) {
+        womenSel.add(bestWid);
+        grew = true;
+      }
+
+      let bestMid: string | null = null;
+      let bestMidAvg = -1;
+      for (const mid of menIdsUniverse) {
+        if (menSel.has(mid)) continue;
+        if (!canAddMan(mid, womenSel)) continue;
+        const avg = avgScoreWithWomen(mid, womenSel);
+        if (avg > bestMidAvg) {
+          bestMidAvg = avg;
+          bestMid = mid;
+        }
+      }
+      if (bestMid) {
+        menSel.add(bestMid);
+        grew = true;
+      }
+    }
+
+    const area = menSel.size * womenSel.size;
+    const minSide = Math.min(menSel.size, womenSel.size);
+    let avg = 0;
+    let count = 0;
+    for (const mid of menSel) {
+      for (const wid of womenSel) {
+        avg += scoreByKey.get(`${mid}:${wid}`) ?? minScore;
+        count++;
+      }
+    }
+    avg = count > 0 ? avg / count : 0;
+
+    if (
+      area > bestArea ||
+      (area === bestArea && minSide > bestMinSide) ||
+      (area === bestArea && minSide === bestMinSide && avg > bestAvg)
+    ) {
+      bestArea = area;
+      bestMinSide = minSide;
+      bestAvg = avg;
+      bestMen = menSel;
+      bestWomen = womenSel;
+    }
+  }
+
+  const menIds = men.filter((m) => bestMen.has(m.id)).map((m) => m.id);
+  const womenIds = women.filter((w) => bestWomen.has(w.id)).map((w) => w.id);
+
+  const recommendations: ScoredPairsResult["recommendations"] = [];
+  for (const mid of menIds) {
+    for (const wid of womenIds) {
+      const score = scoreByKey.get(`${mid}:${wid}`);
+      if (score !== undefined) {
+        recommendations.push({
+          applicantId: mid,
+          partnerId: wid,
+          score,
+          dealbreakers: [],
+        });
+      }
+    }
+  }
+
+  return { menIds, womenIds, recommendations };
 }
 
 /**

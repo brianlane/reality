@@ -213,7 +213,7 @@ export default function AdminEventMatchingPanel({
   // ── State ────────────────────────────────────────────────────────────────
   const [minScore, setMinScore] = useState(60);
   const [maxPerApplicant, setMaxPerApplicant] = useState(5);
-  const [maxPerGender, setMaxPerGender] = useState(15);
+  const [maxPerGender, setMaxPerGender] = useState(25);
   const [matchMode, setMatchMode] = useState<MatchMode>("all_pairs");
 
   const [eventInfo, setEventInfo] = useState<EventInfo | null>(null);
@@ -960,7 +960,7 @@ export default function AdminEventMatchingPanel({
             </div>
             <p className="text-xs text-stone-400">
               {matchMode === "all_pairs"
-                ? "Scores every cross-gender pair above the threshold from the city pool."
+                ? "Builds a mutually compatible cohort from the city pool where every man-woman pair meets the threshold."
                 : "Selects the top N highest-scoring matches per person."}
             </p>
           </div>
@@ -1061,7 +1061,7 @@ export default function AdminEventMatchingPanel({
                       <span className="font-semibold text-emerald-700">
                         {distinctPreview.length} distinct
                       </span>{" "}
-                      (1:1 best)
+                      (1:1 optional)
                     </>
                   ) : null}
                   {previewMatrix

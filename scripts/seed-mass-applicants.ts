@@ -34,7 +34,7 @@ const FEBRUARY_EVENT_ID = eventArg ?? "cmlqropt800376v54xz2k7ovu";
 
 const TARGET_MEN = 500;
 const TARGET_WOMEN = 500;
-const INVITE_PER_GENDER = 15;
+const INVITE_PER_GENDER = 25;
 
 // Seeded PRNG for reproducible results
 function mulberry32(seed: number) {
@@ -570,6 +570,7 @@ async function main() {
     const gender = isMale ? "MAN" : "WOMAN";
     const seeking = isMale ? "WOMAN" : "MAN";
     const genderIdx = isMale ? i : i - TARGET_MEN;
+    const isInvitedCohort = genderIdx < INVITE_PER_GENDER;
 
     const firstNames = isMale ? MALE_FIRST : FEMALE_FIRST;
     const firstName = firstNames[genderIdx % firstNames.length]!;
@@ -600,6 +601,50 @@ async function main() {
         include: { applicant: true },
       });
       if (user?.applicant) {
+        if (isInvitedCohort) {
+          // Ensure first cohort members stay in the high-compatibility profile
+          // even on re-runs when users already exist.
+          const profile = compatibleProfile();
+          await db.applicant.update({
+            where: { id: user.applicant.id },
+            data: {
+              location: PRIMARY_CITY,
+              applicationStatus: "APPROVED",
+              screeningStatus: "PASSED",
+            },
+          });
+
+          const answersToCreate: Array<{
+            applicantId: string;
+            questionId: string;
+            value: unknown;
+          }> = [];
+          for (const question of questions) {
+            const value = generateAnswer(question, profile, user.applicant.age);
+            if (value === null) continue;
+            answersToCreate.push({
+              applicantId: user.applicant.id,
+              questionId: question.id,
+              value,
+            });
+          }
+
+          await db.questionnaireAnswer.deleteMany({
+            where: { applicantId: user.applicant.id },
+          });
+          if (answersToCreate.length > 0) {
+            await db.questionnaireAnswer.createMany({
+              data: answersToCreate.map((a) => ({
+                applicantId: a.applicantId,
+                questionId: a.questionId,
+                value:
+                  a.value as import("@prisma/client").Prisma.InputJsonValue,
+              })),
+              skipDuplicates: true,
+            });
+          }
+        }
+
         if (isMale) menIds.push(user.applicant.id);
         else womenIds.push(user.applicant.id);
       }
@@ -608,7 +653,6 @@ async function main() {
 
     // Use compatible profiles for the first INVITE_PER_GENDER of each gender
     // so the invited cohort has high cross-compatibility
-    const isInvitedCohort = genderIdx < INVITE_PER_GENDER;
     const profile = isInvitedCohort ? compatibleProfile() : randomProfile();
     const age = isInvitedCohort
       ? 27 + Math.floor(rng() * 8)

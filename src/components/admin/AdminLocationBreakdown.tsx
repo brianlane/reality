@@ -59,7 +59,9 @@ export default function AdminLocationBreakdown({
         <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-3 lg:grid-cols-4">
           {rows.map(({ location, count }) => (
             <div key={location} className="flex items-baseline justify-between">
-              <span className="text-sm text-navy-soft truncate">{location}</span>
+              <span className="text-sm text-navy-soft truncate">
+                {location}
+              </span>
               <span className="ml-3 text-sm font-semibold text-navy tabular-nums">
                 {count.toLocaleString()}
               </span>

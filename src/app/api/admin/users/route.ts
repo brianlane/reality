@@ -57,7 +57,7 @@ export async function GET(request: Request) {
       ? { AND: [{ OR: searchOR }, locationClause] }
       : searchOR
         ? { OR: searchOR }
-        : locationClause ?? {}),
+        : (locationClause ?? {})),
   };
 
   const [users, total, totalApplicants, totalAdmins] = await Promise.all([

@@ -26,7 +26,27 @@ export async function GET(request: Request) {
 
   let breakdown: { location: string; count: number }[] = [];
 
-  if (type === "applications" || type === "users") {
+  const applicationsExcludedStatuses: ApplicationStatus[] = [
+    "WAITLIST",
+    "WAITLIST_INVITED",
+    "RESEARCH_INVITED",
+    "RESEARCH_IN_PROGRESS",
+    "RESEARCH_COMPLETED",
+  ];
+
+  if (type === "applications") {
+    const rows = await db.applicant.groupBy({
+      by: ["location"],
+      _count: true,
+      where: {
+        deletedAt: null,
+        applicationStatus: { notIn: applicationsExcludedStatuses },
+      },
+    });
+    breakdown = rows
+      .map((r) => ({ location: r.location, count: r._count }))
+      .sort((a, b) => b.count - a.count);
+  } else if (type === "users") {
     const rows = await db.applicant.groupBy({
       by: ["location"],
       _count: true,
@@ -50,19 +70,23 @@ export async function GET(request: Request) {
       .map((r) => ({ location: r.location, count: r._count }))
       .sort((a, b) => b.count - a.count);
   } else if (type === "matches") {
-    // Group by applicant location since Match has no location field.
-    // Fetch all non-deleted match applicant locations and aggregate in JS.
+    // Events are location-based, so match counts are grouped by event location.
+    // This aligns with the new flow: event city -> generate matches -> invite.
     const matches = await db.match.findMany({
       where: { deletedAt: null },
-      select: { applicant: { select: { location: true } } },
+      select: {
+        id: true,
+        event: { select: { location: true } },
+      },
     });
-    const locationMap: Record<string, number> = {};
+    const locationMatchIds: Record<string, Set<string>> = {};
     for (const m of matches) {
-      const loc = m.applicant.location;
-      locationMap[loc] = (locationMap[loc] ?? 0) + 1;
+      const loc = m.event.location ?? "Unknown";
+      if (!locationMatchIds[loc]) locationMatchIds[loc] = new Set();
+      locationMatchIds[loc].add(m.id);
     }
-    breakdown = Object.entries(locationMap)
-      .map(([location, count]) => ({ location, count }))
+    breakdown = Object.entries(locationMatchIds)
+      .map(([location, ids]) => ({ location, count: ids.size }))
       .sort((a, b) => b.count - a.count);
   }
 
