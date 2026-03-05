@@ -1,4 +1,5 @@
 import AdminUsersTable from "@/components/admin/AdminUsersTable";
+import AdminLocationBreakdown from "@/components/admin/AdminLocationBreakdown";
 
 export default function AdminUsersPage() {
   return (
@@ -11,6 +12,7 @@ export default function AdminUsersPage() {
         </p>
       </div>
       <AdminUsersTable />
+      <AdminLocationBreakdown type="users" />
     </div>
   );
 }

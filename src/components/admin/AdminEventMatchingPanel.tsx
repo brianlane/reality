@@ -11,11 +11,19 @@ import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-type EventStats = {
+type PoolStats = {
+  total: number;
+  men: number;
+  women: number;
+};
+
+type EventInfo = {
+  location: string | null;
+  existingMatches: number;
   invited: number;
   men: number;
   women: number;
-  existingMatches: number;
+  pool: PoolStats | null;
 };
 
 type MatchRecord = {
@@ -34,9 +42,44 @@ type PreviewMatch = {
   score: number;
 };
 
+type MatrixPerson = { id: string; name: string; eventsAttended?: number };
+
+type PreviewMatrixData = {
+  men: MatrixPerson[];
+  women: MatrixPerson[];
+  allPairScores: Array<{
+    manId: string;
+    womanId: string;
+    score: number;
+    dealbreakersViolated: string[];
+  }>;
+  truncated: boolean;
+  totalMen: number;
+  totalWomen: number;
+};
+
+type MatchMode = "top_n" | "all_pairs";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** Deduplicate pairs by canonical key (lower ID first), sorted by score desc. */
+function deduplicatePairs(recs: PreviewMatch[]): PreviewMatch[] {
+  const seen = new Set<string>();
+  const unique: PreviewMatch[] = [];
+  for (const r of recs) {
+    const key =
+      r.applicantId < r.partnerId
+        ? `${r.applicantId}:${r.partnerId}`
+        : `${r.partnerId}:${r.applicantId}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(r);
+    }
+  }
+  return unique.sort((a, b) => b.score - a.score);
+}
 
 function ScoreBar({ score }: { score: number }) {
   const filled = Math.round((score / 100) * 10);
@@ -84,6 +127,88 @@ function InviteStatusBadge({ status }: { status: string | undefined }) {
   );
 }
 
+function scoreColor(score: number, threshold: number): string {
+  if (score >= threshold) return "bg-green-100 text-green-800";
+  if (score >= threshold - 5) return "bg-amber-100 text-amber-800";
+  return "bg-red-100 text-red-800";
+}
+
+function MatrixTable({
+  men,
+  women,
+  scoreMap,
+  threshold,
+}: {
+  men: MatrixPerson[];
+  women: MatrixPerson[];
+  scoreMap: Map<string, number>;
+  threshold: number;
+}) {
+  return (
+    <div className="overflow-x-auto rounded-md border">
+      <table className="text-xs">
+        <thead>
+          <tr>
+            <th className="sticky left-0 z-10 bg-stone-100 px-2 py-1.5 text-left font-semibold text-stone-500">
+              Men \ Women
+            </th>
+            {women.map((w) => (
+              <th
+                key={w.id}
+                className="bg-stone-50 px-2 py-1.5 text-center font-medium text-navy whitespace-nowrap"
+                title={
+                  w.eventsAttended !== undefined
+                    ? `${w.name} (${w.eventsAttended} events attended)`
+                    : w.name
+                }
+              >
+                {abbrev(w.name)}
+                {w.eventsAttended !== undefined && w.eventsAttended > 0 ? (
+                  <span className="ml-0.5 text-[10px] text-stone-400">
+                    ({w.eventsAttended})
+                  </span>
+                ) : null}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {men.map((m) => (
+            <tr key={m.id}>
+              <td
+                className="sticky left-0 z-10 bg-stone-50 px-2 py-1.5 font-medium text-navy whitespace-nowrap"
+                title={
+                  m.eventsAttended !== undefined
+                    ? `${m.name} (${m.eventsAttended} events attended)`
+                    : m.name
+                }
+              >
+                {abbrev(m.name)}
+                {m.eventsAttended !== undefined && m.eventsAttended > 0 ? (
+                  <span className="ml-0.5 text-[10px] text-stone-400">
+                    ({m.eventsAttended})
+                  </span>
+                ) : null}
+              </td>
+              {women.map((w) => {
+                const s = scoreMap.get(`${m.id}:${w.id}`) ?? 0;
+                return (
+                  <td
+                    key={w.id}
+                    className={`px-2 py-1.5 text-center font-semibold tabular-nums ${scoreColor(s, threshold)}`}
+                  >
+                    {s}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function abbrev(fullName: string): string {
   const parts = fullName.trim().split(" ");
   const first = parts[0] ?? "";
@@ -103,10 +228,12 @@ export default function AdminEventMatchingPanel({
   eventId,
 }: AdminEventMatchingPanelProps) {
   // ── State ────────────────────────────────────────────────────────────────
-  const [minScore, setMinScore] = useState(65);
+  const [minScore, setMinScore] = useState(60);
   const [maxPerApplicant, setMaxPerApplicant] = useState(5);
+  const [maxPerGender, setMaxPerGender] = useState(25);
+  const [matchMode, setMatchMode] = useState<MatchMode>("all_pairs");
 
-  const [eventStats, setEventStats] = useState<EventStats | null>(null);
+  const [eventInfo, setEventInfo] = useState<EventInfo | null>(null);
   const [existingMatchList, setExistingMatchList] = useState<MatchRecord[]>([]);
   const [invitationMap, setInvitationMap] = useState<Record<string, string>>(
     {},
@@ -115,6 +242,30 @@ export default function AdminEventMatchingPanel({
 
   const [preview, setPreview] = useState<PreviewMatch[] | null>(null);
   const [previewAvgScore, setPreviewAvgScore] = useState<number | null>(null);
+  const [previewMatrix, setPreviewMatrix] = useState<PreviewMatrixData | null>(
+    null,
+  );
+  const [distinctPreview, setDistinctPreview] = useState<PreviewMatch[] | null>(
+    null,
+  );
+
+  const previewScoreMap = useMemo(
+    () =>
+      new Map(
+        previewMatrix?.allPairScores.map((p) => [
+          `${p.manId}:${p.womanId}`,
+          p.score,
+        ]),
+      ),
+    [previewMatrix],
+  );
+
+  const [scoringProgress, setScoringProgress] = useState<{
+    scored: number;
+    totalPairs: number;
+    pct: number;
+    elapsedMs: number;
+  } | null>(null);
 
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [isPreviewing, setIsPreviewing] = useState(false);
@@ -140,7 +291,6 @@ export default function AdminEventMatchingPanel({
         result.push({ id: match.partnerId, name: match.partnerName });
       }
     }
-    // Uninvited first, then alphabetical within each group
     return result.sort((a, b) => {
       const aInvited = !!invitationMap[a.id];
       const bInvited = !!invitationMap[b.id];
@@ -172,13 +322,15 @@ export default function AdminEventMatchingPanel({
         return;
       }
 
-      const { stats, invitations, matches } = json;
+      const { event, pool, stats, invitations, matches } = json;
 
-      setEventStats({
+      setEventInfo({
+        location: event?.location ?? null,
+        existingMatches: matches?.length ?? 0,
         invited: stats.invitationsSent,
         men: stats.genderBalance?.male ?? 0,
         women: stats.genderBalance?.female ?? 0,
-        existingMatches: matches?.length ?? 0,
+        pool: pool ?? null,
       });
 
       setExistingMatchList(matches ?? []);
@@ -314,50 +466,141 @@ export default function AdminEventMatchingPanel({
     setSuccess(null);
     setPreview(null);
     setPreviewAvgScore(null);
+    setPreviewMatrix(null);
+    setDistinctPreview(null);
+    setScoringProgress(null);
+
     try {
       const headers = await getAuthHeaders();
       if (!headers) {
         setError("Please sign in again.");
         return;
       }
-      const res = await fetch(`/api/admin/events/${eventId}/generate-matches`, {
-        method: "POST",
-        headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          minScore,
-          maxPerApplicant,
-          createMatches: false,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok || json?.error) {
-        setError(json?.error?.message ?? "Preview failed.");
-        return;
-      }
-      const recs: PreviewMatch[] = json.recommendations ?? [];
-      const seen = new Set<string>();
-      const unique: PreviewMatch[] = [];
-      for (const r of recs) {
-        const key =
-          r.applicantId < r.partnerId
-            ? `${r.applicantId}:${r.partnerId}`
-            : `${r.partnerId}:${r.applicantId}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          unique.push(r);
+
+      if (matchMode === "all_pairs") {
+        const res = await fetch(
+          `/api/admin/events/${eventId}/generate-matches-stream`,
+          {
+            method: "POST",
+            headers: { ...headers, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              minScore,
+              maxPerGender,
+            }),
+          },
+        );
+
+        if (!res.ok || !res.body) {
+          setError("Preview failed.");
+          return;
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let eventType = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            if (line === "") {
+              eventType = "";
+            } else if (line.startsWith("event: ")) {
+              eventType = line.slice(7);
+            } else if (line.startsWith("data: ")) {
+              let data: Record<string, unknown>;
+              try {
+                data = JSON.parse(line.slice(6)) as Record<string, unknown>;
+              } catch {
+                continue;
+              }
+              if (eventType === "progress") {
+                setScoringProgress(
+                  data as {
+                    scored: number;
+                    totalPairs: number;
+                    pct: number;
+                    elapsedMs: number;
+                  },
+                );
+              } else if (eventType === "complete") {
+                setScoringProgress(null);
+                const unique = deduplicatePairs(
+                  (data.recommendations ?? []) as PreviewMatch[],
+                );
+                setPreview(unique);
+                setPreviewAvgScore((data.avgScore as number) ?? 0);
+                if (data.matrix) {
+                  setPreviewMatrix(data.matrix as PreviewMatrixData);
+                  // Build name map from matrix people for resolveName()
+                  const nMap: Record<string, string> = {};
+                  for (const p of [
+                    ...((data.matrix as PreviewMatrixData).men ?? []),
+                    ...((data.matrix as PreviewMatrixData).women ?? []),
+                  ]) {
+                    nMap[p.id] = p.name;
+                  }
+                  setNameMap((prev) => ({ ...prev, ...nMap }));
+                }
+                if (data.distinctMatches) {
+                  setDistinctPreview(data.distinctMatches as PreviewMatch[]);
+                }
+              } else if (eventType === "error") {
+                setScoringProgress(null);
+                setError(
+                  (data as { message?: string }).message ??
+                    "Scoring failed unexpectedly.",
+                );
+              }
+            }
+          }
+        }
+      } else {
+        const res = await fetch(
+          `/api/admin/events/${eventId}/generate-matches`,
+          {
+            method: "POST",
+            headers: { ...headers, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              minScore,
+              maxPerApplicant,
+              createMatches: false,
+              mode: matchMode,
+              maxPerGender,
+            }),
+          },
+        );
+        const json = await res.json();
+        if (!res.ok || json?.error) {
+          setError(json?.error?.message ?? "Preview failed.");
+          return;
+        }
+        const unique = deduplicatePairs(
+          (json.recommendations ?? []) as PreviewMatch[],
+        );
+        setPreview(unique);
+        setPreviewAvgScore(
+          unique.length > 0
+            ? Math.round(
+                unique.reduce((s, r) => s + r.score, 0) / unique.length,
+              )
+            : 0,
+        );
+        if (json.distinctMatches) {
+          setDistinctPreview(json.distinctMatches as PreviewMatch[]);
         }
       }
-      unique.sort((a, b) => b.score - a.score);
-      setPreview(unique);
-      setPreviewAvgScore(
-        unique.length > 0
-          ? Math.round(unique.reduce((s, r) => s + r.score, 0) / unique.length)
-          : 0,
-      );
     } catch {
       setError("Preview failed.");
     } finally {
       setIsPreviewing(false);
+      setScoringProgress(null);
     }
   }
 
@@ -377,9 +620,8 @@ export default function AdminEventMatchingPanel({
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({
-          minScore,
-          maxPerApplicant,
           createMatches: true,
+          explicitPairs: preview,
         }),
       });
       const json = await res.json();
@@ -392,9 +634,50 @@ export default function AdminEventMatchingPanel({
       );
       setPreview(null);
       setPreviewAvgScore(null);
+      setPreviewMatrix(null);
+      setDistinctPreview(null);
       await loadStats();
     } catch {
       setError("Failed to create matches.");
+    } finally {
+      setIsCreating(false);
+    }
+  }
+
+  async function handleCreateDistinct() {
+    if (!distinctPreview || distinctPreview.length === 0) return;
+    setIsCreating(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError("Please sign in again.");
+        return;
+      }
+      const res = await fetch(`/api/admin/events/${eventId}/generate-matches`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          createMatches: true,
+          explicitPairs: distinctPreview,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || json?.error) {
+        setError(json?.error?.message ?? "Failed to create distinct matches.");
+        return;
+      }
+      setSuccess(
+        `Created ${json.matchesCreated} distinct matches (avg score: ${json.avgScore}).`,
+      );
+      setPreview(null);
+      setPreviewAvgScore(null);
+      setPreviewMatrix(null);
+      setDistinctPreview(null);
+      await loadStats();
+    } catch {
+      setError("Failed to create distinct matches.");
     } finally {
       setIsCreating(false);
     }
@@ -414,18 +697,47 @@ export default function AdminEventMatchingPanel({
     <Card className="space-y-6">
       <h2 className="text-lg font-semibold text-navy">Match Generation</h2>
 
-      {/* ── Stats ── */}
+      {/* ── Event Info ── */}
       {isLoadingStats ? (
-        <p className="text-sm text-stone-500">Loading event stats…</p>
-      ) : eventStats ? (
-        <div className="rounded-md bg-stone-50 px-4 py-3 text-sm text-stone-700">
-          <span className="font-medium">{eventStats.invited} invited</span>
-          {" · "}
-          <span>{eventStats.men} men</span>
-          {" · "}
-          <span>{eventStats.women} women</span>
-          {" · "}
-          <span>{eventStats.existingMatches} existing matches</span>
+        <p className="text-sm text-stone-500">Loading event info…</p>
+      ) : eventInfo ? (
+        <div className="space-y-2">
+          <div className="rounded-md bg-stone-50 px-4 py-3 text-sm text-stone-700">
+            {eventInfo.location ? (
+              <span className="mr-3 rounded-full bg-navy/10 px-2.5 py-0.5 text-xs font-semibold text-navy">
+                {eventInfo.location}
+              </span>
+            ) : (
+              <span className="mr-3 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+                No location set
+              </span>
+            )}
+            {eventInfo.pool ? (
+              <>
+                <span className="font-medium">
+                  {eventInfo.pool.total} in pool
+                </span>
+                <span className="text-stone-400">
+                  {" "}
+                  ({eventInfo.pool.men}M / {eventInfo.pool.women}W)
+                </span>
+              </>
+            ) : null}
+            {" · "}
+            <span>{eventInfo.existingMatches} matches</span>
+            {eventInfo.invited > 0 ? (
+              <>
+                {" · "}
+                <span>{eventInfo.invited} invited</span>
+              </>
+            ) : null}
+          </div>
+
+          {!eventInfo.location ? (
+            <p className="text-xs text-red-600">
+              Set a city on the event form above before generating matches.
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -588,8 +900,12 @@ export default function AdminEventMatchingPanel({
         <h3 className="text-sm font-semibold text-navy-soft uppercase tracking-wide">
           Generate New Matches
         </h3>
+        <p className="text-xs text-stone-500">
+          Scores all approved applicants in the event&apos;s city. Create
+          matches first, then invite the matched individuals to the event.
+        </p>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-3">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-navy-soft">
               Min Compatibility Score (0–100)
@@ -603,36 +919,135 @@ export default function AdminEventMatchingPanel({
                 setMinScore(Number(e.target.value));
                 setPreview(null);
                 setPreviewAvgScore(null);
+                setPreviewMatrix(null);
+                setDistinctPreview(null);
               }}
             />
           </div>
+
           <div className="space-y-1">
             <label className="text-xs font-semibold text-navy-soft">
-              Max Matches per Person (1–20)
+              Match Mode
             </label>
-            <Input
-              type="number"
-              min={1}
-              max={20}
-              value={maxPerApplicant}
-              onChange={(e) => {
-                setMaxPerApplicant(Number(e.target.value));
-                setPreview(null);
-                setPreviewAvgScore(null);
-              }}
-            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMatchMode("all_pairs");
+                  setPreview(null);
+                  setPreviewAvgScore(null);
+                  setPreviewMatrix(null);
+                  setDistinctPreview(null);
+                }}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  matchMode === "all_pairs"
+                    ? "bg-copper text-white"
+                    : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                }`}
+              >
+                All Compatible Pairs
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMatchMode("top_n");
+                  setPreview(null);
+                  setPreviewAvgScore(null);
+                  setPreviewMatrix(null);
+                  setDistinctPreview(null);
+                }}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  matchMode === "top_n"
+                    ? "bg-copper text-white"
+                    : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                }`}
+              >
+                Top N per Person
+              </button>
+            </div>
+            <p className="text-xs text-stone-400">
+              {matchMode === "all_pairs"
+                ? "Builds a mutually compatible cohort from the city pool where every man-woman pair meets the threshold."
+                : "Selects the top N highest-scoring matches per person."}
+            </p>
           </div>
+
+          {matchMode === "all_pairs" ? (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-navy-soft">
+                Max Individuals per Gender (1–100)
+              </label>
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                value={maxPerGender}
+                onChange={(e) => {
+                  setMaxPerGender(Number(e.target.value));
+                  setPreview(null);
+                  setPreviewAvgScore(null);
+                  setPreviewMatrix(null);
+                  setDistinctPreview(null);
+                }}
+              />
+              <p className="text-xs text-stone-400">
+                Caps how many men and women are scored. 25 per gender = up to
+                625 pairs.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-navy-soft">
+                Max Matches per Person (1–20)
+              </label>
+              <Input
+                type="number"
+                min={1}
+                max={20}
+                value={maxPerApplicant}
+                onChange={(e) => {
+                  setMaxPerApplicant(Number(e.target.value));
+                  setPreview(null);
+                  setPreviewAvgScore(null);
+                  setPreviewMatrix(null);
+                  setDistinctPreview(null);
+                }}
+              />
+            </div>
+          )}
         </div>
 
         <Button
           type="button"
           onClick={handlePreview}
-          disabled={isBusy}
+          disabled={isBusy || !eventInfo?.location}
           variant="outline"
           className="bg-copper/10 hover:bg-copper/20 text-copper border-copper"
         >
-          {isPreviewing ? "Previewing…" : "Preview Matches"}
+          {isPreviewing ? "Scoring…" : "Preview Matches"}
         </Button>
+
+        {/* Scoring progress bar */}
+        {scoringProgress ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-stone-500">
+              <span>
+                Scoring pairs: {scoringProgress.scored} /{" "}
+                {scoringProgress.totalPairs}
+              </span>
+              <span>
+                {scoringProgress.pct}% &middot;{" "}
+                {(scoringProgress.elapsedMs / 1000).toFixed(1)}s
+              </span>
+            </div>
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-stone-200">
+              <div
+                className="h-full rounded-full bg-copper transition-all duration-300"
+                style={{ width: `${scoringProgress.pct}%` }}
+              />
+            </div>
+          </div>
+        ) : null}
 
         {preview !== null ? (
           <div className="space-y-3">
@@ -641,73 +1056,170 @@ export default function AdminEventMatchingPanel({
                 "No matches found at this threshold — try lowering the min score."
               ) : (
                 <>
-                  Preview: {preview.length} potential match
-                  {preview.length !== 1 ? "es" : ""}, avg score:{" "}
+                  Preview: {preview.length} match
+                  {preview.length !== 1 ? "es" : ""} above {minScore}%, avg
+                  score:{" "}
                   <span className="font-semibold text-navy">
                     {previewAvgScore}
                   </span>
+                  {distinctPreview ? (
+                    <>
+                      {" · "}
+                      <span className="font-semibold text-emerald-700">
+                        {distinctPreview.length} distinct
+                      </span>{" "}
+                      (1:1 optional)
+                    </>
+                  ) : null}
+                  {previewMatrix
+                    ? ` · ${previewMatrix.allPairScores.length} total pairs scored${
+                        previewMatrix.truncated
+                          ? ` (capped at ${previewMatrix.men.length}M x ${previewMatrix.women.length}W of ${previewMatrix.totalMen}M x ${previewMatrix.totalWomen}W)`
+                          : ""
+                      }`
+                    : ""}
                 </>
               )}
             </div>
 
-            {preview.length > 0 ? (
-              <>
-                <div className="max-h-80 overflow-y-auto rounded-md border">
-                  <table className="w-full text-sm">
-                    <thead className="sticky top-0 bg-stone-50">
-                      <tr className="border-b">
-                        <th className="px-3 py-2 text-left font-semibold text-stone-600">
-                          Person A
-                        </th>
-                        <th className="px-1 py-2 text-center text-stone-400">
+            {/* All-pairs matrix view */}
+            {previewMatrix &&
+            previewMatrix.men.length > 0 &&
+            previewMatrix.women.length > 0 ? (
+              <MatrixTable
+                men={previewMatrix.men}
+                women={previewMatrix.women}
+                scoreMap={previewScoreMap}
+                threshold={minScore}
+              />
+            ) : null}
+
+            {/* Flat list for top_n mode (or fallback) */}
+            {!previewMatrix && preview.length > 0 ? (
+              <div className="max-h-80 overflow-y-auto rounded-md border">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-stone-50">
+                    <tr className="border-b">
+                      <th className="px-3 py-2 text-left font-semibold text-stone-600">
+                        Person A
+                      </th>
+                      <th className="px-1 py-2 text-center text-stone-400">
+                        ↔
+                      </th>
+                      <th className="px-3 py-2 text-left font-semibold text-stone-600">
+                        Person B
+                      </th>
+                      <th className="px-3 py-2 text-right font-semibold text-stone-600">
+                        Score
+                      </th>
+                      <th className="px-3 py-2 text-left font-semibold text-stone-600 hidden sm:table-cell">
+                        Fit
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {preview.map((match, i) => (
+                      <tr key={i} className="hover:bg-stone-50">
+                        <td className="px-3 py-2 font-medium text-navy">
+                          {resolveName(match.applicantId)}
+                        </td>
+                        <td className="px-1 py-2 text-center text-stone-400">
                           ↔
-                        </th>
-                        <th className="px-3 py-2 text-left font-semibold text-stone-600">
-                          Person B
-                        </th>
-                        <th className="px-3 py-2 text-right font-semibold text-stone-600">
-                          Score
-                        </th>
-                        <th className="px-3 py-2 text-left font-semibold text-stone-600 hidden sm:table-cell">
-                          Fit
-                        </th>
+                        </td>
+                        <td className="px-3 py-2 font-medium text-navy">
+                          {resolveName(match.partnerId)}
+                        </td>
+                        <td className="px-3 py-2 text-right font-semibold text-copper">
+                          {match.score}
+                        </td>
+                        <td className="px-3 py-2 hidden sm:table-cell">
+                          <ScoreBar score={match.score} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+
+            {/* Distinct matches (1:1 best assignment) */}
+            {distinctPreview && distinctPreview.length > 0 ? (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-emerald-700">
+                  Distinct Matches (1:1 Best Assignment) —{" "}
+                  {distinctPreview.length} pair
+                  {distinctPreview.length !== 1 ? "s" : ""}
+                </h4>
+                <p className="text-xs text-stone-500">
+                  Each person appears in exactly one match, selected from
+                  highest compatibility first.
+                </p>
+                <div className="overflow-x-auto rounded-md border border-emerald-200">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-emerald-50 text-left text-xs text-emerald-800">
+                        <th className="px-3 py-2">#</th>
+                        <th className="px-3 py-2">Man</th>
+                        <th className="px-3 py-2">Woman</th>
+                        <th className="px-3 py-2">Score</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y">
-                      {preview.map((match, i) => (
-                        <tr key={i} className="hover:bg-stone-50">
-                          <td className="px-3 py-2 font-medium text-navy">
-                            {resolveName(match.applicantId)}
+                    <tbody>
+                      {distinctPreview.map((dm, idx) => (
+                        <tr
+                          key={`${dm.applicantId}-${dm.partnerId}`}
+                          className={
+                            idx % 2 === 0 ? "bg-white" : "bg-emerald-50/40"
+                          }
+                        >
+                          <td className="px-3 py-1.5 text-stone-400">
+                            {idx + 1}
                           </td>
-                          <td className="px-1 py-2 text-center text-stone-400">
-                            ↔
+                          <td className="px-3 py-1.5">
+                            {resolveName(dm.applicantId)}
                           </td>
-                          <td className="px-3 py-2 font-medium text-navy">
-                            {resolveName(match.partnerId)}
+                          <td className="px-3 py-1.5">
+                            {resolveName(dm.partnerId)}
                           </td>
-                          <td className="px-3 py-2 text-right font-semibold text-copper">
-                            {match.score}
-                          </td>
-                          <td className="px-3 py-2 hidden sm:table-cell">
-                            <ScoreBar score={match.score} />
+                          <td
+                            className={`px-3 py-1.5 font-semibold ${scoreColor(dm.score, minScore)}`}
+                          >
+                            {dm.score}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+              </div>
+            ) : null}
 
+            {preview.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-3">
+                {distinctPreview && distinctPreview.length > 0 ? (
+                  <Button
+                    type="button"
+                    onClick={handleCreateDistinct}
+                    disabled={isBusy}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    {isCreating
+                      ? "Creating…"
+                      : `Create ${distinctPreview.length} Distinct Match${distinctPreview.length !== 1 ? "es" : ""}`}
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   onClick={handleCreate}
                   disabled={isBusy}
-                  className="bg-copper hover:bg-copper/90"
+                  variant="outline"
+                  className="border-copper text-copper hover:bg-copper/10"
                 >
                   {isCreating
                     ? "Creating…"
-                    : `Create ${preview.length} Match${preview.length !== 1 ? "es" : ""}`}
+                    : `Create All ${preview.length} Match${preview.length !== 1 ? "es" : ""}`}
                 </Button>
-              </>
+              </div>
             ) : null}
           </div>
         ) : null}

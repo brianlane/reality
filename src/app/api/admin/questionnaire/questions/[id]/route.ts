@@ -161,6 +161,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       isActive: body.isActive,
       mlWeight: body.mlWeight,
       isDealbreaker: body.isDealbreaker,
+      importanceModifierForId: body.importanceModifierForId,
     },
   });
 

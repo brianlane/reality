@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 import { formatDateTime, formatDuration } from "@/lib/admin/format";
 import PaginationControls from "@/components/admin/PaginationControls";
+import LocationFilter from "@/components/admin/LocationFilter";
 
 type ApplicationItem = {
   id: string;
@@ -28,6 +29,7 @@ export default function AdminApplicationsTable() {
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
+  const [location, setLocation] = useState("");
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -44,8 +46,11 @@ export default function AdminApplicationsTable() {
         const searchParam = search
           ? `&search=${encodeURIComponent(search)}`
           : "";
+        const locationParam = location
+          ? `&location=${encodeURIComponent(location)}`
+          : "";
         const res = await fetch(
-          `/api/admin/applications?page=${page}${searchParam}`,
+          `/api/admin/applications?page=${page}${searchParam}${locationParam}`,
           {
             headers,
             signal: controller.signal,
@@ -69,13 +74,20 @@ export default function AdminApplicationsTable() {
     loadApplications();
 
     return () => controller.abort();
-  }, [page, search]);
+  }, [page, search, location]);
 
   return (
     <Card>
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-lg font-semibold text-navy">Applications</h2>
         <div className="flex items-center gap-3 ml-auto">
+          <LocationFilter
+            value={location}
+            onChange={(val) => {
+              setLocation(val);
+              setPage(1);
+            }}
+          />
           <Input
             placeholder="Search name or email…"
             className="h-8 w-48 text-sm"

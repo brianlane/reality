@@ -20,21 +20,7 @@ type FieldErrors = {
   instagram?: string;
 };
 
-const CITIES = [
-  "New York City, NY",
-  "Los Angeles, CA",
-  "Chicago, IL",
-  "Dallas, TX",
-  "Phoenix, AZ",
-  "San Francisco, CA",
-  "Miami, FL",
-  "Denver, CO",
-  "Atlanta, GA",
-  "Las Vegas, NV",
-  "Seattle, WA",
-  "Portland, OR",
-  "Other",
-] as const;
+import { CITY_OPTIONS } from "@/lib/locations";
 
 export default function Stage1QualificationForm({
   previewMode = false,
@@ -409,7 +395,7 @@ export default function Stage1QualificationForm({
               className={errors.location ? "border-red-500" : ""}
             >
               <option value="">Select a city</option>
-              {CITIES.map((city) => (
+              {CITY_OPTIONS.map((city) => (
                 <option key={city} value={city}>
                   {city}
                 </option>

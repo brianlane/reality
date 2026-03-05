@@ -25,11 +25,13 @@ export async function GET(request: Request) {
     const limit = Number(url.searchParams.get("limit") ?? "50");
     const includeDeleted = url.searchParams.get("includeDeleted") === "true";
     const search = url.searchParams.get("search") ?? undefined;
+    const location = url.searchParams.get("location") ?? undefined;
 
     const where = {
       applicationStatus: {
         in: [ApplicationStatus.WAITLIST, ApplicationStatus.WAITLIST_INVITED],
       },
+      ...(location ? { location } : {}),
       ...(includeDeleted ? {} : { deletedAt: null }),
       ...(search
         ? {

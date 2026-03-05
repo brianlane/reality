@@ -235,6 +235,13 @@ model QuestionnaireQuestion {
   mlWeight      Float                   @default(1.0)  // 0.0-1.0 importance weight
   isDealbreaker Boolean                 @default(false) // If mismatch, score = 0
 
+  // Cross-question importance modulation:
+  // If set, this question's effective weight is scaled by the average of both
+  // applicants' answers to the linked importance question (RADIO_7 1–7 → 0–1).
+  importanceModifierForId String?
+  importanceModifierFor   QuestionnaireQuestion?  @relation("ImportanceModifier", fields: [importanceModifierForId], references: [id])
+  importanceTargets       QuestionnaireQuestion[] @relation("ImportanceModifier")
+
   createdAt  DateTime                  @default(now())
   updatedAt  DateTime                  @updatedAt
   deletedAt  DateTime?
@@ -331,6 +338,7 @@ model Event {
   
   venue             String
   venueAddress      String
+  location          String?           // Canonical city from CITIES constant (e.g. "Phoenix, AZ")
   capacity          Int               @default(20)
   
   status            EventStatus       @default(DRAFT)

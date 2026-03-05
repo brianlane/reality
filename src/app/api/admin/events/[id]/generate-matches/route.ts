@@ -2,6 +2,12 @@ import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { getRecommendations } from "@/lib/matching/recommendations";
+import {
+  computeDistinctMatches,
+  preloadAnswerCache,
+  scoreAllPairs,
+  selectCohortFromScores,
+} from "@/lib/matching/weighted-compatibility";
 import { ApplicationStatus, ScreeningStatus } from "@prisma/client";
 import { z } from "zod";
 
@@ -9,6 +15,19 @@ const generateMatchesSchema = z.object({
   maxPerApplicant: z.number().int().min(1).max(50).optional().default(5),
   minScore: z.number().min(0).max(100).optional().default(60),
   createMatches: z.boolean().optional().default(true),
+  mode: z.enum(["top_n", "all_pairs"]).optional().default("all_pairs"),
+  maxPerGender: z.number().int().min(1).max(100).optional().default(50),
+  distinct: z.boolean().optional().default(false),
+  /** Pre-computed pairs from a preview — skips scoring and creates these directly. */
+  explicitPairs: z
+    .array(
+      z.object({
+        applicantId: z.string(),
+        partnerId: z.string(),
+        score: z.number().min(0).max(100),
+      }),
+    )
+    .optional(),
 });
 
 type GenerateMatchesRequest = z.infer<typeof generateMatchesSchema>;
@@ -17,7 +36,6 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  // 1. Authenticate and authorize
   const auth = await getAuthUser();
   if (!auth) {
     return errorResponse("UNAUTHORIZED", "User not authenticated", 401);
@@ -31,7 +49,6 @@ export async function POST(
 
   const { id: eventId } = await params;
 
-  // 2. Parse and validate request body
   let body: GenerateMatchesRequest;
   try {
     const rawBody = await request.json().catch(() => ({}));
@@ -42,11 +59,16 @@ export async function POST(
     ]);
   }
 
-  const maxPerApplicant = body.maxPerApplicant;
-  const minScore = body.minScore;
-  const createMatches = body.createMatches;
+  const {
+    maxPerApplicant,
+    minScore,
+    createMatches,
+    mode,
+    maxPerGender,
+    distinct,
+    explicitPairs,
+  } = body;
 
-  // 3. Verify event exists
   const event = await db.event.findUnique({
     where: { id: eventId },
   });
@@ -55,36 +77,156 @@ export async function POST(
     return errorResponse("NOT_FOUND", "Event not found", 404);
   }
 
-  // 4. Get all approved applicants with completed questionnaires
-  // Filter by event invitations to only include applicants invited to this specific event
-  // Exclude those who declined or didn't show up
+  if (!event.location) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "Event must have a location set before generating matches",
+      400,
+    );
+  }
+
+  // ── Explicit pairs shortcut (from preview) ──────────────────────────────
+  if (explicitPairs && explicitPairs.length > 0) {
+    const allPairIds = new Set(
+      explicitPairs.flatMap((p) => [p.applicantId, p.partnerId]),
+    );
+    const validApplicants = await db.applicant.findMany({
+      where: {
+        id: { in: [...allPairIds] },
+        deletedAt: null,
+        applicationStatus: ApplicationStatus.APPROVED,
+        screeningStatus: ScreeningStatus.PASSED,
+      },
+      select: { id: true, location: true },
+    });
+    const validIds = new Set(validApplicants.map((a) => a.id));
+    const invalidIds = [...allPairIds].filter((id) => !validIds.has(id));
+    if (invalidIds.length > 0) {
+      return errorResponse(
+        "VALIDATION_ERROR",
+        `${invalidIds.length} applicant ID(s) not found or not approved`,
+        400,
+      );
+    }
+
+    // Ensure all explicit-pair applicants are in the event's city
+    const wrongCity = validApplicants.filter(
+      (a) => a.location !== event.location,
+    );
+    if (wrongCity.length > 0) {
+      return errorResponse(
+        "VALIDATION_ERROR",
+        `${wrongCity.length} applicant(s) are not in the event's city (${event.location})`,
+        400,
+      );
+    }
+
+    // Deduplicate pairs with canonical ordering (lower ID first)
+    const seen = new Set<string>();
+    const uniquePairs: Array<{
+      applicantId: string;
+      partnerId: string;
+      score: number;
+    }> = [];
+    for (const pair of explicitPairs) {
+      const [a, b] =
+        pair.applicantId < pair.partnerId
+          ? [pair.applicantId, pair.partnerId]
+          : [pair.partnerId, pair.applicantId];
+      const key = `${a}:${b}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniquePairs.push({ applicantId: a, partnerId: b, score: pair.score });
+      }
+    }
+
+    const avgScore =
+      uniquePairs.length > 0
+        ? Math.round(
+            uniquePairs.reduce((s, p) => s + p.score, 0) / uniquePairs.length,
+          )
+        : 0;
+
+    if (!createMatches) {
+      return successResponse({
+        event: { id: event.id, name: event.name },
+        mode: "explicit",
+        matchesCreated: 0,
+        avgScore,
+        recommendations: uniquePairs.map((p) => ({
+          applicantId: p.applicantId,
+          partnerId: p.partnerId,
+          score: p.score,
+          dealbreakers: [],
+        })),
+      });
+    }
+
+    try {
+      const result = await db.match.createMany({
+        data: uniquePairs.map((p) => ({
+          eventId,
+          applicantId: p.applicantId,
+          partnerId: p.partnerId,
+          type: "CURATED" as const,
+          compatibilityScore: p.score,
+        })),
+        skipDuplicates: true,
+      });
+      return successResponse({
+        event: { id: event.id, name: event.name },
+        mode: "explicit",
+        matchesCreated: result.count,
+        avgScore,
+      });
+    } catch (error) {
+      console.error("Failed to create explicit matches:", error);
+      return errorResponse(
+        "DATABASE_ERROR",
+        "Failed to create matches in database",
+        500,
+      );
+    }
+  }
+
+  // ── Pool-based applicant query (by event location, not invitations) ─────
+  // Ordered by fewest events attended (newcomers first), then oldest
+  // applicants first (longest-waiting get priority when capped).
   const applicants = await db.applicant.findMany({
     where: {
       applicationStatus: ApplicationStatus.APPROVED,
       screeningStatus: ScreeningStatus.PASSED,
       deletedAt: null,
       questionnaireAnswers: { some: {} },
-      eventInvitations: {
-        some: {
-          eventId: eventId,
-          status: {
-            notIn: ["DECLINED", "NO_SHOW"],
+      location: event.location,
+    },
+    include: {
+      user: { select: { firstName: true, lastName: true } },
+      _count: {
+        select: {
+          eventInvitations: {
+            where: { status: "ATTENDED" },
           },
         },
       },
     },
-    include: {},
+    orderBy: [{ createdAt: "asc" }],
   });
+
+  // Stable sort: fewest events attended first (preserves createdAt ASC within each bucket)
+  applicants.sort(
+    (a, b) => a._count.eventInvitations - b._count.eventInvitations,
+  );
 
   if (applicants.length < 2) {
     return errorResponse(
       "INSUFFICIENT_DATA",
-      "Need at least 2 approved applicants with completed questionnaires",
+      `Need at least 2 approved applicants in ${event.location} with completed questionnaires (found ${applicants.length})`,
       400,
     );
   }
 
-  // 5. Generate recommendations for each applicant
+  // ── Generate recommendations ────────────────────────────────────────────
   const allRecommendations: Array<{
     applicantId: string;
     partnerId: string;
@@ -92,36 +234,106 @@ export async function POST(
     dealbreakers: string[];
   }> = [];
 
-  for (const applicant of applicants) {
-    try {
-      const recommendations = await getRecommendations(applicant, applicants, {
-        maxResults: maxPerApplicant,
-        minScore,
-      });
-
-      for (const rec of recommendations) {
-        allRecommendations.push({
-          applicantId: applicant.id,
-          partnerId: rec.applicantId,
-          score: rec.compatibilityScore,
-          dealbreakers: rec.dealbreakersViolated,
-        });
+  let matrixData:
+    | {
+        men: Array<{ id: string; name: string; eventsAttended: number }>;
+        women: Array<{ id: string; name: string; eventsAttended: number }>;
+        allPairScores: Array<{
+          manId: string;
+          womanId: string;
+          score: number;
+          dealbreakersViolated: string[];
+        }>;
+        truncated: boolean;
+        totalMen: number;
+        totalWomen: number;
+        comparedMen: number;
+        comparedWomen: number;
       }
-    } catch (error) {
-      console.error(
-        `Failed to get recommendations for ${applicant.id}:`,
-        error,
+    | undefined;
+
+  if (mode === "all_pairs") {
+    const allMen = applicants.filter((a) => a.gender === "MAN");
+    const allWomen = applicants.filter((a) => a.gender === "WOMAN");
+
+    const allIds = [...allMen.map((m) => m.id), ...allWomen.map((w) => w.id)];
+    const cache = await preloadAnswerCache(allIds);
+
+    const { allScores } = await scoreAllPairs(
+      allMen,
+      allWomen,
+      cache,
+      minScore,
+    );
+    const { finalMenSet, finalWomenSet, recommendations } =
+      selectCohortFromScores(
+        allScores,
+        allMen,
+        allWomen,
+        minScore,
+        maxPerGender,
       );
-      // Continue with other applicants
+
+    allRecommendations.push(...recommendations);
+
+    matrixData = {
+      men: allMen
+        .filter((m) => finalMenSet.has(m.id))
+        .map((m) => ({
+          id: m.id,
+          name: `${m.user.firstName} ${m.user.lastName}`,
+          eventsAttended: m._count.eventInvitations,
+        })),
+      women: allWomen
+        .filter((w) => finalWomenSet.has(w.id))
+        .map((w) => ({
+          id: w.id,
+          name: `${w.user.firstName} ${w.user.lastName}`,
+          eventsAttended: w._count.eventInvitations,
+        })),
+      allPairScores: allScores.filter(
+        (s) => finalMenSet.has(s.manId) && finalWomenSet.has(s.womanId),
+      ),
+      truncated: false,
+      totalMen: allMen.length,
+      totalWomen: allWomen.length,
+      comparedMen: allMen.length,
+      comparedWomen: allWomen.length,
+    };
+  } else {
+    for (const applicant of applicants) {
+      try {
+        const recommendations = await getRecommendations(
+          applicant,
+          applicants,
+          {
+            maxResults: maxPerApplicant,
+            minScore,
+          },
+        );
+
+        for (const rec of recommendations) {
+          allRecommendations.push({
+            applicantId: applicant.id,
+            partnerId: rec.applicantId,
+            score: rec.compatibilityScore,
+            dealbreakers: rec.dealbreakersViolated,
+          });
+        }
+      } catch (error) {
+        console.error(
+          `Failed to get recommendations for ${applicant.id}:`,
+          error,
+        );
+      }
     }
   }
 
-  // 6. Create matches if requested
+  const distinctMatchList = computeDistinctMatches(allRecommendations);
+  const matchSource = distinct ? distinctMatchList : allRecommendations;
+
   let matchesCreated = 0;
-  if (createMatches && allRecommendations.length > 0) {
-    // Deduplicate bidirectional matches: for mutual pairs (A,B) and (B,A),
-    // only create one match record using canonical ordering (smaller ID first).
-    // This ensures consistent storage and prevents reverse duplicates in future runs.
+  if (createMatches && matchSource.length > 0) {
     const seen = new Set<string>();
     const uniqueMatches: Array<{
       applicantId: string;
@@ -129,8 +341,7 @@ export async function POST(
       score: number;
     }> = [];
 
-    for (const rec of allRecommendations) {
-      // Canonical ordering: always store with smaller ID as applicantId
+    for (const rec of matchSource) {
       const [canonicalApplicantId, canonicalPartnerId] =
         rec.applicantId < rec.partnerId
           ? [rec.applicantId, rec.partnerId]
@@ -140,14 +351,12 @@ export async function POST(
 
       if (!seen.has(key)) {
         seen.add(key);
-        // For mutual matches, use the higher score (both parties compatible)
         uniqueMatches.push({
           applicantId: canonicalApplicantId,
           partnerId: canonicalPartnerId,
           score: rec.score,
         });
       } else {
-        // Found the reverse pair - update score if this one is higher
         const existing = uniqueMatches.find(
           (m) =>
             m.applicantId === canonicalApplicantId &&
@@ -170,7 +379,7 @@ export async function POST(
     try {
       const result = await db.match.createMany({
         data: matchesToCreate,
-        skipDuplicates: true, // Skip if match already exists
+        skipDuplicates: true,
       });
       matchesCreated = result.count;
     } catch (error) {
@@ -183,14 +392,19 @@ export async function POST(
     }
   }
 
-  // 7. Return summary
   return successResponse({
     event: {
       id: event.id,
       name: event.name,
+      location: event.location,
     },
+    mode,
+    distinct,
     applicantsProcessed: applicants.length,
     recommendationsGenerated: allRecommendations.length,
+    distinctCount: distinctMatchList.length,
+    cohortMenCount: matrixData?.men.length ?? 0,
+    cohortWomenCount: matrixData?.women.length ?? 0,
     matchesCreated,
     avgScore:
       allRecommendations.length > 0
@@ -199,6 +413,8 @@ export async function POST(
               allRecommendations.length,
           )
         : 0,
-    recommendations: createMatches ? undefined : allRecommendations, // Only return if not creating
+    recommendations: createMatches ? undefined : allRecommendations,
+    distinctMatches: !createMatches ? distinctMatchList : undefined,
+    matrix: !createMatches ? matrixData : undefined,
   });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 import { formatDateTime, formatDuration } from "@/lib/admin/format";
 import PaginationControls from "@/components/admin/PaginationControls";
+import LocationFilter from "@/components/admin/LocationFilter";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -43,9 +44,11 @@ export default function AdminResearchInviteTable({
   const [sendingResumeId, setSendingResumeId] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [location, setLocation] = useState("");
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(initialApplicants.length);
+  const [refreshKey, setRefreshKey] = useState(0);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [form, setForm] = useState({
     firstName: "",
@@ -53,18 +56,25 @@ export default function AdminResearchInviteTable({
     email: "",
   });
 
-  const loadResearchInvites = useCallback(
-    async (p = page, q = search) => {
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadResearchInvites = async () => {
       try {
         const headers = await getAuthHeaders();
         if (!headers) {
           setError("Please sign in again.");
           return;
         }
-        const searchParam = q ? `&search=${encodeURIComponent(q)}` : "";
+        const searchParam = search
+          ? `&search=${encodeURIComponent(search)}`
+          : "";
+        const locationParam = location
+          ? `&location=${encodeURIComponent(location)}`
+          : "";
         const res = await fetch(
-          `/api/admin/research-invites?page=${p}${searchParam}`,
-          { headers },
+          `/api/admin/research-invites?page=${page}${searchParam}${locationParam}`,
+          { headers, signal: controller.signal },
         );
         const json = await res.json();
         if (!res.ok || json?.error) {
@@ -76,12 +86,17 @@ export default function AdminResearchInviteTable({
         setTotal(json.pagination?.total ?? (json.applicants ?? []).length);
         setError(null);
       } catch (err) {
-        console.error("Error loading research invites:", err);
-        setError("Failed to load research invites.");
+        if ((err as Error).name !== "AbortError") {
+          console.error("Error loading research invites:", err);
+          setError("Failed to load research invites.");
+        }
       }
-    },
-    [page, search],
-  );
+    };
+
+    loadResearchInvites();
+
+    return () => controller.abort();
+  }, [page, search, location, refreshKey]);
 
   function updateField(name: string, value: string) {
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -124,7 +139,7 @@ export default function AdminResearchInviteTable({
       setSuccess(`Research invite created.${emailNote}`);
       setInviteUrl(json.inviteUrl ?? null);
       setForm({ firstName: "", lastName: "", email: "" });
-      await loadResearchInvites();
+      setRefreshKey((k) => k + 1);
     } catch (err) {
       console.error("Error creating research invite:", err);
       setError("Failed to create research invite.");
@@ -165,7 +180,7 @@ export default function AdminResearchInviteTable({
         return;
       }
       setSuccess("Participant permanently deleted.");
-      await loadResearchInvites();
+      setRefreshKey((k) => k + 1);
     } catch (err) {
       console.error("Error deleting research participant:", err);
       setError("Failed to permanently delete participant.");
@@ -203,7 +218,7 @@ export default function AdminResearchInviteTable({
         ? " Resume email sent."
         : " Could not send email, but the resume link is available.";
       setSuccess(`Research resume link ready.${emailNote}`);
-      await loadResearchInvites();
+      setRefreshKey((k) => k + 1);
     } catch (err) {
       console.error("Error sending research resume email:", err);
       setError("Failed to send resume email.");
@@ -309,6 +324,13 @@ export default function AdminResearchInviteTable({
           <h2 className="text-lg font-semibold text-navy">
             Research Participants ({total})
           </h2>
+          <LocationFilter
+            value={location}
+            onChange={(val) => {
+              setLocation(val);
+              setPage(1);
+            }}
+          />
           <Input
             placeholder="Search name or email…"
             className="h-8 w-48 text-sm"
@@ -318,14 +340,13 @@ export default function AdminResearchInviteTable({
               searchTimeout.current = setTimeout(() => {
                 setSearch(val);
                 setPage(1);
-                loadResearchInvites(1, val);
               }, 300);
             }}
           />
           <Button
             variant="outline"
             className="ml-auto"
-            onClick={() => loadResearchInvites()}
+            onClick={() => setRefreshKey((k) => k + 1)}
           >
             Refresh
           </Button>
@@ -443,10 +464,7 @@ export default function AdminResearchInviteTable({
           page={page}
           pages={pages}
           total={total}
-          onPageChange={(p) => {
-            setPage(p);
-            loadResearchInvites(p, search);
-          }}
+          onPageChange={setPage}
         />
       </Card>
     </div>

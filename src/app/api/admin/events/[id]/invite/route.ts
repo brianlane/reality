@@ -44,6 +44,33 @@ export async function POST(request: Request, { params }: RouteContext) {
     return errorResponse("NOT_FOUND", "Event not found", 404);
   }
 
+  // Enforce flow: matches must be generated before invitations can be sent.
+  // If CURATED matches exist, only cohort members may be invited.
+  const cohortMatches = await db.match.findMany({
+    where: { eventId: id, type: "CURATED", deletedAt: null },
+    select: { applicantId: true, partnerId: true },
+  });
+
+  if (cohortMatches.length === 0) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "No matches have been generated for this event. Generate matches first before inviting applicants.",
+      400,
+    );
+  }
+
+  const cohortIds = new Set(
+    cohortMatches.flatMap((m) => [m.applicantId, m.partnerId]),
+  );
+  const outsideCohort = body.applicantIds.filter((aid) => !cohortIds.has(aid));
+  if (outsideCohort.length > 0) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      `${outsideCohort.length} applicant(s) are not in the match cohort for this event. Only applicants who appear in a generated match may be invited.`,
+      400,
+    );
+  }
+
   const invitations = await Promise.all(
     body.applicantIds.map((applicantId) =>
       db.eventInvitation.upsert({

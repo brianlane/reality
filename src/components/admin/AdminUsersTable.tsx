@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 import { formatDateTime } from "@/lib/admin/format";
 import PaginationControls from "@/components/admin/PaginationControls";
+import LocationFilter from "@/components/admin/LocationFilter";
 
 type UserRow = {
   id: string;
@@ -65,6 +66,7 @@ export default function AdminUsersTable() {
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [filter, setFilter] = useState<"all" | "applicants">("all");
   const [search, setSearch] = useState("");
+  const [location, setLocation] = useState("");
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -83,8 +85,11 @@ export default function AdminUsersTable() {
         const searchParam = search
           ? `&search=${encodeURIComponent(search)}`
           : "";
+        const locationParam = location
+          ? `&location=${encodeURIComponent(location)}`
+          : "";
         const res = await fetch(
-          `/api/admin/users?page=${page}&includeDeleted=${includeDeleted}${roleParam}${searchParam}`,
+          `/api/admin/users?page=${page}&includeDeleted=${includeDeleted}${roleParam}${searchParam}${locationParam}`,
           { headers, signal: controller.signal },
         );
         const json = await res.json();
@@ -115,7 +120,7 @@ export default function AdminUsersTable() {
     loadUsers();
 
     return () => controller.abort();
-  }, [page, includeDeleted, filter, search]);
+  }, [page, includeDeleted, filter, search, location]);
 
   return (
     <div className="space-y-4">
@@ -179,6 +184,13 @@ export default function AdminUsersTable() {
         >
           Applicants Only
         </button>
+        <LocationFilter
+          value={location}
+          onChange={(val) => {
+            setLocation(val);
+            setPage(1);
+          }}
+        />
         <label className="ml-auto flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5 text-sm text-navy">
           <input
             type="checkbox"

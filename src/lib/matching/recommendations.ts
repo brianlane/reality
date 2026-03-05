@@ -35,10 +35,7 @@ export async function getRecommendations(
   const scored = await Promise.all(
     filtered.map(async (candidate) => {
       const result = await scoreApplicantMatch(applicant, candidate);
-      return {
-        candidate,
-        result,
-      };
+      return { candidate, result, adjustedScore: result.score };
     }),
   );
 
@@ -50,16 +47,16 @@ export async function getRecommendations(
 
   // 4. Filter by minimum score
   const qualifying = withoutDealbreakers.filter(
-    (s) => s.result.score >= minScore,
+    (s) => s.adjustedScore >= minScore,
   );
 
   // 5. Sort by score (descending)
-  qualifying.sort((a, b) => b.result.score - a.result.score);
+  qualifying.sort((a, b) => b.adjustedScore - a.adjustedScore);
 
   // 6. Return top N recommendations
   return qualifying.slice(0, maxResults).map((s) => ({
     applicantId: s.candidate.id,
-    compatibilityScore: s.result.score,
+    compatibilityScore: s.adjustedScore,
     dealbreakersViolated: s.result.dealbreakersViolated,
     questionsScored: s.result.questionsScored,
   }));

@@ -350,10 +350,15 @@
 ### Section C: Rate the Importance of Similarities
 
 1. Music taste with your partner? (1 = Not important, 7 = Extremely important) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7 | w=0.3]`
-2. Genre of a movie/book preference? (1 = Not important, 7 = Extremely important) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7 | w=0.3]`
-3. The type and amount of activities preferred in your free time? (1 = Not important, 7 = Extremely important) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7 | w=0.4]`
-4. Shared sense of humor? (1 = Not important, 7 = Extremely important) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7 | w=0.5]`
-5. How important is it that your partner is open to trying new things with you? (1 = Not important, 7 = Extremely important) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7 | w=0.5]`
+2. Favorite genre of music? `[DROPDOWN: Pop, Rock, Hip-Hop/Rap, R&B/Soul, Country, Electronic/EDM, Jazz, Classical, Latin, Indie/Alternative, Folk/Acoustic, Metal, Don't Care]`
+3. How important is movie/tv genre compatibility with your partner? (1 = Not important, 7 = Extremely important) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7 | w=0.3]`
+4. Favorite movie/tv genre? `[DROPDOWN: Action/Thriller, Comedy, Drama, Romance, Science Fiction/Fantasy, Documentary, Horror, Mystery/Crime, Animation/Family, Superhero/Comic Book, Don't Care]`
+5. How important is book genre compatibility with your partner? (1 = Not important, 7 = Extremely important) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7 | w=0.3]`
+6. Favorite book genre? `[DROPDOWN: Literary Fiction, Mystery/Thriller, Science Fiction/Fantasy, Romance, Biography/Memoir, Self-Help/Psychology, Historical Fiction, Business/Finance, Narrative Nonfiction, Poetry/Essays, Not A Reader]`
+7. The type of activities preferred in your free time? (1 = Not important, 7 = Extremely important) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7 | w=0.4]`
+8. Favorite type of activity in your free time? `[DROPDOWN: Outdoor/Adventure, Fitness/Sports, Arts & Creative, Gaming, Music & Performance, Cooking & Food, Travel & Exploration, Reading & Learning, Entertainment, Wellness & Mindfulness]`
+9. Shared sense of humor? (1 = Not important, 7 = Extremely important) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7 | w=0.5]`
+10. How important is it that your partner is open to trying new things with you? (1 = Not important, 7 = Extremely important) `[RADIO_7: 1, 2, 3, 4, 5, 6, 7 | w=0.5]`
 
 ---
 
@@ -393,13 +398,13 @@
 
 ## Summary Statistics
 
-- **Total Questions:** ~150 (standard + 5 research feedback; dealbreaker checkboxes removed after research phase)
+- **Total Questions:** ~153 (standard + 5 research feedback; dealbreaker checkboxes removed after research phase)
 - **Pages:** 17 (Page 0: Consent through Page 16: Research Feedback)
 - **Consent Page Questions:** 11 (Page 0, separate numbering, all w=0)
 - **Research-Only Questions:** 5 (Page 16, visible only to research participants)
 - **Dealbreaker Checkbox Questions:** Removed (served their purpose as research signals; isDealbreaker/weight now set directly on parent questions)
 - **RADIO_7 Questions:** 39
-- **DROPDOWN Questions:** 74
+- **DROPDOWN Questions:** 77
 - **TEXTAREA Questions:** 19
 - **CHECKBOXES Questions:** 15 (including consent checkboxes)
 - **TEXT/NUMBER Questions:** 11

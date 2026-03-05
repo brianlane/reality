@@ -20,6 +20,7 @@ export async function GET(request: Request) {
   const status = url.searchParams.get("status") ?? undefined;
   const gender = url.searchParams.get("gender") ?? undefined;
   const screeningStatus = url.searchParams.get("screeningStatus") ?? undefined;
+  const location = url.searchParams.get("location") ?? undefined;
   const search = url.searchParams.get("search") ?? undefined;
   const page = Number(url.searchParams.get("page") ?? "1");
   const limit = Number(url.searchParams.get("limit") ?? "20");
@@ -44,6 +45,7 @@ export async function GET(request: Request) {
         }),
     ...(gender ? { gender: gender as never } : {}),
     ...(screeningStatus ? { screeningStatus: screeningStatus as never } : {}),
+    ...(location ? { location } : {}),
     ...(includeDeleted ? {} : { deletedAt: null }),
     ...(search
       ? {
@@ -96,6 +98,7 @@ export async function GET(request: Request) {
       age: applicant.age,
       gender: applicant.gender,
       occupation: applicant.occupation,
+      location: applicant.location,
       applicationStatus: applicant.applicationStatus,
       screeningStatus: applicant.screeningStatus,
       compatibilityScore: applicant.compatibilityScore,
