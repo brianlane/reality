@@ -15,6 +15,7 @@ export default function SignInForm() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const resetSuccess = searchParams.get("reset") === "success";
+  const authCodeError = searchParams.get("error") === "auth-code-error";
 
   const getSafeNext = () => {
     const next = searchParams.get("next") ?? "/dashboard";
@@ -83,6 +84,14 @@ export default function SignInForm() {
           <p className="text-sm text-green-800">
             Your password has been reset successfully. Please sign in with your
             new password.
+          </p>
+        </div>
+      ) : null}
+
+      {authCodeError ? (
+        <div className="mt-4 rounded-md bg-red-50 p-4">
+          <p className="text-sm text-red-800">
+            This link is invalid or has expired. Please try again.
           </p>
         </div>
       ) : null}

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import ForgotPasswordForm from "./ForgotPasswordForm";
 
 export default function ForgotPasswordPage() {
@@ -9,7 +10,11 @@ export default function ForgotPasswordPage() {
         password.
       </p>
 
-      <ForgotPasswordForm />
+      <Suspense
+        fallback={<p className="mt-8 text-sm text-navy-soft">Loading...</p>}
+      >
+        <ForgotPasswordForm />
+      </Suspense>
     </section>
   );
 }

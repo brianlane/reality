@@ -60,7 +60,7 @@ export default function CreatePasswordForm({
           supabase,
           email: email.trim().toLowerCase(),
           password,
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin}/auth/callback?next=/dashboard`,
         });
         if (authResult.errorMessage) {
           setError(authResult.errorMessage);
