@@ -114,14 +114,15 @@ export async function POST(request: Request) {
         break;
 
       case "EVENT_INVITATION":
+        // Build test dates as explicit Arizona time (UTC-7, no DST)
         const testDate = new Date();
         testDate.setDate(testDate.getDate() + 7); // 7 days from now
+        const dateStr = testDate.toLocaleDateString("en-CA", {
+          timeZone: "America/Phoenix",
+        }); // YYYY-MM-DD
 
-        const testStartTime = new Date(testDate);
-        testStartTime.setHours(19, 0, 0, 0); // 7:00 PM
-
-        const testEndTime = new Date(testDate);
-        testEndTime.setHours(22, 0, 0, 0); // 10:00 PM
+        const testStartTime = new Date(`${dateStr}T19:00:00-07:00`); // 7:00 PM AZ
+        const testEndTime = new Date(`${dateStr}T22:30:00-07:00`); // 10:30 PM AZ
 
         result = await sendEventInvitationEmail({
           to: recipientEmail,

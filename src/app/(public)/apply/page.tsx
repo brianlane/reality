@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import Stage1QualificationForm from "@/components/forms/Stage1QualificationForm";
 import ExistingApplicationStatus from "@/components/apply/ExistingApplicationStatus";
 import { getAuthUser } from "@/lib/auth";
@@ -73,20 +74,24 @@ export default async function ApplyPage() {
       {/* Body copy + Form */}
       <section className="mx-auto max-w-3xl px-6 pt-8 pb-16">
         <div className="mb-10 space-y-4 text-base text-navy-soft leading-relaxed">
+          <p>Every member is background checked and manually reviewed.</p>
           <p>
-            Every member is background checked and manually reviewed.
+            When we&apos;ve curated the right group, you&apos;ll receive a
+            personal invitation.
           </p>
           <p>
-            When we've curated the right group, you'll receive a personal invitation.
-          </p>
-          <p>
-            Events are designed for individuals who are serious about finding a life partner — <em>not another match.</em>
+            Events are designed for individuals who are serious about finding a
+            life partner — <em>not another match.</em>
           </p>
           <p>
             Learn more about our{" "}
-            <a href="/purpose" className="underline hover:text-copper transition-colors">
+            <Link
+              href="/purpose"
+              className="underline hover:text-copper transition-colors"
+            >
               purpose
-            </a>.
+            </Link>
+            .
           </p>
         </div>
 
