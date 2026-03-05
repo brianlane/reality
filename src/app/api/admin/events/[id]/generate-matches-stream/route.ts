@@ -142,7 +142,13 @@ export async function POST(
           finalWomenIds,
           finalWomenSet,
           recommendations: allRecommendations,
-        } = selectCohortFromScores(allScores, allMen, allWomen, minScore, maxPerGender);
+        } = selectCohortFromScores(
+          allScores,
+          allMen,
+          allWomen,
+          minScore,
+          maxPerGender,
+        );
 
         const distinctMatches = computeDistinctMatches(allRecommendations);
 

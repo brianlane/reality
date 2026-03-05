@@ -580,7 +580,13 @@ export function selectCohortFromScores(
     (r) => finalMenSet.has(r.applicantId) && finalWomenSet.has(r.partnerId),
   );
 
-  return { finalMenIds, finalWomenIds, finalMenSet, finalWomenSet, recommendations };
+  return {
+    finalMenIds,
+    finalWomenIds,
+    finalMenSet,
+    finalWomenSet,
+    recommendations,
+  };
 }
 
 /**

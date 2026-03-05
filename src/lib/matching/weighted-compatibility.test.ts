@@ -142,11 +142,7 @@ describe("scorePairFromCache", () => {
 // ── selectCohortFromScores ────────────────────────────────────────────────────
 
 describe("selectCohortFromScores", () => {
-  function makeScore(
-    manId: string,
-    womanId: string,
-    score: number,
-  ): PairScore {
+  function makeScore(manId: string, womanId: string, score: number): PairScore {
     return { manId, womanId, score, dealbreakersViolated: [] };
   }
 

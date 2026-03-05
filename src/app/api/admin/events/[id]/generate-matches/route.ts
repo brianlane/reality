@@ -86,7 +86,7 @@ export async function POST(
   }
 
   // ── Explicit pairs shortcut (from preview) ──────────────────────────────
-  if (explicitPairs && explicitPairs.length > 0 && createMatches) {
+  if (explicitPairs && explicitPairs.length > 0) {
     const allPairIds = new Set(
       explicitPairs.flatMap((p) => [p.applicantId, p.partnerId]),
     );
@@ -109,13 +109,12 @@ export async function POST(
       );
     }
 
+    // Deduplicate pairs with canonical ordering (lower ID first)
     const seen = new Set<string>();
-    const matchesToCreate: Array<{
-      eventId: string;
+    const uniquePairs: Array<{
       applicantId: string;
       partnerId: string;
-      type: "CURATED";
-      compatibilityScore: number;
+      score: number;
     }> = [];
     for (const pair of explicitPairs) {
       const [a, b] =
@@ -125,31 +124,48 @@ export async function POST(
       const key = `${a}:${b}`;
       if (!seen.has(key)) {
         seen.add(key);
-        matchesToCreate.push({
-          eventId,
-          applicantId: a,
-          partnerId: b,
-          type: "CURATED",
-          compatibilityScore: pair.score,
-        });
+        uniquePairs.push({ applicantId: a, partnerId: b, score: pair.score });
       }
     }
+
+    const avgScore =
+      uniquePairs.length > 0
+        ? Math.round(
+            uniquePairs.reduce((s, p) => s + p.score, 0) / uniquePairs.length,
+          )
+        : 0;
+
+    if (!createMatches) {
+      return successResponse({
+        event: { id: event.id, name: event.name },
+        mode: "explicit",
+        matchesCreated: 0,
+        avgScore,
+        recommendations: uniquePairs.map((p) => ({
+          applicantId: p.applicantId,
+          partnerId: p.partnerId,
+          score: p.score,
+          dealbreakers: [],
+        })),
+      });
+    }
+
     try {
       const result = await db.match.createMany({
-        data: matchesToCreate,
+        data: uniquePairs.map((p) => ({
+          eventId,
+          applicantId: p.applicantId,
+          partnerId: p.partnerId,
+          type: "CURATED" as const,
+          compatibilityScore: p.score,
+        })),
         skipDuplicates: true,
       });
       return successResponse({
         event: { id: event.id, name: event.name },
         mode: "explicit",
         matchesCreated: result.count,
-        avgScore:
-          explicitPairs.length > 0
-            ? Math.round(
-                explicitPairs.reduce((s, p) => s + p.score, 0) /
-                  explicitPairs.length,
-              )
-            : 0,
+        avgScore,
       });
     } catch (error) {
       console.error("Failed to create explicit matches:", error);
@@ -231,14 +247,20 @@ export async function POST(
     const allIds = [...allMen.map((m) => m.id), ...allWomen.map((w) => w.id)];
     const cache = await preloadAnswerCache(allIds);
 
-    const { allScores } = await scoreAllPairs(allMen, allWomen, cache, minScore);
-    const { finalMenSet, finalWomenSet, recommendations } = selectCohortFromScores(
-      allScores,
+    const { allScores } = await scoreAllPairs(
       allMen,
       allWomen,
+      cache,
       minScore,
-      maxPerGender,
     );
+    const { finalMenSet, finalWomenSet, recommendations } =
+      selectCohortFromScores(
+        allScores,
+        allMen,
+        allWomen,
+        minScore,
+        maxPerGender,
+      );
 
     allRecommendations.push(...recommendations);
 
