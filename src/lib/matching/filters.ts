@@ -91,7 +91,12 @@ export function checkScreeningFlags(
 }
 
 /**
- * Apply all filters to a list of candidates
+ * Apply compatibility filters (gender/seeking/status) to a list of candidates.
+ *
+ * NOTE: Screening flag exclusions (RED flags) are intentionally NOT applied here.
+ * Callers are responsible for pre-filtering with `checkScreeningFlags` so that
+ * exclusions can be collected and reported back to admins. Embedding the check
+ * here would silently drop applicants without any audit trail.
  */
 export function applyFilters(
   applicant: Applicant,
