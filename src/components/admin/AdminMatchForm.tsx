@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 import { CITIES } from "@/lib/locations";
+import { formatDateOnly } from "@/lib/admin/format";
 
 type AdminMatchFormProps = {
   matchId?: string;
@@ -44,40 +45,21 @@ type ApplicantOption = {
   applicationStatus: string;
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 // ── EventCombobox ─────────────────────────────────────────────────────────────
 
 function EventCombobox({
-  events,
   selectedId,
   onSelect,
 }: {
-  events: EventOption[];
   selectedId: string;
   onSelect: (id: string) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState<EventOption[]>([]);
+  const [selected, setSelected] = useState<EventOption | null>(null);
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const selected = events.find((e) => e.id === selectedId) ?? null;
-
-  const filtered = query
-    ? events.filter(
-        (e) =>
-          e.name.toLowerCase().includes(query.toLowerCase()) ||
-          (e.location ?? "").toLowerCase().includes(query.toLowerCase()),
-      )
-    : events;
 
   useEffect(() => {
     function onMouseDown(e: MouseEvent) {
@@ -92,7 +74,51 @@ function EventCombobox({
     return () => document.removeEventListener("mousedown", onMouseDown);
   }, []);
 
+  // Debounced server-side search (no pre-load limit)
+  useEffect(() => {
+    if (selected) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const headers = await getAuthHeaders();
+        if (!headers) return;
+        const params = new URLSearchParams({ limit: "20", page: "1" });
+        if (query.trim()) params.set("name", query.trim());
+        const res = await fetch(`/api/admin/events?${params}`, {
+          headers,
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          const json = await res.json();
+          setResults(json.events ?? []);
+          setOpen(true);
+        }
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          setResults([]);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, selected]);
+
+  // Sync external clear
+  useEffect(() => {
+    if (!selectedId) {
+      setSelected(null);
+      setQuery("");
+      setResults([]);
+    }
+  }, [selectedId]);
+
   function handleSelect(ev: EventOption) {
+    setSelected(ev);
     onSelect(ev.id);
     setQuery("");
     setOpen(false);
@@ -100,8 +126,10 @@ function EventCombobox({
 
   function handleClear(e: React.MouseEvent) {
     e.stopPropagation();
+    setSelected(null);
     onSelect("");
     setQuery("");
+    setResults([]);
   }
 
   return (
@@ -119,7 +147,7 @@ function EventCombobox({
             {selected.location ?? "—"}
           </span>
           <span className="shrink-0 text-xs text-slate-400">
-            {formatDate(selected.date)}
+            {formatDateOnly(selected.date) ?? "—"}
           </span>
           <button
             type="button"
@@ -131,38 +159,39 @@ function EventCombobox({
           </button>
         </div>
       ) : (
-        <Input
-          placeholder="Search events by name or location…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setOpen(true)}
-          autoComplete="off"
-        />
-      )}
-      {open && (
-        <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
-          {filtered.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-slate-400">
-              No events found
-            </div>
-          ) : (
-            filtered.map((ev) => (
-              <button
-                key={ev.id}
-                type="button"
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-50"
-                onMouseDown={() => handleSelect(ev)}
-              >
-                <span className="flex-1 font-medium">{ev.name}</span>
-                <span className="shrink-0 text-xs text-slate-400">
-                  {ev.location ?? "—"}
-                </span>
-                <span className="shrink-0 text-xs text-slate-400">
-                  {formatDate(ev.date)}
-                </span>
-              </button>
-            ))
+        <div className="relative">
+          <Input
+            placeholder="Search events by name…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => results.length > 0 && setOpen(true)}
+            autoComplete="off"
+          />
+          {loading && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+              …
+            </span>
           )}
+        </div>
+      )}
+      {open && results.length > 0 && (
+        <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
+          {results.map((ev) => (
+            <button
+              key={ev.id}
+              type="button"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-50"
+              onMouseDown={() => handleSelect(ev)}
+            >
+              <span className="flex-1 font-medium">{ev.name}</span>
+              <span className="shrink-0 text-xs text-slate-400">
+                {ev.location ?? "—"}
+              </span>
+              <span className="shrink-0 text-xs text-slate-400">
+                {formatDateOnly(ev.date) ?? "—"}
+              </span>
+            </button>
+          ))}
         </div>
       )}
     </div>
@@ -204,7 +233,7 @@ function ApplicantCombobox({
     return () => document.removeEventListener("mousedown", onMouseDown);
   }, []);
 
-  // Debounced search
+  // Debounced search with AbortController to discard stale responses
   useEffect(() => {
     if (selected || !query.trim()) {
       if (!query.trim()) {
@@ -213,6 +242,7 @@ function ApplicantCombobox({
       }
       return;
     }
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
@@ -226,17 +256,25 @@ function ApplicantCombobox({
         if (locationFilter) params.set("location", locationFilter);
         const res = await fetch(`/api/admin/applications?${params}`, {
           headers,
+          signal: controller.signal,
         });
         if (res.ok) {
           const json = await res.json();
           setResults(json.applications ?? []);
           setOpen(true);
         }
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          setResults([]);
+        }
       } finally {
         setLoading(false);
       }
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [query, locationFilter, selected]);
 
   // Sync external clear (e.g., form reset)
@@ -353,36 +391,7 @@ export default function AdminMatchForm({ matchId, mode }: AdminMatchFormProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   // Create-mode state
-  const [events, setEvents] = useState<EventOption[]>([]);
   const [locationFilter, setLocationFilter] = useState("");
-
-  // Load events for the dropdown (create mode only)
-  useEffect(() => {
-    if (mode !== "create") return;
-    const controller = new AbortController();
-
-    const loadEvents = async () => {
-      try {
-        const headers = await getAuthHeaders();
-        if (!headers) return;
-        const res = await fetch("/api/admin/events?limit=100&page=1", {
-          headers,
-          signal: controller.signal,
-        });
-        if (res.ok) {
-          const json = await res.json();
-          setEvents(json.events ?? []);
-        }
-      } catch (err) {
-        if ((err as Error).name !== "AbortError") {
-          console.error("Failed to load events", err);
-        }
-      }
-    };
-
-    loadEvents();
-    return () => controller.abort();
-  }, [mode]);
 
   // Load existing match for edit mode
   useEffect(() => {
@@ -630,7 +639,6 @@ export default function AdminMatchForm({ matchId, mode }: AdminMatchFormProps) {
 
             {/* Event combobox */}
             <EventCombobox
-              events={events}
               selectedId={form.eventId}
               onSelect={(id) => updateField("eventId", id)}
             />
