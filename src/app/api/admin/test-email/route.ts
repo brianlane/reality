@@ -130,7 +130,7 @@ export async function POST(request: Request) {
           eventTitle: "Spring Matchmaking Mixer",
           eventDate: testDate,
           eventLocation: "The Metropolitan Club",
-          eventAddress: "123 Main Street, New York, NY 10001",
+          eventAddress: "6850 E Main St, Scottsdale, AZ 85251",
           startTime: testStartTime,
           endTime: testEndTime,
           rsvpUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/events/test/rsvp`,

@@ -171,7 +171,7 @@ export function getEventInvitationHTML(params: {
   const eventTitle = escapeHtml(params.eventTitle);
   const eventLocation = escapeHtml(params.eventLocation);
   const eventAddress = escapeHtml(params.eventAddress);
-  const rsvpUrl = params.rsvpUrl;
+  const rsvpUrl = escapeHtml(params.rsvpUrl);
 
   return `
 <!DOCTYPE html>
