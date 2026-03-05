@@ -15,7 +15,7 @@ const generateMatchesSchema = z.object({
   maxPerApplicant: z.number().int().min(1).max(50).optional().default(5),
   minScore: z.number().min(0).max(100).optional().default(60),
   createMatches: z.boolean().optional().default(true),
-  mode: z.enum(["top_n", "all_pairs"]).optional().default("top_n"),
+  mode: z.enum(["top_n", "all_pairs"]).optional().default("all_pairs"),
   maxPerGender: z.number().int().min(1).max(100).optional().default(50),
   distinct: z.boolean().optional().default(false),
   /** Pre-computed pairs from a preview — skips scoring and creates these directly. */
@@ -95,6 +95,7 @@ export async function POST(
         id: { in: [...allPairIds] },
         deletedAt: null,
         applicationStatus: ApplicationStatus.APPROVED,
+        screeningStatus: ScreeningStatus.PASSED,
       },
       select: { id: true },
     });
@@ -229,9 +230,6 @@ export async function POST(
 
     const men = allMen;
     const women = allWomen;
-    const menExceeded = false;
-    const womenExceeded = false;
-    const truncated = false;
 
     const allIds = [...men.map((m) => m.id), ...women.map((w) => w.id)];
     const cache = await preloadAnswerCache(allIds);
@@ -251,21 +249,20 @@ export async function POST(
       womenPassCount.set(s.womanId, (womenPassCount.get(s.womanId) ?? 0) + 1);
     }
 
-    const preselectPerGender = Math.min(
-      men.length,
-      Math.max(maxPerGender * 3, maxPerGender),
-    );
+    // Pre-select 3× maxPerGender candidates per gender (ranked by passing-partner count)
+    // to give the cohort builder a larger, higher-quality candidate pool.
+    const preselectCount = maxPerGender * 3;
     const candidateMen = [...men]
       .sort(
         (a, b) => (menPassCount.get(b.id) ?? 0) - (menPassCount.get(a.id) ?? 0),
       )
-      .slice(0, preselectPerGender);
+      .slice(0, preselectCount);
     const candidateWomen = [...women]
       .sort(
         (a, b) =>
           (womenPassCount.get(b.id) ?? 0) - (womenPassCount.get(a.id) ?? 0),
       )
-      .slice(0, preselectPerGender);
+      .slice(0, preselectCount);
     const candidateMenSet = new Set(candidateMen.map((m) => m.id));
     const candidateWomenSet = new Set(candidateWomen.map((w) => w.id));
     const candidateScores = allScores.filter(
@@ -309,7 +306,7 @@ export async function POST(
       allPairScores: allScores.filter(
         (s) => finalMenSet.has(s.manId) && finalWomenSet.has(s.womanId),
       ),
-      truncated,
+      truncated: false,
       totalMen: allMen.length,
       totalWomen: allWomen.length,
       comparedMen: men.length,

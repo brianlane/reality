@@ -90,7 +90,6 @@ export async function POST(
   const allWomen = applicants.filter((a) => a.gender === "WOMAN");
   const men = allMen;
   const women = allWomen;
-  const truncated = false;
   const totalPairs = men.length * women.length;
 
   const allIds = [...men.map((m) => m.id), ...women.map((w) => w.id)];
@@ -112,7 +111,7 @@ export async function POST(
           totalPairs,
           menCount: men.length,
           womenCount: women.length,
-          truncated,
+          truncated: false,
           totalMen: allMen.length,
           totalWomen: allWomen.length,
         });
@@ -156,22 +155,21 @@ export async function POST(
           );
         }
 
-        const preselectPerGender = Math.min(
-          men.length,
-          Math.max(maxPerGender * 3, maxPerGender),
-        );
+        // Pre-select 3× maxPerGender candidates per gender (ranked by passing-partner count)
+        // to give the cohort builder a larger, higher-quality candidate pool.
+        const preselectCount = maxPerGender * 3;
         const candidateMen = [...men]
           .sort(
             (a, b) =>
               (menPassCount.get(b.id) ?? 0) - (menPassCount.get(a.id) ?? 0),
           )
-          .slice(0, preselectPerGender);
+          .slice(0, preselectCount);
         const candidateWomen = [...women]
           .sort(
             (a, b) =>
               (womenPassCount.get(b.id) ?? 0) - (womenPassCount.get(a.id) ?? 0),
           )
-          .slice(0, preselectPerGender);
+          .slice(0, preselectCount);
         const candidateMenSet = new Set(candidateMen.map((m) => m.id));
         const candidateWomenSet = new Set(candidateWomen.map((w) => w.id));
         const candidateScores = allScores.filter(
@@ -224,7 +222,7 @@ export async function POST(
             allPairScores: allScores.filter(
               (s) => finalMenSet.has(s.manId) && finalWomenSet.has(s.womanId),
             ),
-            truncated,
+            truncated: false,
             totalMen: allMen.length,
             totalWomen: allWomen.length,
             comparedMen: men.length,
