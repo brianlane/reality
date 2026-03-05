@@ -201,7 +201,7 @@ export default function ApplicationDraftForm({
           supabase,
           email: applicant.email,
           password,
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
         });
         if (authResult.errorMessage) {
           setStatus(authResult.errorMessage);
