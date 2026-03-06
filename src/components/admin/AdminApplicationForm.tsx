@@ -8,20 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 import ScreeningDetail from "@/components/admin/ScreeningDetail";
+import type { ScreeningData } from "@/components/admin/screening-types";
 import { runSkipPaymentFlow } from "@/lib/admin/skip-payment";
-
-type ScreeningData = {
-  screeningStatus: "PENDING" | "IN_PROGRESS" | "PASSED" | "FAILED";
-  idenfyStatus: "PENDING" | "IN_PROGRESS" | "PASSED" | "FAILED";
-  idenfyVerificationId: string | null;
-  checkrStatus: "PENDING" | "IN_PROGRESS" | "PASSED" | "FAILED";
-  checkrReportId: string | null;
-  checkrCandidateId: string | null;
-  backgroundCheckConsentAt: string | null;
-  backgroundCheckConsentIp: string | null;
-  backgroundCheckNotes: string | null;
-  continuousMonitoringId: string | null;
-};
 
 type AdminApplicationFormProps = {
   applicationId?: string;

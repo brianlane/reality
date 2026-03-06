@@ -4,21 +4,10 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
-
-type ScreeningStatus = "PENDING" | "IN_PROGRESS" | "PASSED" | "FAILED";
-
-type ScreeningData = {
-  screeningStatus: ScreeningStatus;
-  idenfyStatus: ScreeningStatus;
-  idenfyVerificationId: string | null;
-  checkrStatus: ScreeningStatus;
-  checkrReportId: string | null;
-  checkrCandidateId: string | null;
-  backgroundCheckConsentAt: string | null;
-  backgroundCheckConsentIp: string | null;
-  backgroundCheckNotes: string | null;
-  continuousMonitoringId: string | null;
-};
+import type {
+  ScreeningData,
+  ScreeningStatus,
+} from "@/components/admin/screening-types";
 
 type Props = {
   applicationId: string;
