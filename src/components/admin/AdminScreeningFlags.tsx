@@ -132,13 +132,12 @@ export default function AdminScreeningFlags({
     try {
       const headers = await getAuthHeaders();
       if (!headers) return;
-      const res = await fetch(
-        `/api/admin/applications/${applicantId}/screening-flags`,
-        { headers },
-      );
+      const res = await fetch(`/api/admin/applications/${applicantId}`, {
+        headers,
+      });
       const json = await res.json();
-      if (json?.data) {
-        setData(json.data);
+      if (json?.screeningFlags) {
+        setData(json.screeningFlags);
       }
     } catch {
       setError("Failed to load screening flags");

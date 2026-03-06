@@ -21,6 +21,7 @@ type ApplicationItem = {
   relationshipReadinessFlag?: FlagSeverity | null;
   saScreeningFlag?: FlagSeverity | null;
   screeningFlagOverride?: boolean;
+  compatibilityScore?: number | null;
   submittedAt?: string | null;
   questionnaireStartedAt?: string | null;
   reviewedAt?: string | null;
@@ -160,6 +161,7 @@ export default function AdminApplicationsTable() {
                 <th className="py-2 px-6 text-left">Email</th>
                 <th className="py-2 px-6 text-left">Status</th>
                 <th className="py-2 px-6 text-left">Screening</th>
+                <th className="py-2 px-6 text-left">Compatibility</th>
                 <th
                   className="py-2 px-3 text-center"
                   title="Relationship Readiness Flag"
@@ -189,6 +191,12 @@ export default function AdminApplicationsTable() {
                   </td>
                   <td className="py-2 px-6 whitespace-nowrap">
                     {app.screeningStatus ?? "N/A"}
+                  </td>
+                  <td className="py-2 px-6 whitespace-nowrap">
+                    {app.compatibilityScore !== null &&
+                    app.compatibilityScore !== undefined
+                      ? Math.round(app.compatibilityScore)
+                      : "N/A"}
                   </td>
                   <td className="py-2 px-3 text-center">
                     <FlagBadge

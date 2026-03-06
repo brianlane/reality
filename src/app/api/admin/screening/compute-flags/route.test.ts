@@ -16,12 +16,6 @@ vi.mock("@/lib/screening", () => ({
   computeAndStoreScreeningFlags: vi.fn(),
 }));
 
-function makeRequest(): Request {
-  return new Request("http://localhost/api/admin/screening/compute-flags", {
-    method: "POST",
-  });
-}
-
 describe("POST /api/admin/screening/compute-flags", () => {
   beforeEach(() => {
     vi.clearAllMocks();

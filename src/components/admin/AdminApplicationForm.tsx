@@ -89,9 +89,11 @@ export default function AdminApplicationForm({
           aboutYourself: json.applicant.aboutYourself ?? "",
           applicationStatus: status,
           screeningStatus: json.applicant.screeningStatus ?? "PENDING",
-          compatibilityScore: json.applicant.compatibilityScore
-            ? String(json.applicant.compatibilityScore)
-            : "",
+          compatibilityScore:
+            json.applicant.compatibilityScore !== null &&
+            json.applicant.compatibilityScore !== undefined
+              ? String(json.applicant.compatibilityScore)
+              : "",
           photos: Array.isArray(json.applicant.photos)
             ? json.applicant.photos.join(", ")
             : "",
