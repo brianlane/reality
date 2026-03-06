@@ -69,25 +69,21 @@ export async function POST(request: Request) {
 
   const screeningStatus = mapIdenfyStatus(overallStatus, { final: body.final });
 
-  // Log to screening audit (always, even for soft-deleted — compliance requirement)
-  await db.screeningAuditLog
-    .create({
-      data: {
-        userId: null,
-        applicantId: applicant.id,
-        action: "IDENFY_WEBHOOK",
-        metadata: {
-          scanRef,
-          overallStatus,
-          mappedStatus: screeningStatus,
-        },
+  // Log to screening audit (always, even for soft-deleted — compliance requirement).
+  // No .catch() — failures must return 500 so the provider retries; we cannot
+  // proceed without a legally required record.
+  await db.screeningAuditLog.create({
+    data: {
+      userId: null,
+      applicantId: applicant.id,
+      action: "IDENFY_WEBHOOK",
+      metadata: {
+        scanRef,
+        overallStatus,
+        mappedStatus: screeningStatus,
       },
-    })
-    .catch((err: unknown) => {
-      logger.warn("Failed to create screening audit log", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    });
+    },
+  });
 
   // Skip status updates and orchestration for soft-deleted applicants
   if (applicant.deletedAt) {

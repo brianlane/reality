@@ -33,34 +33,44 @@ export default function IdentityVerification({
     [onStatusChange],
   );
 
-  // Poll for status updates when verification is in progress
+  // Poll for status updates when verification is in progress.
+  // Use setTimeout (schedule next after current completes) instead of setInterval
+  // to avoid overlapping fetches when a request takes longer than the poll interval.
   useEffect(() => {
     if (status !== "IN_PROGRESS" || pollTimedOut) return;
 
-    // Stop polling after 10 minutes (120 polls) and show timeout UI
     if (pollCount >= 120) {
       setPollTimedOut(true);
       return;
     }
 
-    const interval = setInterval(async () => {
+    let cancelled = false;
+
+    const poll = async () => {
       try {
         const response = await fetch(
           `/api/applications/status/${applicationId}`,
         );
+        if (cancelled) return;
         if (response.ok) {
           const data = await response.json();
           if (data.idenfyStatus && data.idenfyStatus !== "IN_PROGRESS") {
             updateStatus(data.idenfyStatus);
+            return;
           }
         }
         setPollCount((prev) => prev + 1);
       } catch {
-        // Silently retry on network errors
+        if (!cancelled) setPollCount((prev) => prev + 1);
       }
-    }, 5000); // Poll every 5 seconds
+    };
 
-    return () => clearInterval(interval);
+    const timeoutId = setTimeout(poll, 5000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
   }, [status, applicationId, pollCount, pollTimedOut, updateStatus]);
 
   const checkStatusManually = async () => {

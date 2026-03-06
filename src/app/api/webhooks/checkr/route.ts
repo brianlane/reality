@@ -116,26 +116,22 @@ async function handleReportCompleted(data: {
 
   const screeningStatus = mapCheckrResult(result);
 
-  // Audit log (always, even for soft-deleted — compliance requirement)
-  await db.screeningAuditLog
-    .create({
-      data: {
-        userId: null,
-        applicantId: applicant.id,
-        action: "CHECKR_REPORT_COMPLETED",
-        metadata: {
-          reportId,
-          candidateId,
-          result,
-          mappedStatus: screeningStatus,
-        },
+  // Audit log (always, even for soft-deleted — compliance requirement).
+  // No .catch() — failures must return 500 so the provider retries; we cannot
+  // proceed without a legally required record.
+  await db.screeningAuditLog.create({
+    data: {
+      userId: null,
+      applicantId: applicant.id,
+      action: "CHECKR_REPORT_COMPLETED",
+      metadata: {
+        reportId,
+        candidateId,
+        result,
+        mappedStatus: screeningStatus,
       },
-    })
-    .catch((err: unknown) => {
-      logger.warn("Failed to create screening audit log", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    });
+    },
+  });
 
   // Skip status updates and orchestration for soft-deleted applicants
   if (applicant.deletedAt) {
@@ -202,24 +198,18 @@ async function handleInvitationCompleted(data: {
     return successResponse({ received: true, processed: false });
   }
 
-  // Log for audit trail -- the report.completed event will do the real processing
-  await db.screeningAuditLog
-    .create({
-      data: {
-        userId: null,
-        applicantId: applicant.id,
-        action: "CHECKR_INVITATION_COMPLETED",
-        metadata: {
-          invitationId: data.id,
-          candidateId,
-        },
+  // Log for audit trail — compliance requirement; failures must return 500.
+  await db.screeningAuditLog.create({
+    data: {
+      userId: null,
+      applicantId: applicant.id,
+      action: "CHECKR_INVITATION_COMPLETED",
+      metadata: {
+        invitationId: data.id,
+        candidateId,
       },
-    })
-    .catch((err: unknown) => {
-      logger.warn("Failed to create screening audit log", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    });
+    },
+  });
 
   logger.info("Checkr invitation completed", {
     applicantId: applicant.id,
@@ -251,25 +241,19 @@ async function handleContinuousMonitorUpdated(data: {
     return successResponse({ received: true, processed: false });
   }
 
-  // Log the monitoring alert for admin review
-  await db.screeningAuditLog
-    .create({
-      data: {
-        userId: null,
-        applicantId: applicant.id,
-        action: "CONTINUOUS_MONITOR_ALERT",
-        metadata: {
-          monitorId: data.id,
-          candidateId,
-          status: data.status,
-        },
+  // Log the monitoring alert — compliance requirement; failures must return 500.
+  await db.screeningAuditLog.create({
+    data: {
+      userId: null,
+      applicantId: applicant.id,
+      action: "CONTINUOUS_MONITOR_ALERT",
+      metadata: {
+        monitorId: data.id,
+        candidateId,
+        status: data.status,
       },
-    })
-    .catch((err: unknown) => {
-      logger.warn("Failed to create screening audit log", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    });
+    },
+  });
 
   logger.warn("Continuous monitoring alert received", {
     applicantId: applicant.id,
