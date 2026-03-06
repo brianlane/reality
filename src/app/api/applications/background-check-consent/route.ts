@@ -20,7 +20,8 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { applicationId, fullName, consentGiven } = body;
+    const { applicationId, fullName, consentGiven, evergreenConsentGiven } =
+      body;
 
     if (!applicationId) {
       return errorResponse(
@@ -46,6 +47,14 @@ export async function POST(request: Request) {
       return errorResponse(
         "CONSENT_REQUIRED",
         "You must agree to the background check authorization to proceed",
+        400,
+      );
+    }
+
+    if (evergreenConsentGiven !== true) {
+      return errorResponse(
+        "CONSENT_REQUIRED",
+        "You must agree to ongoing criminal record monitoring to proceed",
         400,
       );
     }
@@ -103,6 +112,8 @@ export async function POST(request: Request) {
             ip: clientIp,
             consentTimestamp: consentTimestamp.toISOString(),
             userAgent: headerList.get("user-agent") || "unknown",
+            consentGiven: true,
+            evergreenConsentGiven: true,
           },
         },
       }),

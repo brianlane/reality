@@ -72,6 +72,13 @@ export default function AdminApplicationForm({
   // silently overwriting unsaved form edits the admin may have made.
   const initialLoadDone = useRef(false);
 
+  // Reset when applicationId changes so we do a full load for the new applicant.
+  // Without this, client-side navigation reusing the component would take the
+  // "refresh" path and leave stale data from the previous applicant.
+  useEffect(() => {
+    initialLoadDone.current = false;
+  }, [applicationId]);
+
   useEffect(() => {
     if (mode !== "edit" || !applicationId) return;
     const controller = new AbortController();

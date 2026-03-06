@@ -42,6 +42,7 @@ export default function BackgroundCheckConsentForm({
             applicationId,
             fullName: fullName.trim(),
             consentGiven: true,
+            evergreenConsentGiven: true,
           }),
         },
       );
