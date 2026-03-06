@@ -134,11 +134,23 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     email: auth.email,
   });
 
+  const { backgroundCheckNotes: notesPayload, ...restApplicant } =
+    body.applicant ?? {};
+
   const updateData: Prisma.ApplicantUpdateInput = {
-    ...body.applicant,
+    ...restApplicant,
     reviewedAt: new Date(),
     reviewedBy: adminUser.id,
   };
+
+  // Append admin notes to preserve orchestrator audit trail instead of replacing
+  if (notesPayload != null && notesPayload.trim() !== "") {
+    const timestamp = new Date().toISOString();
+    const entry = `[${timestamp}] ${notesPayload.trim()}`;
+    updateData.backgroundCheckNotes = existing.backgroundCheckNotes
+      ? `${existing.backgroundCheckNotes}\n${entry}`
+      : entry;
+  }
 
   const applicationStatusChangeRequested =
     body.applicant?.applicationStatus &&

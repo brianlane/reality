@@ -233,6 +233,11 @@ export default function AdminApplicationForm({
                 compatibilityScore: form.compatibilityScore
                   ? Number(form.compatibilityScore)
                   : undefined,
+                ...(form.notes?.trim()
+                  ? {
+                      backgroundCheckNotes: form.notes.trim(),
+                    }
+                  : {}),
                 photos: form.photos
                   ? form.photos.split(",").map((item) => item.trim())
                   : undefined,
@@ -259,6 +264,9 @@ export default function AdminApplicationForm({
         return;
       }
       setSuccess("Application saved.");
+      if (payload.applicant && "backgroundCheckNotes" in payload.applicant) {
+        setForm((prev) => ({ ...prev, notes: "" }));
+      }
       // Update initial status to current value after successful save
       // This ensures subsequent status changes are detected correctly
       if (
