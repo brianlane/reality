@@ -5,21 +5,25 @@
  * These functions are used by both:
  * - Email sending (src/lib/email/*.ts)
  * - Email preview endpoint (src/app/api/admin/preview-email/route.ts)
+ *
+ * Content definitions come from src/lib/status-content.ts to ensure
+ * consistency between emails and webpages.
  */
 
+import { EMAIL_STATUS_CONTENT, type StatusContentKey } from "../status-content";
+import {
+  getSimpleStatusViewHTML,
+  getSimpleEmailHTML,
+  escapeHtml,
+} from "./simple-status-view";
+import { getTimezoneForAddress } from "@/lib/locations";
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-const htmlEscapes: Record<string, string> = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;",
-};
-
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (char) => htmlEscapes[char] ?? char);
-}
+const EMAIL_ASSET_BASE_URL = (
+  process.env.EMAIL_ASSET_BASE_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "https://www.realitymatchmaking.com"
+).replace(/\/$/, "");
 
 export function getWaitlistConfirmationHTML() {
   return `
@@ -36,18 +40,13 @@ export function getWaitlistConfirmationHTML() {
     <div style="padding: 40px 32px;">
       <!-- Logo and Title -->
       <div style="text-align: center; margin-bottom: 32px;">
-        <svg width="60" height="60" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; margin-bottom: 16px;">
-          <defs>
-            <linearGradient id="lineGradient" x1="12" y1="24" x2="36" y2="24" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stop-color="#c9a880"/>
-              <stop offset="0.5" stop-color="#c9a880" stop-opacity="0.3"/>
-              <stop offset="1" stop-color="#c9a880"/>
-            </linearGradient>
-          </defs>
-          <line x1="18" y1="24" x2="30" y2="24" stroke="url(#lineGradient)" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="12" cy="24" r="6" fill="#c9a880"/>
-          <circle cx="36" cy="24" r="6" fill="#c9a880"/>
-        </svg>
+        <img
+          src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+          alt="Reality Matchmaking logo"
+          width="60"
+          height="60"
+          style="display: inline-block; margin-bottom: 16px; border: 0; outline: none; text-decoration: none;"
+        />
         <h1 style="color: #1a1a2e; margin: 0; font-size: 32px; font-weight: 600;">Reality Matchmaking</h1>
       </div>
 
@@ -75,9 +74,96 @@ export function getWaitlistConfirmationHTML() {
   `.trim();
 }
 
-export function getResearchInviteHTML(firstName: string, inviteCode: string) {
+export function getResearchInviteHTML(inviteCode: string) {
   const inviteUrl = `${APP_URL}/research?code=${inviteCode}`;
-  const safeFirstName = escapeHtml(firstName);
+  const content = EMAIL_STATUS_CONTENT.RESEARCH_INVITED;
+
+  return getSimpleEmailHTML({
+    title: content.title,
+    description: content.description,
+    buttonText: content.actionText,
+    buttonUrl: inviteUrl,
+  });
+}
+
+export function getWaitlistInviteHTML(inviteToken: string) {
+  const inviteUrl = `${APP_URL}/apply/continue?token=${inviteToken}`;
+
+  return getSimpleStatusViewHTML({
+    statusKey: "WAITLIST_INVITED",
+    buttonUrl: inviteUrl,
+  });
+}
+
+export function getPaymentConfirmationHTML(params: {
+  firstName: string;
+  amount: number;
+  currency: string;
+  receiptUrl: string;
+}) {
+  const { amount, currency, receiptUrl } = params;
+  const formattedAmount = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+  }).format(amount / 100);
+
+  return getSimpleEmailHTML({
+    title: "Payment Confirmed",
+    description: `Thank you for your payment! We've successfully received your application fee of ${formattedAmount} and you're one step closer to finding your match.`,
+    buttonText: "View Receipt",
+    buttonUrl: receiptUrl,
+  });
+}
+
+export function getApplicationApprovalHTML() {
+  return getSimpleStatusViewHTML({
+    statusKey: "APPROVED",
+    buttonUrl: `${APP_URL}/dashboard`,
+  });
+}
+
+export function getEventInvitationHTML(params: {
+  firstName: string;
+  eventTitle: string;
+  eventDate: Date;
+  eventLocation: string;
+  eventAddress: string;
+  startTime: Date;
+  endTime: Date;
+  rsvpUrl: string;
+}) {
+  const AZ_TZ = getTimezoneForAddress(params.eventAddress);
+
+  const formattedDate = params.eventDate.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: AZ_TZ,
+  });
+
+  const formattedStartTime = params.startTime.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: AZ_TZ,
+  });
+
+  const formattedEndTime = params.endTime.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: AZ_TZ,
+  });
+
+  const firstName = escapeHtml(params.firstName);
+  const eventTitle = escapeHtml(params.eventTitle);
+  const eventLocation = escapeHtml(params.eventLocation);
+  const eventAddress = escapeHtml(params.eventAddress);
+  const rsvpUrl = escapeHtml(params.rsvpUrl);
+  const safeFormattedDate = escapeHtml(formattedDate);
+  const safeFormattedStartTime = escapeHtml(formattedStartTime);
+  const safeFormattedEndTime = escapeHtml(formattedEndTime);
 
   return `
 <!DOCTYPE html>
@@ -85,66 +171,143 @@ export function getResearchInviteHTML(firstName: string, inviteCode: string) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>You're Invited to Participate in Reality Matchmaking Research</title>
+  <title>You're in — Reality Matchmaking</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
     <!-- Header -->
-    <div style="background: linear-gradient(135deg, #1a2332 0%, #2d3e50 100%); padding: 40px 20px; text-align: center;">
-      <svg width="60" height="60" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; margin-bottom: 16px;">
-        <defs>
-          <linearGradient id="lineGradient" x1="12" y1="24" x2="36" y2="24" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#c9a880"/>
-            <stop offset="0.5" stop-color="#c9a880" stop-opacity="0.3"/>
-            <stop offset="1" stop-color="#c9a880"/>
-          </linearGradient>
-        </defs>
-        <line x1="18" y1="24" x2="30" y2="24" stroke="url(#lineGradient)" stroke-width="2" stroke-linecap="round"/>
-        <circle cx="12" cy="24" r="6" fill="#c9a880"/>
-        <circle cx="36" cy="24" r="6" fill="#c9a880"/>
-      </svg>
-      <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">Research Invitation</h1>
+    <div style="padding: 48px 40px 32px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+      <img
+        src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+        alt="Reality Matchmaking"
+        width="60"
+        height="60"
+        style="display: inline-block; margin-bottom: 24px; border: 0; outline: none; text-decoration: none;"
+      />
+      <p style="color: #c9a880; font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; margin: 0 0 16px;">
+        You&rsquo;ve been selected
+      </p>
+      <h1 style="color: #1a1a2e; font-size: 28px; font-weight: 700; line-height: 1.3; margin: 0;">
+        ${firstName}, we&rsquo;re pleased to invite you to the next Reality Matchmaking event.
+      </h1>
     </div>
 
-    <!-- Content -->
-    <div style="padding: 40px 32px;">
-      <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-        Hi ${safeFirstName},
+    <!-- Event Details -->
+    <div style="padding: 32px 40px; background-color: #fafaf9; border-bottom: 1px solid #e2e8f0;">
+      <p style="color: #9d7d52; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; margin: 0 0 12px;">Event Details</p>
+      <p style="color: #1a1a2e; font-size: 18px; font-weight: 700; margin: 0 0 8px;">${eventTitle}</p>
+      <p style="color: #4f4f66; font-size: 15px; margin: 0 0 4px;">${safeFormattedDate}</p>
+      <p style="color: #4f4f66; font-size: 15px; margin: 0 0 16px;">${safeFormattedStartTime} &ndash; ${safeFormattedEndTime}</p>
+      <p style="color: #1a1a2e; font-size: 15px; font-weight: 600; margin: 0 0 4px;">${eventLocation}</p>
+      <p style="color: #4f4f66; font-size: 14px; margin: 0;">${eventAddress}</p>
+    </div>
+
+    <!-- Body copy -->
+    <div style="padding: 32px 40px;">
+      <p style="color: #3a3a52; font-size: 15px; line-height: 1.7; margin: 0 0 20px;">
+        This event is limited to 20 members, all of whom have passed our background verification and been manually reviewed. Everyone in the room is there for the same reason you are.
+      </p>
+      <p style="color: #3a3a52; font-size: 15px; line-height: 1.7; margin: 0 0 20px;">
+        The evening begins blind. You&rsquo;ll connect through conversation before seeing anyone. Then we remove the partition, and allow for one more different connection. Then the rest of the night is yours to mingle.
+      </p>
+      <p style="color: #3a3a52; font-size: 15px; line-height: 1.7; margin: 0 0 20px;">
+        <strong style="color: #1a1a2e;">Dress:</strong> Smart casual to cocktail. First impressions matter &mdash; but not yet.
       </p>
 
-      <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-        You've been invited to participate in a research questionnaire for Reality Matchmaking. Your responses will help us validate and improve our compatibility questions.
+      <!-- Urgency -->
+      <p style="color: #3a3a52; font-size: 15px; line-height: 1.7; margin: 0 0 20px;">
+        Your spot is held for <strong style="color: #1a1a2e;">72 hours</strong>. Confirm your attendance below to secure your place and complete the event fee payment.
       </p>
-
-      <div style="background-color: #f8f9fa; border-left: 4px solid #c8915f; padding: 20px; margin: 32px 0; border-radius: 4px;">
-        <h3 style="color: #1a2332; margin: 0 0 12px; font-size: 18px; font-weight: 600;">What to expect:</h3>
-        <ul style="color: #4a5568; margin: 0; padding-left: 20px; line-height: 1.8;">
-          <li style="margin-bottom: 8px;">A questionnaire about compatibility preferences</li>
-          <li style="margin-bottom: 8px;">Your answers are used for research purposes only</li>
-          <li style="margin-bottom: 8px;">You can complete it at your own pace</li>
-        </ul>
-      </div>
 
       <!-- CTA Button -->
-      <div style="text-align: center; margin: 40px 0;">
-        <a href="${inviteUrl}" style="display: inline-block; background-color: #c8915f; color: white; text-decoration: none; padding: 16px 32px; border-radius: 6px; font-size: 16px; font-weight: 600; box-shadow: 0 2px 4px rgba(200, 145, 95, 0.3);">
-          Start Questionnaire
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${rsvpUrl}" style="display: inline-block; background-color: #1a1a2e; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 6px; font-size: 15px; font-weight: 600; letter-spacing: 0.03em;">
+          RSVP &amp; Pay &mdash; $749
         </a>
       </div>
 
-      <p style="color: #4a5568; font-size: 14px; line-height: 1.6; margin: 32px 0 0; text-align: center;">
-        Can't click the button? Copy and paste this link into your browser:<br>
-        <a href="${inviteUrl}" style="color: #c8915f; word-break: break-all;">${inviteUrl}</a>
+      <p style="color: #4f4f66; font-size: 14px; line-height: 1.6; margin: 0; text-align: center;">
+        Questions? Reply directly to this email.
       </p>
     </div>
 
     <!-- Footer -->
+    <div style="padding: 24px 40px; background-color: #f8f9fa; border-top: 1px solid #e2e8f0; text-align: center;">
+      <p style="color: #4f4f66; font-size: 14px; margin: 0 0 8px;">
+        Reality Matchmaking
+      </p>
+      <p style="color: #9b9bb0; font-size: 12px; margin: 0;">
+        Spots that go unclaimed will be offered to the waitlist.
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
+export function getMatchNotificationHTML(params: {
+  firstName: string;
+  partnerFirstName: string;
+  eventName: string;
+  compatibilityScore: number | null;
+  matchesUrl: string;
+}) {
+  const score =
+    params.compatibilityScore !== null
+      ? Math.round(params.compatibilityScore)
+      : null;
+  const firstName = escapeHtml(params.firstName);
+  const partnerFirstName = escapeHtml(params.partnerFirstName);
+  const eventName = escapeHtml(params.eventName);
+  const matchesUrl = escapeHtml(params.matchesUrl);
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You have a new match!</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
+  <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <div style="padding: 40px 32px; text-align: center;">
+      <img
+        src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+        alt="Reality Matchmaking logo"
+        width="60"
+        height="60"
+        style="display: inline-block; margin-bottom: 24px; border: 0; outline: none; text-decoration: none;"
+      />
+
+      <h1 style="color: #1a2332; margin: 0 0 8px; font-size: 28px; font-weight: 600;">
+        You have a new match, ${firstName}!
+      </h1>
+
+      <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 32px;">
+        We found a great connection for you at <strong>${eventName}</strong>.
+      </p>
+
+      <div style="background-color: #f8f9fa; border-radius: 8px; padding: 24px; margin: 0 0 32px; text-align: left;">
+        <p style="color: #718096; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px;">Your Match</p>
+        <p style="color: #1a2332; font-size: 22px; font-weight: 600; margin: 0 0 16px;">${partnerFirstName}</p>
+        ${score !== null ? `<p style="color: #718096; font-size: 14px; margin: 0;">Compatibility: <strong style="color: #1a2332;">${score} / 100</strong></p>` : ""}
+      </div>
+
+      <a href="${matchesUrl}" style="display: inline-block; background-color: #1a2332; color: white; text-decoration: none; padding: 16px 32px; border-radius: 6px; font-size: 16px; font-weight: 500;">
+        View Your Match
+      </a>
+    </div>
+
     <div style="background-color: #f8f9fa; padding: 24px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
       <p style="color: #718096; font-size: 12px; margin: 0 0 8px;">
         <a href="https://www.realitymatchmaking.com" style="color: #718096; text-decoration: none;">Reality Matchmaking</a>
       </p>
       <p style="color: #a0aec0; font-size: 11px; margin: 0;">
-        You received this email because you were invited to participate in research for Reality Matchmaking
+        You received this email because you are a member of Reality Matchmaking
       </p>
     </div>
   </div>
@@ -153,77 +316,40 @@ export function getResearchInviteHTML(firstName: string, inviteCode: string) {
   `.trim();
 }
 
-export function getWaitlistInviteHTML(firstName: string, inviteToken: string) {
-  const inviteUrl = `${APP_URL}/apply/continue?token=${inviteToken}`;
-  const safeFirstName = escapeHtml(firstName);
+export function getStatusUpdateHTML(params: {
+  firstName: string;
+  status: string;
+  message?: string;
+}) {
+  // Try to get content from shared source first
+  const statusKey = params.status.toUpperCase() as StatusContentKey;
+  const sharedContent = EMAIL_STATUS_CONTENT[statusKey];
 
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>You're Invited to Continue Your Reality Matchmaking Application!</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
-  <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-    <!-- Header -->
-    <div style="background: linear-gradient(135deg, #1a2332 0%, #2d3e50 100%); padding: 40px 20px; text-align: center;">
-      <div style="width: 60px; height: 60px; margin: 0 auto 16px; background-color: #c8915f; border-radius: 50%; text-align: center; line-height: 60px; font-size: 32px;">
-        🎉
-      </div>
-      <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">A Spot Has Opened Up!</h1>
-    </div>
+  let title = sharedContent?.title || "Status Update";
+  let description =
+    sharedContent?.description ||
+    params.message ||
+    "Your application status has been updated.";
+  let buttonText: string | undefined =
+    sharedContent?.actionText || "View Dashboard";
+  let buttonUrl: string | undefined = `${APP_URL}/dashboard`;
 
-    <!-- Content -->
-    <div style="padding: 40px 32px;">
-      <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-        Hi ${safeFirstName},
-      </p>
+  // Customize for specific statuses
+  if (params.status.toUpperCase() === "PAYMENT_PENDING") {
+    buttonUrl = `${APP_URL}/apply/payment`;
+  } else if (params.status.toUpperCase() === "REJECTED") {
+    title = "Application Decision";
+    description =
+      "Thank you for your interest in Reality Matchmaking. After careful review, we've decided not to move forward with your application at this time.";
+    // No button for rejected applicants
+    buttonText = undefined;
+    buttonUrl = undefined;
+  }
 
-      <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-        Great news! We've reviewed your qualification and we're excited to invite you to continue your Reality Matchmaking application.
-      </p>
-
-      <div style="background-color: #f8f9fa; border-left: 4px solid #c8915f; padding: 20px; margin: 32px 0; border-radius: 4px;">
-        <h3 style="color: #1a2332; margin: 0 0 16px; font-size: 18px; font-weight: 600;">Next Steps:</h3>
-        <ol style="color: #4a5568; margin: 0; padding-left: 20px; line-height: 1.8;">
-          <li style="margin-bottom: 12px;"><strong>Complete Your Profile:</strong> Fill in your full demographic information</li>
-          <li style="margin-bottom: 12px;"><strong>Application Fee:</strong> Submit the $199 application fee</li>
-          <li style="margin-bottom: 12px;"><strong>Full Assessment:</strong> Complete our comprehensive 80-question questionnaire</li>
-        </ol>
-      </div>
-
-      <!-- CTA Button -->
-      <div style="text-align: center; margin: 40px 0;">
-        <a href="${inviteUrl}" style="display: inline-block; background-color: #c8915f; color: white; text-decoration: none; padding: 16px 32px; border-radius: 6px; font-size: 16px; font-weight: 600; box-shadow: 0 2px 4px rgba(200, 145, 95, 0.3);">
-          Continue Your Application
-        </a>
-      </div>
-
-      <div style="background-color: #fff5e6; border: 1px solid #f0e0c0; padding: 16px; border-radius: 4px; margin: 32px 0;">
-        <p style="color: #8b6914; font-size: 14px; margin: 0; text-align: center;">
-          ⏰ <strong>Important:</strong> This invitation expires in 7 days
-        </p>
-      </div>
-
-      <p style="color: #4a5568; font-size: 14px; line-height: 1.6; margin: 32px 0 0; text-align: center;">
-        Can't click the button? Copy and paste this link into your browser:<br>
-        <a href="${inviteUrl}" style="color: #c8915f; word-break: break-all;">${inviteUrl}</a>
-      </p>
-    </div>
-
-    <!-- Footer -->
-    <div style="background-color: #f8f9fa; padding: 24px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
-      <p style="color: #718096; font-size: 12px; margin: 0 0 8px;">
-        Reality Matchmaking
-      </p>
-      <p style="color: #a0aec0; font-size: 11px; margin: 0;">
-        You received this email because you're on the Reality Matchmaking waitlist
-      </p>
-    </div>
-  </div>
-</body>
-</html>
-  `.trim();
+  return getSimpleEmailHTML({
+    title,
+    description,
+    buttonText,
+    buttonUrl,
+  });
 }

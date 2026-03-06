@@ -1,5 +1,6 @@
 import { ApplicationStatus } from "@prisma/client";
 import AdminWaitlistTable from "@/components/admin/AdminWaitlistTable";
+import AdminLocationBreakdown from "@/components/admin/AdminLocationBreakdown";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -83,6 +84,7 @@ export default async function AdminWaitlistPage() {
         initialApplicants={initialApplicants}
         initialError={initialError}
       />
+      <AdminLocationBreakdown type="waitlist" />
     </div>
   );
 }

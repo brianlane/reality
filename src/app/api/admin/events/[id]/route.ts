@@ -27,7 +27,18 @@ export async function GET(request: Request, { params }: RouteContext) {
     where: { id, ...(includeDeleted ? {} : { deletedAt: null }) },
     include: {
       invitations: { include: { applicant: { include: { user: true } } } },
-      matches: true,
+      matches: {
+        where: { deletedAt: null },
+        include: {
+          applicant: {
+            include: { user: { select: { firstName: true, lastName: true } } },
+          },
+          partner: {
+            include: { user: { select: { firstName: true, lastName: true } } },
+          },
+        },
+        orderBy: { compatibilityScore: "desc" },
+      },
     },
   });
 
@@ -37,12 +48,31 @@ export async function GET(request: Request, { params }: RouteContext) {
 
   const genderBalance = event.invitations.reduce(
     (acc, invite) => {
-      if (invite.applicant.gender === "MALE") acc.male += 1;
-      if (invite.applicant.gender === "FEMALE") acc.female += 1;
+      if (invite.applicant.gender === "MAN") acc.male += 1;
+      if (invite.applicant.gender === "WOMAN") acc.female += 1;
       return acc;
     },
     { male: 0, female: 0 },
   );
+
+  // Pool stats: how many approved applicants exist in this event's city
+  let pool: { total: number; men: number; women: number } | null = null;
+  if (event.location) {
+    const poolCounts = await db.applicant.groupBy({
+      by: ["gender"],
+      where: {
+        applicationStatus: "APPROVED",
+        screeningStatus: "PASSED",
+        deletedAt: null,
+        questionnaireAnswers: { some: {} },
+        location: event.location,
+      },
+      _count: true,
+    });
+    const poolMen = poolCounts.find((g) => g.gender === "MAN")?._count ?? 0;
+    const poolWomen = poolCounts.find((g) => g.gender === "WOMAN")?._count ?? 0;
+    pool = { total: poolMen + poolWomen, men: poolMen, women: poolWomen };
+  }
 
   return successResponse({
     event: {
@@ -53,6 +83,7 @@ export async function GET(request: Request, { params }: RouteContext) {
       endTime: event.endTime,
       venue: event.venue,
       venueAddress: event.venueAddress,
+      location: event.location,
       capacity: event.capacity,
       status: event.status,
       expectedRevenue: event.expectedRevenue,
@@ -75,10 +106,14 @@ export async function GET(request: Request, { params }: RouteContext) {
     matches: event.matches.map((match) => ({
       id: match.id,
       applicantId: match.applicantId,
+      applicantName: `${match.applicant.user.firstName} ${match.applicant.user.lastName}`,
       partnerId: match.partnerId,
+      partnerName: `${match.partner.user.firstName} ${match.partner.user.lastName}`,
       type: match.type,
       compatibilityScore: match.compatibilityScore,
+      notifiedAt: match.notifiedAt,
     })),
+    pool,
     stats: {
       invitationsSent: event.invitations.length,
       accepted: event.invitations.filter(
@@ -142,6 +177,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       endTime: body.endTime ? new Date(body.endTime) : undefined,
       venue: body.venue,
       venueAddress: body.venueAddress,
+      location: body.location,
       capacity: body.capacity,
       venueCost: body.costs?.venue,
       cateringCost: body.costs?.catering,

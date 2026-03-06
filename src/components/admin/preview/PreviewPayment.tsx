@@ -39,10 +39,9 @@ export default function PreviewPayment() {
         </div>
 
         <div className="bg-gray-50 rounded p-4 text-sm text-navy-soft">
-          <strong>Note:</strong> In the real application, this would integrate
-          with Stripe or another payment processor. The applicant would be
-          redirected to a secure payment page, then returned to continue the
-          application after successful payment.
+          <strong>Note:</strong> In the live application, the applicant is
+          redirected to Stripe Checkout to complete payment securely, then
+          returned to continue the application.
         </div>
       </div>
     </div>

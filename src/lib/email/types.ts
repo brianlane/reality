@@ -11,7 +11,9 @@ export type EmailType =
   | "PAYMENT_CONFIRMATION"
   | "APPLICATION_APPROVAL"
   | "EVENT_INVITATION"
-  | "STATUS_UPDATE";
+  | "STATUS_UPDATE"
+  | "COUPLE_COMPLETION_NOTIFICATION"
+  | "MATCH_NOTIFICATION";
 
 /**
  * Test Email Types
@@ -51,6 +53,7 @@ export interface SendEmailParams {
   to: string;
   subject: string;
   html: string;
+  text?: string;
   replyTo?: string;
   emailType: EmailType;
   applicantId?: string;

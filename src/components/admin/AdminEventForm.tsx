@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import { CITIES } from "@/lib/locations";
 
 type AdminEventFormProps = {
   eventId?: string;
@@ -21,6 +22,7 @@ type EventDetail = {
   endTime: string;
   venue: string;
   venueAddress: string;
+  location: string | null;
   capacity: number;
   status: string;
   expectedRevenue: number;
@@ -50,6 +52,7 @@ export default function AdminEventForm({ eventId, mode }: AdminEventFormProps) {
     endTime: "",
     venue: "",
     venueAddress: "",
+    location: "",
     capacity: "",
     expectedRevenue: "",
     venueCost: "",
@@ -64,7 +67,6 @@ export default function AdminEventForm({ eventId, mode }: AdminEventFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [matchesInfo, setMatchesInfo] = useState<string | null>(null);
 
   useEffect(() => {
     if (mode !== "edit" || !eventId) return;
@@ -103,6 +105,7 @@ export default function AdminEventForm({ eventId, mode }: AdminEventFormProps) {
           endTime: toDateTimeLocal(loaded.endTime),
           venue: loaded.venue ?? "",
           venueAddress: loaded.venueAddress ?? "",
+          location: loaded.location ?? "",
           capacity: String(loaded.capacity ?? ""),
           expectedRevenue: String(loaded.expectedRevenue ?? 0),
           venueCost: String(loaded.venueCost ?? 0),
@@ -148,6 +151,7 @@ export default function AdminEventForm({ eventId, mode }: AdminEventFormProps) {
         endTime: new Date(form.endTime).toISOString(),
         venue: form.venue,
         venueAddress: form.venueAddress,
+        location: form.location || null,
         capacity: Number(form.capacity),
         expectedRevenue: Number(form.expectedRevenue),
         costs: {
@@ -326,48 +330,6 @@ export default function AdminEventForm({ eventId, mode }: AdminEventFormProps) {
     }
   }
 
-  async function handleGenerateMatches() {
-    if (!eventId) return;
-    setIsLoading(true);
-    setError(null);
-    setSuccess(null);
-    setMatchesInfo(null);
-    try {
-      const headers = await getAuthHeaders();
-      if (!headers) {
-        setError("Please sign in again.");
-        setIsLoading(false);
-        return;
-      }
-      const res = await fetch(`/api/admin/events/${eventId}/generate-matches`, {
-        method: "POST",
-        headers: {
-          ...headers,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          maxPerApplicant: 5,
-          minScore: 60,
-          createMatches: true,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok || json?.error) {
-        setError(json?.error?.message || "Failed to generate matches.");
-        setIsLoading(false);
-        return;
-      }
-      setSuccess("Matches generated successfully.");
-      setMatchesInfo(
-        `Generated ${json.matchesCreated} matches for ${json.applicantsProcessed} applicants (avg score: ${json.avgScore})`,
-      );
-      setIsLoading(false);
-    } catch {
-      setError("Failed to generate matches.");
-      setIsLoading(false);
-    }
-  }
-
   return (
     <Card className="space-y-4">
       {error ? (
@@ -378,11 +340,6 @@ export default function AdminEventForm({ eventId, mode }: AdminEventFormProps) {
       {success ? (
         <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">
           {success}
-        </div>
-      ) : null}
-      {matchesInfo ? (
-        <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-700">
-          {matchesInfo}
         </div>
       ) : null}
       <div className="grid gap-4 md:grid-cols-2">
@@ -416,6 +373,17 @@ export default function AdminEventForm({ eventId, mode }: AdminEventFormProps) {
           value={form.venueAddress}
           onChange={(event) => updateField("venueAddress", event.target.value)}
         />
+        <Select
+          value={form.location}
+          onChange={(event) => updateField("location", event.target.value)}
+        >
+          <option value="">Select City…</option>
+          {CITIES.map((city) => (
+            <option key={city} value={city}>
+              {city}
+            </option>
+          ))}
+        </Select>
         <Input
           type="number"
           placeholder="Capacity"
@@ -495,15 +463,6 @@ export default function AdminEventForm({ eventId, mode }: AdminEventFormProps) {
         </Button>
         {mode === "edit" ? (
           <>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleGenerateMatches}
-              disabled={isLoading}
-              className="bg-copper/10 hover:bg-copper/20 text-copper border-copper"
-            >
-              Generate Matches
-            </Button>
             <Button
               type="button"
               variant="outline"

@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 import ScreeningDetail from "@/components/admin/ScreeningDetail";
+import { runSkipPaymentFlow } from "@/lib/admin/skip-payment";
 
 type ScreeningData = {
   screeningStatus: "PENDING" | "IN_PROGRESS" | "PASSED" | "FAILED";
@@ -38,7 +39,7 @@ export default function AdminApplicationForm({
     lastName: "",
     role: "APPLICANT",
     age: "",
-    gender: "MALE",
+    gender: "MAN",
     location: "",
     cityFrom: "",
     industry: "",
@@ -54,6 +55,10 @@ export default function AdminApplicationForm({
     notes: "",
     photos: "",
   });
+  const canSkipPayment = form.applicationStatus === "PAYMENT_PENDING";
+  const [initialApplicationStatus, setInitialApplicationStatus] = useState<
+    string | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -88,17 +93,17 @@ export default function AdminApplicationForm({
           setError("Failed to load application.");
           return;
         }
+        const status = json.applicant.applicationStatus ?? "SUBMITTED";
 
-        // Only populate editable form fields on initial load, not on
-        // screening-triggered refreshes (which would discard unsaved edits).
         if (!isRefresh) {
+          setInitialApplicationStatus(status);
           setForm((prev) => ({
             ...prev,
             email: json.applicant.email ?? "",
             firstName: json.applicant.firstName ?? "",
             lastName: json.applicant.lastName ?? "",
             age: String(json.applicant.age ?? ""),
-            gender: json.applicant.gender ?? "MALE",
+            gender: json.applicant.gender ?? "MAN",
             location: json.applicant.location ?? "",
             cityFrom: json.applicant.cityFrom ?? "",
             industry: json.applicant.industry ?? "",
@@ -108,17 +113,20 @@ export default function AdminApplicationForm({
             incomeRange: json.applicant.incomeRange ?? "",
             referredBy: json.applicant.referredBy ?? "",
             aboutYourself: json.applicant.aboutYourself ?? "",
-            applicationStatus: json.applicant.applicationStatus ?? "SUBMITTED",
+            applicationStatus: status,
             screeningStatus: json.applicant.screeningStatus ?? "PENDING",
-            compatibilityScore: json.applicant.compatibilityScore
-              ? String(json.applicant.compatibilityScore)
-              : "",
+            compatibilityScore:
+              json.applicant.compatibilityScore !== null &&
+              json.applicant.compatibilityScore !== undefined
+                ? String(json.applicant.compatibilityScore)
+                : "",
             notes: json.applicant.backgroundCheckNotes ?? "",
+            photos: Array.isArray(json.applicant.photos)
+              ? json.applicant.photos.join(", ")
+              : "",
           }));
           initialLoadDone.current = true;
         } else {
-          // On refresh, only update read-only status fields that may have
-          // changed due to the screening action.
           setForm((prev) => ({
             ...prev,
             applicationStatus:
@@ -128,20 +136,20 @@ export default function AdminApplicationForm({
           }));
         }
 
-        // Always update screening data (read-only panel, no editable fields)
         setScreeningData({
-          screeningStatus: json.applicant.screeningStatus ?? "PENDING",
-          idenfyStatus: json.applicant.idenfyStatus ?? "PENDING",
-          idenfyVerificationId: json.applicant.idenfyVerificationId ?? null,
-          checkrStatus: json.applicant.checkrStatus ?? "PENDING",
-          checkrReportId: json.applicant.checkrReportId ?? null,
-          checkrCandidateId: json.applicant.checkrCandidateId ?? null,
+          screeningStatus: json.screening?.screeningStatus ?? "PENDING",
+          idenfyStatus: json.screening?.idenfyStatus ?? "PENDING",
+          idenfyVerificationId: json.screening?.idenfyVerificationId ?? null,
+          checkrStatus: json.screening?.checkrStatus ?? "PENDING",
+          checkrReportId: json.screening?.checkrReportId ?? null,
+          checkrCandidateId: json.screening?.checkrCandidateId ?? null,
           backgroundCheckConsentAt:
-            json.applicant.backgroundCheckConsentAt ?? null,
+            json.screening?.backgroundCheckConsentAt ?? null,
           backgroundCheckConsentIp:
-            json.applicant.backgroundCheckConsentIp ?? null,
-          backgroundCheckNotes: json.applicant.backgroundCheckNotes ?? null,
-          continuousMonitoringId: json.applicant.continuousMonitoringId ?? null,
+            json.screening?.backgroundCheckConsentIp ?? null,
+          backgroundCheckNotes: json.screening?.backgroundCheckNotes ?? null,
+          continuousMonitoringId:
+            json.screening?.continuousMonitoringId ?? null,
         });
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
@@ -212,10 +220,15 @@ export default function AdminApplicationForm({
                 incomeRange: form.incomeRange,
                 referredBy: form.referredBy.trim() || null,
                 aboutYourself: form.aboutYourself.trim() || undefined,
+                // Only include applicationStatus if it has changed from initial value
+                // This prevents validation errors for applicants in invite-only statuses
                 applicationStatus:
-                  form.applicationStatus === "REJECTED"
+                  mode === "edit" &&
+                  form.applicationStatus === initialApplicationStatus
                     ? undefined
-                    : form.applicationStatus,
+                    : form.applicationStatus === "REJECTED"
+                      ? undefined
+                      : form.applicationStatus,
                 screeningStatus: form.screeningStatus,
                 compatibilityScore: form.compatibilityScore
                   ? Number(form.compatibilityScore)
@@ -247,6 +260,14 @@ export default function AdminApplicationForm({
         return;
       }
       setSuccess("Application saved.");
+      // Update initial status to current value after successful save
+      // This ensures subsequent status changes are detected correctly
+      if (
+        mode === "edit" &&
+        payload.applicant?.applicationStatus !== undefined
+      ) {
+        setInitialApplicationStatus(form.applicationStatus);
+      }
       setIsLoading(false);
     } catch {
       setError("Failed to save application.");
@@ -436,6 +457,21 @@ export default function AdminApplicationForm({
     }
   }
 
+  async function handleSkipPayment() {
+    await runSkipPaymentFlow({
+      applicationId,
+      confirmAction: (message) => window.confirm(message),
+      getAuthHeaders,
+      setIsLoading,
+      setError,
+      setSuccess,
+      setApplicationStatusDraft: () => {
+        setForm((prev) => ({ ...prev, applicationStatus: "DRAFT" }));
+        setInitialApplicationStatus("DRAFT");
+      },
+    });
+  }
+
   return (
     <Card className="space-y-4">
       {error ? (
@@ -490,8 +526,8 @@ export default function AdminApplicationForm({
           value={form.gender}
           onChange={(event) => updateField("gender", event.target.value)}
         >
-          <option value="MALE">Male</option>
-          <option value="FEMALE">Female</option>
+          <option value="MAN">Man</option>
+          <option value="WOMAN">Woman</option>
           <option value="NON_BINARY">Non-binary</option>
           <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
         </Select>
@@ -553,11 +589,12 @@ export default function AdminApplicationForm({
           <option value="SCREENING_IN_PROGRESS">Screening</option>
           <option value="APPROVED">Approved</option>
           <option value="WAITLIST">Waitlist</option>
-          <option value="WAITLIST_INVITED">Waitlist Invited</option>
-          {/* Research statuses are read-only - use /admin/research to manage */}
-          {form.applicationStatus.startsWith("RESEARCH_") && (
-            <option value={form.applicationStatus}>
-              {form.applicationStatus.replace(/_/g, " ")}
+          {/* Invite-only statuses (WAITLIST_INVITED, RESEARCH_INVITED) cannot be set directly */}
+          {/* Use dedicated invite endpoints to set these statuses with required metadata */}
+          {(form.applicationStatus === "WAITLIST_INVITED" ||
+            form.applicationStatus.startsWith("RESEARCH_")) && (
+            <option value={form.applicationStatus} disabled>
+              {form.applicationStatus.replace(/_/g, " ")} (read-only)
             </option>
           )}
         </Select>
@@ -579,11 +616,41 @@ export default function AdminApplicationForm({
             updateField("compatibilityScore", event.target.value)
           }
         />
-        <Input
-          placeholder="Photos (comma-separated URLs)"
-          value={form.photos}
-          onChange={(event) => updateField("photos", event.target.value)}
-        />
+        <div className="col-span-2 space-y-2">
+          <label className="text-xs font-semibold text-navy-soft">
+            Photos (
+            {form.photos
+              ? form.photos.split(",").filter((u) => u.trim()).length
+              : 0}
+            )
+          </label>
+          {form.photos &&
+          form.photos.split(",").filter((u) => u.trim()).length > 0 ? (
+            <div className="flex flex-wrap gap-3">
+              {form.photos
+                .split(",")
+                .filter((u) => u.trim())
+                .map((url, i) => (
+                  <a
+                    key={i}
+                    href={url.trim()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {/* Intentional here because admin previews arbitrary external photo URLs */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={url.trim()}
+                      alt={`Photo ${i + 1}`}
+                      className="h-32 w-32 rounded-lg object-cover border border-slate-200 hover:opacity-80 transition-opacity"
+                    />
+                  </a>
+                ))}
+            </div>
+          ) : (
+            <p className="text-sm text-navy-soft/60">No photos uploaded.</p>
+          )}
+        </div>
       </div>
       <div className="space-y-2">
         <label className="text-xs font-semibold text-navy-soft">
@@ -639,6 +706,19 @@ export default function AdminApplicationForm({
               disabled={isLoading}
             >
               Soft Reject
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSkipPayment}
+              disabled={isLoading || !canSkipPayment}
+              title={
+                canSkipPayment
+                  ? undefined
+                  : "Skip Payment is only available for PAYMENT_PENDING applicants."
+              }
+            >
+              Skip Payment
             </Button>
             <Button
               type="button"

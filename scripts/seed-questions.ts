@@ -25,6 +25,7 @@ interface ParsedQuestion {
   type: QuestionnaireQuestionType;
   options:
     | string[]
+    | { options: string[]; maxSelections?: number; isDealbreaker?: boolean }
     | { min: number; max: number; step: number }
     | { minAge: number; maxAge: number }
     | { items: string[]; total: number }
@@ -32,6 +33,9 @@ interface ParsedQuestion {
     | { validation: string; min?: number; max?: number }
     | null;
   helperText: string | null;
+  isRequired: boolean;
+  mlWeight: number;
+  isDealbreaker: boolean;
 }
 
 interface ParsedSection {
@@ -66,6 +70,7 @@ function parseAnnotation(line: string): {
   type: QuestionnaireQuestionType;
   options:
     | string[]
+    | { options: string[]; maxSelections?: number; isDealbreaker?: boolean }
     | { min: number; max: number; step: number }
     | { minAge: number; maxAge: number }
     | { items: string[]; total: number }
@@ -73,6 +78,9 @@ function parseAnnotation(line: string): {
     | { validation: string; min?: number; max?: number }
     | null;
   cleanPrompt: string;
+  isRequired: boolean;
+  mlWeight: number;
+  isDealbreaker: boolean;
 } {
   // Match the annotation pattern: `[TYPE]` or `[TYPE: options]`
   const annotationMatch = line.match(/`\[([^\]]+)\]`/);
@@ -83,10 +91,33 @@ function parseAnnotation(line: string): {
       type: "TEXT",
       options: null,
       cleanPrompt: line.replace(/^\d+\.\s*/, "").trim(),
+      isRequired: true,
+      mlWeight: 1.0,
+      isDealbreaker: false,
     };
   }
 
-  const annotation = annotationMatch[1];
+  const annotationRaw = annotationMatch[1];
+  const [annotation, ...metaTokens] = annotationRaw
+    .split("|")
+    .map((token) => token.trim())
+    .filter(Boolean);
+  let mlWeight = 1.0;
+  let isDealbreaker = false;
+  for (const token of metaTokens) {
+    const weightMatch = token.match(/^w(?:eight)?=(\d*\.?\d+)$/i);
+    if (weightMatch) {
+      const parsed = Number(weightMatch[1]);
+      if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 1) {
+        mlWeight = parsed;
+      }
+      continue;
+    }
+    const dealbreakerMatch = token.match(/^dealbreaker=(true|false)$/i);
+    if (dealbreakerMatch) {
+      isDealbreaker = dealbreakerMatch[1].toLowerCase() === "true";
+    }
+  }
   const cleanPrompt = line
     .replace(/`\[[^\]]+\]`/, "")
     .replace(/^\d+\.\s*/, "")
@@ -104,8 +135,29 @@ function parseAnnotation(line: string): {
           step: 1,
         },
         cleanPrompt,
+        isRequired: true,
+        mlWeight,
+        isDealbreaker,
       };
     }
+  }
+
+  // Parse DEALBREAKER_CHECKBOX type: single checkbox "Is this a dealbreaker?"
+  // Stored as CHECKBOXES with one option and isDealbreaker:true marker in options.
+  // isRequired=false so leaving it unchecked (= "no") is a valid submission.
+  if (annotation === "DEALBREAKER_CHECKBOX") {
+    isDealbreaker = true;
+    return {
+      type: "CHECKBOXES",
+      options: {
+        options: ["Yes, this is a dealbreaker for me"],
+        isDealbreaker: true,
+      },
+      cleanPrompt,
+      isRequired: false,
+      mlWeight,
+      isDealbreaker,
+    };
   }
 
   // Parse DROPDOWN type: DROPDOWN: opt1, opt2, opt3
@@ -116,17 +168,45 @@ function parseAnnotation(line: string): {
       type: "DROPDOWN",
       options,
       cleanPrompt,
+      isRequired: true,
+      mlWeight,
+      isDealbreaker,
     };
   }
 
-  // Parse CHECKBOXES type: CHECKBOXES: opt1, opt2, opt3
+  // Parse CHECKBOXES type:
+  //   CHECKBOXES: opt1, opt2, opt3
+  //   CHECKBOXES:max=3: opt1, opt2, opt3
   if (annotation.startsWith("CHECKBOXES:")) {
-    const optionsStr = annotation.replace("CHECKBOXES:", "").trim();
-    const options = optionsStr.split(",").map((opt) => opt.trim());
+    const rest = annotation.replace("CHECKBOXES:", "").trim();
+    const maxMatch = rest.match(/^max=(\d+):([\s\S]*)/);
+    if (maxMatch) {
+      const maxSelections = parseInt(maxMatch[1], 10);
+      const optionsStr = maxMatch[2].trim();
+      const options = optionsStr
+        .split(",")
+        .map((opt) => opt.trim())
+        .filter(Boolean);
+      return {
+        type: "CHECKBOXES",
+        options: { options, maxSelections },
+        cleanPrompt,
+        isRequired: true,
+        mlWeight,
+        isDealbreaker,
+      };
+    }
+    const options = rest
+      .split(",")
+      .map((opt) => opt.trim())
+      .filter(Boolean);
     return {
       type: "CHECKBOXES",
-      options,
+      options: { options },
       cleanPrompt,
+      isRequired: true,
+      mlWeight,
+      isDealbreaker,
     };
   }
 
@@ -138,6 +218,9 @@ function parseAnnotation(line: string): {
       type: "RADIO_7",
       options,
       cleanPrompt,
+      isRequired: true,
+      mlWeight,
+      isDealbreaker,
     };
   }
 
@@ -153,6 +236,9 @@ function parseAnnotation(line: string): {
         type: "POINT_ALLOCATION",
         options: { items, total: isNaN(total) ? 100 : total },
         cleanPrompt,
+        isRequired: true,
+        mlWeight,
+        isDealbreaker,
       };
     }
   }
@@ -165,6 +251,9 @@ function parseAnnotation(line: string): {
       type: "RANKING",
       options: { items },
       cleanPrompt,
+      isRequired: true,
+      mlWeight,
+      isDealbreaker,
     };
   }
 
@@ -174,6 +263,9 @@ function parseAnnotation(line: string): {
       type: "AGE_RANGE",
       options: { minAge: 18, maxAge: 80 },
       cleanPrompt,
+      isRequired: true,
+      mlWeight,
+      isDealbreaker,
     };
   }
 
@@ -185,6 +277,9 @@ function parseAnnotation(line: string): {
       type: "TEXT",
       options: { validation: "number", min: 0 },
       cleanPrompt,
+      isRequired: true,
+      mlWeight,
+      isDealbreaker,
     };
   }
 
@@ -203,6 +298,9 @@ function parseAnnotation(line: string): {
     type,
     options: null,
     cleanPrompt,
+    isRequired: true,
+    mlWeight,
+    isDealbreaker,
   };
 }
 
@@ -280,7 +378,14 @@ function parseMarkdown(content: string): ParsedPage[] {
       const questionNum = parseInt(questionMatch[1], 10);
       const questionText = questionMatch[2];
 
-      const { type, options, cleanPrompt } = parseAnnotation(questionText);
+      const {
+        type,
+        options,
+        cleanPrompt,
+        isRequired,
+        mlWeight,
+        isDealbreaker,
+      } = parseAnnotation(questionText);
 
       // Look ahead for helper text (indented lines starting with -)
       const helperLines: string[] = [];
@@ -310,6 +415,9 @@ function parseMarkdown(content: string): ParsedPage[] {
         type,
         options,
         helperText,
+        isRequired,
+        mlWeight,
+        isDealbreaker,
       });
 
       continue;
@@ -444,7 +552,7 @@ async function upsertPages(pages: ParsedPage[]) {
     activePageIds.push(pageId);
 
     console.log(
-      `  ${existingPage ? "↻" : "✓"} Page ${page.order + 1}: ${page.title}${page.forResearch ? " [RESEARCH ONLY]" : ""}`,
+      `  ${existingPage ? "↻" : "✓"} Page ${page.order + 1}: ${page.title} [forResearch=${page.forResearch}]`,
     );
 
     // Upsert sections for this page (including soft-deleted for restoration)
@@ -528,11 +636,22 @@ async function upsertPages(pages: ParsedPage[]) {
         number,
         (typeof existingQuestions)[number]
       >();
-      // Pass 1: prompt matches
+
+      // Count prompt occurrences within this section. Questions whose prompt
+      // appears more than once (e.g. all "Is this a dealbreaker for you?"
+      // checkboxes) cannot be reliably matched by prompt — they are skipped in
+      // Pass 1 and handled by order-based matching in Pass 2 instead.
+      const promptCounts = new Map<string, number>();
+      for (const q of section.questions) {
+        promptCounts.set(q.prompt, (promptCounts.get(q.prompt) ?? 0) + 1);
+      }
+
+      // Pass 1: prompt matches (unique prompts only)
       for (let i = 0; i < section.questions.length; i++) {
+        const prompt = section.questions[i].prompt;
+        if ((promptCounts.get(prompt) ?? 0) > 1) continue; // defer to Pass 2
         const match = existingQuestions.find(
-          (q) =>
-            q.prompt === section.questions[i].prompt && !consumedIds.has(q.id),
+          (q) => q.prompt === prompt && !consumedIds.has(q.id),
         );
         if (match) {
           questionMatches.set(i, match);
@@ -564,7 +683,9 @@ async function upsertPages(pages: ParsedPage[]) {
               helperText: question.helperText,
               type: question.type,
               options: question.options ?? undefined,
-              isRequired: true,
+              isRequired: question.isRequired,
+              mlWeight: question.mlWeight,
+              isDealbreaker: question.isDealbreaker,
               order: i,
               isActive: true,
               deletedAt: null, // Restore if previously soft-deleted
@@ -581,11 +702,11 @@ async function upsertPages(pages: ParsedPage[]) {
               helperText: question.helperText,
               type: question.type,
               options: question.options ?? undefined,
-              isRequired: true,
+              isRequired: question.isRequired,
               order: i,
               isActive: true,
-              mlWeight: 1.0,
-              isDealbreaker: false,
+              mlWeight: question.mlWeight,
+              isDealbreaker: question.isDealbreaker,
             },
           });
           activeQuestionIds.push(created.id);
@@ -641,6 +762,29 @@ async function upsertPages(pages: ParsedPage[]) {
     console.log(
       `\n🗑️  Soft-deleted: ${removedPages.count} pages, ${removedSections.count} sections, ${removedQuestions.count} questions`,
     );
+  }
+
+  // Verify that research-only pages have forResearch=true in the DB
+  const researchPages = pages.filter((p) => p.forResearch);
+  if (researchPages.length > 0) {
+    console.log("\n🔬 Verifying forResearch flags...");
+    for (const page of researchPages) {
+      const dbPage = await db.questionnairePage.findFirst({
+        where: { title: page.title, deletedAt: null },
+        select: { id: true, forResearch: true },
+      });
+      if (!dbPage) {
+        console.warn(
+          `  ⚠️  Research page "${page.title}" not found in DB after seed!`,
+        );
+      } else if (!dbPage.forResearch) {
+        console.error(
+          `  ❌ Research page "${page.title}" still has forResearch=false in DB! Run: npx tsx scripts/fix-research-page.ts`,
+        );
+      } else {
+        console.log(`  ✓ "${page.title}" has forResearch=true`);
+      }
+    }
   }
 
   return {

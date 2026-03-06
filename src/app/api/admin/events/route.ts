@@ -17,6 +17,7 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const status = url.searchParams.get("status");
+  const name = url.searchParams.get("name") ?? undefined;
   const fromDate = url.searchParams.get("fromDate");
   const toDate = url.searchParams.get("toDate");
   const page = Number(url.searchParams.get("page") ?? "1");
@@ -41,6 +42,7 @@ export async function GET(request: Request) {
 
   const where = {
     ...(status ? { status: status as never } : {}),
+    ...(name ? { name: { contains: name, mode: "insensitive" as const } } : {}),
     ...(fromDate || toDate
       ? {
           date: {
@@ -71,6 +73,7 @@ export async function GET(request: Request) {
       id: event.id,
       name: event.name,
       date: event.date,
+      location: event.location,
       status: event.status,
       capacity: event.capacity,
       invitationsSent: event.invitations.length,
@@ -128,6 +131,7 @@ export async function POST(request: Request) {
       endTime: new Date(body.endTime),
       venue: body.venue,
       venueAddress: body.venueAddress,
+      location: body.location,
       capacity: body.capacity,
       venueCost: body.costs.venue,
       cateringCost: body.costs.catering,

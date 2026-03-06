@@ -30,8 +30,12 @@ export async function GET(request: Request, { params }: RouteContext) {
     where: { id, ...(includeDeleted ? {} : { deletedAt: null }) },
     include: {
       user: true,
-      questionnaire: true,
       payments: true,
+      questionnaireAnswers: {
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: { createdAt: true },
+      },
     },
   });
 
@@ -60,9 +64,18 @@ export async function GET(request: Request, { params }: RouteContext) {
       aboutYourself: applicant.aboutYourself,
       incomeVerified: applicant.incomeVerified,
       applicationStatus: applicant.applicationStatus,
+      screeningStatus: applicant.screeningStatus,
+      compatibilityScore: applicant.compatibilityScore,
+      createdAt: applicant.createdAt,
       submittedAt: applicant.submittedAt,
+      questionnaireStartedAt:
+        applicant.questionnaireAnswers[0]?.createdAt ?? null,
+      reviewedAt: applicant.reviewedAt,
+      softRejectedAt: applicant.softRejectedAt,
+      invitedOffWaitlistAt: applicant.invitedOffWaitlistAt,
       photos: applicant.photos,
-      // Screening fields (flattened for admin form)
+    },
+    screening: {
       screeningStatus: applicant.screeningStatus,
       idenfyStatus: applicant.idenfyStatus,
       idenfyVerificationId: applicant.idenfyVerificationId,
@@ -74,7 +87,15 @@ export async function GET(request: Request, { params }: RouteContext) {
       backgroundCheckConsentIp: applicant.backgroundCheckConsentIp,
       continuousMonitoringId: applicant.continuousMonitoringId,
     },
-    questionnaire: applicant.questionnaire,
+    screeningFlags: {
+      relationshipReadinessFlag: applicant.relationshipReadinessFlag,
+      saScreeningFlag: applicant.saScreeningFlag,
+      screeningFlagDetails: applicant.screeningFlagDetails,
+      screeningFlagComputedAt: applicant.screeningFlagComputedAt,
+      screeningFlagReviewedAt: applicant.screeningFlagReviewedAt,
+      screeningFlagReviewedBy: applicant.screeningFlagReviewedBy,
+      screeningFlagOverride: applicant.screeningFlagOverride,
+    },
     payments: applicant.payments,
   });
 }

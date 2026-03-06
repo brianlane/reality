@@ -1,5 +1,7 @@
 import AdminApplicationForm from "@/components/admin/AdminApplicationForm";
+import AdminApplicationTimeline from "@/components/admin/AdminApplicationTimeline";
 import AdminQuestionnaireResponses from "@/components/admin/AdminQuestionnaireResponses";
+import AdminScreeningFlags from "@/components/admin/AdminScreeningFlags";
 
 type AdminApplicationDetailProps = {
   params: Promise<{ id: string }>;
@@ -12,6 +14,8 @@ export default async function AdminApplicationDetailPage({
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold text-navy">Application Detail</h1>
+      <AdminApplicationTimeline applicationId={id} />
+      <AdminScreeningFlags applicantId={id} />
       <AdminApplicationForm mode="edit" applicationId={id} />
       <AdminQuestionnaireResponses applicantId={id} />
     </div>

@@ -60,8 +60,8 @@ enum ApplicationStatus {
 }
 
 enum Gender {
-  MALE
-  FEMALE
+  MAN
+  WOMAN
   NON_BINARY
   PREFER_NOT_TO_SAY
 }
@@ -71,6 +71,12 @@ enum ScreeningStatus {
   IN_PROGRESS
   PASSED
   FAILED
+}
+
+enum FlagSeverity {
+  GREEN
+  YELLOW
+  RED
 }
 
 model Applicant {
@@ -112,6 +118,14 @@ model Applicant {
   researchInviteUsedAt  DateTime?
   researchCompletedAt   DateTime?
 
+  // Prolific Integration
+  prolificPid            String?   @unique    // Prolific participant ID
+  prolificStudyId        String?              // Study ID
+  prolificSessionId      String?              // Session/submission ID
+  prolificPartnerPid     String?              // Partner's Prolific PID (for couples)
+  prolificCompletionCode String?              // Completion code for redirect
+  prolificRedirectedAt   DateTime?            // When redirected to Prolific
+
   // Application Status
   applicationStatus     ApplicationStatus @default(DRAFT)
   submittedAt           DateTime?
@@ -137,6 +151,15 @@ model Applicant {
   checkrCandidateId     String?           @unique // Checkr's candidate UUID
   continuousMonitoringId String?          @unique // Checkr continuous monitoring subscription ID
   
+  // Questionnaire Screening Flags
+  relationshipReadinessFlag   FlagSeverity?
+  saScreeningFlag             FlagSeverity?
+  screeningFlagDetails        Json?
+  screeningFlagComputedAt     DateTime?
+  screeningFlagReviewedAt     DateTime?
+  screeningFlagReviewedBy     String?
+  screeningFlagOverride       Boolean           @default(false)
+
   // Compatibility & Matching
   compatibilityScore    Float?            // 0-100 calculated score
   
@@ -148,7 +171,6 @@ model Applicant {
   deletedAt             DateTime?
   deletedBy             String?
   
-  questionnaire         Questionnaire?
   questionnaireAnswers  QuestionnaireAnswer[]
   payments              Payment[]
   eventInvitations      EventInvitation[]
@@ -160,8 +182,14 @@ model Applicant {
   @@index([applicationStatus])
   @@index([gender])
   @@index([screeningStatus])
+  @@index([relationshipReadinessFlag])
+  @@index([saScreeningFlag])
   @@index([compatibilityScore])
   @@index([deletedAt])
+  @@index([prolificStudyId])
+  @@index([prolificSessionId])
+  @@index([prolificCompletionCode])
+  @@index([prolificPartnerPid])
 }
 
 enum QuestionnaireQuestionType {
@@ -234,6 +262,13 @@ model QuestionnaireQuestion {
   mlWeight      Float                   @default(1.0)  // 0.0-1.0 importance weight
   isDealbreaker Boolean                 @default(false) // If mismatch, score = 0
 
+  // Cross-question importance modulation:
+  // If set, this question's effective weight is scaled by the average of both
+  // applicants' answers to the linked importance question (RADIO_7 1–7 → 0–1).
+  importanceModifierForId String?
+  importanceModifierFor   QuestionnaireQuestion?  @relation("ImportanceModifier", fields: [importanceModifierForId], references: [id])
+  importanceTargets       QuestionnaireQuestion[] @relation("ImportanceModifier")
+
   createdAt  DateTime                  @default(now())
   updatedAt  DateTime                  @updatedAt
   deletedAt  DateTime?
@@ -264,57 +299,6 @@ model QuestionnaireAnswer {
   @@index([questionId])
 }
 
-model Questionnaire {
-  id            String    @id @default(cuid())
-  applicantId   String    @unique
-  applicant     Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
-  
-  // Values & Beliefs (scored 1-5)
-  religionImportance      Int
-  politicalAlignment      String
-  familyImportance        Int
-  careerAmbition          Int
-  financialGoals          String
-  
-  // Lifestyle
-  fitnessLevel            String
-  diet                    String
-  drinking                String
-  smoking                 String
-  drugs                   String
-  pets                    String
-  
-  // Relationship Goals
-  relationshipGoal        String    // Marriage, Long-term, etc.
-  wantsChildren           String    // Yes, No, Maybe, Already have
-  childrenTimeline        String?
-  movingWillingness       String
-  
-  // Interests & Hobbies
-  hobbies                 String[]  // Array of interests
-  travelFrequency         String
-  favoriteActivities      String[]
-  
-  // Communication & Personality
-  loveLanguage            String
-  conflictStyle           String
-  introvertExtrovert      Int       // 1-10 scale
-  spontaneityPlanning     Int       // 1-10 scale
-  
-  // Deal-breakers
-  dealBreakers            String[]
-  
-  // Open-ended
-  aboutMe                 String    @db.Text
-  idealPartner            String    @db.Text
-  perfectDate             String    @db.Text
-  
-  // Raw JSON for flexibility
-  responses               Json      // Full questionnaire responses
-  
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
-}
 
 // ============================================
 // PAYMENTS
@@ -381,6 +365,7 @@ model Event {
   
   venue             String
   venueAddress      String
+  location          String?           // Canonical city from CITIES constant (e.g. "Phoenix, AZ")
   capacity          Int               @default(20)
   
   status            EventStatus       @default(DRAFT)
@@ -495,6 +480,9 @@ model Match {
   // Detailed analytics data
   analytics       MatchAnalytics?
 
+  // Notification tracking
+  notifiedAt      DateTime?     // set when admin notifies participants; null = not yet revealed
+
   // Contact exchange
   contactExchanged Boolean      @default(false)
   contactExchangedAt DateTime?
@@ -569,6 +557,7 @@ enum AdminActionType {
   INVITE_OFF_WAITLIST
   BATCH_INVITE_WAITLIST
   INVITE_RESEARCH
+  NOTIFY_MATCHES
 }
 
 model AdminAction {

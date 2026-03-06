@@ -8,16 +8,18 @@ import {
   validateAnswerForQuestion,
 } from "@/lib/questionnaire";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
-
-const RESEARCH_STATUSES: ApplicationStatus[] = [
-  "RESEARCH_INVITED",
-  "RESEARCH_IN_PROGRESS",
+import {
+  APP_STATUS,
+  QUESTIONNAIRE_NON_RESEARCH_ALLOWED_STATUSES,
+} from "@/lib/application-status";
+import { ERROR_MESSAGES } from "@/lib/error-messages";
+import { computeAndStoreScreeningFlags } from "@/lib/screening";
+const RESEARCH_ACCESS_STATUSES: ApplicationStatus[] = [
+  APP_STATUS.RESEARCH_INVITED,
+  APP_STATUS.RESEARCH_IN_PROGRESS,
 ];
-const ALLOWED_STATUSES: ApplicationStatus[] = [
-  "WAITLIST_INVITED",
-  "PAYMENT_PENDING",
-  "DRAFT",
-  ...RESEARCH_STATUSES,
+const NON_RESEARCH_ALLOWED_STATUSES: ApplicationStatus[] = [
+  ...QUESTIONNAIRE_NON_RESEARCH_ALLOWED_STATUSES,
 ];
 
 // Negative patterns for consent validation
@@ -88,7 +90,7 @@ function isAffirmativeConsentValue(
 
 type InvitedApplicantResult =
   | { applicant: Applicant; isResearchMode: boolean }
-  | { error: string };
+  | { error: string; statusCode: number };
 
 async function requireInvitedApplicant(
   applicationId: string,
@@ -98,28 +100,68 @@ async function requireInvitedApplicant(
       id: applicationId,
       deletedAt: null,
     },
+    include: {
+      user: {
+        select: {
+          email: true,
+        },
+      },
+    },
   });
 
   if (!applicant) {
-    return { error: "Applicant not found or not invited." };
+    return { error: "Applicant not found or not invited.", statusCode: 404 };
   }
 
-  const isResearchApplicant = RESEARCH_STATUSES.includes(
+  const isResearchApplicant = RESEARCH_ACCESS_STATUSES.includes(
     applicant.applicationStatus,
   );
-  const hasInvite = isResearchApplicant
-    ? !!applicant.researchInvitedAt
-    : !!applicant.invitedOffWaitlistAt;
 
-  if (!hasInvite) {
-    return { error: "Applicant not found or not invited." };
+  if (isResearchApplicant) {
+    if (!applicant.researchInvitedAt) {
+      return {
+        error: ERROR_MESSAGES.APP_NOT_FOUND_OR_INVITED,
+        statusCode: 404,
+      };
+    }
+    // If the caller has an authenticated session, verify they own this record.
+    // This prevents a regular user with a stale research applicationId in
+    // localStorage from loading another person's research questionnaire.
+    // Unauthenticated research links (auth=null) are still allowed through.
+    const auth = await getAuthUser();
+    if (auth?.email) {
+      if (auth.email.toLowerCase() !== applicant.user.email.toLowerCase()) {
+        return {
+          error: ERROR_MESSAGES.OWN_APPLICATION_ONLY,
+          statusCode: 403,
+        };
+      }
+    }
+    return { applicant, isResearchMode: true };
   }
 
-  if (!ALLOWED_STATUSES.includes(applicant.applicationStatus)) {
-    return { error: "Questionnaire access is not available for this status." };
+  const auth = await getAuthUser();
+  if (!auth?.email) {
+    // 401 = Unauthorized (authentication required)
+    return { error: ERROR_MESSAGES.SIGN_IN_TO_CONTINUE, statusCode: 401 };
   }
 
-  return { applicant, isResearchMode: isResearchApplicant };
+  if (auth.email.toLowerCase() !== applicant.user.email.toLowerCase()) {
+    // 403 = Forbidden (authenticated but insufficient permissions)
+    return {
+      error: ERROR_MESSAGES.OWN_APPLICATION_ONLY,
+      statusCode: 403,
+    };
+  }
+
+  if (!NON_RESEARCH_ALLOWED_STATUSES.includes(applicant.applicationStatus)) {
+    return {
+      error: ERROR_MESSAGES.QUESTIONNAIRE_STATUS_UNAVAILABLE,
+      statusCode: 403,
+    };
+  }
+
+  return { applicant, isResearchMode: false };
 }
 
 export async function GET(request: NextRequest) {
@@ -157,7 +199,10 @@ export async function GET(request: NextRequest) {
     // Regular mode requires invited applicant validation
     const access = await requireInvitedApplicant(applicationId);
     if ("error" in access) {
-      return errorResponse("FORBIDDEN", access.error, 403);
+      // Use the specific status code from the access check (401, 403, or 404)
+      const errorCode =
+        access.statusCode === 401 ? "UNAUTHORIZED" : "FORBIDDEN";
+      return errorResponse(errorCode, access.error, access.statusCode);
     }
     isResearchMode = access.isResearchMode;
   }
@@ -227,6 +272,7 @@ export async function GET(request: NextRequest) {
   return successResponse({
     sections: sections.map((section) => ({
       id: section.id,
+      pageId: section.pageId ?? undefined,
       title: section.title,
       description: section.description,
       order: section.order,
@@ -267,7 +313,9 @@ export async function POST(request: NextRequest) {
   const pageId = body.pageId;
   const access = await requireInvitedApplicant(applicationId);
   if ("error" in access) {
-    return errorResponse("FORBIDDEN", access.error, 403);
+    // Use the specific status code from the access check (401, 403, or 404)
+    const errorCode = access.statusCode === 401 ? "UNAUTHORIZED" : "FORBIDDEN";
+    return errorResponse(errorCode, access.error, access.statusCode);
   }
 
   // Same filtering logic as GET: research participants see all content,
@@ -380,8 +428,14 @@ export async function POST(request: NextRequest) {
 
       // For CHECKBOXES, pass available options so ALL must be checked
       const checkboxOptions =
-        question.type === "CHECKBOXES" && Array.isArray(question.options)
-          ? (question.options as unknown[])
+        question.type === "CHECKBOXES"
+          ? Array.isArray(question.options)
+            ? (question.options as unknown[])
+            : question.options !== null &&
+                typeof question.options === "object" &&
+                "options" in (question.options as object)
+              ? (question.options as { options: unknown[] }).options
+              : undefined
           : undefined;
 
       // Check if the answer is affirmative consent
@@ -465,6 +519,17 @@ export async function POST(request: NextRequest) {
       }),
     ),
   );
+
+  // Fire-and-forget: recompute screening flags after answers are saved.
+  // Non-blocking — failure here does NOT affect the save response, but flags
+  // will remain stale until the next successful compute (admin can trigger
+  // manually via the Recompute button on the application detail page).
+  computeAndStoreScreeningFlags(applicationId).catch((err) => {
+    console.error(
+      `[screening] Failed to recompute flags for applicant ${applicationId} after questionnaire save — flags may be stale. Error:`,
+      err,
+    );
+  });
 
   return successResponse({ saved: true });
 }

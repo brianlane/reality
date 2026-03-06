@@ -15,6 +15,7 @@ export default function SignInForm() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const resetSuccess = searchParams.get("reset") === "success";
+  const authCodeError = searchParams.get("error") === "auth-code-error";
 
   const getSafeNext = () => {
     const next = searchParams.get("next") ?? "/dashboard";
@@ -47,6 +48,29 @@ export default function SignInForm() {
       return;
     }
 
+    // Clear session-specific localStorage state so this session never
+    // accidentally reuses IDs cached from a different user's prior session.
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("applicationId");
+      localStorage.removeItem("researchMode");
+      localStorage.removeItem("researchInviteCode");
+      // Strip session IDs from the persistent draft while preserving any
+      // personal info the user may have pre-filled (name, demographics, etc.)
+      const draftKey = "reality-application-draft";
+      const storedDraft = localStorage.getItem(draftKey);
+      if (storedDraft) {
+        try {
+          const parsed = JSON.parse(storedDraft) as Record<string, unknown>;
+          delete parsed.applicationId;
+          delete parsed.currentPageId;
+          delete parsed.completedPageIds;
+          localStorage.setItem(draftKey, JSON.stringify(parsed));
+        } catch {
+          localStorage.removeItem(draftKey);
+        }
+      }
+    }
+
     router.replace(getSafeNext());
     router.refresh();
   };
@@ -60,6 +84,14 @@ export default function SignInForm() {
           <p className="text-sm text-green-800">
             Your password has been reset successfully. Please sign in with your
             new password.
+          </p>
+        </div>
+      ) : null}
+
+      {authCodeError ? (
+        <div className="mt-4 rounded-md bg-red-50 p-4">
+          <p className="text-sm text-red-800">
+            This link is invalid or has expired. Please try again.
           </p>
         </div>
       ) : null}

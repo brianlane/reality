@@ -20,21 +20,7 @@ type FieldErrors = {
   instagram?: string;
 };
 
-const CITIES = [
-  "New York City, NY",
-  "Los Angeles, CA",
-  "Chicago, IL",
-  "Dallas, TX",
-  "Phoenix, AZ",
-  "San Francisco, CA",
-  "Miami, FL",
-  "Denver, CO",
-  "Atlanta, GA",
-  "Las Vegas, NV",
-  "Seattle, WA",
-  "Portland, OR",
-  "Other",
-] as const;
+import { CITY_OPTIONS } from "@/lib/locations";
 
 export default function Stage1QualificationForm({
   previewMode = false,
@@ -381,8 +367,8 @@ export default function Stage1QualificationForm({
               className={errors.gender ? "border-red-500" : ""}
             >
               <option value="">Select gender</option>
-              <option value="MALE">Male</option>
-              <option value="FEMALE">Female</option>
+              <option value="MAN">Man</option>
+              <option value="WOMAN">Woman</option>
               <option value="NON_BINARY">Non-binary</option>
               <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
             </Select>
@@ -409,7 +395,7 @@ export default function Stage1QualificationForm({
               className={errors.location ? "border-red-500" : ""}
             >
               <option value="">Select a city</option>
-              {CITIES.map((city) => (
+              {CITY_OPTIONS.map((city) => (
                 <option key={city} value={city}>
                   {city}
                 </option>
@@ -458,9 +444,13 @@ export default function Stage1QualificationForm({
       {/* Submit Button */}
       <div className="space-y-2">
         <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? "Submitting..." : "Join the Waitlist"}
+          {isSubmitting ? "Submitting..." : "Apply for Membership"}
         </Button>
         {status && <p className="text-sm text-red-500 text-center">{status}</p>}
+        <p className="text-xs text-slate-400 text-center pt-1">
+          Application requires a one-time $199 application fee and background
+          verification. Payment does not guarantee membership.
+        </p>
       </div>
     </form>
   );

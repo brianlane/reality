@@ -3,12 +3,18 @@ import {
   QuestionnaireQuestion,
   QuestionnaireQuestionType,
 } from "@prisma/client";
+import {
+  CrossPairIndex,
+  CROSS_APPLICANT_PAIRS,
+  buildCrossPairIndex,
+} from "./cross-pair-scoring";
 
 export interface QuestionBreakdown {
   questionId: string;
   prompt: string;
   similarity: number;
   weight: number;
+  effectiveWeight: number; // weight after importance modulation (may equal weight)
   weightedScore: number;
 }
 
@@ -43,56 +49,199 @@ export async function calculateWeightedCompatibility(
     orderBy: { order: "asc" },
   });
 
+  // Build answer maps and delegate to pure scoring
+  const answersA = new Map<string, unknown>();
+  const answersB = new Map<string, unknown>();
+  for (const q of questions) {
+    for (const a of q.answers) {
+      if (a.value === null) continue;
+      if (a.applicantId === applicantId) answersA.set(q.id, a.value);
+      else if (a.applicantId === candidateId) answersB.set(q.id, a.value);
+    }
+  }
+
+  return scorePairFromCache(questions, answersA, answersB);
+}
+
+// ── Pre-loaded cache for batch scoring ─────────────────────────────────────
+
+export interface AnswerCache {
+  questions: QuestionnaireQuestion[];
+  answersByApplicant: Map<string, Map<string, unknown>>;
+  /** Cross-pair index built once on load — passed into scorePairFromCache to avoid rebuilding per pair. */
+  crossPairIndex: CrossPairIndex;
+}
+
+/**
+ * Load all questions + answers for a set of applicant IDs in two queries.
+ * Returns a cache that can be passed to scorePairFromCache for O(Q) in-memory
+ * scoring with zero additional DB round-trips.
+ */
+export async function preloadAnswerCache(
+  applicantIds: string[],
+): Promise<AnswerCache> {
+  const [questions, answers] = await Promise.all([
+    db.questionnaireQuestion.findMany({
+      where: { isActive: true, deletedAt: null },
+      orderBy: { order: "asc" },
+    }),
+    db.questionnaireAnswer.findMany({
+      where: {
+        applicantId: { in: applicantIds },
+        question: { isActive: true, deletedAt: null },
+      },
+      select: { applicantId: true, questionId: true, value: true },
+    }),
+  ]);
+
+  const answersByApplicant = new Map<string, Map<string, unknown>>();
+  for (const a of answers) {
+    if (a.value === null) continue;
+    let map = answersByApplicant.get(a.applicantId);
+    if (!map) {
+      map = new Map();
+      answersByApplicant.set(a.applicantId, map);
+    }
+    map.set(a.questionId, a.value);
+  }
+
+  return {
+    questions,
+    answersByApplicant,
+    crossPairIndex: buildCrossPairIndex(questions),
+  };
+}
+
+/**
+ * Pure in-memory scoring using pre-loaded data. No DB calls.
+ *
+ * Three scoring modes are applied in order:
+ *
+ * 1. **Cross-applicant pairs** (pets, children): Questions where the meaningful
+ *    check is Person A's status ("do you have pets?") against Person B's
+ *    preference ("are you ok with partner's pets?"), and vice versa.
+ *    These are resolved by prompt substring and handled separately; both
+ *    questions are excluded from the main loop.
+ *
+ * 2. **Importance-modulated questions** (`importanceModifierForId` set): The
+ *    question's effective weight is scaled by the average of both applicants'
+ *    importance ratings (RADIO_7 1–7 → factor 0.14–1.0). Importance questions
+ *    themselves are still scored normally.
+ *
+ * 3. **Regular questions**: Scored by comparing both applicants' answers with
+ *    their configured `mlWeight`.
+ */
+export function scorePairFromCache(
+  questions: QuestionnaireQuestion[],
+  answersA: Map<string, unknown>,
+  answersB: Map<string, unknown>,
+  prebuiltCrossPairIndex?: CrossPairIndex,
+): ScoringResult {
   const dealbreakersViolated: string[] = [];
   const breakdown: QuestionBreakdown[] = [];
   let totalWeightedScore = 0;
   let totalWeight = 0;
 
-  // 2. For each question, calculate weighted score
+  // ── Mode 1: Cross-applicant pairs ──────────────────────────────────────
+  // Use pre-built index when available (batch path) to avoid rebuilding per pair.
+  const { resolved: crossPairs, coveredIds: crossPairIds } =
+    prebuiltCrossPairIndex ??
+    buildCrossPairIndex(questions, CROSS_APPLICANT_PAIRS);
+
+  for (const pair of crossPairs) {
+    const statusA = answersA.get(pair.statusQuestionId);
+    const statusB = answersB.get(pair.statusQuestionId);
+    const prefA = answersA.get(pair.preferenceQuestionId);
+    const prefB = answersB.get(pair.preferenceQuestionId);
+
+    // Skip if we cannot compute at least one complete direction
+    const canScoreAtoB = statusA !== undefined && prefB !== undefined;
+    const canScoreBtoA = statusB !== undefined && prefA !== undefined;
+    if (!canScoreAtoB && !canScoreBtoA) continue;
+
+    const scoreAtoB = canScoreAtoB
+      ? pair.config.scoreOneSide(statusA, prefB)
+      : 0.5;
+    const scoreBtoA = canScoreBtoA
+      ? pair.config.scoreOneSide(statusB, prefA)
+      : 0.5;
+
+    const crossScore = (scoreAtoB + scoreBtoA) / 2;
+
+    // Each question contributes with its own weight; combined weight replaces
+    // what the two questions would have contributed independently.
+    const sw = pair.statusWeight;
+    const pw = pair.preferenceWeight;
+
+    totalWeightedScore += crossScore * (sw + pw);
+    totalWeight += sw + pw;
+
+    breakdown.push({
+      questionId: pair.statusQuestionId,
+      prompt: `[Cross-pair: ${pair.config.name}] ${questions.find((q) => q.id === pair.statusQuestionId)?.prompt ?? pair.statusQuestionId}`,
+      similarity: crossScore,
+      weight: sw,
+      effectiveWeight: sw,
+      weightedScore: crossScore * sw,
+    });
+    breakdown.push({
+      questionId: pair.preferenceQuestionId,
+      prompt: `[Cross-pair: ${pair.config.name}] ${questions.find((q) => q.id === pair.preferenceQuestionId)?.prompt ?? pair.preferenceQuestionId}`,
+      similarity: crossScore,
+      weight: pw,
+      effectiveWeight: pw,
+      weightedScore: crossScore * pw,
+    });
+  }
+
+  // ── Mode 2 pre-pass: Importance factors ────────────────────────────────
+  // targetQuestionId → 0–1 multiplier based on average importance rating.
+  const importanceFactors = new Map<string, number>();
   for (const question of questions) {
-    const answerA = question.answers.find((a) => a.applicantId === applicantId);
-    const answerB = question.answers.find((a) => a.applicantId === candidateId);
+    if (!question.importanceModifierForId) continue;
+    const impId = question.importanceModifierForId;
+    const valA = answersA.get(impId);
+    const valB = answersB.get(impId);
+    const numA = valA !== undefined ? Number(valA) : 7;
+    const numB = valB !== undefined ? Number(valB) : 7;
+    importanceFactors.set(question.id, (numA + numB) / 2 / 7);
+  }
 
-    // Skip if either didn't answer OR if either value is null
-    if (
-      !answerA ||
-      !answerB ||
-      answerA.value === null ||
-      answerB.value === null
-    )
-      continue;
+  // ── Modes 2 + 3: Regular + importance-modulated questions ──────────────
+  for (const question of questions) {
+    // Skip questions handled by cross-pair scoring above
+    if (crossPairIds.has(question.id)) continue;
 
-    // Calculate similarity based on question type
-    const similarity = calculateSimilarity(
-      question,
-      answerA.value,
-      answerB.value,
-    );
+    const valA = answersA.get(question.id);
+    const valB = answersB.get(question.id);
 
-    // Check dealbreaker - collect all violations, don't return immediately
+    if (valA === undefined || valB === undefined) continue;
+
+    const similarity = calculateSimilarity(question, valA, valB);
+
     if (question.isDealbreaker && similarity < 0.5) {
       dealbreakersViolated.push(question.id);
     }
 
-    // Apply weight
-    const weightedScore = similarity * question.mlWeight;
+    const importanceFactor = importanceFactors.get(question.id) ?? 1.0;
+    const effectiveWeight = question.mlWeight * importanceFactor;
+    const weightedScore = similarity * effectiveWeight;
     totalWeightedScore += weightedScore;
-    totalWeight += question.mlWeight;
+    totalWeight += effectiveWeight;
 
     breakdown.push({
       questionId: question.id,
       prompt: question.prompt,
       similarity,
       weight: question.mlWeight,
+      effectiveWeight,
       weightedScore,
     });
   }
 
-  // 3. Calculate final score (weighted average)
   let score =
-    totalWeight > 0 ? Math.round((totalWeightedScore / totalWeight) * 100) : 50; // Default if no questions answered
+    totalWeight > 0 ? Math.round((totalWeightedScore / totalWeight) * 100) : 50;
 
-  // 4. If any dealbreakers were violated, set score to 0
   if (dealbreakersViolated.length > 0) {
     score = 0;
   }
@@ -103,6 +252,365 @@ export async function calculateWeightedCompatibility(
     questionsScored: breakdown.length,
     breakdown,
   };
+}
+
+export interface PairScore {
+  manId: string;
+  womanId: string;
+  score: number;
+  dealbreakersViolated: string[];
+}
+
+export interface ScoredPairsResult {
+  allScores: PairScore[];
+  recommendations: Array<{
+    applicantId: string;
+    partnerId: string;
+    score: number;
+    dealbreakers: string[];
+  }>;
+}
+
+export interface CompatibleCohortResult {
+  menIds: string[];
+  womenIds: string[];
+  recommendations: ScoredPairsResult["recommendations"];
+}
+
+/**
+ * Score every man×woman pair using a pre-loaded cache. No DB calls.
+ *
+ * @param onProgress - optional async callback invoked after each pair is scored.
+ *   For SSE streaming routes, yield the event loop here (e.g. via setImmediate) so
+ *   enqueued chunks are actually flushed between progress updates. Without an await
+ *   the ReadableStream controller buffers all enqueues synchronously and the client
+ *   receives everything in one batch at the end.
+ */
+export async function scoreAllPairs(
+  men: Array<{ id: string }>,
+  women: Array<{ id: string }>,
+  cache: AnswerCache,
+  minScore: number,
+  onProgress?: (scored: number, total: number) => void | Promise<void>,
+): Promise<ScoredPairsResult> {
+  const allScores: PairScore[] = [];
+  const recommendations: ScoredPairsResult["recommendations"] = [];
+  const total = men.length * women.length;
+  let scored = 0;
+
+  for (const man of men) {
+    const manAnswers = cache.answersByApplicant.get(man.id) ?? new Map();
+    for (const woman of women) {
+      try {
+        const womanAnswers =
+          cache.answersByApplicant.get(woman.id) ?? new Map();
+        const result = scorePairFromCache(
+          cache.questions,
+          manAnswers,
+          womanAnswers,
+          cache.crossPairIndex,
+        );
+
+        allScores.push({
+          manId: man.id,
+          womanId: woman.id,
+          score: result.score,
+          dealbreakersViolated: result.dealbreakersViolated,
+        });
+
+        if (
+          result.score >= minScore &&
+          result.dealbreakersViolated.length === 0
+        ) {
+          recommendations.push({
+            applicantId: man.id,
+            partnerId: woman.id,
+            score: result.score,
+            dealbreakers: result.dealbreakersViolated,
+          });
+        }
+      } catch (error) {
+        console.error(`Failed to score pair ${man.id} x ${woman.id}:`, error);
+        allScores.push({
+          manId: man.id,
+          womanId: woman.id,
+          score: 0,
+          dealbreakersViolated: [],
+        });
+      }
+
+      scored++;
+      if (onProgress) await onProgress(scored, total);
+    }
+  }
+
+  return { allScores, recommendations };
+}
+
+/**
+ * Build a mutually compatible cohort from scored man×woman pairs.
+ *
+ * Goal: every remaining man-woman pair in the cohort is >= minScore with no
+ * dealbreaker violations (i.e. a complete bipartite "all-talk-all" cohort).
+ *
+ * Strategy:
+ * - Start with all capped men/women
+ * - Repeatedly remove the participant involved in the most failing edges
+ * - Stop when no failing cross-pairs remain
+ */
+export function buildCompatibleCohort(
+  allScores: PairScore[],
+  men: Array<{ id: string }>,
+  women: Array<{ id: string }>,
+  minScore: number,
+): CompatibleCohortResult {
+  const menIdsUniverse = men.map((m) => m.id);
+  const womenIdsUniverse = women.map((w) => w.id);
+
+  const passingScores = allScores.filter(
+    (s) => s.score >= minScore && s.dealbreakersViolated.length === 0,
+  );
+  if (passingScores.length === 0) {
+    return { menIds: [], womenIds: [], recommendations: [] };
+  }
+
+  const passByMan = new Map<string, Set<string>>();
+  const scoreByKey = new Map<string, number>();
+  for (const mid of menIdsUniverse) passByMan.set(mid, new Set());
+  for (const s of passingScores) {
+    passByMan.get(s.manId)?.add(s.womanId);
+    scoreByKey.set(`${s.manId}:${s.womanId}`, s.score);
+  }
+
+  const canAddWoman = (wid: string, menSel: Set<string>) => {
+    for (const mid of menSel) {
+      if (!passByMan.get(mid)?.has(wid)) return false;
+    }
+    return true;
+  };
+  const canAddMan = (mid: string, womenSel: Set<string>) => {
+    for (const wid of womenSel) {
+      if (!passByMan.get(mid)?.has(wid)) return false;
+    }
+    return true;
+  };
+
+  const avgScoreWithMen = (wid: string, menSel: Set<string>) => {
+    let sum = 0;
+    for (const mid of menSel)
+      sum += scoreByKey.get(`${mid}:${wid}`) ?? minScore;
+    return sum / Math.max(1, menSel.size);
+  };
+  const avgScoreWithWomen = (mid: string, womenSel: Set<string>) => {
+    let sum = 0;
+    for (const wid of womenSel)
+      sum += scoreByKey.get(`${mid}:${wid}`) ?? minScore;
+    return sum / Math.max(1, womenSel.size);
+  };
+
+  const seedPairs = [...passingScores]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 200);
+
+  let bestMen = new Set<string>();
+  let bestWomen = new Set<string>();
+  let bestArea = 0;
+  let bestMinSide = 0;
+  let bestAvg = 0;
+
+  for (const seed of seedPairs) {
+    const menSel = new Set<string>([seed.manId]);
+    const womenSel = new Set<string>([seed.womanId]);
+
+    let grew = true;
+    while (grew) {
+      grew = false;
+
+      let bestWid: string | null = null;
+      let bestWidAvg = -1;
+      for (const wid of womenIdsUniverse) {
+        if (womenSel.has(wid)) continue;
+        if (!canAddWoman(wid, menSel)) continue;
+        const avg = avgScoreWithMen(wid, menSel);
+        if (avg > bestWidAvg) {
+          bestWidAvg = avg;
+          bestWid = wid;
+        }
+      }
+      if (bestWid) {
+        womenSel.add(bestWid);
+        grew = true;
+      }
+
+      let bestMid: string | null = null;
+      let bestMidAvg = -1;
+      for (const mid of menIdsUniverse) {
+        if (menSel.has(mid)) continue;
+        if (!canAddMan(mid, womenSel)) continue;
+        const avg = avgScoreWithWomen(mid, womenSel);
+        if (avg > bestMidAvg) {
+          bestMidAvg = avg;
+          bestMid = mid;
+        }
+      }
+      if (bestMid) {
+        menSel.add(bestMid);
+        grew = true;
+      }
+    }
+
+    const area = menSel.size * womenSel.size;
+    const minSide = Math.min(menSel.size, womenSel.size);
+    let avg = 0;
+    let count = 0;
+    for (const mid of menSel) {
+      for (const wid of womenSel) {
+        avg += scoreByKey.get(`${mid}:${wid}`) ?? minScore;
+        count++;
+      }
+    }
+    avg = count > 0 ? avg / count : 0;
+
+    if (
+      area > bestArea ||
+      (area === bestArea && minSide > bestMinSide) ||
+      (area === bestArea && minSide === bestMinSide && avg > bestAvg)
+    ) {
+      bestArea = area;
+      bestMinSide = minSide;
+      bestAvg = avg;
+      bestMen = menSel;
+      bestWomen = womenSel;
+    }
+  }
+
+  const menIds = men.filter((m) => bestMen.has(m.id)).map((m) => m.id);
+  const womenIds = women.filter((w) => bestWomen.has(w.id)).map((w) => w.id);
+
+  const recommendations: ScoredPairsResult["recommendations"] = [];
+  for (const mid of menIds) {
+    for (const wid of womenIds) {
+      const score = scoreByKey.get(`${mid}:${wid}`);
+      if (score !== undefined) {
+        recommendations.push({
+          applicantId: mid,
+          partnerId: wid,
+          score,
+          dealbreakers: [],
+        });
+      }
+    }
+  }
+
+  return { menIds, womenIds, recommendations };
+}
+
+/**
+ * Post-scoring cohort selection shared between the HTTP and SSE
+ * generate-matches routes.
+ *
+ * Encapsulates: pass-count ranking → 3× pre-selection → compatible cohort
+ * build with empty-result fallback → maxPerGender cap → recommendation filter.
+ *
+ * Keeping this logic in one place means a bug fix or tuning change is
+ * automatically reflected in both callers.
+ */
+export function selectCohortFromScores(
+  allScores: PairScore[],
+  men: Array<{ id: string }>,
+  women: Array<{ id: string }>,
+  minScore: number,
+  maxPerGender: number,
+): {
+  finalMenIds: string[];
+  finalWomenIds: string[];
+  finalMenSet: Set<string>;
+  finalWomenSet: Set<string>;
+  recommendations: CompatibleCohortResult["recommendations"];
+} {
+  const passScores = allScores.filter(
+    (s) => s.score >= minScore && s.dealbreakersViolated.length === 0,
+  );
+  const menPassCount = new Map<string, number>();
+  const womenPassCount = new Map<string, number>();
+  for (const m of men) menPassCount.set(m.id, 0);
+  for (const w of women) womenPassCount.set(w.id, 0);
+  for (const s of passScores) {
+    menPassCount.set(s.manId, (menPassCount.get(s.manId) ?? 0) + 1);
+    womenPassCount.set(s.womanId, (womenPassCount.get(s.womanId) ?? 0) + 1);
+  }
+
+  // Pre-select 3× maxPerGender candidates per gender (ranked by passing-partner count)
+  // to give the cohort builder a larger, higher-quality candidate pool.
+  const preselectCount = maxPerGender * 3;
+  const candidateMen = [...men]
+    .sort(
+      (a, b) =>
+        (menPassCount.get(b.id) ?? 0) - (menPassCount.get(a.id) ?? 0) ||
+        a.id.localeCompare(b.id),
+    )
+    .slice(0, preselectCount);
+  const candidateWomen = [...women]
+    .sort(
+      (a, b) =>
+        (womenPassCount.get(b.id) ?? 0) - (womenPassCount.get(a.id) ?? 0) ||
+        a.id.localeCompare(b.id),
+    )
+    .slice(0, preselectCount);
+  const candidateMenSet = new Set(candidateMen.map((m) => m.id));
+  const candidateWomenSet = new Set(candidateWomen.map((w) => w.id));
+  const candidateScores = allScores.filter(
+    (s) => candidateMenSet.has(s.manId) && candidateWomenSet.has(s.womanId),
+  );
+
+  let cohort = buildCompatibleCohort(
+    candidateScores,
+    candidateMen,
+    candidateWomen,
+    minScore,
+  );
+  if (cohort.menIds.length === 0 || cohort.womenIds.length === 0) {
+    cohort = buildCompatibleCohort(allScores, men, women, minScore);
+  }
+  const finalMenIds = cohort.menIds.slice(0, maxPerGender);
+  const finalWomenIds = cohort.womenIds.slice(0, maxPerGender);
+  const finalMenSet = new Set(finalMenIds);
+  const finalWomenSet = new Set(finalWomenIds);
+  const recommendations = cohort.recommendations.filter(
+    (r) => finalMenSet.has(r.applicantId) && finalWomenSet.has(r.partnerId),
+  );
+
+  return {
+    finalMenIds,
+    finalWomenIds,
+    finalMenSet,
+    finalWomenSet,
+    recommendations,
+  };
+}
+
+/**
+ * Greedy 1:1 assignment: sort all qualifying pairs by score descending,
+ * then assign each pair only if neither person is already taken.
+ * A single Set covers both roles so the same person cannot appear twice
+ * regardless of which side they're on.
+ */
+export function computeDistinctMatches<
+  T extends { applicantId: string; partnerId: string; score: number },
+>(pairs: T[]): T[] {
+  const sorted = [...pairs].sort((a, b) => b.score - a.score);
+  const usedPeople = new Set<string>();
+  const result: T[] = [];
+
+  for (const pair of sorted) {
+    if (!usedPeople.has(pair.applicantId) && !usedPeople.has(pair.partnerId)) {
+      result.push(pair);
+      usedPeople.add(pair.applicantId);
+      usedPeople.add(pair.partnerId);
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -169,11 +677,29 @@ function calculateSimilarity(
       return intersection.size / union.size;
     }
 
-    case QuestionnaireQuestionType.TEXT:
+    case QuestionnaireQuestionType.TEXT: {
+      // Numeric proximity scoring for TEXT:number questions.
+      // If the question's options include { numericMaxDelta: N }, both values
+      // are parsed as numbers and scored by distance: 1 - |a - b| / maxDelta.
+      // This enables lifestyle-proximity questions (work hours, screen time)
+      // to be scored without converting their DB type to NUMBER_SCALE.
+      const opts = question.options as Record<string, unknown> | null;
+      const maxDelta =
+        opts && typeof opts["numericMaxDelta"] === "number"
+          ? (opts["numericMaxDelta"] as number)
+          : null;
+      if (maxDelta !== null && maxDelta > 0) {
+        const a = Number(valueA);
+        const b = Number(valueB);
+        if (!isNaN(a) && !isNaN(b)) {
+          return Math.max(0, 1 - Math.abs(a - b) / maxDelta);
+        }
+      }
+      return 0.5;
+    }
+
     case QuestionnaireQuestionType.TEXTAREA:
     case QuestionnaireQuestionType.RICH_TEXT: {
-      // For text fields, we could use string similarity in the future
-      // For now, just return neutral (0.5)
       return 0.5;
     }
 

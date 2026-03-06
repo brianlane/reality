@@ -7,14 +7,30 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notifyApplicationSubmitted } from "@/lib/email/admin-notifications";
 import { initiateScreening } from "@/lib/background-checks/orchestrator";
 import { logger } from "@/lib/logger";
-
-const APPLICATION_FEE_AMOUNT = 19900;
+import { createPaymentCheckout } from "@/lib/stripe";
+import { PHOTO_MIN_COUNT } from "@/lib/photo-config";
 
 export async function POST(request: NextRequest) {
+  // Parse and validate request body
+  let body;
   try {
-    const { applicationId } = submitApplicationSchema.parse(
-      await request.json(),
-    );
+    body = await request.json();
+  } catch {
+    return errorResponse("INVALID_JSON", "Invalid JSON in request body", 400);
+  }
+
+  let applicationId;
+  try {
+    const parsed = submitApplicationSchema.parse(body);
+    applicationId = parsed.applicationId;
+  } catch (error) {
+    return errorResponse("VALIDATION_ERROR", "Invalid submit payload", 400, [
+      { message: (error as Error).message },
+    ]);
+  }
+
+  // Process the submission
+  try {
     const applicant = await db.applicant.findUnique({
       where: { id: applicationId },
       include: { user: true },
@@ -50,17 +66,17 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const payment = await db.payment.create({
-        data: {
-          applicantId: applicant.id,
+      const { session } = await createPaymentCheckout(
+        {
           type: "APPLICATION_FEE",
-          amount: APPLICATION_FEE_AMOUNT,
-          status: "PENDING",
+          applicantId: applicant.id,
+          customerEmail: applicant.user.email,
         },
-      });
+        db,
+      );
 
       return successResponse({
-        paymentUrl: `https://mock.stripe.local/session/${payment.id}`,
+        checkoutUrl: session.url,
         applicationId: applicant.id,
       });
     } else if (applicant.applicationStatus === "DRAFT") {
@@ -95,6 +111,14 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      if (applicant.photos.length < PHOTO_MIN_COUNT) {
+        return errorResponse(
+          "INSUFFICIENT_PHOTOS",
+          `Please upload at least ${PHOTO_MIN_COUNT} photos before submitting.`,
+          400,
+        );
+      }
+
       await db.applicant.update({
         where: { id: applicant.id },
         data: {
@@ -113,6 +137,11 @@ export async function POST(request: NextRequest) {
         firstName: applicant.user.firstName,
         lastName: applicant.user.lastName,
         email: applicant.user.email,
+        age: applicant.age,
+        gender: applicant.gender,
+        location: applicant.location,
+        incomeRange: applicant.incomeRange,
+        firstPhotoUrl: applicant.photos[0],
       }).catch(() => {
         // Silently ignore - notification failure shouldn't affect the response
       });
@@ -147,8 +176,14 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
-    return errorResponse("VALIDATION_ERROR", "Invalid submit payload", 400, [
-      { message: (error as Error).message },
-    ]);
+    // Log the error for debugging
+    console.error("Application submission error:", error);
+
+    return errorResponse(
+      "SERVER_ERROR",
+      "An unexpected error occurred while processing your submission. Please try again later.",
+      500,
+      [{ message: (error as Error).message }],
+    );
   }
 }

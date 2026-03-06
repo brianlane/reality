@@ -8,18 +8,13 @@
  */
 
 import { sendEmail } from "./client";
+import { escapeHtml } from "./simple-status-view";
 
-// Escape HTML to prevent injection when interpolating user data into email templates
-const escapeHtml = (str: string) => {
-  const htmlEscapes: Record<string, string> = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  };
-  return str.replace(/[&<>"']/g, (char) => htmlEscapes[char] ?? char);
-};
+const EMAIL_ASSET_BASE_URL = (
+  process.env.EMAIL_ASSET_BASE_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "https://www.realitymatchmaking.com"
+).replace(/\/$/, "");
 
 interface EmailFailureParams {
   recipientEmail: string;
@@ -40,7 +35,23 @@ interface ApplicationSubmittedParams {
   firstName: string;
   lastName: string;
   email: string;
+  age: number;
+  gender: string;
+  location: string;
+  incomeRange: string;
+  firstPhotoUrl?: string;
 }
+
+const APP_BASE_URL = (
+  process.env.NEXT_PUBLIC_APP_URL || "https://www.realitymatchmaking.com"
+).replace(/\/$/, "");
+
+const formatEnumLabel = (value: string) =>
+  value
+    .toLowerCase()
+    .split("_")
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
 
 export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
   const adminEmail = process.env.ADMIN_EMAIL;
@@ -73,9 +84,13 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
     <!-- Header -->
     <div style="background-color: #dc2626; padding: 32px 20px; text-align: center;">
-      <div style="width: 60px; height: 60px; margin: 0 auto 16px; background-color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-        <span style="font-size: 32px; color: #dc2626;">⚠️</span>
-      </div>
+      <img
+        src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+        alt="Reality Matchmaking logo"
+        width="60"
+        height="60"
+        style="display: inline-block; margin-bottom: 16px; border: 0; outline: none; text-decoration: none;"
+      />
       <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Email Delivery Failed</h1>
     </div>
 
@@ -141,11 +156,27 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
 </html>
   `.trim();
 
+  const text =
+    "EMAIL DELIVERY FAILED\n\n" +
+    "An email failed to send after multiple retry attempts. Action may be required.\n\n" +
+    "FAILURE DETAILS\n\n" +
+    `Email Type: ${params.emailType}\n` +
+    `Recipient: ${params.recipientEmail}\n` +
+    (params.applicantId ? `Applicant ID: ${params.applicantId}\n` : "") +
+    `Error: ${params.errorMessage}\n` +
+    `Time: ${new Date().toLocaleString()}\n\n` +
+    "RECOMMENDED ACTIONS\n\n" +
+    "- Verify the recipient's email address is valid\n" +
+    "- Check Resend dashboard for delivery status\n" +
+    "- Review Resend API key configuration\n" +
+    "- Contact the applicant through alternate means if urgent";
+
   try {
     await sendEmail({
       to: adminEmail,
       subject,
       html,
+      text,
       emailType: "STATUS_UPDATE", // Using STATUS_UPDATE as a general admin notification type
     });
     console.log("Admin notification sent successfully");
@@ -186,6 +217,13 @@ export async function notifyQuestionnaireCompleted(
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #1a2332 0%, #2d3e50 100%); padding: 32px 20px; text-align: center;">
+      <img
+        src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+        alt="Reality Matchmaking logo"
+        width="60"
+        height="60"
+        style="display: inline-block; margin-bottom: 16px; border: 0; outline: none; text-decoration: none;"
+      />
       <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Research Questionnaire Completed</h1>
     </div>
 
@@ -229,11 +267,21 @@ export async function notifyQuestionnaireCompleted(
 </html>
   `.trim();
 
+  const questionnaireText =
+    "RESEARCH QUESTIONNAIRE COMPLETED\n\n" +
+    "A research participant has completed their questionnaire.\n\n" +
+    "PARTICIPANT DETAILS\n\n" +
+    `Name: ${params.firstName} ${params.lastName}\n` +
+    `Email: ${params.email}\n` +
+    `Applicant ID: ${params.applicantId}\n` +
+    `Completed At: ${new Date().toLocaleString()}`;
+
   try {
     await sendEmail({
       to: notificationEmail,
       subject,
       html,
+      text: questionnaireText,
       emailType: "STATUS_UPDATE",
       applicantId: params.applicantId,
     });
@@ -266,6 +314,13 @@ export async function notifyApplicationSubmitted(
   const safeLastName = escapeHtml(params.lastName);
   const safeEmail = escapeHtml(params.email);
   const safeApplicantId = escapeHtml(params.applicantId);
+  const safeGender = escapeHtml(formatEnumLabel(params.gender));
+  const safeLocation = escapeHtml(params.location);
+  const safeIncomeRange = escapeHtml(params.incomeRange);
+  const firstPhotoUrl = params.firstPhotoUrl?.trim() || null;
+  const safeFirstPhotoUrl = firstPhotoUrl ? escapeHtml(firstPhotoUrl) : null;
+  const adminApplicationUrl = `${APP_BASE_URL}/admin/applications/${encodeURIComponent(params.applicantId)}`;
+  const safeAdminApplicationUrl = escapeHtml(adminApplicationUrl);
 
   const subject = "New Application Submitted";
 
@@ -281,6 +336,13 @@ export async function notifyApplicationSubmitted(
   <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #1a2332 0%, #2d3e50 100%); padding: 32px 20px; text-align: center;">
+      <img
+        src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+        alt="Reality Matchmaking logo"
+        width="60"
+        height="60"
+        style="display: inline-block; margin-bottom: 16px; border: 0; outline: none; text-decoration: none;"
+      />
       <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">New Application Submitted</h1>
     </div>
 
@@ -306,15 +368,56 @@ export async function notifyApplicationSubmitted(
             <td style="padding: 8px 0; color: #1a2332; font-family: monospace; font-size: 14px;">${safeApplicantId}</td>
           </tr>
           <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Age:</td>
+            <td style="padding: 8px 0; color: #1a2332;">${params.age}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Gender:</td>
+            <td style="padding: 8px 0; color: #1a2332;">${safeGender}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Location:</td>
+            <td style="padding: 8px 0; color: #1a2332;">${safeLocation}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Salary Range:</td>
+            <td style="padding: 8px 0; color: #1a2332;">${safeIncomeRange}</td>
+          </tr>
+          <tr>
             <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Submitted At:</td>
             <td style="padding: 8px 0; color: #1a2332;">${new Date().toLocaleString()}</td>
           </tr>
         </table>
       </div>
 
+      ${
+        safeFirstPhotoUrl
+          ? `
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 4px; margin: 24px 0;">
+        <p style="color: #1a2332; font-size: 14px; margin: 0 0 12px; line-height: 1.6;">
+          <strong>First Photo Preview</strong>
+        </p>
+        <img
+          src="${safeFirstPhotoUrl}"
+          alt="Applicant photo preview"
+          style="display: block; width: 100%; max-width: 320px; height: auto; border-radius: 6px; border: 1px solid #e2e8f0;"
+        />
+      </div>
+      `
+          : ""
+      }
+
       <div style="background-color: #fff7ed; border: 1px solid #fed7aa; padding: 16px; border-radius: 4px; margin: 24px 0;">
         <p style="color: #92400e; font-size: 14px; margin: 0; line-height: 1.6;">
           <strong>Action Required:</strong> Please review this application in the admin dashboard.
+        </p>
+        <p style="margin: 12px 0 0;">
+          <a
+            href="${safeAdminApplicationUrl}"
+            style="display: inline-block; background-color: #1a2332; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 14px; border-radius: 6px;"
+          >
+            Admin Login / Review Application
+          </a>
         </p>
       </div>
     </div>
@@ -330,11 +433,28 @@ export async function notifyApplicationSubmitted(
 </html>
   `.trim();
 
+  const applicationText =
+    "NEW APPLICATION SUBMITTED\n\n" +
+    "An applicant has submitted their full application and is ready for review.\n\n" +
+    "APPLICANT DETAILS\n\n" +
+    `Name: ${params.firstName} ${params.lastName}\n` +
+    `Email: ${params.email}\n` +
+    `Applicant ID: ${params.applicantId}\n` +
+    `Age: ${params.age}\n` +
+    `Gender: ${formatEnumLabel(params.gender)}\n` +
+    `Location: ${params.location}\n` +
+    `Salary Range: ${params.incomeRange}\n` +
+    `Submitted At: ${new Date().toLocaleString()}\n\n` +
+    (firstPhotoUrl ? `First Photo: ${firstPhotoUrl}\n` : "") +
+    `Admin Login / Review Link: ${adminApplicationUrl}\n\n` +
+    "ACTION REQUIRED: Please review this application in the admin dashboard.";
+
   try {
     await sendEmail({
       to: notificationEmail,
       subject,
       html,
+      text: applicationText,
       emailType: "STATUS_UPDATE",
       applicantId: params.applicantId,
     });

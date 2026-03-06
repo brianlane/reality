@@ -40,6 +40,8 @@ export function validatePassword(
       error: "Password must contain at least one number",
     };
   }
+  // Simple equality is sufficient for client-side password confirmation
+  // Both values come from the same user input, so timing attacks are irrelevant
   if (password !== confirmPassword) {
     return { valid: false, error: "Passwords do not match" };
   }

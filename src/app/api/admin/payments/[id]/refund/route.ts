@@ -2,6 +2,7 @@ import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
+import { createRefund } from "@/lib/stripe";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -27,10 +28,45 @@ export async function POST(_: Request, { params }: RouteContext) {
     return errorResponse("NOT_FOUND", "Payment not found", 404);
   }
 
+  if (existing.status === "REFUNDED") {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "Payment has already been refunded",
+      400,
+    );
+  }
+
+  if (existing.status !== "SUCCEEDED") {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "Only succeeded payments can be refunded",
+      400,
+    );
+  }
+
   const adminUser = await getOrCreateAdminUser({
     userId: auth.userId,
     email: auth.email,
   });
+
+  // If the payment has a Stripe Payment Intent ID, issue a real refund
+  let stripeRefundId: string | undefined;
+  const hasStripePayment = !!existing.stripePaymentId;
+
+  if (hasStripePayment) {
+    try {
+      const refund = await createRefund(existing.stripePaymentId!);
+      stripeRefundId = refund.id;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      return errorResponse(
+        "INTERNAL_SERVER_ERROR",
+        `Stripe refund failed: ${errorMessage}`,
+        500,
+      );
+    }
+  }
 
   const payment = await db.payment.update({
     where: { id },
@@ -43,8 +79,14 @@ export async function POST(_: Request, { params }: RouteContext) {
       type: "MANUAL_ADJUSTMENT",
       targetId: payment.id,
       targetType: "payment",
-      description: "Mock refund issued",
-      metadata: { mockRefund: true, previousStatus: existing.status },
+      description: hasStripePayment
+        ? `Stripe refund issued (${stripeRefundId})`
+        : "Manual refund issued (no Stripe payment on record)",
+      metadata: {
+        stripeRefund: hasStripePayment,
+        stripeRefundId: stripeRefundId ?? null,
+        previousStatus: existing.status,
+      },
     },
   });
 

@@ -1,11 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import { formatDateTime, formatDuration } from "@/lib/admin/format";
+import PaginationControls from "@/components/admin/PaginationControls";
+import LocationFilter from "@/components/admin/LocationFilter";
+import type { FlagSeverity } from "@prisma/client";
 
 type ApplicationItem = {
   id: string;
@@ -14,13 +18,61 @@ type ApplicationItem = {
   email: string;
   applicationStatus: string;
   screeningStatus?: string;
+  relationshipReadinessFlag?: FlagSeverity | null;
+  saScreeningFlag?: FlagSeverity | null;
+  screeningFlagOverride?: boolean;
+  compatibilityScore?: number | null;
+  submittedAt?: string | null;
+  questionnaireStartedAt?: string | null;
+  reviewedAt?: string | null;
 };
+
+const FLAG_COLORS: Record<string, string> = {
+  GREEN: "bg-green-500",
+  YELLOW: "bg-yellow-400",
+  RED: "bg-red-500",
+};
+
+const FLAG_LABELS: Record<string, string> = {
+  GREEN: "Green",
+  YELLOW: "Yellow",
+  RED: "Red",
+};
+
+function FlagBadge({
+  severity,
+  override,
+  label,
+}: {
+  severity: FlagSeverity | null;
+  override?: boolean;
+  label: string;
+}) {
+  if (!severity) {
+    return <span className="text-slate-300">--</span>;
+  }
+  return (
+    <span
+      className="inline-flex items-center gap-1"
+      title={`${label}: ${FLAG_LABELS[severity]}${override ? " (overridden)" : ""}`}
+    >
+      <span
+        className={`inline-block h-2.5 w-2.5 rounded-full ${FLAG_COLORS[severity]}${override ? " ring-2 ring-offset-1 ring-slate-400" : ""}`}
+      />
+      {override && <span className="text-[10px] text-slate-400">OVR</span>}
+    </span>
+  );
+}
 
 export default function AdminApplicationsTable() {
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [search, setSearch] = useState("");
+  const [location, setLocation] = useState("");
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -33,10 +85,19 @@ export default function AdminApplicationsTable() {
           return;
         }
 
-        const res = await fetch(`/api/admin/applications?page=${page}`, {
-          headers,
-          signal: controller.signal,
-        });
+        const searchParam = search
+          ? `&search=${encodeURIComponent(search)}`
+          : "";
+        const locationParam = location
+          ? `&location=${encodeURIComponent(location)}`
+          : "";
+        const res = await fetch(
+          `/api/admin/applications?page=${page}${searchParam}${locationParam}`,
+          {
+            headers,
+            signal: controller.signal,
+          },
+        );
         const json = await res.json();
         if (!res.ok || json?.error) {
           setError("Failed to load applications.");
@@ -44,6 +105,7 @@ export default function AdminApplicationsTable() {
         }
         setApplications(json.applications ?? []);
         setPages(json.pagination?.pages ?? 1);
+        setTotal(json.pagination?.total ?? 0);
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
           setError("Failed to load applications.");
@@ -54,31 +116,66 @@ export default function AdminApplicationsTable() {
     loadApplications();
 
     return () => controller.abort();
-  }, [page]);
+  }, [page, search, location]);
 
   return (
     <Card>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <h2 className="text-lg font-semibold text-navy">Applications</h2>
-        <Link
-          href="/admin/applications/new"
-          className="text-xs font-semibold text-copper hover:underline"
-        >
-          New Application
-        </Link>
+        <div className="flex items-center gap-3 ml-auto">
+          <LocationFilter
+            value={location}
+            onChange={(val) => {
+              setLocation(val);
+              setPage(1);
+            }}
+          />
+          <Input
+            placeholder="Search name or email…"
+            className="h-8 w-48 text-sm"
+            onChange={(e) => {
+              const val = e.target.value;
+              if (searchTimeout.current) clearTimeout(searchTimeout.current);
+              searchTimeout.current = setTimeout(() => {
+                setSearch(val);
+                setPage(1);
+              }, 300);
+            }}
+          />
+          <Link
+            href="/admin/applications/new"
+            className="text-xs font-semibold text-copper hover:underline whitespace-nowrap"
+          >
+            New Application
+          </Link>
+        </div>
       </div>
       {error ? (
         <p className="mt-2 text-sm text-red-600">{error}</p>
       ) : (
         <div className="mt-4 overflow-x-auto">
-          <Table className="min-w-full">
+          <Table className="min-w-[1400px]">
             <thead>
               <tr className="border-b text-xs uppercase text-slate-400">
                 <th className="py-2 pr-6 text-left">Applicant</th>
                 <th className="py-2 px-6 text-left">Email</th>
                 <th className="py-2 px-6 text-left">Status</th>
                 <th className="py-2 px-6 text-left">Screening</th>
-                <th className="py-2 px-6 text-left">Waitlist</th>
+                <th className="py-2 px-6 text-left">Compatibility</th>
+                <th
+                  className="py-2 px-3 text-center"
+                  title="Relationship Readiness Flag"
+                >
+                  RR
+                </th>
+                <th className="py-2 px-3 text-center" title="SA Screening Flag">
+                  SA
+                </th>
+                <th className="py-2 px-6 text-left">Submitted</th>
+                <th className="py-2 px-6 text-left">Questionnaire Started</th>
+                <th className="py-2 px-6 text-left">Q Started → Reviewed</th>
+                <th className="py-2 px-6 text-left">Reviewed</th>
+                <th className="py-2 px-6 text-left">Total Duration</th>
                 <th className="py-2 pl-6 text-left">Actions</th>
               </tr>
             </thead>
@@ -96,64 +193,42 @@ export default function AdminApplicationsTable() {
                     {app.screeningStatus ?? "N/A"}
                   </td>
                   <td className="py-2 px-6 whitespace-nowrap">
-                    <button
-                      type="button"
-                      className="text-xs font-medium text-copper hover:underline"
-                      onClick={async () => {
-                        try {
-                          const isWaitlisted = [
-                            "WAITLIST",
-                            "WAITLIST_INVITED",
-                          ].includes(app.applicationStatus);
-                          const enableWaitlist = !isWaitlisted;
-                          const headers = await getAuthHeaders();
-                          if (!headers) {
-                            setError("Please sign in again.");
-                            return;
-                          }
-                          const response = await fetch(
-                            `/api/admin/applications/${app.id}/waitlist`,
-                            {
-                              method: "POST",
-                              headers: {
-                                ...headers,
-                                "Content-Type": "application/json",
-                              },
-                              body: JSON.stringify({ enabled: enableWaitlist }),
-                            },
-                          );
-
-                          if (!response.ok) {
-                            setError("Failed to update waitlist status.");
-                            return;
-                          }
-
-                          const data = await response.json();
-                          const nextStatus =
-                            data?.applicant?.applicationStatus ??
-                            (enableWaitlist ? "WAITLIST" : "SUBMITTED");
-                          setError(null);
-                          setApplications((prev) =>
-                            prev.map((item) =>
-                              item.id === app.id
-                                ? {
-                                    ...item,
-                                    applicationStatus: nextStatus,
-                                  }
-                                : item,
-                            ),
-                          );
-                        } catch {
-                          setError("Failed to update waitlist status.");
-                        }
-                      }}
-                    >
-                      {["WAITLIST", "WAITLIST_INVITED"].includes(
-                        app.applicationStatus,
-                      )
-                        ? "Remove"
-                        : "Add"}
-                    </button>
+                    {app.compatibilityScore !== null &&
+                    app.compatibilityScore !== undefined
+                      ? Math.round(app.compatibilityScore)
+                      : "N/A"}
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <FlagBadge
+                      severity={app.relationshipReadinessFlag ?? null}
+                      override={app.screeningFlagOverride}
+                      label="Relationship Readiness"
+                    />
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <FlagBadge
+                      severity={app.saScreeningFlag ?? null}
+                      override={app.screeningFlagOverride}
+                      label="SA Screening"
+                    />
+                  </td>
+                  <td className="py-2 px-6 whitespace-nowrap text-xs">
+                    {formatDateTime(app.submittedAt) ?? "N/A"}
+                  </td>
+                  <td className="py-2 px-6 whitespace-nowrap text-xs">
+                    {formatDateTime(app.questionnaireStartedAt) ?? "N/A"}
+                  </td>
+                  <td className="py-2 px-6 whitespace-nowrap text-xs text-slate-500">
+                    {formatDuration(
+                      app.questionnaireStartedAt,
+                      app.reviewedAt,
+                    ) ?? "N/A"}
+                  </td>
+                  <td className="py-2 px-6 whitespace-nowrap text-xs">
+                    {formatDateTime(app.reviewedAt) ?? "N/A"}
+                  </td>
+                  <td className="py-2 px-6 whitespace-nowrap text-xs text-slate-500">
+                    {formatDuration(app.submittedAt, app.reviewedAt) ?? "N/A"}
                   </td>
                   <td className="py-2 pl-6 whitespace-nowrap">
                     <Link
@@ -169,29 +244,12 @@ export default function AdminApplicationsTable() {
           </Table>
         </div>
       )}
-      <div className="mt-4 flex items-center justify-between text-sm text-navy-soft">
-        <span>
-          Page {page} of {pages}
-        </span>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-            disabled={page <= 1}
-          >
-            Prev
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setPage((prev) => Math.min(pages, prev + 1))}
-            disabled={page >= pages}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <PaginationControls
+        page={page}
+        pages={pages}
+        total={total}
+        onPageChange={setPage}
+      />
     </Card>
   );
 }

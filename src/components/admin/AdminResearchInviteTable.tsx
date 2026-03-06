@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import { formatDateTime, formatDuration } from "@/lib/admin/format";
+import PaginationControls from "@/components/admin/PaginationControls";
+import LocationFilter from "@/components/admin/LocationFilter";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -38,33 +41,62 @@ export default function AdminResearchInviteTable({
   const [error, setError] = useState<string | null>(initialError);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [sendingResumeId, setSendingResumeId] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [location, setLocation] = useState("");
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(initialApplicants.length);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
     email: "",
   });
 
-  const loadResearchInvites = useCallback(async () => {
-    try {
-      const headers = await getAuthHeaders();
-      if (!headers) {
-        setError("Please sign in again.");
-        return;
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadResearchInvites = async () => {
+      try {
+        const headers = await getAuthHeaders();
+        if (!headers) {
+          setError("Please sign in again.");
+          return;
+        }
+        const searchParam = search
+          ? `&search=${encodeURIComponent(search)}`
+          : "";
+        const locationParam = location
+          ? `&location=${encodeURIComponent(location)}`
+          : "";
+        const res = await fetch(
+          `/api/admin/research-invites?page=${page}${searchParam}${locationParam}`,
+          { headers, signal: controller.signal },
+        );
+        const json = await res.json();
+        if (!res.ok || json?.error) {
+          setError("Failed to load research invites.");
+          return;
+        }
+        setApplicants(json.applicants ?? []);
+        setPages(json.pagination?.pages ?? 1);
+        setTotal(json.pagination?.total ?? (json.applicants ?? []).length);
+        setError(null);
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          console.error("Error loading research invites:", err);
+          setError("Failed to load research invites.");
+        }
       }
-      const res = await fetch("/api/admin/research-invites", { headers });
-      const json = await res.json();
-      if (!res.ok || json?.error) {
-        setError("Failed to load research invites.");
-        return;
-      }
-      setApplicants(json.applicants ?? []);
-      setError(null);
-    } catch (err) {
-      console.error("Error loading research invites:", err);
-      setError("Failed to load research invites.");
-    }
-  }, []);
+    };
+
+    loadResearchInvites();
+
+    return () => controller.abort();
+  }, [page, search, location, refreshKey]);
 
   function updateField(name: string, value: string) {
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -107,7 +139,7 @@ export default function AdminResearchInviteTable({
       setSuccess(`Research invite created.${emailNote}`);
       setInviteUrl(json.inviteUrl ?? null);
       setForm({ firstName: "", lastName: "", email: "" });
-      await loadResearchInvites();
+      setRefreshKey((k) => k + 1);
     } catch (err) {
       console.error("Error creating research invite:", err);
       setError("Failed to create research invite.");
@@ -148,7 +180,7 @@ export default function AdminResearchInviteTable({
         return;
       }
       setSuccess("Participant permanently deleted.");
-      await loadResearchInvites();
+      setRefreshKey((k) => k + 1);
     } catch (err) {
       console.error("Error deleting research participant:", err);
       setError("Failed to permanently delete participant.");
@@ -157,22 +189,45 @@ export default function AdminResearchInviteTable({
     }
   }
 
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  async function handleSendResumeEmail(applicantId: string) {
+    setError(null);
+    setSuccess(null);
+    setSendingResumeId(applicantId);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) {
+        setError("Please sign in again.");
+        setSendingResumeId(null);
+        return;
+      }
+      const res = await fetch(`/api/admin/research-invites/${applicantId}`, {
+        method: "POST",
+        headers,
+      });
+      const json = await res.json();
+      if (!res.ok || json?.error) {
+        setError(json?.error?.message || "Failed to send resume email.");
+        setSendingResumeId(null);
+        return;
+      }
 
-  function formatDate(dateString: string | null) {
-    if (!dateString) {
-      return "N/A";
+      if (json?.inviteUrl) {
+        setInviteUrl(json.inviteUrl);
+      }
+      const emailNote = json?.emailSent
+        ? " Resume email sent."
+        : " Could not send email, but the resume link is available.";
+      setSuccess(`Research resume link ready.${emailNote}`);
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      console.error("Error sending research resume email:", err);
+      setError("Failed to send resume email.");
+    } finally {
+      setSendingResumeId(null);
     }
-    const parsed = new Date(dateString);
-    if (Number.isNaN(parsed.getTime())) {
-      return "N/A";
-    }
-    return parsed.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
   }
+
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   function getInviteUrl(code: string | null) {
     if (!code) return null;
@@ -265,11 +320,34 @@ export default function AdminResearchInviteTable({
       </Card>
 
       <Card>
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
           <h2 className="text-lg font-semibold text-navy">
-            Research Participants ({applicants.length})
+            Research Participants ({total})
           </h2>
-          <Button variant="outline" onClick={loadResearchInvites}>
+          <LocationFilter
+            value={location}
+            onChange={(val) => {
+              setLocation(val);
+              setPage(1);
+            }}
+          />
+          <Input
+            placeholder="Search name or email…"
+            className="h-8 w-48 text-sm"
+            onChange={(e) => {
+              const val = e.target.value;
+              if (searchTimeout.current) clearTimeout(searchTimeout.current);
+              searchTimeout.current = setTimeout(() => {
+                setSearch(val);
+                setPage(1);
+              }, 300);
+            }}
+          />
+          <Button
+            variant="outline"
+            className="ml-auto"
+            onClick={() => setRefreshKey((k) => k + 1)}
+          >
             Refresh
           </Button>
         </div>
@@ -280,45 +358,56 @@ export default function AdminResearchInviteTable({
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <Table className="mt-4">
+            <Table className="mt-4 min-w-[1200px]">
               <thead>
-                <tr className="border-b text-xs uppercase text-slate-400">
-                  <th className="py-2 text-left">Name</th>
-                  <th className="py-2 text-left">Email</th>
-                  <th className="py-2 text-left">Status</th>
-                  <th className="py-2 text-left">Invited</th>
-                  <th className="py-2 text-left">Started</th>
-                  <th className="py-2 text-left">Completed</th>
-                  <th className="py-2 text-left">Actions</th>
+                <tr className="border-b text-xs uppercase tracking-wide text-slate-500">
+                  <th className="px-3 py-3 text-left">Name</th>
+                  <th className="px-3 py-3 text-left">Email</th>
+                  <th className="px-3 py-3 text-left">Status</th>
+                  <th className="px-3 py-3 text-left">Invited</th>
+                  <th className="px-3 py-3 text-left">Started</th>
+                  <th className="px-3 py-3 text-left">Completed</th>
+                  <th className="px-3 py-3 text-left">Duration</th>
+                  <th className="px-3 py-3 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {applicants.map((applicant) => (
                   <tr
                     key={applicant.id}
-                    className="border-b text-sm text-navy-soft"
+                    className="border-b align-top text-sm text-navy-soft"
                   >
-                    <td className="py-2">
+                    <td className="px-3 py-3 font-medium text-navy">
                       {applicant.user.firstName} {applicant.user.lastName}
                     </td>
-                    <td className="py-2">{applicant.user.email}</td>
-                    <td className="py-2">{applicant.applicationStatus}</td>
-                    <td className="py-2">
-                      {formatDate(applicant.researchInvitedAt)}
+                    <td className="px-3 py-3">{applicant.user.email}</td>
+                    <td className="px-3 py-3">
+                      <span className="rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                        {applicant.applicationStatus}
+                      </span>
                     </td>
-                    <td className="py-2">
-                      {formatDate(applicant.researchInviteUsedAt)}
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      {formatDateTime(applicant.researchInvitedAt) ?? "N/A"}
                     </td>
-                    <td className="py-2">
-                      {formatDate(applicant.researchCompletedAt)}
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      {formatDateTime(applicant.researchInviteUsedAt) ?? "N/A"}
                     </td>
-                    <td className="py-2">
-                      <div className="flex gap-2">
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      {formatDateTime(applicant.researchCompletedAt) ?? "N/A"}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-slate-500">
+                      {formatDuration(
+                        applicant.researchInviteUsedAt,
+                        applicant.researchCompletedAt,
+                      ) ?? "N/A"}
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex flex-wrap gap-2">
                         <Link href={`/admin/research/${applicant.id}`}>
                           <Button
                             type="button"
                             variant="outline"
-                            className="text-xs"
+                            className="h-8 px-3 text-xs"
                           >
                             View Responses
                           </Button>
@@ -333,11 +422,25 @@ export default function AdminResearchInviteTable({
                                 applicant.id,
                               )
                             }
-                            className="text-xs"
+                            className="h-8 px-3 text-xs"
                           >
                             {copiedId === applicant.id
                               ? "Copied!"
                               : "Copy Link"}
+                          </Button>
+                        ) : null}
+                        {applicant.applicationStatus !==
+                        "RESEARCH_COMPLETED" ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleSendResumeEmail(applicant.id)}
+                            disabled={sendingResumeId === applicant.id}
+                            className="h-8 px-3 text-xs"
+                          >
+                            {sendingResumeId === applicant.id
+                              ? "Sending..."
+                              : "Send Resume Link"}
                           </Button>
                         ) : null}
                         <Button
@@ -345,7 +448,7 @@ export default function AdminResearchInviteTable({
                           variant="outline"
                           onClick={() => handleHardDelete(applicant.id)}
                           disabled={isLoading}
-                          className="border-red-300 text-red-600 hover:bg-red-50"
+                          className="h-8 border-red-300 px-3 text-xs text-red-600 hover:bg-red-50"
                         >
                           Hard Delete
                         </Button>
@@ -357,6 +460,12 @@ export default function AdminResearchInviteTable({
             </Table>
           </div>
         )}
+        <PaginationControls
+          page={page}
+          pages={pages}
+          total={total}
+          onPageChange={setPage}
+        />
       </Card>
     </div>
   );

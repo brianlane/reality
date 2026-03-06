@@ -20,6 +20,8 @@ export async function GET(request: Request) {
   const status = url.searchParams.get("status") ?? undefined;
   const gender = url.searchParams.get("gender") ?? undefined;
   const screeningStatus = url.searchParams.get("screeningStatus") ?? undefined;
+  const location = url.searchParams.get("location") ?? undefined;
+  const search = url.searchParams.get("search") ?? undefined;
   const page = Number(url.searchParams.get("page") ?? "1");
   const limit = Number(url.searchParams.get("limit") ?? "20");
   const includeDeleted = url.searchParams.get("includeDeleted") === "true";
@@ -43,13 +45,32 @@ export async function GET(request: Request) {
         }),
     ...(gender ? { gender: gender as never } : {}),
     ...(screeningStatus ? { screeningStatus: screeningStatus as never } : {}),
+    ...(location ? { location } : {}),
     ...(includeDeleted ? {} : { deletedAt: null }),
+    ...(search
+      ? {
+          user: {
+            OR: [
+              { firstName: { contains: search, mode: "insensitive" as const } },
+              { lastName: { contains: search, mode: "insensitive" as const } },
+              { email: { contains: search, mode: "insensitive" as const } },
+            ],
+          },
+        }
+      : {}),
   };
 
   const [applications, total] = await Promise.all([
     db.applicant.findMany({
       where,
-      include: { user: true },
+      include: {
+        user: true,
+        questionnaireAnswers: {
+          orderBy: { createdAt: "asc" },
+          take: 1,
+          select: { createdAt: true },
+        },
+      },
       orderBy: { [sortBy]: sortOrder },
       skip: (page - 1) * limit,
       take: limit,
@@ -77,10 +98,17 @@ export async function GET(request: Request) {
       age: applicant.age,
       gender: applicant.gender,
       occupation: applicant.occupation,
+      location: applicant.location,
       applicationStatus: applicant.applicationStatus,
       screeningStatus: applicant.screeningStatus,
+      relationshipReadinessFlag: applicant.relationshipReadinessFlag,
+      saScreeningFlag: applicant.saScreeningFlag,
+      screeningFlagOverride: applicant.screeningFlagOverride,
       compatibilityScore: applicant.compatibilityScore,
       submittedAt: applicant.submittedAt,
+      questionnaireStartedAt:
+        applicant.questionnaireAnswers[0]?.createdAt ?? null,
+      reviewedAt: applicant.reviewedAt,
     })),
     pagination: {
       total,

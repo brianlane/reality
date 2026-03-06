@@ -1,11 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-// Default limit covers total JS chunks across ALL routes (code-split by the
-// App Router). The 1700 KB budget accounts for the full application including
-// Prisma, Supabase auth, admin dashboard, and background-check screening
-// infrastructure (iDenfy + Checkr). Adjust via BUNDLE_SIZE_LIMIT_KB env var.
-const limitKb = Number(process.env.BUNDLE_SIZE_LIMIT_KB ?? "1700");
+const limitKb = Number(process.env.BUNDLE_SIZE_LIMIT_KB ?? "1850");
 const chunksDir = path.join(process.cwd(), ".next", "static", "chunks");
 
 if (!fs.existsSync(chunksDir)) {

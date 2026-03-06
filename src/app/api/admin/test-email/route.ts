@@ -14,6 +14,7 @@ import { sendPaymentConfirmationEmail } from "@/lib/email/payment";
 import { sendApplicationApprovalEmail } from "@/lib/email/approval";
 import { sendEventInvitationEmail } from "@/lib/email/events";
 import { sendApplicationStatusEmail } from "@/lib/email/status";
+import { sendResearchInviteEmail } from "@/lib/email/research";
 import type { TestEmailType } from "@/lib/email/types";
 
 type RequestBody = {
@@ -86,6 +87,14 @@ export async function POST(request: Request) {
         });
         break;
 
+      case "RESEARCH_INVITE":
+        result = await sendResearchInviteEmail({
+          to: recipientEmail,
+          firstName: "Test User",
+          inviteCode: "test_code_abc123",
+        });
+        break;
+
       case "PAYMENT_CONFIRMATION":
         result = await sendPaymentConfirmationEmail({
           to: recipientEmail,
@@ -105,14 +114,15 @@ export async function POST(request: Request) {
         break;
 
       case "EVENT_INVITATION":
+        // Build test dates as explicit Arizona time (UTC-7, no DST)
         const testDate = new Date();
         testDate.setDate(testDate.getDate() + 7); // 7 days from now
+        const dateStr = testDate.toLocaleDateString("en-CA", {
+          timeZone: "America/Phoenix",
+        }); // YYYY-MM-DD
 
-        const testStartTime = new Date(testDate);
-        testStartTime.setHours(19, 0, 0, 0); // 7:00 PM
-
-        const testEndTime = new Date(testDate);
-        testEndTime.setHours(22, 0, 0, 0); // 10:00 PM
+        const testStartTime = new Date(`${dateStr}T19:00:00-07:00`); // 7:00 PM AZ
+        const testEndTime = new Date(`${dateStr}T22:30:00-07:00`); // 10:30 PM AZ
 
         result = await sendEventInvitationEmail({
           to: recipientEmail,
@@ -120,7 +130,7 @@ export async function POST(request: Request) {
           eventTitle: "Spring Matchmaking Mixer",
           eventDate: testDate,
           eventLocation: "The Metropolitan Club",
-          eventAddress: "123 Main Street, New York, NY 10001",
+          eventAddress: "6850 E Main St, Scottsdale, AZ 85251",
           startTime: testStartTime,
           endTime: testEndTime,
           rsvpUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/events/test/rsvp`,

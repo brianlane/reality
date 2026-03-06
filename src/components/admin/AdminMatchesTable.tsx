@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
+import LocationFilter from "@/components/admin/LocationFilter";
 import { Table } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
@@ -21,6 +22,7 @@ export default function AdminMatchesTable() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
+  const [location, setLocation] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -33,10 +35,16 @@ export default function AdminMatchesTable() {
           return;
         }
 
-        const res = await fetch(`/api/admin/matches?page=${page}`, {
-          headers,
-          signal: controller.signal,
-        });
+        const locationParam = location
+          ? `&location=${encodeURIComponent(location)}`
+          : "";
+        const res = await fetch(
+          `/api/admin/matches?page=${page}${locationParam}`,
+          {
+            headers,
+            signal: controller.signal,
+          },
+        );
         const json = await res.json();
         if (!res.ok || json?.error) {
           setError("Failed to load matches.");
@@ -54,18 +62,27 @@ export default function AdminMatchesTable() {
     loadMatches();
 
     return () => controller.abort();
-  }, [page]);
+  }, [page, location]);
 
   return (
     <Card>
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-navy">Matches</h2>
-        <Link
-          href="/admin/matches/new"
-          className="text-xs font-semibold text-copper hover:underline"
-        >
-          New Match
-        </Link>
+        <div className="flex items-center gap-2">
+          <LocationFilter
+            value={location}
+            onChange={(val) => {
+              setLocation(val);
+              setPage(1);
+            }}
+          />
+          <Link
+            href="/admin/matches/new"
+            className="text-xs font-semibold text-copper hover:underline"
+          >
+            New Match
+          </Link>
+        </div>
       </div>
       {error ? (
         <p className="mt-2 text-sm text-red-600">{error}</p>

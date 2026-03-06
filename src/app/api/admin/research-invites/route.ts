@@ -1,4 +1,3 @@
-import { randomBytes } from "crypto";
 import { ApplicationStatus } from "@prisma/client";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -7,12 +6,9 @@ import { adminResearchInviteCreateSchema } from "@/lib/validations";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 import { sendResearchInviteEmail } from "@/lib/email/research";
 import { logger } from "@/lib/logger";
+import { generateUniqueResearchInviteCode } from "@/lib/research/invite-code";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-function generateInviteCode() {
-  return randomBytes(16).toString("hex");
-}
 
 export async function GET(request: Request) {
   const auth = await getAuthUser();
@@ -27,6 +23,10 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const includeDeleted = url.searchParams.get("includeDeleted") === "true";
+  const search = url.searchParams.get("search") ?? undefined;
+  const location = url.searchParams.get("location") ?? undefined;
+  const page = Number(url.searchParams.get("page") ?? "1");
+  const limit = Number(url.searchParams.get("limit") ?? "25");
 
   const researchStatuses: ApplicationStatus[] = [
     "RESEARCH_INVITED",
@@ -34,22 +34,41 @@ export async function GET(request: Request) {
     "RESEARCH_COMPLETED",
   ];
 
-  const applicants = await db.applicant.findMany({
-    where: {
-      applicationStatus: { in: researchStatuses },
-      ...(includeDeleted ? {} : { deletedAt: null }),
-    },
-    include: {
-      user: {
-        select: {
-          firstName: true,
-          lastName: true,
-          email: true,
+  const where = {
+    applicationStatus: { in: researchStatuses },
+    ...(location ? { location } : {}),
+    ...(includeDeleted ? {} : { deletedAt: null }),
+    ...(search
+      ? {
+          user: {
+            OR: [
+              { firstName: { contains: search, mode: "insensitive" as const } },
+              { lastName: { contains: search, mode: "insensitive" as const } },
+              { email: { contains: search, mode: "insensitive" as const } },
+            ],
+          },
+        }
+      : {}),
+  };
+
+  const [applicants, total] = await Promise.all([
+    db.applicant.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
         },
       },
-    },
-    orderBy: { researchInvitedAt: "desc" },
-  });
+      orderBy: { researchInvitedAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    db.applicant.count({ where }),
+  ]);
 
   return successResponse({
     applicants: applicants.map((applicant) => ({
@@ -61,7 +80,12 @@ export async function GET(request: Request) {
       researchInviteUsedAt: applicant.researchInviteUsedAt,
       researchCompletedAt: applicant.researchCompletedAt,
     })),
-    count: applicants.length,
+    pagination: {
+      total,
+      pages: Math.ceil(total / limit),
+      currentPage: page,
+      perPage: limit,
+    },
   });
 }
 
@@ -127,22 +151,14 @@ export async function POST(request: Request) {
   });
 
   let inviteCode = "";
-  let foundUniqueCode = false;
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    inviteCode = generateInviteCode();
-    const exists = await db.applicant.findFirst({
-      where: { researchInviteCode: inviteCode },
-    });
-    if (!exists) {
-      foundUniqueCode = true;
-      break;
-    }
-  }
-
-  if (!foundUniqueCode) {
+  try {
+    inviteCode = await generateUniqueResearchInviteCode(db);
+  } catch (error) {
     return errorResponse(
       "INVITE_FAILED",
-      "Failed to generate unique invite code after 5 attempts.",
+      error instanceof Error
+        ? error.message
+        : "Failed to generate research invite code.",
       500,
     );
   }

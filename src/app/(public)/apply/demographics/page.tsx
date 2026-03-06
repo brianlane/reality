@@ -1,12 +1,21 @@
 "use client";
 
-import { useSyncExternalStore, type ReactNode } from "react";
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import ApplicationDraftForm from "@/components/forms/ApplicationDraftForm";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import ResearchRouteGuard from "@/components/research/ResearchRouteGuard";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getDemographicsRouteDecision } from "@/lib/apply/demographics-routing";
 
 export default function DemographicsPage() {
-  const isAuthorized = useSyncExternalStore(
+  const router = useRouter();
+  const hasInviteContext = useSyncExternalStore(
     (callback) => {
       if (typeof window === "undefined") {
         return () => undefined;
@@ -24,10 +33,103 @@ export default function DemographicsPage() {
     },
     () => null,
   );
+  const [sessionState, setSessionState] = useState<
+    "unknown" | "authenticated" | "unauthenticated"
+  >("unknown");
+  const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (hasInviteContext === null) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const run = async () => {
+      const supabase = createSupabaseBrowserClient();
+      if (!supabase) {
+        queueMicrotask(() => {
+          if (!cancelled) {
+            setSessionState("unauthenticated");
+          }
+        });
+        return;
+      }
+
+      let sessionData:
+        | Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]
+        | null = null;
+      try {
+        const { data } = await supabase.auth.getSession();
+        sessionData = data;
+      } catch {
+        if (!cancelled) {
+          setSessionState("unauthenticated");
+        }
+        return;
+      }
+
+      try {
+        if (cancelled) return;
+        if (!sessionData?.session) {
+          setSessionState("unauthenticated");
+          return;
+        }
+        setSessionState("authenticated");
+        setRecoveryMessage(null);
+
+        const dashboardRes = await fetch("/api/applicant/dashboard");
+        if (cancelled) return;
+        const dashboardJson = await dashboardRes.json().catch(() => null);
+        if (cancelled) return;
+        const status = dashboardJson?.application?.status as string | undefined;
+        const decision = getDemographicsRouteDecision({
+          status,
+          dashboardStatusCode: dashboardRes.status,
+          hasInviteContext,
+        });
+
+        if (decision.type === "reset_session_for_invite_recovery") {
+          await supabase.auth.signOut();
+          if (!cancelled) {
+            setSessionState("unauthenticated");
+            setRecoveryMessage(
+              "Your previous session expired for this application. Please continue with your invite link details.",
+            );
+          }
+          return;
+        }
+
+        if (decision.type === "redirect") {
+          if (cancelled) return;
+          router.replace(decision.href);
+        }
+      } catch {
+        // Errors after session confirmation should not downgrade auth state.
+        // Route to dashboard as the safest fallback for authenticated users.
+        if (!cancelled) {
+          router.replace("/dashboard");
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router, hasInviteContext]);
+
+  const isLoading =
+    hasInviteContext === null ||
+    sessionState === "unknown" ||
+    sessionState === "authenticated";
+  const isAuthorized =
+    sessionState === "unauthenticated" && hasInviteContext === true;
 
   let content: ReactNode;
 
-  if (isAuthorized === null) {
+  if (isLoading) {
     content = (
       <section className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
         <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
@@ -68,6 +170,11 @@ export default function DemographicsPage() {
           application.
         </p>
         <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+          {recoveryMessage ? (
+            <p className="mb-4 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              {recoveryMessage}
+            </p>
+          ) : null}
           <ApplicationDraftForm />
         </div>
       </section>

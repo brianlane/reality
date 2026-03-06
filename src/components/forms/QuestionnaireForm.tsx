@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useApplicationDraft } from "./useApplicationDraft";
 import RichTextEditor from "./RichTextEditor";
+import { ERROR_MESSAGES } from "@/lib/error-messages";
 
 type QuestionType =
   | "TEXT"
@@ -49,6 +50,11 @@ type TextOptions = {
   max?: number;
 };
 
+type CheckboxOptions = {
+  options: string[];
+  maxSelections?: number;
+};
+
 type Question = {
   id: string;
   prompt: string;
@@ -56,6 +62,7 @@ type Question = {
   type: QuestionType;
   options:
     | string[]
+    | CheckboxOptions
     | NumberScaleOptions
     | AgeRangeOptions
     | PointAllocationOptions
@@ -67,6 +74,7 @@ type Question = {
 
 type Section = {
   id: string;
+  pageId?: string;
   title: string;
   description: string | null;
   questions: Question[];
@@ -181,6 +189,7 @@ export default function QuestionnaireForm({
   const router = useRouter();
   const { draft, updateDraft } = useApplicationDraft();
   const [sections, setSections] = useState<Section[]>(mockSections ?? []);
+  const [allSections, setAllSections] = useState<Section[]>(mockSections ?? []);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>(
     mockAnswers ?? {},
   );
@@ -191,11 +200,15 @@ export default function QuestionnaireForm({
   const [isLoading, setIsLoading] = useState(false);
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const isResearchMode = mode === "research";
+  const initialResumePageIdRef = useRef(draft.currentPageId);
 
   useEffect(() => {
     if (!previewMode) return;
-    setSections(mockSections ?? []);
-    setAnswers(mockAnswers ?? {});
+    queueMicrotask(() => {
+      setSections(mockSections ?? []);
+      setAllSections(mockSections ?? []);
+      setAnswers(mockAnswers ?? {});
+    });
   }, [previewMode, mockSections, mockAnswers]);
 
   useEffect(() => {
@@ -203,18 +216,54 @@ export default function QuestionnaireForm({
       // Skip localStorage checks in preview mode
       return;
     }
+    let cancelled = false;
+    const persistRecoveredApplicationId = (nextId: string) => {
+      if (typeof window !== "undefined") {
+        const current = localStorage.getItem("applicationId");
+        if (current !== nextId) {
+          localStorage.setItem("applicationId", nextId);
+        }
+      }
+      setApplicationId(nextId);
+      updateDraft({ applicationId: nextId });
+    };
+
     if (draft.applicationId) {
-      setApplicationId(draft.applicationId);
+      queueMicrotask(() => setApplicationId(draft.applicationId ?? null));
       return;
     }
     if (typeof window !== "undefined") {
       const storedId = localStorage.getItem("applicationId");
       if (storedId) {
-        setApplicationId(storedId);
-        updateDraft({ applicationId: storedId });
+        persistRecoveredApplicationId(storedId);
+        return;
       }
     }
-  }, [draft.applicationId, updateDraft, previewMode]);
+
+    if (isResearchMode) {
+      return;
+    }
+
+    const loadApplicantFromSession = async () => {
+      try {
+        const res = await fetch("/api/applicant/dashboard");
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json?.application?.id) {
+          return;
+        }
+        if (cancelled) return;
+        const recoveredId = String(json.application.id);
+        persistRecoveredApplicationId(recoveredId);
+      } catch {
+        // Ignore and allow existing UI messaging to guide user.
+      }
+    };
+
+    loadApplicantFromSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [draft.applicationId, updateDraft, previewMode, isResearchMode]);
 
   useEffect(() => {
     if (previewMode) {
@@ -226,6 +275,45 @@ export default function QuestionnaireForm({
     }
     const controller = new AbortController();
 
+    const tryRestoreResearchSession = async (): Promise<boolean> => {
+      if (!isResearchMode || typeof window === "undefined") {
+        return false;
+      }
+
+      const inviteCode = localStorage.getItem("researchInviteCode");
+      if (!inviteCode) {
+        return false;
+      }
+
+      try {
+        const recoveryRes = await fetch(
+          `/api/research/validate-invite?code=${encodeURIComponent(inviteCode)}`,
+          { signal: controller.signal },
+        );
+        const recoveryJson = await recoveryRes.json().catch(() => null);
+
+        if (!recoveryRes.ok || !recoveryJson?.applicationId) {
+          return false;
+        }
+
+        const restoredApplicationId = String(recoveryJson.applicationId);
+        localStorage.setItem("applicationId", restoredApplicationId);
+        updateDraft({
+          applicationId: restoredApplicationId,
+          currentPageId: undefined,
+          questionnaire: undefined,
+        });
+        setApplicationId(restoredApplicationId);
+        setStatus(null);
+        return true;
+      } catch (error) {
+        if ((error as Error).name === "AbortError") {
+          return false;
+        }
+        return false;
+      }
+    };
+
     const loadQuestionnaire = async () => {
       try {
         setIsLoading(true);
@@ -236,22 +324,61 @@ export default function QuestionnaireForm({
         );
         const json = await res.json();
         if (!res.ok || json?.error) {
+          const requiresSignIn =
+            !isResearchMode &&
+            json?.error?.message === ERROR_MESSAGES.SIGN_IN_TO_CONTINUE;
+          if (requiresSignIn) {
+            router.push("/sign-in?next=/apply/questionnaire");
+            setIsLoading(false);
+            return;
+          }
+
+          // Only clear cached applicationId for the explicit "wrong owner"
+          // case. Other 403s (e.g., status not allowed) must preserve state to
+          // avoid recovery loops.
+          const isStaleId =
+            res.status === 403 &&
+            !isResearchMode &&
+            json?.error?.message === ERROR_MESSAGES.OWN_APPLICATION_ONLY;
+          if (isStaleId) {
+            if (typeof window !== "undefined") {
+              localStorage.removeItem("applicationId");
+            }
+            updateDraft({ applicationId: undefined, currentPageId: undefined });
+            setApplicationId(null);
+            setIsLoading(false);
+            return;
+          }
+
+          const canRecoverFromStaleResearchSession =
+            isResearchMode &&
+            json?.error?.message === ERROR_MESSAGES.APP_NOT_FOUND_OR_INVITED;
+          if (canRecoverFromStaleResearchSession) {
+            const recovered = await tryRestoreResearchSession();
+            if (recovered) {
+              setIsLoading(false);
+              return;
+            }
+          }
+
           setStatus(
             json?.error?.message ??
               (isResearchMode
-                ? "Your research invite is not valid."
-                : "You must be invited off the waitlist to continue."),
+                ? ERROR_MESSAGES.INVALID_RESEARCH_INVITE
+                : ERROR_MESSAGES.SIGN_IN_TO_CONTINUE_APPLICATION),
           );
           setIsLoading(false);
           return;
         }
 
         const fetchedPages = json.pages ?? [];
+        const fetchedSections = (json.sections ?? []) as Section[];
         setPages(fetchedPages);
+        setAllSections(fetchedSections);
         setAnswers(json.answers ?? {});
 
         // Determine current page from draft or start at first page
-        const resumePageId = draft.currentPageId;
+        const resumePageId = initialResumePageIdRef.current;
         let pageIndex = 0;
         let pageId: string | null = null;
 
@@ -272,28 +399,22 @@ export default function QuestionnaireForm({
 
         setCurrentPageIndex(pageIndex);
 
-        // Now fetch sections for the current page
+        // Filter sections client-side by pageId to avoid a second request.
         if (pageId) {
-          const sectionsRes = await fetch(
-            `/api/applications/questionnaire?applicationId=${applicationId}&pageId=${pageId}`,
-            { signal: controller.signal },
+          setSections(
+            fetchedSections.filter(
+              (section) => (section.pageId ?? null) === pageId,
+            ),
           );
-          const sectionsJson = await sectionsRes.json();
-          if (!sectionsRes.ok || sectionsJson?.error) {
-            setStatus("Failed to load questionnaire sections.");
-            setIsLoading(false);
-            return;
-          }
-          setSections(sectionsJson.sections ?? []);
         } else {
           // No pages, fallback to all sections
-          setSections(json.sections ?? []);
+          setSections(fetchedSections);
         }
 
         setIsLoading(false);
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
-          setStatus("Failed to load questionnaire.");
+          setStatus(ERROR_MESSAGES.FAILED_LOAD_QUESTIONNAIRE);
           setIsLoading(false);
         }
       }
@@ -302,7 +423,7 @@ export default function QuestionnaireForm({
     loadQuestionnaire();
 
     return () => controller.abort();
-  }, [applicationId, previewMode, draft.currentPageId, isResearchMode]);
+  }, [applicationId, previewMode, isResearchMode, updateDraft, router]);
 
   const questionsBySection = useMemo(
     () => sections.filter((section) => section.questions.length > 0),
@@ -311,7 +432,7 @@ export default function QuestionnaireForm({
 
   async function saveCurrentPageAnswers(): Promise<boolean> {
     if (previewMode) {
-      setStatus("Preview mode - form submission is disabled");
+      setStatus(ERROR_MESSAGES.PREVIEW_MODE_SUBMIT_DISABLED);
       return false;
     }
     if (!applicationId) {
@@ -326,9 +447,19 @@ export default function QuestionnaireForm({
     const payloadAnswers = sections.flatMap((section) =>
       section.questions.map((question) => {
         const answer = answers[question.id] ?? { value: null, richText: null };
+        let value = answer.value ?? null;
+        if (
+          question.type === "RANKING" &&
+          (!Array.isArray(value) || (value as unknown[]).length === 0)
+        ) {
+          const rankingOptions = question.options as {
+            items?: string[];
+          } | null;
+          value = rankingOptions?.items ?? null;
+        }
         return {
           questionId: question.id,
-          value: answer.value ?? null,
+          value,
           richText: answer.richText ?? null,
         };
       }),
@@ -347,7 +478,8 @@ export default function QuestionnaireForm({
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data?.error) {
       setStatus(
-        data?.error?.message ?? "Failed to save questionnaire answers.",
+        data?.error?.message ??
+          ERROR_MESSAGES.FAILED_SAVE_QUESTIONNAIRE_ANSWERS,
       );
       return false;
     }
@@ -361,6 +493,15 @@ export default function QuestionnaireForm({
       ...prev,
       [questionId]: next,
     }));
+  }
+
+  function clearFieldError(questionId: string) {
+    if (!fieldErrors[questionId]) return;
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next[questionId];
+      return next;
+    });
   }
 
   function getTextOptions(question: Question): TextOptions | null {
@@ -377,7 +518,38 @@ export default function QuestionnaireForm({
     return null;
   }
 
-  function validateNumericFields(): boolean {
+  function getCheckboxSelectionErrors(): Record<string, string> {
+    const errors: Record<string, string> = {};
+
+    for (const section of sections) {
+      for (const question of section.questions) {
+        if (question.type !== "CHECKBOXES" || !question.isRequired) continue;
+
+        const rawOpts = question.options as CheckboxOptions | string[] | null;
+        const maxSelections =
+          !Array.isArray(rawOpts) &&
+          rawOpts !== null &&
+          typeof rawOpts === "object" &&
+          "maxSelections" in rawOpts
+            ? rawOpts.maxSelections
+            : undefined;
+
+        if (maxSelections === undefined) continue;
+
+        const answer = answers[question.id];
+        const selected = Array.isArray(answer?.value) ? answer.value : [];
+
+        if (selected.length !== maxSelections) {
+          errors[question.id] =
+            `Please select exactly ${maxSelections} option${maxSelections === 1 ? "" : "s"}.`;
+        }
+      }
+    }
+
+    return errors;
+  }
+
+  function getNumericFieldErrors(): Record<string, string> {
     const errors: Record<string, string> = {};
 
     for (const section of sections) {
@@ -412,8 +584,90 @@ export default function QuestionnaireForm({
       }
     }
 
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
+    return errors;
+  }
+
+  function getStructuredFieldErrors(): Record<string, string> {
+    const errors: Record<string, string> = {};
+
+    for (const section of sections) {
+      for (const question of section.questions) {
+        const answerValue = answers[question.id]?.value;
+
+        if (question.type === "RANKING") {
+          const options = question.options as RankingOptions | null;
+          const items = options?.items ?? [];
+          // Default to natural order (same as the renderer) so a question the
+          // user never touched is treated as answered with the displayed order.
+          const rankedItems = Array.isArray(answerValue)
+            ? (answerValue as string[])
+            : [...items];
+
+          if (question.isRequired && rankedItems.length !== items.length) {
+            errors[question.id] = "Please rank all items before continuing.";
+            continue;
+          }
+
+          if (rankedItems.length > 0) {
+            const unique = new Set(rankedItems);
+            if (unique.size !== rankedItems.length) {
+              errors[question.id] = "Each item can only be ranked once.";
+              continue;
+            }
+            const validItems = new Set(items);
+            const hasInvalidItem = rankedItems.some(
+              (item) => !validItems.has(item),
+            );
+            if (hasInvalidItem) {
+              errors[question.id] = "One or more ranked items are invalid.";
+            }
+          }
+        }
+
+        if (question.type === "POINT_ALLOCATION") {
+          const options = question.options as PointAllocationOptions | null;
+          if (!options) continue;
+          const allocations =
+            answerValue &&
+            typeof answerValue === "object" &&
+            !Array.isArray(answerValue)
+              ? (answerValue as Record<string, unknown>)
+              : {};
+          const total = Object.values(allocations).reduce(
+            (sum: number, val) => sum + (Number(val) || 0),
+            0,
+          );
+
+          if (total > options.total) {
+            errors[question.id] =
+              `Points cannot exceed ${options.total}. Currently: ${total}.`;
+            continue;
+          }
+          if (question.isRequired && total !== options.total) {
+            errors[question.id] =
+              `Points must total exactly ${options.total}. Currently: ${total}.`;
+          }
+        }
+      }
+    }
+
+    return errors;
+  }
+
+  function validateCurrentPageFields(): boolean {
+    const checkboxErrors = getCheckboxSelectionErrors();
+    const numericErrors = getNumericFieldErrors();
+    const structuredErrors = getStructuredFieldErrors();
+    const nextErrors = {
+      ...checkboxErrors,
+      ...numericErrors,
+      ...structuredErrors,
+    };
+
+    // Always write one deterministic error map so validation behavior never
+    // depends on validator call order.
+    setFieldErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -439,8 +693,14 @@ export default function QuestionnaireForm({
 
           // For CHECKBOXES, pass available options so ALL must be checked
           const checkboxOptions =
-            question.type === "CHECKBOXES" && Array.isArray(question.options)
-              ? (question.options as unknown[])
+            question.type === "CHECKBOXES"
+              ? Array.isArray(question.options)
+                ? (question.options as unknown[])
+                : question.options !== null &&
+                    typeof question.options === "object" &&
+                    "options" in question.options
+                  ? (question.options as CheckboxOptions).options
+                  : undefined
               : undefined;
 
           // Check if the answer is affirmative
@@ -455,8 +715,8 @@ export default function QuestionnaireForm({
       }
     }
 
-    // Validate numeric TEXT fields before saving
-    if (!validateNumericFields()) {
+    // Validate all field-level rules in one pass to avoid order-dependent errors.
+    if (!validateCurrentPageFields()) {
       setStatus("Please fix the highlighted errors before continuing.");
       return;
     }
@@ -485,7 +745,22 @@ export default function QuestionnaireForm({
           );
           return;
         }
-        router.push("/research/thank-you");
+        // Store Prolific completion code for redirect on thank-you page
+        if (data.prolificCompletionCode) {
+          localStorage.setItem(
+            "prolificCompletionCode",
+            data.prolificCompletionCode,
+          );
+        } else {
+          localStorage.removeItem("prolificCompletionCode");
+        }
+        if (!applicationId) {
+          setStatus("Missing research application context.");
+          return;
+        }
+        router.push(
+          `/research/thank-you?applicationId=${encodeURIComponent(applicationId)}`,
+        );
       } else {
         // Navigate to photos page
         router.push("/apply/photos");
@@ -496,33 +771,16 @@ export default function QuestionnaireForm({
       const nextPageId = pages[nextPageIndex]?.id;
 
       if (nextPageId) {
-        // Load next page sections
-        setIsLoading(true);
-        let nextLoaded = false;
-        try {
-          const res = await fetch(
-            `/api/applications/questionnaire?applicationId=${applicationId}&pageId=${nextPageId}`,
-          );
-          const json = await res.json();
-          if (!res.ok || json?.error) {
-            setStatus("Failed to load next page.");
-            return;
-          }
-          setSections(json.sections ?? []);
-          setCurrentPageIndex(nextPageIndex);
-          updateDraft({ currentPageId: nextPageId });
-          setFieldErrors({});
-          nextLoaded = true;
-        } catch {
-          setStatus("Failed to load next page.");
-        } finally {
-          setIsLoading(false);
-        }
+        const nextSections = allSections.filter(
+          (section) => (section.pageId ?? null) === nextPageId,
+        );
+        setSections(nextSections);
+        setCurrentPageIndex(nextPageIndex);
+        updateDraft({ currentPageId: nextPageId });
+        setFieldErrors({});
 
-        if (nextLoaded) {
-          // Scroll to top
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
     }
   }
@@ -536,9 +794,14 @@ export default function QuestionnaireForm({
       <p className="text-sm text-navy-soft">
         {isResearchMode
           ? "Please use your research invite link to begin."
-          : "Please use your invite link to continue the application."}
+          : "Please sign in to continue your application."}
       </p>
     );
+  }
+
+  // Show API/load errors before the generic "not available" fallback.
+  if (status && questionsBySection.length === 0) {
+    return <p className="text-sm text-red-500">{status}</p>;
   }
 
   if (questionsBySection.length === 0) {
@@ -746,10 +1009,27 @@ export default function QuestionnaireForm({
               );
             }
             if (question.type === "CHECKBOXES") {
-              const options = Array.isArray(question.options)
-                ? question.options
-                : [];
+              const checkboxOpts = question.options as
+                | CheckboxOptions
+                | string[]
+                | null;
+              const options = Array.isArray(checkboxOpts)
+                ? checkboxOpts
+                : checkboxOpts !== null &&
+                    typeof checkboxOpts === "object" &&
+                    "options" in checkboxOpts
+                  ? checkboxOpts.options
+                  : [];
+              const maxSelections =
+                !Array.isArray(checkboxOpts) &&
+                checkboxOpts !== null &&
+                typeof checkboxOpts === "object" &&
+                "maxSelections" in checkboxOpts
+                  ? checkboxOpts.maxSelections
+                  : undefined;
               const selected = Array.isArray(answer.value) ? answer.value : [];
+              const limitReached =
+                maxSelections !== undefined && selected.length >= maxSelections;
               return (
                 <div key={question.id} className="space-y-2">
                   <label className="text-sm font-medium text-navy-muted">
@@ -760,26 +1040,49 @@ export default function QuestionnaireForm({
                       {question.helperText}
                     </p>
                   ) : null}
+                  {maxSelections !== undefined ? (
+                    <p className="text-xs text-navy-soft">
+                      Select exactly {maxSelections} ({selected.length}/
+                      {maxSelections} selected)
+                    </p>
+                  ) : null}
                   <div className="space-y-2">
-                    {options.map((option) => (
-                      <label
-                        key={option}
-                        className="flex items-center gap-2 text-sm text-navy-soft"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selected.includes(option)}
-                          onChange={(event) => {
-                            const next = event.target.checked
-                              ? [...selected, option]
-                              : selected.filter((item) => item !== option);
-                            updateAnswer(question.id, { value: next });
-                          }}
-                        />
-                        {option}
-                      </label>
-                    ))}
+                    {options.map((option) => {
+                      const isChecked = selected.includes(option);
+                      const isDisabled = limitReached && !isChecked;
+                      return (
+                        <label
+                          key={option}
+                          className={`flex items-center gap-2 text-sm ${isDisabled ? "opacity-40 cursor-not-allowed" : "text-navy-soft"}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            disabled={isDisabled}
+                            onChange={(event) => {
+                              const next = event.target.checked
+                                ? [...selected, option]
+                                : selected.filter((item) => item !== option);
+                              updateAnswer(question.id, { value: next });
+                              if (fieldErrors[question.id]) {
+                                setFieldErrors((prev) => {
+                                  const updated = { ...prev };
+                                  delete updated[question.id];
+                                  return updated;
+                                });
+                              }
+                            }}
+                          />
+                          {option}
+                        </label>
+                      );
+                    })}
                   </div>
+                  {fieldErrors[question.id] ? (
+                    <p className="text-xs text-red-500">
+                      {fieldErrors[question.id]}
+                    </p>
+                  ) : null}
                 </div>
               );
             }
@@ -941,6 +1244,7 @@ export default function QuestionnaireForm({
                                 updateAnswer(question.id, {
                                   value: { ...allocations, [item]: newValue },
                                 });
+                                clearFieldError(question.id);
                               }}
                             />
                             <span className="text-sm text-navy-soft">pts</span>
@@ -961,6 +1265,11 @@ export default function QuestionnaireForm({
                       </span>
                     </div>
                   </div>
+                  {fieldErrors[question.id] ? (
+                    <p className="text-xs text-red-500">
+                      {fieldErrors[question.id]}
+                    </p>
+                  ) : null}
                 </div>
               );
             }
@@ -1013,6 +1322,7 @@ export default function QuestionnaireForm({
                 const [draggedItem] = newItems.splice(dragIndex, 1);
                 newItems.splice(dropIndex, 0, draggedItem);
                 updateAnswer(question.id, { value: newItems });
+                clearFieldError(question.id);
               };
 
               return (
@@ -1071,6 +1381,11 @@ export default function QuestionnaireForm({
                       ))}
                     </div>
                   </div>
+                  {fieldErrors[question.id] ? (
+                    <p className="text-xs text-red-500">
+                      {fieldErrors[question.id]}
+                    </p>
+                  ) : null}
                 </div>
               );
             }

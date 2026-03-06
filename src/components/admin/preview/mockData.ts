@@ -6,7 +6,7 @@ export const mockBasicInfo = {
   email: "alex.johnson@example.com",
   phone: "(555) 123-4567",
   age: 28,
-  gender: "FEMALE" as const,
+  gender: "WOMAN" as const,
   location: "San Francisco, CA",
   instagram: "@alexjohnson",
 };
@@ -22,7 +22,7 @@ export const mockDemographics = {
   referredBy: "Jordan Lee",
   aboutYourself:
     "Passionate about technology and outdoor activities. I love hiking, reading science fiction, and building community connections. Looking forward to being part of this journey.",
-  seeking: "MALE",
+  seeking: "MAN",
   height: "5'6\"",
   bodyType: "Athletic",
   ethnicity: "Asian",
@@ -65,7 +65,7 @@ export const mockQuestionnaireAnswers: Record<
 export const mockInviteToken = "preview-invite-token-123";
 
 export const mockPaymentInfo = {
-  amount: 500,
+  amount: 199,
   currency: "USD",
   status: "pending" as const,
   description: "Application processing fee",

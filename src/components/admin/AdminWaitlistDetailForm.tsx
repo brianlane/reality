@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 
@@ -25,6 +26,10 @@ export default function AdminWaitlistDetailForm({
   applicantId,
 }: AdminWaitlistDetailFormProps) {
   const [data, setData] = useState<WaitlistDetail | null>(null);
+  const [applicationStatus, setApplicationStatus] = useState("WAITLIST");
+  const [initialApplicationStatus, setInitialApplicationStatus] = useState<
+    string | null
+  >(null);
   const [waitlistReason, setWaitlistReason] = useState("");
   const [waitlistPosition, setWaitlistPosition] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +56,9 @@ export default function AdminWaitlistDetailForm({
           return;
         }
         setData(json.applicant);
+        const status = json.applicant.applicationStatus ?? "WAITLIST";
+        setApplicationStatus(status);
+        setInitialApplicationStatus(status);
         setWaitlistReason(json.applicant.waitlistReason ?? "");
         setWaitlistPosition(
           json.applicant.waitlistPosition
@@ -87,6 +95,11 @@ export default function AdminWaitlistDetailForm({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          // Only include applicationStatus if it has changed from initial value
+          // This prevents validation errors for applicants in invite-only statuses
+          ...(applicationStatus !== initialApplicationStatus && {
+            applicationStatus,
+          }),
           waitlistReason: waitlistReason || null,
           waitlistPosition: waitlistPosition ? Number(waitlistPosition) : null,
         }),
@@ -98,6 +111,20 @@ export default function AdminWaitlistDetailForm({
         return;
       }
       setSuccess("Waitlist details updated.");
+      // Update initial status to current value after successful save
+      // This ensures subsequent status changes are detected correctly
+      if (applicationStatus !== initialApplicationStatus) {
+        setInitialApplicationStatus(applicationStatus);
+      }
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              applicationStatus:
+                json?.applicant?.applicationStatus ?? applicationStatus,
+            }
+          : prev,
+      );
       setIsSaving(false);
     } catch {
       setError("Failed to update waitlist details.");
@@ -159,8 +186,35 @@ export default function AdminWaitlistDetailForm({
           {data.user.firstName} {data.user.lastName}
         </div>
         <div className="text-sm text-navy-soft">{data.user.email}</div>
-        <div className="mt-1 text-xs text-navy-soft">
-          Status: {data.applicationStatus}
+        <div className="mt-3 max-w-sm space-y-2">
+          <label className="text-xs font-semibold text-navy-soft">
+            Application Status
+          </label>
+          <Select
+            value={applicationStatus}
+            onChange={(event) => setApplicationStatus(event.target.value)}
+            disabled={applicationStatus.startsWith("RESEARCH_")}
+            title={
+              applicationStatus.startsWith("RESEARCH_")
+                ? "Research statuses cannot be changed. Use /admin/research to manage research participants."
+                : undefined
+            }
+          >
+            <option value="DRAFT">Draft</option>
+            <option value="SUBMITTED">Submitted</option>
+            <option value="PAYMENT_PENDING">Payment Pending</option>
+            <option value="SCREENING_IN_PROGRESS">Screening</option>
+            <option value="APPROVED">Approved</option>
+            <option value="WAITLIST">Waitlist</option>
+            {/* Invite-only and research statuses cannot be set directly */}
+            {/* Show current status as read-only if applicant is in one of these states */}
+            {(applicationStatus === "WAITLIST_INVITED" ||
+              applicationStatus.startsWith("RESEARCH_")) && (
+              <option value={applicationStatus} disabled>
+                {applicationStatus.replace(/_/g, " ")} (read-only)
+              </option>
+            )}
+          </Select>
         </div>
       </div>
 

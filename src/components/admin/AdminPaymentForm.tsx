@@ -241,6 +241,13 @@ export default function AdminPaymentForm({
 
   async function handleRefund() {
     if (!paymentId) return;
+    if (
+      !window.confirm(
+        "Issue a refund for this payment? If a Stripe payment ID is present this will return real money to the customer.",
+      )
+    ) {
+      return;
+    }
     setIsLoading(true);
     setError(null);
     setSuccess(null);
@@ -348,7 +355,7 @@ export default function AdminPaymentForm({
               onClick={handleRefund}
               disabled={isLoading}
             >
-              Mock Refund
+              Refund
             </Button>
             <Button
               type="button"
