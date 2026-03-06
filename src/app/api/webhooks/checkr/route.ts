@@ -162,15 +162,21 @@ async function handleReportCompleted(data: {
     mappedStatus: screeningStatus,
   });
 
-  // Trigger orchestrator for next steps (non-blocking)
-  onCheckrComplete(applicant.id, screeningStatus, result).catch(
-    (err: unknown) => {
-      logger.error("Orchestrator onCheckrComplete failed", {
-        applicantId: applicant.id,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    },
-  );
+  // Await orchestrator so transient failures return 500 and trigger provider retry.
+  // Fire-and-forget would leave applicants stuck in IN_PROGRESS with no recovery.
+  try {
+    await onCheckrComplete(applicant.id, screeningStatus, result);
+  } catch (err: unknown) {
+    logger.error("Orchestrator onCheckrComplete failed", {
+      applicantId: applicant.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return errorResponse(
+      "ORCHESTRATION_FAILED",
+      "Failed to process report completion",
+      500,
+    );
+  }
 
   return successResponse({ received: true, processed: true });
 }

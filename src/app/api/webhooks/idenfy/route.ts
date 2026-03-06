@@ -113,13 +113,21 @@ export async function POST(request: Request) {
     mappedStatus: screeningStatus,
   });
 
-  // Trigger orchestrator for next steps (non-blocking)
-  onIdenfyComplete(applicant.id, screeningStatus).catch((err: unknown) => {
+  // Await orchestrator so transient failures return 500 and trigger provider retry.
+  // Fire-and-forget would leave applicants stuck in IN_PROGRESS with no recovery.
+  try {
+    await onIdenfyComplete(applicant.id, screeningStatus);
+  } catch (err: unknown) {
     logger.error("Orchestrator onIdenfyComplete failed", {
       applicantId: applicant.id,
       error: err instanceof Error ? err.message : String(err),
     });
-  });
+    return errorResponse(
+      "ORCHESTRATION_FAILED",
+      "Failed to process identity verification completion",
+      500,
+    );
+  }
 
   return successResponse({ received: true, processed: true });
 }
