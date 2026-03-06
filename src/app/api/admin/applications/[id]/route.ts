@@ -62,6 +62,8 @@ export async function GET(request: Request, { params }: RouteContext) {
       aboutYourself: applicant.aboutYourself,
       incomeVerified: applicant.incomeVerified,
       applicationStatus: applicant.applicationStatus,
+      screeningStatus: applicant.screeningStatus,
+      compatibilityScore: applicant.compatibilityScore,
       createdAt: applicant.createdAt,
       submittedAt: applicant.submittedAt,
       questionnaireStartedAt:
