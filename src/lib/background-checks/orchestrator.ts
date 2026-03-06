@@ -47,13 +47,15 @@ export async function initiateScreening(applicantId: string): Promise<void> {
     currentStatus: applicant.applicationStatus,
   });
 
-  // Only transition to SCREENING_IN_PROGRESS from SUBMITTED to avoid
-  // regressing later states (APPROVED, WAITLIST, etc.) if an admin acts
-  // before this async function executes.
+  // Only transition from SUBMITTED to SCREENING_IN_PROGRESS. Restricting to
+  // SUBMITTED (not SCREENING_IN_PROGRESS) ensures that when consent and submit
+  // routes call initiateScreening concurrently, only the first update matches
+  // and sends the email — the second sees SCREENING_IN_PROGRESS and matches 0
+  // rows, avoiding duplicate "screening in progress" emails.
   const statusUpdate = await db.applicant.updateMany({
     where: {
       id: applicantId,
-      applicationStatus: { in: ["SUBMITTED", "SCREENING_IN_PROGRESS"] },
+      applicationStatus: "SUBMITTED",
     },
     data: {
       applicationStatus: "SCREENING_IN_PROGRESS",
