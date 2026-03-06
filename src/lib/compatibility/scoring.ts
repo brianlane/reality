@@ -4,7 +4,6 @@ import {
   FlagSeverity,
   QuestionnaireQuestion,
   ScreeningStatus,
-  type Applicant,
 } from "@prisma/client";
 import { applyFilters, checkScreeningFlags } from "@/lib/matching/filters";
 import {
@@ -44,16 +43,12 @@ export interface ApplicantCompatibilityResult {
   readinessFlag: FlagSeverity | null;
   saFlag: FlagSeverity | null;
   multiplier: number;
-  finalScore: number;
+  /** null when no eligible candidates were available to score against */
+  finalScore: number | null;
 }
 
-const READINESS_MULTIPLIER: Record<FlagSeverity, number> = {
-  GREEN: 1.0,
-  YELLOW: 0.9,
-  RED: 0.7,
-};
-
-const SA_MULTIPLIER: Record<FlagSeverity, number> = {
+// Readiness and SA flags use the same multiplier scale; kept as one table.
+const FLAG_MULTIPLIER: Record<FlagSeverity, number> = {
   GREEN: 1.0,
   YELLOW: 0.9,
   RED: 0.7,
@@ -71,8 +66,8 @@ function getFlagMultiplier(
   readinessFlag: FlagSeverity | null,
   saFlag: FlagSeverity | null,
 ): number {
-  const readiness = readinessFlag ? READINESS_MULTIPLIER[readinessFlag] : 1.0;
-  const sa = saFlag ? SA_MULTIPLIER[saFlag] : 1.0;
+  const readiness = readinessFlag ? FLAG_MULTIPLIER[readinessFlag] : 1.0;
+  const sa = saFlag ? FLAG_MULTIPLIER[saFlag] : 1.0;
   return readiness * sa;
 }
 
@@ -187,7 +182,7 @@ export async function computeAndStoreApplicantCompatibility(
 
   const filtered = applyFilters(applicant, candidates);
 
-  const eligible = filtered.filter((c) => !checkScreeningFlags(c as Applicant));
+  const eligible = filtered.filter((c) => !checkScreeningFlags(c));
 
   const allIds = [applicantId, ...eligible.map((c) => c.id)];
   const cache = await preloadAnswerCache(allIds);
@@ -214,9 +209,12 @@ export async function computeAndStoreApplicantCompatibility(
     applicant.relationshipReadinessFlag,
     applicant.saScreeningFlag,
   );
-  const finalScore = Math.round(
-    Math.max(0, Math.min(100, avgPairwiseScore * multiplier)),
-  );
+  // Store null instead of 0 when there are no candidates — a 0 score would be
+  // indistinguishable from "scored and truly incompatible with everyone".
+  const finalScore =
+    candidateCount > 0
+      ? Math.round(Math.max(0, Math.min(100, avgPairwiseScore * multiplier)))
+      : null;
 
   await db.applicant.update({
     where: { id: applicantId },

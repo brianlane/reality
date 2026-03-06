@@ -86,10 +86,13 @@ export async function POST(request: Request, { params }: RouteContext) {
     applicantId: applicant.id,
   }).catch((err) => console.error("Failed to send approval email:", err));
 
-  // Auto-compute compatibility score against the approved pool (fire-and-forget)
-  computeAndStoreApplicantCompatibility(id).catch((err) =>
-    console.error(`Failed to compute compatibility score for ${id}:`, err),
-  );
+  // Auto-compute compatibility score against the approved pool (fire-and-forget).
+  // Skip if the admin explicitly provided a manual score — don't overwrite it.
+  if (body.compatibilityScore === undefined) {
+    computeAndStoreApplicantCompatibility(id).catch((err) =>
+      console.error(`Failed to compute compatibility score for ${id}:`, err),
+    );
+  }
 
   return successResponse({
     applicant: {

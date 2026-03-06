@@ -88,10 +88,7 @@ export default function AdminApplicationForm({
           referredBy: json.applicant.referredBy ?? "",
           aboutYourself: json.applicant.aboutYourself ?? "",
           applicationStatus: status,
-          screeningStatus:
-            json.applicant.screeningStatus ??
-            json.screening?.screeningStatus ??
-            "PENDING",
+          screeningStatus: json.applicant.screeningStatus ?? "PENDING",
           compatibilityScore:
             json.applicant.compatibilityScore !== null &&
             json.applicant.compatibilityScore !== undefined
