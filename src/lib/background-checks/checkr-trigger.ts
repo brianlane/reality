@@ -34,7 +34,7 @@ type TriggerCheckrInvitationResult =
  * - atomic claim (PENDING/FAILED -> IN_PROGRESS)
  * - candidate creation/reuse
  * - invitation creation
- * - audit logging (non-blocking)
+ * - audit logging (compliance-critical; failures propagate)
  * - rollback to the pre-claim status on failure
  */
 export async function triggerCheckrInvitation(
@@ -89,26 +89,21 @@ export async function triggerCheckrInvitation(
 
     const invitation = await createInvitation(candidateId);
 
-    await db.screeningAuditLog
-      .create({
-        data: {
-          userId: audit.userId,
-          applicantId,
-          action: audit.action,
-          metadata: {
-            candidateId,
-            invitationId: invitation.id,
-            ...(invitation.package ? { package: invitation.package } : {}),
-            ...(audit.metadata ?? {}),
-          },
+    // Audit log is compliance-critical; no .catch() — failures must propagate
+    // so callers (webhook, admin API) can retry and we roll back the status claim.
+    await db.screeningAuditLog.create({
+      data: {
+        userId: audit.userId,
+        applicantId,
+        action: audit.action,
+        metadata: {
+          candidateId,
+          invitationId: invitation.id,
+          ...(invitation.package ? { package: invitation.package } : {}),
+          ...(audit.metadata ?? {}),
         },
-      })
-      .catch((err: unknown) => {
-        logger.warn("Failed to create screening audit log", {
-          applicantId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
+      },
+    });
 
     return {
       status: "invitation_sent",
