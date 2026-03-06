@@ -120,7 +120,7 @@ export default function AdminApplicationForm({
               json.applicant.compatibilityScore !== undefined
                 ? String(json.applicant.compatibilityScore)
                 : "",
-            notes: json.screening?.backgroundCheckNotes ?? "",
+            notes: "",
             photos: Array.isArray(json.applicant.photos)
               ? json.applicant.photos.join(", ")
               : "",
@@ -233,7 +233,6 @@ export default function AdminApplicationForm({
                 compatibilityScore: form.compatibilityScore
                   ? Number(form.compatibilityScore)
                   : undefined,
-                backgroundCheckNotes: form.notes || null,
                 photos: form.photos
                   ? form.photos.split(",").map((item) => item.trim())
                   : undefined,

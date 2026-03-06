@@ -58,6 +58,8 @@ export default function ScreeningDetail({
   const fetchReport = async () => {
     setIsLoadingReport(true);
     setReportData(null);
+    setActionError(null);
+    setActionMessage(null);
     try {
       const headers = await getAuthHeaders();
       if (!headers) return;
