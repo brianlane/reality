@@ -120,7 +120,7 @@ export default function AdminApplicationForm({
               json.applicant.compatibilityScore !== undefined
                 ? String(json.applicant.compatibilityScore)
                 : "",
-            notes: json.applicant.backgroundCheckNotes ?? "",
+            notes: json.screening?.backgroundCheckNotes ?? "",
             photos: Array.isArray(json.applicant.photos)
               ? json.applicant.photos.join(", ")
               : "",
