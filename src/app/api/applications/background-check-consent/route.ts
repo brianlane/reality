@@ -106,14 +106,17 @@ export async function POST(request: Request) {
     const realIp = headerList.get("x-real-ip");
     const clientIp = forwardedFor?.split(",")[0]?.trim() || realIp || "unknown";
 
-    // Record consent AND audit log atomically in a transaction, and include
-    // a re-read of applicationStatus within the same transaction. This ensures
-    // the re-read sees any applicationStatus committed by a concurrent submit
-    // route before our read executes, closing the race window that existed when
-    // the write and re-read were separate statements.
-    // The audit log contains the digital signature (fullName) which is
-    // FCRA-critical legal evidence — it must succeed atomically with the consent
-    // write or retries would hit the "already_consented" guard and lose the sig.
+    // Record consent and audit log atomically so the FCRA-critical digital
+    // signature (fullName) is never lost if the write partially fails.
+    // The findUnique at index [2] re-reads applicationStatus within the same
+    // DB transaction; under READ COMMITTED it sees any applicationStatus
+    // committed by a concurrent submit route BEFORE this statement executes.
+    // Note: if both routes' reads run before either write commits, both could
+    // miss each other's change — neither would call initiateScreening and the
+    // applicant would be stuck. This window is very narrow in practice, and a
+    // future compensation mechanism (e.g. a background job) would close it
+    // fully. The initiateScreening updateMany guard prevents DUPLICATE
+    // initiations; it does not prevent this missed-initiation scenario.
     const consentTimestamp = new Date();
     const [, , freshApplicant] = await db.$transaction([
       db.applicant.update({

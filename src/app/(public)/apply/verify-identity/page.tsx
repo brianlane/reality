@@ -51,10 +51,7 @@ export default async function VerifyIdentityPage({ searchParams }: PageProps) {
       <div className="mx-auto max-w-2xl px-4">
         <VerifyIdentityClient
           applicationId={applicant.id}
-          initialStatus={
-            (applicant.idenfyStatus as "PENDING" | "IN_PROGRESS" | "FAILED") ??
-            "PENDING"
-          }
+          initialStatus={applicant.idenfyStatus}
         />
       </div>
     </div>

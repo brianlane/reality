@@ -47,21 +47,24 @@ export async function GET(_request: Request, { params }: RouteContext) {
     );
   }
 
-  // Log the access BEFORE fetching the report (audit compliance)
-  await db.screeningAuditLog.create({
-    data: {
-      userId: adminUser.userId,
-      applicantId: applicant.id,
-      action: "VIEW_REPORT",
-      metadata: {
-        reportId: applicant.checkrReportId,
-        adminEmail: adminUser.email,
-      },
-    },
-  });
-
   try {
     const report = await getReport(applicant.checkrReportId);
+
+    // Log the access AFTER confirming the report was successfully fetched and
+    // delivered to the admin. Writing before getReport would create a false
+    // compliance record if the Checkr API call fails — the admin is logged as
+    // having "viewed" a report they never actually saw.
+    await db.screeningAuditLog.create({
+      data: {
+        userId: adminUser.userId,
+        applicantId: applicant.id,
+        action: "VIEW_REPORT",
+        metadata: {
+          reportId: applicant.checkrReportId,
+          adminEmail: adminUser.email,
+        },
+      },
+    });
 
     // Return a sanitized view -- only what the admin needs
     return successResponse({
