@@ -183,11 +183,20 @@ describe("POST /api/applications/background-check-consent", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant() as never,
     );
-    vi.mocked(db.$transaction).mockResolvedValue([
-      {},
-      {},
-      { applicationStatus: "SUBMITTED" },
-    ] as never);
+    vi.mocked(db.$transaction).mockImplementation(async (callback) => {
+      const tx = {
+        applicant: {
+          update: vi.fn().mockResolvedValue(undefined),
+          findUnique: vi.fn().mockResolvedValue({
+            applicationStatus: "SUBMITTED",
+          }),
+        },
+        screeningAuditLog: {
+          create: vi.fn().mockResolvedValue(undefined),
+        },
+      };
+      return callback(tx as never);
+    });
 
     const res = await POST(makeRequest(validBody));
     expect(res.status).toBe(200);
@@ -208,11 +217,20 @@ describe("POST /api/applications/background-check-consent", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant() as never,
     );
-    vi.mocked(db.$transaction).mockResolvedValue([
-      {},
-      {},
-      { applicationStatus: "SUBMITTED" },
-    ] as never);
+    vi.mocked(db.$transaction).mockImplementation(async (callback) => {
+      const tx = {
+        applicant: {
+          update: vi.fn().mockResolvedValue(undefined),
+          findUnique: vi.fn().mockResolvedValue({
+            applicationStatus: "SUBMITTED",
+          }),
+        },
+        screeningAuditLog: {
+          create: vi.fn().mockResolvedValue(undefined),
+        },
+      };
+      return callback(tx as never);
+    });
 
     await POST(makeRequest(validBody));
 
@@ -235,11 +253,20 @@ describe("POST /api/applications/background-check-consent", () => {
     // Transaction returns SCREENING_IN_PROGRESS — screening already underway.
     // initiateScreening's updateMany guard only matches SUBMITTED, so calling
     // it here would be a no-op. The condition should not trigger.
-    vi.mocked(db.$transaction).mockResolvedValue([
-      {},
-      {},
-      { applicationStatus: "SCREENING_IN_PROGRESS" },
-    ] as never);
+    vi.mocked(db.$transaction).mockImplementation(async (callback) => {
+      const tx = {
+        applicant: {
+          update: vi.fn().mockResolvedValue(undefined),
+          findUnique: vi.fn().mockResolvedValue({
+            applicationStatus: "SCREENING_IN_PROGRESS",
+          }),
+        },
+        screeningAuditLog: {
+          create: vi.fn().mockResolvedValue(undefined),
+        },
+      };
+      return callback(tx as never);
+    });
 
     await POST(makeRequest(validBody));
 

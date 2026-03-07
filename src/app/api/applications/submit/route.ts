@@ -120,14 +120,12 @@ export async function POST(request: NextRequest) {
       }
 
       // Write SUBMITTED and re-read backgroundCheckConsentAt in the same
-      // DB transaction. Under READ COMMITTED, the findUnique sees any consent
-      // committed by a concurrent request BEFORE this statement executes.
-      // Note: if both routes' reads run before either write commits, both could
-      // miss each other — neither would call initiateScreening. This narrow
-      // window is acceptable in practice; the initiateScreening updateMany
-      // guard prevents duplicate initiations but does not prevent missed ones.
-      const [, freshApplicant] = await db.$transaction([
-        db.applicant.update({
+      // DB transaction. The findUnique runs after the update within the same
+      // BEGIN...COMMIT block, so it sees the status write (read-your-own-writes).
+      // Under READ COMMITTED it also sees any backgroundCheckConsentAt committed
+      // by a concurrent consent route before the findUnique executes.
+      const freshApplicant = await db.$transaction(async (tx) => {
+        await tx.applicant.update({
           where: { id: applicant.id },
           data: {
             applicationStatus: "SUBMITTED",
@@ -137,12 +135,12 @@ export async function POST(request: NextRequest) {
             invitedOffWaitlistAt: null,
             invitedOffWaitlistBy: null,
           },
-        }),
-        db.applicant.findUnique({
+        });
+        return tx.applicant.findUnique({
           where: { id: applicant.id },
           select: { backgroundCheckConsentAt: true },
-        }),
-      ]);
+        });
+      });
 
       // Notify admin that an application was submitted (non-blocking)
       notifyApplicationSubmitted({

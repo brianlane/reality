@@ -108,25 +108,24 @@ export async function POST(request: Request) {
 
     // Record consent and audit log atomically so the FCRA-critical digital
     // signature (fullName) is never lost if the write partially fails.
-    // The findUnique at index [2] re-reads applicationStatus within the same
-    // DB transaction; under READ COMMITTED it sees any applicationStatus
-    // committed by a concurrent submit route BEFORE this statement executes.
+    // The findUnique runs after the update within the same BEGIN...COMMIT block,
+    // so it sees the consent write (read-your-own-writes). Under READ COMMITTED
+    // it also sees any applicationStatus committed by a concurrent submit route
+    // before the findUnique statement executes.
     // Note: if both routes' reads run before either write commits, both could
-    // miss each other's change — neither would call initiateScreening and the
-    // applicant would be stuck. This window is very narrow in practice, and a
-    // future compensation mechanism (e.g. a background job) would close it
-    // fully. The initiateScreening updateMany guard prevents DUPLICATE
-    // initiations; it does not prevent this missed-initiation scenario.
+    // miss each other — neither would call initiateScreening. This narrow
+    // window is acceptable in practice; the initiateScreening updateMany guard
+    // prevents duplicate initiations but does not prevent missed ones.
     const consentTimestamp = new Date();
-    const [, , freshApplicant] = await db.$transaction([
-      db.applicant.update({
+    const freshApplicant = await db.$transaction(async (tx) => {
+      await tx.applicant.update({
         where: { id: applicant.id },
         data: {
           backgroundCheckConsentAt: consentTimestamp,
           backgroundCheckConsentIp: clientIp,
         },
-      }),
-      db.screeningAuditLog.create({
+      });
+      await tx.screeningAuditLog.create({
         data: {
           userId: applicant.userId,
           applicantId: applicant.id,
@@ -140,12 +139,12 @@ export async function POST(request: Request) {
             evergreenConsentGiven: true,
           },
         },
-      }),
-      db.applicant.findUnique({
+      });
+      return tx.applicant.findUnique({
         where: { id: applicant.id },
         select: { applicationStatus: true },
-      }),
-    ]);
+      });
+    });
 
     logger.info("FCRA background check consent recorded", {
       applicantId: applicant.id,
