@@ -117,6 +117,76 @@ async function handleReportCompleted(data: {
 
   const screeningStatus = mapCheckrResult(result);
 
+  // Soft-deleted: audit log for compliance, no status update. Use audit-log
+  // existence check for idempotency (we cannot use updateMany since we skip it).
+  if (applicant.deletedAt) {
+    const existingLog = await db.screeningAuditLog.findFirst({
+      where: {
+        applicantId: applicant.id,
+        action: "CHECKR_REPORT_COMPLETED",
+        metadata: { path: ["reportId"], equals: reportId },
+      },
+    });
+    if (existingLog) {
+      logger.info(
+        "Checkr report already processed (soft-deleted, idempotent retry)",
+        {
+          applicantId: applicant.id,
+          reportId,
+        },
+      );
+      return successResponse({ received: true, processed: false });
+    }
+    await db.screeningAuditLog.create({
+      data: {
+        userId: null,
+        applicantId: applicant.id,
+        action: "CHECKR_REPORT_COMPLETED",
+        metadata: {
+          reportId,
+          candidateId,
+          result,
+          mappedStatus: screeningStatus,
+        },
+      },
+    });
+    logger.info(
+      "Checkr report.completed for soft-deleted applicant, audit logged",
+      {
+        applicantId: applicant.id,
+        reportId,
+      },
+    );
+    return successResponse({ received: true, processed: false });
+  }
+
+  // FCRA-required audit log before the claim. If audit fails, we return 500 and
+  // the provider retries; the retry will create the audit (or find it exists).
+  // Writing before the claim ensures that if the claim succeeds but a later step
+  // fails, the retry hits the idempotency guard but the audit is already present.
+  const existingAudit = await db.screeningAuditLog.findFirst({
+    where: {
+      applicantId: applicant.id,
+      action: "CHECKR_REPORT_COMPLETED",
+      metadata: { path: ["reportId"], equals: reportId },
+    },
+  });
+  if (!existingAudit) {
+    await db.screeningAuditLog.create({
+      data: {
+        userId: null,
+        applicantId: applicant.id,
+        action: "CHECKR_REPORT_COMPLETED",
+        metadata: {
+          reportId,
+          candidateId,
+          result,
+          mappedStatus: screeningStatus,
+        },
+      },
+    });
+  }
+
   // Atomically claim first-time processing for this specific report. The guard
   // uses { not: reportId } rather than null for two reasons:
   // 1. OR-fallback conflict: if the applicant was found via the checkrReportId
@@ -143,38 +213,12 @@ async function handleReportCompleted(data: {
     return successResponse({ received: true, processed: false });
   }
 
-  // Audit log only on first-time processing (after idempotency claim).
-  // Failures must return 500 so the provider retries; we cannot proceed without
-  // a legally required record.
-  await db.screeningAuditLog.create({
-    data: {
-      userId: null,
-      applicantId: applicant.id,
-      action: "CHECKR_REPORT_COMPLETED",
-      metadata: {
-        reportId,
-        candidateId,
-        result,
-        mappedStatus: screeningStatus,
-      },
-    },
-  });
-
   logger.info("Checkr report completed", {
     applicantId: applicant.id,
     reportId,
     result,
     mappedStatus: screeningStatus,
   });
-
-  // Skip orchestration for soft-deleted applicants (audit log already created)
-  if (applicant.deletedAt) {
-    logger.info(
-      "Checkr report.completed for soft-deleted applicant, skipping orchestrator",
-      { applicantId: applicant.id, reportId },
-    );
-    return successResponse({ received: true, processed: false });
-  }
 
   // Await orchestrator so transient failures return 500 and trigger provider retry.
   // Fire-and-forget would leave applicants stuck in IN_PROGRESS with no recovery.

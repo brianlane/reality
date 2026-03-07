@@ -6,7 +6,7 @@ import { POST } from "./route";
 vi.mock("@/lib/db", () => ({
   db: {
     applicant: { findFirst: vi.fn(), updateMany: vi.fn() },
-    screeningAuditLog: { create: vi.fn() },
+    screeningAuditLog: { create: vi.fn(), findFirst: vi.fn() },
   },
 }));
 
@@ -197,7 +197,10 @@ describe("POST /api/webhooks/checkr", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant() as never,
     );
-    vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
+    // Audit already exists from first delivery (retry scenario)
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue({
+      id: "log-1",
+    } as never);
     // updateMany returns 0 = report already recorded (idempotent retry)
     vi.mocked(db.applicant.updateMany).mockResolvedValue({ count: 0 });
 
@@ -205,6 +208,8 @@ describe("POST /api/webhooks/checkr", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.processed).toBe(false);
+    // No duplicate audit log on retry
+    expect(db.screeningAuditLog.create).not.toHaveBeenCalled();
     expect(onCheckrComplete).not.toHaveBeenCalled();
   });
 
@@ -219,6 +224,7 @@ describe("POST /api/webhooks/checkr", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant({ deletedAt: new Date() }) as never,
     );
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue(null);
     vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
 
     const res = await POST(makeRequest(makeReportCompletedEvent()));
