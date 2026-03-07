@@ -79,6 +79,11 @@ export async function POST(request: Request) {
     // pre-claim state instead of always resetting to PENDING.
     let rollbackStatus: "PENDING" | "FAILED" | "IN_PROGRESS" | null = null;
     let rollbackVerificationId: string | null = null;
+    // Separate flag because rollbackVerificationId can legitimately be null
+    // (when forceNewSession claims a row whose idenfyVerificationId was null).
+    // Using null as a sentinel would skip the rollback in that case, leaving
+    // the "claiming-{uuid}" placeholder permanently in the database.
+    let shouldRollbackVerificationId = false;
 
     const claimedFromFailed = await db.applicant.updateMany({
       where: { id: applicant.id, idenfyStatus: "FAILED" },
@@ -108,6 +113,7 @@ export async function POST(request: Request) {
         if (claimedFromInProgress.count > 0) {
           rollbackStatus = "IN_PROGRESS";
           rollbackVerificationId = applicant.idenfyVerificationId;
+          shouldRollbackVerificationId = true;
         }
       }
     }
@@ -144,7 +150,7 @@ export async function POST(request: Request) {
         where: { id: applicant.id, idenfyStatus: "IN_PROGRESS" },
         data: {
           idenfyStatus: rollbackStatus,
-          ...(rollbackVerificationId !== null
+          ...(shouldRollbackVerificationId
             ? { idenfyVerificationId: rollbackVerificationId }
             : {}),
         },
