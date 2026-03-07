@@ -3,7 +3,6 @@ import {
   createInvitation,
 } from "@/lib/background-checks/checkr";
 import { db } from "@/lib/db";
-import { logger } from "@/lib/logger";
 
 type TriggerCheckrInvitationParams = {
   applicantId: string;
@@ -123,7 +122,4 @@ export async function triggerCheckrInvitation(
     packageName:
       typeof invitation.package === "string" ? invitation.package : null,
   };
-</think>
-
-<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
-Read
+}
