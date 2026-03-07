@@ -143,13 +143,18 @@ async function handleReportCompleted(data: {
     return successResponse({ received: true, processed: false });
   }
 
-  // Atomically claim first-time processing by storing the report ID only when
-  // it has not been set yet. This makes the handler idempotent: if Checkr
-  // retries a webhook (e.g. after a transient 500), the guard matches 0 rows
-  // and we return 200 below without re-running the orchestrator — preventing
-  // duplicate appendNote writes and redundant finalization attempts.
+  // Atomically claim first-time processing for this specific report. The guard
+  // uses { not: reportId } rather than null for two reasons:
+  // 1. OR-fallback conflict: if the applicant was found via the checkrReportId
+  //    fallback, checkrReportId is already reportId — a null guard would always
+  //    match 0 rows, silently dropping the webhook without running the orchestrator.
+  // 2. Re-trigger support: if an admin re-triggers after FAILED, checkrReportId
+  //    holds the old report ID; a null guard would block the new report entirely.
+  // { not: reportId } correctly handles all cases: first delivery (null ≠ reportId
+  // → matches), re-trigger with old ID (old ≠ new → matches), and idempotent
+  // retry of the same report (reportId = reportId → 0 rows → "already processed").
   const claimed = await db.applicant.updateMany({
-    where: { id: applicant.id, checkrReportId: null },
+    where: { id: applicant.id, checkrReportId: { not: reportId } },
     data: {
       checkrStatus: screeningStatus,
       checkrReportId: reportId,

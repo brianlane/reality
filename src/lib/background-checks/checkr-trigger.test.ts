@@ -65,9 +65,7 @@ describe("triggerCheckrInvitation", () => {
 
   it("claims from FAILED status and sends invitation", async () => {
     const { db } = await import("@/lib/db");
-    const { createInvitation } = await import(
-      "@/lib/background-checks/checkr"
-    );
+    const { createInvitation } = await import("@/lib/background-checks/checkr");
     vi.mocked(db.applicant.updateMany)
       .mockResolvedValueOnce({ count: 1 }) // claimedFromFailed
       .mockResolvedValue({ count: 0 });
@@ -91,9 +89,7 @@ describe("triggerCheckrInvitation", () => {
 
   it("claims from PENDING status when not FAILED", async () => {
     const { db } = await import("@/lib/db");
-    const { createInvitation } = await import(
-      "@/lib/background-checks/checkr"
-    );
+    const { createInvitation } = await import("@/lib/background-checks/checkr");
     vi.mocked(db.applicant.updateMany)
       .mockResolvedValueOnce({ count: 0 }) // claimedFromFailed
       .mockResolvedValueOnce({ count: 1 }); // claimedFromPending
@@ -113,9 +109,8 @@ describe("triggerCheckrInvitation", () => {
 
   it("creates a new Checkr candidate when none exists", async () => {
     const { db } = await import("@/lib/db");
-    const { createCandidate, createInvitation } = await import(
-      "@/lib/background-checks/checkr"
-    );
+    const { createCandidate, createInvitation } =
+      await import("@/lib/background-checks/checkr");
     vi.mocked(db.applicant.updateMany).mockResolvedValueOnce({ count: 1 });
     vi.mocked(db.applicant.findUnique).mockResolvedValue({
       checkrCandidateId: null,
@@ -144,9 +139,7 @@ describe("triggerCheckrInvitation", () => {
 
   it("writes audit log BEFORE sending invitation (within rollback territory)", async () => {
     const { db } = await import("@/lib/db");
-    const { createInvitation } = await import(
-      "@/lib/background-checks/checkr"
-    );
+    const { createInvitation } = await import("@/lib/background-checks/checkr");
     const callOrder: string[] = [];
 
     vi.mocked(db.applicant.updateMany).mockResolvedValueOnce({ count: 1 });
@@ -193,9 +186,7 @@ describe("triggerCheckrInvitation", () => {
 
   it("rolls back checkrStatus and rethrows when createInvitation fails", async () => {
     const { db } = await import("@/lib/db");
-    const { createInvitation } = await import(
-      "@/lib/background-checks/checkr"
-    );
+    const { createInvitation } = await import("@/lib/background-checks/checkr");
     vi.mocked(db.applicant.updateMany).mockResolvedValueOnce({ count: 1 });
     vi.mocked(db.applicant.findUnique).mockResolvedValue({
       checkrCandidateId: "cand-1",
@@ -221,9 +212,7 @@ describe("triggerCheckrInvitation", () => {
 
   it("enriches audit log with invitationId after successful invitation", async () => {
     const { db } = await import("@/lib/db");
-    const { createInvitation } = await import(
-      "@/lib/background-checks/checkr"
-    );
+    const { createInvitation } = await import("@/lib/background-checks/checkr");
     vi.mocked(db.applicant.updateMany).mockResolvedValueOnce({ count: 1 });
     vi.mocked(db.applicant.findUnique).mockResolvedValue({
       checkrCandidateId: "cand-1",

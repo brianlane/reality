@@ -199,9 +199,8 @@ describe("POST /api/applications/background-check-consent", () => {
   it("calls initiateScreening when applicationStatus is SUBMITTED after consent", async () => {
     const { getAuthUser } = await import("@/lib/auth");
     const { db } = await import("@/lib/db");
-    const { initiateScreening } = await import(
-      "@/lib/background-checks/orchestrator",
-    );
+    const { initiateScreening } =
+      await import("@/lib/background-checks/orchestrator");
     vi.mocked(getAuthUser).mockResolvedValue({
       userId: "user-1",
       email: "jane@example.com",
@@ -224,9 +223,8 @@ describe("POST /api/applications/background-check-consent", () => {
   it("does NOT call initiateScreening when applicationStatus is SCREENING_IN_PROGRESS", async () => {
     const { getAuthUser } = await import("@/lib/auth");
     const { db } = await import("@/lib/db");
-    const { initiateScreening } = await import(
-      "@/lib/background-checks/orchestrator",
-    );
+    const { initiateScreening } =
+      await import("@/lib/background-checks/orchestrator");
     vi.mocked(getAuthUser).mockResolvedValue({
       userId: "user-1",
       email: "jane@example.com",
