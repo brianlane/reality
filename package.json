@@ -30,7 +30,8 @@
     "db:full": "concurrently \"npm run db:dev\" \"npm run db:studio\"",
     "dev:all": "concurrently \"npm run db:dev\" \"npm run db:studio\" \"npm run dev\" --names \"DB,STUDIO,NEXT\" -c \"blue,magenta,green\"",
     "db:reset": "npx prisma migrate reset && npm run seed:questions",
-    "seed:questions": "npx tsx scripts/seed-questions.ts"
+    "seed:questions": "npx tsx scripts/seed-questions.ts",
+    "prepare": "husky"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   }
 
   // Look up applicant by scanRef (idenfyVerificationId) or clientId (our applicant ID)
-  let applicant = await db.applicant.findFirst({
+  const applicant = await db.applicant.findFirst({
     where: {
       OR: [
         { idenfyVerificationId: scanRef },
@@ -94,14 +94,30 @@ export async function POST(request: Request) {
     return successResponse({ received: true, processed: false });
   }
 
-  // Update the iDenfy status
-  applicant = await db.applicant.update({
-    where: { id: applicant.id },
+  // Atomically claim first-time processing. Two guards work together:
+  // - idenfyVerificationId: scanRef — only the current active session is processed;
+  //   stale webhooks from a previous session (after forceNewSession) are rejected.
+  // - idenfyStatus PENDING/IN_PROGRESS — prevents re-running the orchestrator on
+  //   webhook retries after a 500; once PASSED/FAILED is written, retries return 200.
+  const claimed = await db.applicant.updateMany({
+    where: {
+      id: applicant.id,
+      idenfyVerificationId: scanRef,
+      idenfyStatus: { in: ["PENDING", "IN_PROGRESS"] },
+    },
     data: {
       idenfyStatus: screeningStatus,
       idenfyVerificationId: scanRef,
     },
   });
+
+  if (claimed.count === 0) {
+    logger.info("iDenfy webhook already processed (idempotent retry)", {
+      applicantId: applicant.id,
+      scanRef,
+    });
+    return successResponse({ received: true, processed: false });
+  }
 
   logger.info("iDenfy webhook processed", {
     applicantId: applicant.id,
