@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import ScreeningDetail from "@/components/admin/ScreeningDetail";
+import type { ScreeningData } from "@/components/admin/screening-types";
 import { runSkipPaymentFlow } from "@/lib/admin/skip-payment";
 
 type AdminApplicationFormProps = {
@@ -48,10 +50,28 @@ export default function AdminApplicationForm({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [screeningData, setScreeningData] = useState<ScreeningData | null>(
+    null,
+  );
+  // Counter to trigger re-fetching application data from the screening detail panel
+  const [refreshKey, setRefreshKey] = useState(0);
+  const incrementRefreshKey = () => setRefreshKey((k) => k + 1);
+  // Track whether the initial load has completed. On subsequent refreshes
+  // (triggered by screening actions), we only update screening data to avoid
+  // silently overwriting unsaved form edits the admin may have made.
+  const initialLoadDone = useRef(false);
+
+  // Reset when applicationId changes so we do a full load for the new applicant.
+  // Without this, client-side navigation reusing the component would take the
+  // "refresh" path and leave stale data from the previous applicant.
+  useEffect(() => {
+    initialLoadDone.current = false;
+  }, [applicationId]);
 
   useEffect(() => {
     if (mode !== "edit" || !applicationId) return;
     const controller = new AbortController();
+    const isRefresh = initialLoadDone.current;
 
     const loadApplication = async () => {
       try {
@@ -70,34 +90,63 @@ export default function AdminApplicationForm({
           return;
         }
         const status = json.applicant.applicationStatus ?? "SUBMITTED";
-        setInitialApplicationStatus(status);
-        setForm((prev) => ({
-          ...prev,
-          email: json.applicant.email ?? "",
-          firstName: json.applicant.firstName ?? "",
-          lastName: json.applicant.lastName ?? "",
-          age: String(json.applicant.age ?? ""),
-          gender: json.applicant.gender ?? "MAN",
-          location: json.applicant.location ?? "",
-          cityFrom: json.applicant.cityFrom ?? "",
-          industry: json.applicant.industry ?? "",
-          occupation: json.applicant.occupation ?? "",
-          employer: json.applicant.employer ?? "",
-          education: json.applicant.education ?? "",
-          incomeRange: json.applicant.incomeRange ?? "",
-          referredBy: json.applicant.referredBy ?? "",
-          aboutYourself: json.applicant.aboutYourself ?? "",
-          applicationStatus: status,
-          screeningStatus: json.applicant.screeningStatus ?? "PENDING",
-          compatibilityScore:
-            json.applicant.compatibilityScore !== null &&
-            json.applicant.compatibilityScore !== undefined
-              ? String(json.applicant.compatibilityScore)
+
+        if (!isRefresh) {
+          setInitialApplicationStatus(status);
+          setForm((prev) => ({
+            ...prev,
+            email: json.applicant.email ?? "",
+            firstName: json.applicant.firstName ?? "",
+            lastName: json.applicant.lastName ?? "",
+            age: String(json.applicant.age ?? ""),
+            gender: json.applicant.gender ?? "MAN",
+            location: json.applicant.location ?? "",
+            cityFrom: json.applicant.cityFrom ?? "",
+            industry: json.applicant.industry ?? "",
+            occupation: json.applicant.occupation ?? "",
+            employer: json.applicant.employer ?? "",
+            education: json.applicant.education ?? "",
+            incomeRange: json.applicant.incomeRange ?? "",
+            referredBy: json.applicant.referredBy ?? "",
+            aboutYourself: json.applicant.aboutYourself ?? "",
+            applicationStatus: status,
+            screeningStatus: json.applicant.screeningStatus ?? "PENDING",
+            compatibilityScore:
+              json.applicant.compatibilityScore !== null &&
+              json.applicant.compatibilityScore !== undefined
+                ? String(json.applicant.compatibilityScore)
+                : "",
+            notes: "",
+            photos: Array.isArray(json.applicant.photos)
+              ? json.applicant.photos.join(", ")
               : "",
-          photos: Array.isArray(json.applicant.photos)
-            ? json.applicant.photos.join(", ")
-            : "",
-        }));
+          }));
+          initialLoadDone.current = true;
+        } else {
+          setForm((prev) => ({
+            ...prev,
+            applicationStatus:
+              json.applicant.applicationStatus ?? prev.applicationStatus,
+            screeningStatus:
+              json.applicant.screeningStatus ?? prev.screeningStatus,
+          }));
+        }
+
+        setScreeningData({
+          screeningStatus: json.screening?.screeningStatus ?? "PENDING",
+          idenfyStatus: json.screening?.idenfyStatus ?? "PENDING",
+          idenfyVerificationId: json.screening?.idenfyVerificationId ?? null,
+          checkrStatus: json.screening?.checkrStatus ?? "PENDING",
+          checkrReportId: json.screening?.checkrReportId ?? null,
+          checkrCandidateId: json.screening?.checkrCandidateId ?? null,
+          backgroundCheckConsentAt:
+            json.screening?.backgroundCheckConsentAt ?? null,
+          backgroundCheckConsentIp:
+            json.screening?.backgroundCheckConsentIp ?? null,
+          backgroundCheckNotes: json.screening?.backgroundCheckNotes ?? null,
+          continuousMonitoringId:
+            json.screening?.continuousMonitoringId ?? null,
+        });
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
           setError("Failed to load application.");
@@ -108,7 +157,7 @@ export default function AdminApplicationForm({
     loadApplication();
 
     return () => controller.abort();
-  }, [mode, applicationId]);
+  }, [mode, applicationId, refreshKey]);
 
   function updateField(name: string, value: string) {
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -180,7 +229,11 @@ export default function AdminApplicationForm({
                 compatibilityScore: form.compatibilityScore
                   ? Number(form.compatibilityScore)
                   : undefined,
-                backgroundCheckNotes: form.notes || null,
+                ...(form.notes?.trim()
+                  ? {
+                      backgroundCheckNotes: form.notes.trim(),
+                    }
+                  : {}),
                 photos: form.photos
                   ? form.photos.split(",").map((item) => item.trim())
                   : undefined,
@@ -207,6 +260,9 @@ export default function AdminApplicationForm({
         return;
       }
       setSuccess("Application saved.");
+      if (payload.applicant && "backgroundCheckNotes" in payload.applicant) {
+        setForm((prev) => ({ ...prev, notes: "" }));
+      }
       // Update initial status to current value after successful save
       // This ensures subsequent status changes are detected correctly
       if (
@@ -618,6 +674,15 @@ export default function AdminApplicationForm({
           onChange={(event) => updateField("notes", event.target.value)}
         />
       </div>
+      {/* Screening Detail Panel */}
+      {mode === "edit" && applicationId && screeningData && (
+        <ScreeningDetail
+          applicationId={applicationId}
+          screening={screeningData}
+          onRefresh={incrementRefreshKey}
+        />
+      )}
+
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"

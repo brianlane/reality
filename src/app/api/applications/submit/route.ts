@@ -5,6 +5,8 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { ensureApplicantAccount } from "@/lib/account-init";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notifyApplicationSubmitted } from "@/lib/email/admin-notifications";
+import { initiateScreening } from "@/lib/background-checks/orchestrator";
+import { logger } from "@/lib/logger";
 import { createPaymentCheckout } from "@/lib/stripe";
 import { PHOTO_MIN_COUNT } from "@/lib/photo-config";
 
@@ -117,16 +119,27 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      await db.applicant.update({
-        where: { id: applicant.id },
-        data: {
-          applicationStatus: "SUBMITTED",
-          submittedAt: new Date(),
-          screeningStatus: "PENDING",
-          waitlistInviteToken: null,
-          invitedOffWaitlistAt: null,
-          invitedOffWaitlistBy: null,
-        },
+      // Write SUBMITTED and re-read backgroundCheckConsentAt in the same
+      // DB transaction. The findUnique runs after the update within the same
+      // BEGIN...COMMIT block, so it sees the status write (read-your-own-writes).
+      // Under READ COMMITTED it also sees any backgroundCheckConsentAt committed
+      // by a concurrent consent route before the findUnique executes.
+      const freshApplicant = await db.$transaction(async (tx) => {
+        await tx.applicant.update({
+          where: { id: applicant.id },
+          data: {
+            applicationStatus: "SUBMITTED",
+            submittedAt: new Date(),
+            screeningStatus: "PENDING",
+            waitlistInviteToken: null,
+            invitedOffWaitlistAt: null,
+            invitedOffWaitlistBy: null,
+          },
+        });
+        return tx.applicant.findUnique({
+          where: { id: applicant.id },
+          select: { backgroundCheckConsentAt: true },
+        });
       });
 
       // Notify admin that an application was submitted (non-blocking)
@@ -143,6 +156,16 @@ export async function POST(request: NextRequest) {
       }).catch(() => {
         // Silently ignore - notification failure shouldn't affect the response
       });
+
+      // If FCRA consent has already been given, auto-initiate screening (non-blocking)
+      if (freshApplicant?.backgroundCheckConsentAt) {
+        initiateScreening(applicant.id).catch((err: unknown) => {
+          logger.error("Failed to auto-initiate screening after submission", {
+            applicantId: applicant.id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
+      }
 
       return successResponse({
         applicationId: applicant.id,

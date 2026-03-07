@@ -18,6 +18,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "format:check": "prettier --check . --ignore-path .gitignore",
+    "format": "prettier --write . --ignore-path .gitignore",
     "bundle:check": "node scripts/check-bundle-size.mjs",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -30,7 +31,8 @@
     "db:full": "concurrently \"npm run db:dev\" \"npm run db:studio\"",
     "dev:all": "concurrently \"npm run db:dev\" \"npm run db:studio\" \"npm run dev\" --names \"DB,STUDIO,NEXT\" -c \"blue,magenta,green\"",
     "db:reset": "npx prisma migrate reset && npm run seed:questions",
-    "seed:questions": "npx tsx scripts/seed-questions.ts"
+    "seed:questions": "npx tsx scripts/seed-questions.ts",
+    "prepare": "husky"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -70,13 +72,18 @@
     "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "husky": "^9.1.7",
     "jsdom": "^28.1.0",
     "lightningcss": "^1.31.1",
+    "lint-staged": "^16.3.2",
     "prettier": "^3.2.5",
     "prisma": "^7.4.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^4.0.18"
+  },
+  "lint-staged": {
+    "**/*": "prettier --write --ignore-unknown"
   }
 }

@@ -1,9 +1,14 @@
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import {
-  mapCheckrResult,
   verifyCheckrSignature,
+  mapCheckrResult,
 } from "@/lib/background-checks/checkr";
+import { onCheckrComplete } from "@/lib/background-checks/orchestrator";
+import { notifyAdminMonitoringAlert } from "@/lib/email/admin-notifications";
+import { logger } from "@/lib/logger";
+
+import type { CheckrWebhookPayload } from "@/lib/background-checks/checkr";
 
 export async function POST(request: Request) {
   const signature = request.headers.get("x-checkr-signature") ?? "";
@@ -25,7 +30,7 @@ export async function POST(request: Request) {
     return errorResponse("FORBIDDEN", "Invalid signature", 403);
   }
 
-  let body: { candidate_id?: string; result?: string };
+  let body: CheckrWebhookPayload;
   try {
     body = JSON.parse(payload);
   } catch (error) {
@@ -33,31 +38,257 @@ export async function POST(request: Request) {
       { message: (error as Error).message },
     ]);
   }
-  const applicantId = body.candidate_id;
 
-  if (!applicantId) {
-    return errorResponse("VALIDATION_ERROR", "Missing applicantId", 400);
+  const eventType = body.type;
+  const eventData = body.data?.object;
+
+  if (!eventType || !eventData) {
+    return errorResponse("VALIDATION_ERROR", "Missing event type or data", 400);
   }
 
-  if (!body.result) {
-    return errorResponse("VALIDATION_ERROR", "Missing result", 400);
-  }
-
-  const status = mapCheckrResult(body.result);
-  const applicant = await db.applicant.findUnique({
-    where: { id: applicantId },
+  logger.info("Checkr webhook received", {
+    eventType,
+    objectId: eventData.id,
   });
 
-  if (!applicant) {
-    return errorResponse("NOT_FOUND", "Applicant not found", 404);
+  // Route by event type
+  switch (eventType) {
+    case "report.completed":
+      return handleReportCompleted(eventData);
+
+    case "invitation.completed":
+      return handleInvitationCompleted(eventData);
+
+    case "continuous_monitor.updated":
+      return handleContinuousMonitorUpdated(eventData);
+
+    default:
+      logger.info("Checkr webhook event type not handled", { eventType });
+      return successResponse({ received: true, processed: false });
+  }
+}
+
+// ============================================
+// Event Handlers
+// ============================================
+
+async function handleReportCompleted(data: {
+  id: string;
+  result?: string;
+  candidate_id?: string;
+  status?: string;
+  package?: string;
+  [key: string]: unknown;
+}) {
+  const reportId = data.id;
+  const result = data.result ?? null;
+  const candidateId = data.candidate_id;
+
+  if (!reportId) {
+    logger.warn("Checkr report.completed missing report id");
+    return errorResponse("VALIDATION_ERROR", "Missing report id", 400);
   }
 
-  await db.applicant.update({
-    where: { id: applicantId },
-    data: {
-      checkrStatus: status as never,
+  if (!candidateId) {
+    logger.warn("Checkr report.completed missing candidate_id", { reportId });
+    return errorResponse("VALIDATION_ERROR", "Missing candidate_id", 400);
+  }
+
+  // Look up applicant by Checkr candidate ID
+  const applicant = await db.applicant.findFirst({
+    where: {
+      OR: [
+        { checkrCandidateId: candidateId },
+        // Fallback: try report ID
+        { checkrReportId: reportId },
+      ],
     },
   });
 
-  return successResponse({ received: true });
+  if (!applicant) {
+    // Return 200 so Checkr does not retry indefinitely for a genuinely
+    // missing applicant. The warning log alerts the team for investigation.
+    logger.warn("Checkr webhook: applicant not found", {
+      candidateId,
+      reportId,
+    });
+    return successResponse({ received: true, processed: false });
+  }
+
+  const screeningStatus = mapCheckrResult(result);
+
+  // Audit log (always, even for soft-deleted — compliance requirement).
+  // No .catch() — failures must return 500 so the provider retries; we cannot
+  // proceed without a legally required record.
+  await db.screeningAuditLog.create({
+    data: {
+      userId: null,
+      applicantId: applicant.id,
+      action: "CHECKR_REPORT_COMPLETED",
+      metadata: {
+        reportId,
+        candidateId,
+        result,
+        mappedStatus: screeningStatus,
+      },
+    },
+  });
+
+  // Skip status updates and orchestration for soft-deleted applicants
+  if (applicant.deletedAt) {
+    logger.info(
+      "Checkr report.completed for soft-deleted applicant, skipping update",
+      { applicantId: applicant.id, reportId },
+    );
+    return successResponse({ received: true, processed: false });
+  }
+
+  // Atomically claim first-time processing for this specific report. The guard
+  // uses { not: reportId } rather than null for two reasons:
+  // 1. OR-fallback conflict: if the applicant was found via the checkrReportId
+  //    fallback, checkrReportId is already reportId — a null guard would always
+  //    match 0 rows, silently dropping the webhook without running the orchestrator.
+  // 2. Re-trigger support: if an admin re-triggers after FAILED, checkrReportId
+  //    holds the old report ID; a null guard would block the new report entirely.
+  // { not: reportId } correctly handles all cases: first delivery (null ≠ reportId
+  // → matches), re-trigger with old ID (old ≠ new → matches), and idempotent
+  // retry of the same report (reportId = reportId → 0 rows → "already processed").
+  const claimed = await db.applicant.updateMany({
+    where: { id: applicant.id, checkrReportId: { not: reportId } },
+    data: {
+      checkrStatus: screeningStatus,
+      checkrReportId: reportId,
+    },
+  });
+
+  if (claimed.count === 0) {
+    logger.info("Checkr report already processed (idempotent retry)", {
+      applicantId: applicant.id,
+      reportId,
+    });
+    return successResponse({ received: true, processed: false });
+  }
+
+  logger.info("Checkr report completed", {
+    applicantId: applicant.id,
+    reportId,
+    result,
+    mappedStatus: screeningStatus,
+  });
+
+  // Await orchestrator so transient failures return 500 and trigger provider retry.
+  // Fire-and-forget would leave applicants stuck in IN_PROGRESS with no recovery.
+  try {
+    await onCheckrComplete(applicant.id, screeningStatus, result);
+  } catch (err: unknown) {
+    logger.error("Orchestrator onCheckrComplete failed", {
+      applicantId: applicant.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return errorResponse(
+      "ORCHESTRATION_FAILED",
+      "Failed to process report completion",
+      500,
+    );
+  }
+
+  return successResponse({ received: true, processed: true });
+}
+
+async function handleInvitationCompleted(data: {
+  id: string;
+  candidate_id?: string;
+  [key: string]: unknown;
+}) {
+  const candidateId = data.candidate_id;
+  if (!candidateId) {
+    return successResponse({ received: true, processed: false });
+  }
+
+  const applicant = await db.applicant.findFirst({
+    where: { checkrCandidateId: candidateId },
+  });
+
+  if (!applicant) {
+    logger.warn("Checkr invitation.completed: applicant not found", {
+      candidateId,
+    });
+    return successResponse({ received: true, processed: false });
+  }
+
+  // Log for audit trail — compliance requirement; failures must return 500.
+  await db.screeningAuditLog.create({
+    data: {
+      userId: null,
+      applicantId: applicant.id,
+      action: "CHECKR_INVITATION_COMPLETED",
+      metadata: {
+        invitationId: data.id,
+        candidateId,
+      },
+    },
+  });
+
+  logger.info("Checkr invitation completed", {
+    applicantId: applicant.id,
+    candidateId,
+  });
+
+  return successResponse({ received: true, processed: true });
+}
+
+async function handleContinuousMonitorUpdated(data: {
+  id: string;
+  candidate_id?: string;
+  status?: string;
+  [key: string]: unknown;
+}) {
+  const candidateId = data.candidate_id;
+  if (!candidateId) {
+    return successResponse({ received: true, processed: false });
+  }
+
+  const applicant = await db.applicant.findFirst({
+    where: { checkrCandidateId: candidateId },
+  });
+
+  if (!applicant) {
+    logger.warn("Checkr continuous_monitor.updated: applicant not found", {
+      candidateId,
+    });
+    return successResponse({ received: true, processed: false });
+  }
+
+  // Log the monitoring alert — compliance requirement; failures must return 500.
+  await db.screeningAuditLog.create({
+    data: {
+      userId: null,
+      applicantId: applicant.id,
+      action: "CONTINUOUS_MONITOR_ALERT",
+      metadata: {
+        monitorId: data.id,
+        candidateId,
+        status: data.status,
+      },
+    },
+  });
+
+  logger.warn("Continuous monitoring alert received", {
+    applicantId: applicant.id,
+    candidateId,
+    monitorStatus: data.status,
+  });
+
+  notifyAdminMonitoringAlert({
+    applicantId: applicant.id,
+    candidateId,
+    monitorStatus: data.status,
+  }).catch((err: unknown) => {
+    logger.warn("Failed to send admin monitoring alert notification", {
+      applicantId: applicant.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
+
+  return successResponse({ received: true, processed: true });
 }
