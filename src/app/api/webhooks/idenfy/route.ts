@@ -182,6 +182,11 @@ export async function POST(request: Request) {
         error: err instanceof Error ? err.message : String(err),
       });
     });
+    // Return immediately. onIdenfyComplete is a no-op for IN_PROGRESS; calling it
+    // risks a transient orchestrator error (e.g. findUnique) causing 500, which
+    // triggers iDenfy retries. Retries hit the idempotency guard (count=0) and
+    // return processed: false forever — the original 500 is unrecoverable.
+    return successResponse({ received: true, processed: true });
   }
 
   // Await orchestrator so transient failures return 500 and trigger provider retry.

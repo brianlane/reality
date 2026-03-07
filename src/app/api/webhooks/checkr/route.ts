@@ -117,32 +117,6 @@ async function handleReportCompleted(data: {
 
   const screeningStatus = mapCheckrResult(result);
 
-  // Audit log (always, even for soft-deleted — compliance requirement).
-  // No .catch() — failures must return 500 so the provider retries; we cannot
-  // proceed without a legally required record.
-  await db.screeningAuditLog.create({
-    data: {
-      userId: null,
-      applicantId: applicant.id,
-      action: "CHECKR_REPORT_COMPLETED",
-      metadata: {
-        reportId,
-        candidateId,
-        result,
-        mappedStatus: screeningStatus,
-      },
-    },
-  });
-
-  // Skip status updates and orchestration for soft-deleted applicants
-  if (applicant.deletedAt) {
-    logger.info(
-      "Checkr report.completed for soft-deleted applicant, skipping update",
-      { applicantId: applicant.id, reportId },
-    );
-    return successResponse({ received: true, processed: false });
-  }
-
   // Atomically claim first-time processing for this specific report. The guard
   // uses { not: reportId } rather than null for two reasons:
   // 1. OR-fallback conflict: if the applicant was found via the checkrReportId
@@ -169,12 +143,38 @@ async function handleReportCompleted(data: {
     return successResponse({ received: true, processed: false });
   }
 
+  // Audit log only on first-time processing (after idempotency claim).
+  // Failures must return 500 so the provider retries; we cannot proceed without
+  // a legally required record.
+  await db.screeningAuditLog.create({
+    data: {
+      userId: null,
+      applicantId: applicant.id,
+      action: "CHECKR_REPORT_COMPLETED",
+      metadata: {
+        reportId,
+        candidateId,
+        result,
+        mappedStatus: screeningStatus,
+      },
+    },
+  });
+
   logger.info("Checkr report completed", {
     applicantId: applicant.id,
     reportId,
     result,
     mappedStatus: screeningStatus,
   });
+
+  // Skip orchestration for soft-deleted applicants (audit log already created)
+  if (applicant.deletedAt) {
+    logger.info(
+      "Checkr report.completed for soft-deleted applicant, skipping orchestrator",
+      { applicantId: applicant.id, reportId },
+    );
+    return successResponse({ received: true, processed: false });
+  }
 
   // Await orchestrator so transient failures return 500 and trigger provider retry.
   // Fire-and-forget would leave applicants stuck in IN_PROGRESS with no recovery.
