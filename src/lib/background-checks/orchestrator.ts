@@ -370,29 +370,36 @@ async function finalizeScreening(applicantId: string): Promise<void> {
           })
           .catch(async (err: unknown) => {
             // API call failed — no Checkr subscription was created.
-            // Clear the placeholder so enrollment can be retried.
-            try {
-              await db.applicant.update({
-                where: { id: applicantId },
-                data: { continuousMonitoringId: null },
-              });
-            } catch (rollbackErr: unknown) {
-              // Never throw from this background catch handler; otherwise we'd
-              // surface an unhandled rejection from a non-awaited promise chain.
-              logger.error(
-                "Failed to clear monitoring placeholder after enrollment API failure",
-                {
-                  applicantId,
-                  enrollmentError:
-                    err instanceof Error ? err.message : String(err),
-                  rollbackError:
-                    rollbackErr instanceof Error
-                      ? rollbackErr.message
-                      : String(rollbackErr),
+            // Clear the placeholder using updateMany with the placeholder
+            // value as a guard. If the applicant was hard-deleted while
+            // enrollment was in-flight, updateMany returns count=0 rather
+            // than throwing a FK error, so the placeholder is already gone
+            // and no manual cleanup is needed.
+            await db.applicant
+              .updateMany({
+                where: {
+                  id: applicantId,
+                  continuousMonitoringId: `enrolling-${applicantId}`,
                 },
-              );
-              return;
-            }
+                data: { continuousMonitoringId: null },
+              })
+              .catch((rollbackErr: unknown) => {
+                // DB unavailable — placeholder may be stuck. Log the
+                // applicantId and placeholder so it can be cleared manually.
+                logger.error(
+                  "Failed to clear monitoring placeholder after enrollment API failure — manual DB cleanup may be required",
+                  {
+                    applicantId,
+                    placeholder: `enrolling-${applicantId}`,
+                    enrollmentError:
+                      err instanceof Error ? err.message : String(err),
+                    rollbackError:
+                      rollbackErr instanceof Error
+                        ? rollbackErr.message
+                        : String(rollbackErr),
+                  },
+                );
+              });
             logger.error("Failed to enroll continuous monitoring", {
               applicantId,
               error: err instanceof Error ? err.message : String(err),
@@ -426,6 +433,10 @@ async function finalizeScreening(applicantId: string): Promise<void> {
 // Helpers
 // ============================================
 
+// Note: appendNote is called from within db.applicant.update — concurrent
+// webhook deliveries (e.g. iDenfy + Checkr completing simultaneously) can
+// produce last-write-wins overwrites on backgroundCheckNotes. This is
+// intentional: notes are informational only and do not affect pipeline state.
 export function appendNote(
   existingNotes: string | null,
   newNote: string,

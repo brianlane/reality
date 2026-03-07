@@ -621,13 +621,13 @@ model EmailLog {
 model ScreeningAuditLog {
   id          String   @id @default(cuid())
   userId      String?  // User who performed the action (null for system/webhook events)
-  applicantId String   // Target applicant
+  applicantId String?  // Nullable: set to null via onDelete: SetNull on hard delete for FCRA retention
   action      String   // VIEW_REPORT, TRIGGER_CHECK, IDENFY_WEBHOOK, etc.
   metadata    Json?    // Additional context (report type, IP, etc.)
   createdAt   DateTime @default(now())
 
-  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  applicant   Applicant @relation(fields: [applicantId], references: [id])
+  user        User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  applicant   Applicant? @relation(fields: [applicantId], references: [id], onDelete: SetNull)
 
   @@index([applicantId])
   @@index([userId])

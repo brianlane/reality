@@ -15,8 +15,9 @@ async function deleteApplicantRelations(tx: Transaction, applicantId: string) {
     },
   });
 
-  // Delete screening audit logs
-  await tx.screeningAuditLog.deleteMany({ where: { applicantId } });
+  // Screening audit logs are NOT deleted — they are retained for FCRA compliance.
+  // The applicantId FK is set to null via onDelete: SetNull in the schema,
+  // so records survive the applicant deletion as orphaned rows.
 }
 
 async function deleteQuestionnaireBySectionIds(

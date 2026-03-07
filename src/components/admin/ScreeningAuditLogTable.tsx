@@ -11,7 +11,8 @@ type AuditLogEntry = {
   metadata: Record<string, unknown> | null;
   createdAt: string;
   admin: { name: string; email: string | null };
-  applicant: { id: string; name: string };
+  // id is null for hard-deleted applicants (FCRA audit record retained)
+  applicant: { id: string | null; name: string };
 };
 
 export default function ScreeningAuditLogTable() {
