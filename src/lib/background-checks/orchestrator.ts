@@ -12,10 +12,7 @@ import { logger } from "@/lib/logger";
 import { enrollContinuousMonitoring } from "@/lib/background-checks/checkr";
 import { triggerCheckrInvitation } from "@/lib/background-checks/checkr-trigger";
 import { sendApplicationStatusEmail } from "@/lib/email/status";
-import {
-  notifyAdminCheckrFlagged,
-  notifyAdminMonitoringAlert,
-} from "@/lib/email/admin-notifications";
+import { notifyAdminCheckrFlagged } from "@/lib/email/admin-notifications";
 
 // ============================================
 // Step 1: Initiate Screening
