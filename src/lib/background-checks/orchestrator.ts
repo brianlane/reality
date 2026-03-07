@@ -12,6 +12,10 @@ import { logger } from "@/lib/logger";
 import { enrollContinuousMonitoring } from "@/lib/background-checks/checkr";
 import { triggerCheckrInvitation } from "@/lib/background-checks/checkr-trigger";
 import { sendApplicationStatusEmail } from "@/lib/email/status";
+import {
+  notifyAdminCheckrFlagged,
+  notifyAdminMonitoringAlert,
+} from "@/lib/email/admin-notifications";
 
 // ============================================
 // Step 1: Initiate Screening
@@ -240,7 +244,18 @@ export async function onCheckrComplete(
       result,
     });
 
-    // TODO: Send admin notification about the flagged result
+    notifyAdminCheckrFlagged({
+      applicantId,
+      result: result || "consider",
+    }).catch((err: unknown) => {
+      logger.warn(
+        "Failed to send admin notification for flagged Checkr result",
+        {
+          applicantId,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      );
+    });
   }
 }
 
@@ -414,7 +429,10 @@ async function finalizeScreening(applicantId: string): Promise<void> {
 // Helpers
 // ============================================
 
-function appendNote(existingNotes: string | null, newNote: string): string {
+export function appendNote(
+  existingNotes: string | null,
+  newNote: string,
+): string {
   const timestamp = new Date().toISOString();
   const entry = `[${timestamp}] ${newNote}`;
   return existingNotes ? `${existingNotes}\n${entry}` : entry;

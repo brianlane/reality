@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useReducer, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -54,7 +54,8 @@ export default function AdminApplicationForm({
     null,
   );
   // Counter to trigger re-fetching application data from the screening detail panel
-  const [refreshKey, incrementRefreshKey] = useReducer((c: number) => c + 1, 0);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const incrementRefreshKey = () => setRefreshKey((k) => k + 1);
   // Track whether the initial load has completed. On subsequent refreshes
   // (triggered by screening actions), we only update screening data to avoid
   // silently overwriting unsaved form edits the admin may have made.

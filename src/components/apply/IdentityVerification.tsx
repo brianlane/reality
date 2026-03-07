@@ -65,7 +65,9 @@ export default function IdentityVerification({
       }
     };
 
-    const timeoutId = setTimeout(poll, 5000);
+    // First poll fires after 1s to catch fast completions; subsequent polls
+    // every 5s to avoid hammering the status endpoint.
+    const timeoutId = setTimeout(poll, pollCount === 0 ? 1000 : 5000);
 
     return () => {
       cancelled = true;

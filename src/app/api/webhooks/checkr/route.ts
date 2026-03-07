@@ -5,6 +5,7 @@ import {
   mapCheckrResult,
 } from "@/lib/background-checks/checkr";
 import { onCheckrComplete } from "@/lib/background-checks/orchestrator";
+import { notifyAdminMonitoringAlert } from "@/lib/email/admin-notifications";
 import { logger } from "@/lib/logger";
 
 import type { CheckrWebhookPayload } from "@/lib/background-checks/checkr";
@@ -261,8 +262,16 @@ async function handleContinuousMonitorUpdated(data: {
     monitorStatus: data.status,
   });
 
-  // TODO: Send admin notification email about the monitoring alert
-  // This is a safety-critical event that requires admin attention
+  notifyAdminMonitoringAlert({
+    applicantId: applicant.id,
+    candidateId,
+    monitorStatus: data.status,
+  }).catch((err: unknown) => {
+    logger.warn("Failed to send admin monitoring alert notification", {
+      applicantId: applicant.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
 
   return successResponse({ received: true, processed: true });
 }

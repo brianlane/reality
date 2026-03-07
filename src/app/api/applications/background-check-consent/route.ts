@@ -43,6 +43,9 @@ export async function POST(request: Request) {
       );
     }
 
+    // Note: ownership check and name-match validation happen after the DB
+    // fetch below, once we have the applicant's legal name on file.
+
     if (consentGiven !== true) {
       return errorResponse(
         "CONSENT_REQUIRED",
@@ -73,6 +76,21 @@ export async function POST(request: Request) {
       return errorResponse("FORBIDDEN", "Access denied", 403);
     }
 
+    // Validate the digital signature matches the applicant's legal name on file.
+    // Case-insensitive, whitespace-normalized to handle minor formatting differences.
+    const normalizedInput = fullName.trim().toLowerCase().replace(/\s+/g, " ");
+    const expectedName =
+      `${applicant.user.firstName} ${applicant.user.lastName}`
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+    if (normalizedInput !== expectedName) {
+      return errorResponse(
+        "VALIDATION_ERROR",
+        "The name entered does not match your legal name on file. Please type your full legal name exactly as it appears.",
+        400,
+      );
+    }
+
     // Already consented
     if (applicant.backgroundCheckConsentAt) {
       return successResponse({
@@ -88,13 +106,16 @@ export async function POST(request: Request) {
     const realIp = headerList.get("x-real-ip");
     const clientIp = forwardedFor?.split(",")[0]?.trim() || realIp || "unknown";
 
-    // Record consent AND audit log atomically in a transaction.
-    // Both must succeed together -- the audit log contains the digital signature
-    // (fullName) which is FCRA-critical legal evidence. If the audit log fails
-    // after consent is recorded, the digital signature would be permanently lost
-    // since retries would hit the "already_consented" guard.
+    // Record consent AND audit log atomically in a transaction, and include
+    // a re-read of applicationStatus within the same transaction. This ensures
+    // the re-read sees any applicationStatus committed by a concurrent submit
+    // route before our read executes, closing the race window that existed when
+    // the write and re-read were separate statements.
+    // The audit log contains the digital signature (fullName) which is
+    // FCRA-critical legal evidence — it must succeed atomically with the consent
+    // write or retries would hit the "already_consented" guard and lose the sig.
     const consentTimestamp = new Date();
-    await db.$transaction([
+    const [, , freshApplicant] = await db.$transaction([
       db.applicant.update({
         where: { id: applicant.id },
         data: {
@@ -117,19 +138,15 @@ export async function POST(request: Request) {
           },
         },
       }),
+      db.applicant.findUnique({
+        where: { id: applicant.id },
+        select: { applicationStatus: true },
+      }),
     ]);
 
     logger.info("FCRA background check consent recorded", {
       applicantId: applicant.id,
       ip: clientIp,
-    });
-
-    // Re-read the applicant to get the latest applicationStatus.
-    // The initial fetch (top of handler) may be stale if the submit route
-    // ran concurrently and committed between our fetch and this point.
-    const freshApplicant = await db.applicant.findUnique({
-      where: { id: applicant.id },
-      select: { applicationStatus: true },
     });
 
     // If the application is already submitted, auto-initiate screening

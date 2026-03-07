@@ -119,17 +119,27 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      await db.applicant.update({
-        where: { id: applicant.id },
-        data: {
-          applicationStatus: "SUBMITTED",
-          submittedAt: new Date(),
-          screeningStatus: "PENDING",
-          waitlistInviteToken: null,
-          invitedOffWaitlistAt: null,
-          invitedOffWaitlistBy: null,
-        },
-      });
+      // Write SUBMITTED and re-read backgroundCheckConsentAt in the same
+      // transaction to close the race window with the consent route. With
+      // READ COMMITTED isolation, the findUnique sees any consent committed
+      // by a concurrent request before this read statement executes.
+      const [, freshApplicant] = await db.$transaction([
+        db.applicant.update({
+          where: { id: applicant.id },
+          data: {
+            applicationStatus: "SUBMITTED",
+            submittedAt: new Date(),
+            screeningStatus: "PENDING",
+            waitlistInviteToken: null,
+            invitedOffWaitlistAt: null,
+            invitedOffWaitlistBy: null,
+          },
+        }),
+        db.applicant.findUnique({
+          where: { id: applicant.id },
+          select: { backgroundCheckConsentAt: true },
+        }),
+      ]);
 
       // Notify admin that an application was submitted (non-blocking)
       notifyApplicationSubmitted({
@@ -144,14 +154,6 @@ export async function POST(request: NextRequest) {
         firstPhotoUrl: applicant.photos[0],
       }).catch(() => {
         // Silently ignore - notification failure shouldn't affect the response
-      });
-
-      // Re-read the applicant to get the latest backgroundCheckConsentAt.
-      // The initial fetch (top of handler) may be stale if the consent route
-      // ran concurrently and committed between our fetch and this point.
-      const freshApplicant = await db.applicant.findUnique({
-        where: { id: applicant.id },
-        select: { backgroundCheckConsentAt: true },
       });
 
       // If FCRA consent has already been given, auto-initiate screening (non-blocking)

@@ -4,6 +4,7 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { adminApplicantUpdateSchema } from "@/lib/validations";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 import { cancelContinuousMonitoring } from "@/lib/background-checks/checkr";
+import { appendNote } from "@/lib/background-checks/orchestrator";
 import { logger } from "@/lib/logger";
 import { Prisma } from "@prisma/client";
 
@@ -145,11 +146,10 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
   // Append admin notes to preserve orchestrator audit trail instead of replacing
   if (notesPayload != null && notesPayload.trim() !== "") {
-    const timestamp = new Date().toISOString();
-    const entry = `[${timestamp}] ${notesPayload.trim()}`;
-    updateData.backgroundCheckNotes = existing.backgroundCheckNotes
-      ? `${existing.backgroundCheckNotes}\n${entry}`
-      : entry;
+    updateData.backgroundCheckNotes = appendNote(
+      existing.backgroundCheckNotes,
+      notesPayload.trim(),
+    );
   }
 
   const applicationStatusChangeRequested =
