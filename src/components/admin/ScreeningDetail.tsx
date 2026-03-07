@@ -41,6 +41,7 @@ export default function ScreeningDetail({
     null,
   );
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [actionWarning, setActionWarning] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isTriggering, setIsTriggering] = useState(false);
 
@@ -49,6 +50,7 @@ export default function ScreeningDetail({
     setReportData(null);
     setActionError(null);
     setActionMessage(null);
+    setActionWarning(null);
     try {
       const headers = await getAuthHeaders();
       if (!headers) return;
@@ -59,6 +61,9 @@ export default function ScreeningDetail({
       const data = await res.json();
       if (res.ok) {
         setReportData(data);
+        if (data.warnings?.length) {
+          setActionWarning(data.warnings[0]);
+        }
       } else {
         setActionError(data.error?.message || "Failed to fetch report");
       }
@@ -203,6 +208,11 @@ export default function ScreeningDetail({
       {actionMessage && (
         <div className="rounded-md bg-green-50 p-2 text-xs text-green-700">
           {actionMessage}
+        </div>
+      )}
+      {actionWarning && (
+        <div className="rounded-md bg-amber-50 p-2 text-xs text-amber-700">
+          {actionWarning}
         </div>
       )}
       {actionError && (

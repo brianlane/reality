@@ -47,47 +47,9 @@ export async function GET(_request: Request, { params }: RouteContext) {
     );
   }
 
+  let report;
   try {
-    const report = await getReport(applicant.checkrReportId);
-
-    // Log the access AFTER confirming the report was successfully fetched and
-    // delivered to the admin. Writing before getReport would create a false
-    // compliance record if the Checkr API call fails — the admin is logged as
-    // having "viewed" a report they never actually saw.
-    await db.screeningAuditLog.create({
-      data: {
-        userId: adminUser.userId,
-        applicantId: applicant.id,
-        action: "VIEW_REPORT",
-        metadata: {
-          reportId: applicant.checkrReportId,
-          adminEmail: adminUser.email,
-        },
-      },
-    });
-
-    // Return a sanitized view -- only what the admin needs
-    return successResponse({
-      reportId: report.id,
-      status: report.status,
-      result: report.result,
-      adjudication: report.adjudication,
-      completedAt: report.completed_at,
-      turnaroundTime: report.turnaround_time,
-      package: report.package,
-      screenings: report.screenings.map((s) => ({
-        id: s.id,
-        type: s.type,
-        status: s.status,
-        result: s.result,
-        turnaroundTime: s.turnaround_time,
-      })),
-      applicant: {
-        id: applicant.id,
-        name: `${applicant.user.firstName} ${applicant.user.lastName}`,
-        checkrCandidateId: applicant.checkrCandidateId,
-      },
-    });
+    report = await getReport(applicant.checkrReportId);
   } catch (error) {
     logger.error("Failed to fetch Checkr report", {
       reportId: applicant.checkrReportId,
@@ -100,4 +62,60 @@ export async function GET(_request: Request, { params }: RouteContext) {
       500,
     );
   }
+
+  // Log the access AFTER confirming the report was successfully fetched.
+  // Use separate try/catch so a transient audit-log failure does not block
+  // returning the report to the admin. A warning is surfaced in the response
+  // so the admin can see the gap and alert compliance if needed.
+  let auditLogFailed = false;
+  try {
+    await db.screeningAuditLog.create({
+      data: {
+        userId: adminUser.userId,
+        applicantId: applicant.id,
+        action: "VIEW_REPORT",
+        metadata: {
+          reportId: applicant.checkrReportId,
+          adminEmail: adminUser.email,
+        },
+      },
+    });
+  } catch (auditError) {
+    auditLogFailed = true;
+    logger.error("Failed to write screening audit log", {
+      reportId: applicant.checkrReportId,
+      applicantId: applicant.id,
+      adminUserId: adminUser.userId,
+      error:
+        auditError instanceof Error ? auditError.message : String(auditError),
+    });
+  }
+
+  // Return a sanitized view -- only what the admin needs
+  return successResponse({
+    ...(auditLogFailed && {
+      warnings: [
+        "Audit log could not be written due to a database error. Please notify your compliance team.",
+      ],
+    }),
+    reportId: report.id,
+    status: report.status,
+    result: report.result,
+    adjudication: report.adjudication,
+    completedAt: report.completed_at,
+    turnaroundTime: report.turnaround_time,
+    package: report.package,
+    screenings: report.screenings.map((s) => ({
+      id: s.id,
+      type: s.type,
+      status: s.status,
+      result: s.result,
+      turnaroundTime: s.turnaround_time,
+    })),
+    applicant: {
+      id: applicant.id,
+      name: `${applicant.user.firstName} ${applicant.user.lastName}`,
+      checkrCandidateId: applicant.checkrCandidateId,
+    },
+  });
 }
