@@ -69,6 +69,8 @@ export async function GET(_request: Request, { params }: RouteContext) {
   // so the admin can see the gap and alert compliance if needed.
   let auditLogFailed = false;
   try {
+    // adminUser.userId is the DB User.id (cuid) returned by requireAdminRole,
+    // not the Supabase UUID from getAuthUser. It satisfies the ScreeningAuditLog FK.
     await db.screeningAuditLog.create({
       data: {
         userId: adminUser.userId,

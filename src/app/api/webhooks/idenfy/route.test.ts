@@ -235,6 +235,39 @@ describe("POST /api/webhooks/idenfy", () => {
     expect(onIdenfyComplete).not.toHaveBeenCalled();
   });
 
+  // ── REVIEWING + final admin alert ───────────────────────────────────────────
+
+  it("sends admin alert and keeps IN_PROGRESS for final REVIEWING webhook", async () => {
+    const { verifyIdenfySignature, mapIdenfyStatus } =
+      await import("@/lib/background-checks/idenfy");
+    const { db } = await import("@/lib/db");
+    const { onIdenfyComplete } =
+      await import("@/lib/background-checks/orchestrator");
+
+    vi.mock("@/lib/email/admin-notifications", () => ({
+      notifyAdminCheckrFlagged: vi.fn().mockResolvedValue(undefined),
+    }));
+    const { notifyAdminCheckrFlagged } =
+      await import("@/lib/email/admin-notifications");
+
+    vi.mocked(verifyIdenfySignature).mockReturnValue(true);
+    vi.mocked(mapIdenfyStatus).mockReturnValue("IN_PROGRESS");
+    vi.mocked(db.applicant.findFirst).mockResolvedValue(
+      makeApplicant() as never,
+    );
+    vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
+    vi.mocked(db.applicant.updateMany).mockResolvedValue({ count: 1 });
+
+    const res = await POST(
+      makeRequest({ ...makeFinalWebhook(), status: { overall: "REVIEWING" } }),
+    );
+    expect(res.status).toBe(200);
+    expect(onIdenfyComplete).toHaveBeenCalledWith("app-1", "IN_PROGRESS");
+    expect(notifyAdminCheckrFlagged).toHaveBeenCalledWith(
+      expect.objectContaining({ applicantId: "app-1" }),
+    );
+  });
+
   // ── Orchestrator failure ────────────────────────────────────────────────────
 
   it("returns 500 when orchestrator throws", async () => {

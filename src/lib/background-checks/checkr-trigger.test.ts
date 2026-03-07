@@ -210,6 +210,33 @@ describe("triggerCheckrInvitation", () => {
     );
   });
 
+  it("reuses existing checkrCandidateId on re-trigger (does not create duplicate candidate)", async () => {
+    const { db } = await import("@/lib/db");
+    const { createCandidate, createInvitation } =
+      await import("@/lib/background-checks/checkr");
+    // Claim from FAILED (re-trigger scenario)
+    vi.mocked(db.applicant.updateMany).mockResolvedValueOnce({ count: 1 });
+    // Applicant already has a candidateId from the previous attempt
+    vi.mocked(db.applicant.findUnique).mockResolvedValue({
+      checkrCandidateId: "existing-cand",
+    } as never);
+    vi.mocked(db.screeningAuditLog.create).mockResolvedValue({
+      id: "audit-1",
+    } as never);
+    vi.mocked(db.screeningAuditLog.update).mockResolvedValue({} as never);
+    vi.mocked(createInvitation).mockResolvedValue({ id: "inv-2" } as never);
+
+    const result = await triggerCheckrInvitation(defaultParams);
+
+    // Must reuse the existing candidate — no new candidate created
+    expect(createCandidate).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      status: "invitation_sent",
+      candidateId: "existing-cand",
+      invitationId: "inv-2",
+    });
+  });
+
   it("enriches audit log with invitationId after successful invitation", async () => {
     const { db } = await import("@/lib/db");
     const { createInvitation } = await import("@/lib/background-checks/checkr");

@@ -1,6 +1,7 @@
 import { getAuthUser, requireAdminRole } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { Prisma } from "@prisma/client";
 
 const VALID_ACTIONS = new Set([
   "VIEW_REPORT",
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const where: Record<string, unknown> = {};
+  const where: Prisma.ScreeningAuditLogWhereInput = {};
   if (applicantId) where.applicantId = applicantId;
   if (action) where.action = action;
 

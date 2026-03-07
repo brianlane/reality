@@ -180,9 +180,12 @@ export function mapIdenfyStatus(
     case "SUSPECTED":
       return "FAILED";
     case "REVIEWING":
-      // REVIEWING is a non-terminal state. If a webhook is marked final, treat
-      // REVIEWING as FAILED so the applicant does not remain permanently stuck.
-      return options?.final ? "FAILED" : "IN_PROGRESS";
+      // REVIEWING means a human reviewer is evaluating the session. Even on a
+      // final webhook, the outcome is not yet determined — auto-failing would
+      // incorrectly reject applicants who are under legitimate manual review.
+      // Keep IN_PROGRESS; the webhook handler raises an admin alert so the team
+      // can follow up directly with iDenfy and advance the applicant manually.
+      return "IN_PROGRESS";
     default:
       return "FAILED";
   }

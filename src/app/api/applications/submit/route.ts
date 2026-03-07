@@ -157,19 +157,26 @@ export async function POST(request: NextRequest) {
         // Silently ignore - notification failure shouldn't affect the response
       });
 
-      // If FCRA consent has already been given, auto-initiate screening (non-blocking)
+      // If FCRA consent has already been given, auto-initiate screening.
+      let screeningInitiated = false;
       if (freshApplicant?.backgroundCheckConsentAt) {
-        initiateScreening(applicant.id).catch((err: unknown) => {
+        try {
+          await initiateScreening(applicant.id);
+          screeningInitiated = true;
+        } catch (err: unknown) {
+          // Log at error level so it surfaces in monitoring. The admin can
+          // manually trigger screening via /api/applications/background-check.
           logger.error("Failed to auto-initiate screening after submission", {
             applicantId: applicant.id,
             error: err instanceof Error ? err.message : String(err),
           });
-        });
+        }
       }
 
       return successResponse({
         applicationId: applicant.id,
         status: "SUBMITTED",
+        screeningInitiated,
       });
     } else {
       return errorResponse(

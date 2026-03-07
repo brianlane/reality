@@ -5,6 +5,7 @@ import {
   verifyIdenfySignature,
 } from "@/lib/background-checks/idenfy";
 import { onIdenfyComplete } from "@/lib/background-checks/orchestrator";
+import { notifyAdminCheckrFlagged } from "@/lib/email/admin-notifications";
 import { logger } from "@/lib/logger";
 
 import type { IdenfyWebhookPayload } from "@/lib/background-checks/idenfy";
@@ -124,6 +125,26 @@ export async function POST(request: Request) {
     overallStatus,
     mappedStatus: screeningStatus,
   });
+
+  // REVIEWING on a final webhook means the session is under human review at
+  // iDenfy and the outcome is not yet known. Alert the admin to follow up with
+  // iDenfy and advance the applicant manually once resolved.
+  if (overallStatus.toUpperCase() === "REVIEWING" && body.final) {
+    logger.warn(
+      "iDenfy final webhook with REVIEWING status — manual admin follow-up required",
+      { applicantId: applicant.id, scanRef },
+    );
+    notifyAdminCheckrFlagged({
+      applicantId: applicant.id,
+      result:
+        "iDenfy REVIEWING (manual review required — follow up with iDenfy)",
+    }).catch((err: unknown) => {
+      logger.warn("Failed to send admin alert for iDenfy REVIEWING status", {
+        applicantId: applicant.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+  }
 
   // Await orchestrator so transient failures return 500 and trigger provider retry.
   // Fire-and-forget would leave applicants stuck in IN_PROGRESS with no recovery.

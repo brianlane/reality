@@ -43,8 +43,22 @@ export async function POST(request: Request) {
       );
     }
 
-    // Note: ownership check and name-match validation happen after the DB
-    // fetch below, once we have the applicant's legal name on file.
+    // Fetch applicant and verify ownership before checking consent flags.
+    // This ensures unauthorized callers get FORBIDDEN, not CONSENT_REQUIRED,
+    // even if they also omitted the consent checkboxes.
+    const applicant = await db.applicant.findFirst({
+      where: { id: applicationId, deletedAt: null },
+      include: { user: true },
+    });
+
+    if (!applicant) {
+      return errorResponse("NOT_FOUND", "Application not found", 404);
+    }
+
+    // Verify the authenticated user owns this application
+    if (applicant.user.email.toLowerCase() !== auth.email?.toLowerCase()) {
+      return errorResponse("FORBIDDEN", "Access denied", 403);
+    }
 
     if (consentGiven !== true) {
       return errorResponse(
@@ -60,20 +74,6 @@ export async function POST(request: Request) {
         "You must agree to ongoing criminal record monitoring to proceed",
         400,
       );
-    }
-
-    const applicant = await db.applicant.findFirst({
-      where: { id: applicationId, deletedAt: null },
-      include: { user: true },
-    });
-
-    if (!applicant) {
-      return errorResponse("NOT_FOUND", "Application not found", 404);
-    }
-
-    // Verify the authenticated user owns this application
-    if (applicant.user.email.toLowerCase() !== auth.email?.toLowerCase()) {
-      return errorResponse("FORBIDDEN", "Access denied", 403);
     }
 
     // Validate the digital signature matches the applicant's legal name on file.
@@ -161,18 +161,25 @@ export async function POST(request: Request) {
     // Only check SUBMITTED — initiateScreening's updateMany guard only
     // transitions from SUBMITTED, so calling it when already SCREENING_IN_PROGRESS
     // would always match 0 rows and is a misleading no-op.
+    let screeningInitiated = false;
     if (freshApplicant?.applicationStatus === "SUBMITTED") {
-      initiateScreening(applicant.id).catch((err: unknown) => {
+      try {
+        await initiateScreening(applicant.id);
+        screeningInitiated = true;
+      } catch (err: unknown) {
+        // Log at error level so it surfaces in monitoring. The admin can
+        // manually trigger screening via /api/applications/background-check.
         logger.error("Failed to auto-initiate screening after consent", {
           applicantId: applicant.id,
           error: err instanceof Error ? err.message : String(err),
         });
-      });
+      }
     }
 
     return successResponse({
       status: "consent_recorded",
       consentedAt: consentTimestamp.toISOString(),
+      screeningInitiated,
       message: "Background check consent has been recorded successfully.",
     });
   } catch (error) {

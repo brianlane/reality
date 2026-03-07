@@ -55,6 +55,8 @@ export default function AdminApplicationForm({
   );
   // Counter to trigger re-fetching application data from the screening detail panel
   const [refreshKey, setRefreshKey] = useState(0);
+  const [screeningDataRefreshedAt, setScreeningDataRefreshedAt] =
+    useState<Date | null>(null);
   const incrementRefreshKey = () => setRefreshKey((k) => k + 1);
   // Track whether the initial load has completed. On subsequent refreshes
   // (triggered by screening actions), we only update screening data to avoid
@@ -147,6 +149,9 @@ export default function AdminApplicationForm({
           continuousMonitoringId:
             json.screening?.continuousMonitoringId ?? null,
         });
+        if (isRefresh) {
+          setScreeningDataRefreshedAt(new Date());
+        }
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
           setError("Failed to load application.");
@@ -676,11 +681,20 @@ export default function AdminApplicationForm({
       </div>
       {/* Screening Detail Panel */}
       {mode === "edit" && applicationId && screeningData && (
-        <ScreeningDetail
-          applicationId={applicationId}
-          screening={screeningData}
-          onRefresh={incrementRefreshKey}
-        />
+        <>
+          {screeningDataRefreshedAt && (
+            <p className="text-xs text-navy-soft/60">
+              Screening data refreshed at{" "}
+              {screeningDataRefreshedAt.toLocaleTimeString()}. Any unsaved form
+              edits above are preserved.
+            </p>
+          )}
+          <ScreeningDetail
+            applicationId={applicationId}
+            screening={screeningData}
+            onRefresh={incrementRefreshKey}
+          />
+        </>
       )}
 
       <div className="flex flex-wrap gap-2">

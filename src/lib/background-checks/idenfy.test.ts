@@ -25,8 +25,11 @@ describe("mapIdenfyStatus", () => {
     expect(mapIdenfyStatus("REVIEWING", { final: false })).toBe("IN_PROGRESS");
   });
 
-  it("maps REVIEWING to FAILED when final is true", () => {
-    expect(mapIdenfyStatus("REVIEWING", { final: true })).toBe("FAILED");
+  it("maps REVIEWING to IN_PROGRESS even when final is true (manual review pending)", () => {
+    // REVIEWING on a final webhook means iDenfy has a human reviewer evaluating
+    // the session. The outcome is not yet determined, so we keep IN_PROGRESS and
+    // alert the admin to follow up rather than auto-failing the applicant.
+    expect(mapIdenfyStatus("REVIEWING", { final: true })).toBe("IN_PROGRESS");
   });
 
   it("maps unknown status to FAILED", () => {

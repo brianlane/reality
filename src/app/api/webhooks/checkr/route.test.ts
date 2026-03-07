@@ -336,6 +336,22 @@ describe("POST /api/webhooks/checkr", () => {
     expect(notifyAdminMonitoringAlert).toHaveBeenCalled();
   });
 
+  it("returns 200 processed=false for continuous_monitor.updated with null candidate_id", async () => {
+    const { verifyCheckrSignature } =
+      await import("@/lib/background-checks/checkr");
+    vi.mocked(verifyCheckrSignature).mockReturnValue(true);
+
+    const res = await POST(
+      makeRequest({
+        type: "continuous_monitor.updated",
+        data: { object: { id: "monitor-1", status: "pending" } }, // no candidate_id
+      }),
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.processed).toBe(false);
+  });
+
   // ── Unknown event type ──────────────────────────────────────────────────────
 
   it("returns 200 processed=false for unknown event types", async () => {

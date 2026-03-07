@@ -210,20 +210,28 @@ export async function DELETE(_: Request, { params }: RouteContext) {
 
   // Cancel continuous monitoring before soft-delete to avoid ongoing
   // Checkr subscription costs for a removed user.
+  // Only null continuousMonitoringId if cancellation succeeds — if it fails,
+  // preserve the ID so the admin can retry the cancellation manually.
+  let monitoringCanceled = false;
   if (existing.continuousMonitoringId) {
     try {
       await cancelContinuousMonitoring(existing.continuousMonitoringId);
+      monitoringCanceled = true;
       logger.info("Canceled continuous monitoring during soft delete", {
         applicantId: id,
         monitoringId: existing.continuousMonitoringId,
       });
     } catch (err: unknown) {
-      logger.warn("Failed to cancel continuous monitoring during soft delete", {
-        applicantId: id,
-        monitoringId: existing.continuousMonitoringId, // Log before it's nulled
-        error: err instanceof Error ? err.message : String(err),
-      });
-      // Continue with deletion even if cancellation fails
+      logger.warn(
+        "Failed to cancel continuous monitoring during soft delete — ID preserved for manual retry",
+        {
+          applicantId: id,
+          monitoringId: existing.continuousMonitoringId,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      );
+      // Continue with deletion. The ID is NOT cleared below so the admin can
+      // see it in the DB and retry the Checkr API call manually.
     }
   }
 
@@ -237,7 +245,7 @@ export async function DELETE(_: Request, { params }: RouteContext) {
     data: {
       deletedAt: new Date(),
       deletedBy: adminUser.id,
-      continuousMonitoringId: null,
+      ...(monitoringCanceled ? { continuousMonitoringId: null } : {}),
     },
   });
 

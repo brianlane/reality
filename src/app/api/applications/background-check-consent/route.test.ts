@@ -142,12 +142,35 @@ describe("POST /api/applications/background-check-consent", () => {
     expect(data.error?.message).toContain("does not match");
   });
 
+  it("returns 403 (not CONSENT_REQUIRED) when non-owner omits consent", async () => {
+    // Ownership check must run before consent validation so that unauthorized
+    // callers get FORBIDDEN regardless of missing consent fields.
+    const { getAuthUser } = await import("@/lib/auth");
+    const { db } = await import("@/lib/db");
+    vi.mocked(getAuthUser).mockResolvedValue({
+      userId: "other-user",
+      email: "other@example.com",
+    } as never);
+    vi.mocked(db.applicant.findFirst).mockResolvedValue(
+      makeApplicant() as never,
+    );
+
+    const res = await POST(makeRequest({ ...validBody, consentGiven: false }));
+    expect(res.status).toBe(403);
+    const data = await res.json();
+    expect(data.error?.code).toBe("FORBIDDEN");
+  });
+
   it("returns 400 when consentGiven is false", async () => {
     const { getAuthUser } = await import("@/lib/auth");
+    const { db } = await import("@/lib/db");
     vi.mocked(getAuthUser).mockResolvedValue({
       userId: "user-1",
       email: "jane@example.com",
     } as never);
+    vi.mocked(db.applicant.findFirst).mockResolvedValue(
+      makeApplicant() as never,
+    );
 
     const res = await POST(makeRequest({ ...validBody, consentGiven: false }));
     expect(res.status).toBe(400);

@@ -46,12 +46,19 @@ export default async function VerifyIdentityPage({ searchParams }: PageProps) {
     redirect(`/apply/waitlist?id=${applicationId}`);
   }
 
+  // After the PASSED guard above, the status can only be PENDING, IN_PROGRESS,
+  // or FAILED. Narrow the type so VerifyIdentityClient's prop type is satisfied.
+  const verifyStatus = applicant.idenfyStatus as
+    | "PENDING"
+    | "IN_PROGRESS"
+    | "FAILED";
+
   return (
     <div className="min-h-screen bg-slate-50 py-12">
       <div className="mx-auto max-w-2xl px-4">
         <VerifyIdentityClient
           applicationId={applicant.id}
-          initialStatus={applicant.idenfyStatus}
+          initialStatus={verifyStatus}
         />
       </div>
     </div>
