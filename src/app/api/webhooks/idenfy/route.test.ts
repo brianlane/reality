@@ -235,21 +235,12 @@ describe("POST /api/webhooks/idenfy", () => {
     expect(onIdenfyComplete).not.toHaveBeenCalled();
   });
 
-  // ── REVIEWING + final admin alert ───────────────────────────────────────────
+  // ── REVIEWING + final idempotency ───────────────────────────────────────────
 
-  it("sends admin alert and keeps IN_PROGRESS for final REVIEWING webhook", async () => {
+  it("writes reviewing sentinel and sends admin alert on first REVIEWING delivery", async () => {
     const { verifyIdenfySignature, mapIdenfyStatus } =
       await import("@/lib/background-checks/idenfy");
     const { db } = await import("@/lib/db");
-    const { onIdenfyComplete } =
-      await import("@/lib/background-checks/orchestrator");
-
-    vi.mock("@/lib/email/admin-notifications", () => ({
-      notifyAdminCheckrFlagged: vi.fn().mockResolvedValue(undefined),
-    }));
-    const { notifyAdminCheckrFlagged } =
-      await import("@/lib/email/admin-notifications");
-
     vi.mocked(verifyIdenfySignature).mockReturnValue(true);
     vi.mocked(mapIdenfyStatus).mockReturnValue("IN_PROGRESS");
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
@@ -262,10 +253,76 @@ describe("POST /api/webhooks/idenfy", () => {
       makeRequest({ ...makeFinalWebhook(), status: { overall: "REVIEWING" } }),
     );
     expect(res.status).toBe(200);
-    expect(onIdenfyComplete).toHaveBeenCalledWith("app-1", "IN_PROGRESS");
-    expect(notifyAdminCheckrFlagged).toHaveBeenCalledWith(
-      expect.objectContaining({ applicantId: "app-1" }),
+    const data = await res.json();
+    expect(data.processed).toBe(true);
+
+    // Guard must use the original scanRef (not sentinel) to detect first delivery
+    expect(db.applicant.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ idenfyVerificationId: "scan-ref-1" }),
+        data: expect.objectContaining({
+          idenfyVerificationId: "reviewing:scan-ref-1", // sentinel written
+          idenfyStatus: "IN_PROGRESS",
+        }),
+      }),
     );
+  });
+
+  it("returns processed=false and does NOT alert on REVIEWING retry (idempotent)", async () => {
+    const { verifyIdenfySignature, mapIdenfyStatus } =
+      await import("@/lib/background-checks/idenfy");
+    const { db } = await import("@/lib/db");
+    vi.mocked(verifyIdenfySignature).mockReturnValue(true);
+    vi.mocked(mapIdenfyStatus).mockReturnValue("IN_PROGRESS");
+    // Applicant found via clientId; idenfyVerificationId already holds sentinel
+    vi.mocked(db.applicant.findFirst).mockResolvedValue(
+      makeApplicant({ idenfyVerificationId: "reviewing:scan-ref-1" }) as never,
+    );
+    vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
+    // Guard fails because current value is sentinel, not scanRef → count=0
+    vi.mocked(db.applicant.updateMany).mockResolvedValue({ count: 0 });
+
+    const res = await POST(
+      makeRequest({ ...makeFinalWebhook(), status: { overall: "REVIEWING" } }),
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.processed).toBe(false);
+  });
+
+  it("processes terminal APPROVED after REVIEWING (accepts reviewing sentinel)", async () => {
+    const { verifyIdenfySignature, mapIdenfyStatus } =
+      await import("@/lib/background-checks/idenfy");
+    const { db } = await import("@/lib/db");
+    const { onIdenfyComplete } =
+      await import("@/lib/background-checks/orchestrator");
+    vi.mocked(verifyIdenfySignature).mockReturnValue(true);
+    vi.mocked(mapIdenfyStatus).mockReturnValue("PASSED");
+    // Applicant found via clientId; idenfyVerificationId holds the reviewing sentinel
+    vi.mocked(db.applicant.findFirst).mockResolvedValue(
+      makeApplicant({ idenfyVerificationId: "reviewing:scan-ref-1" }) as never,
+    );
+    vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
+    vi.mocked(db.applicant.updateMany).mockResolvedValue({ count: 1 });
+
+    const res = await POST(makeRequest(makeFinalWebhook())); // status: APPROVED
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.processed).toBe(true);
+
+    // Terminal guard must accept both scanRef and reviewing sentinel
+    expect(db.applicant.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          idenfyVerificationId: { in: ["scan-ref-1", "reviewing:scan-ref-1"] },
+        }),
+        data: expect.objectContaining({
+          idenfyStatus: "PASSED",
+          idenfyVerificationId: "scan-ref-1", // sentinel restored to original
+        }),
+      }),
+    );
+    expect(onIdenfyComplete).toHaveBeenCalledWith("app-1", "PASSED");
   });
 
   // ── Orchestrator failure ────────────────────────────────────────────────────

@@ -48,11 +48,16 @@ export async function POST(request: Request) {
     );
   }
 
-  // Look up applicant by scanRef (idenfyVerificationId) or clientId (our applicant ID)
+  // Look up applicant by scanRef, the reviewing sentinel, or clientId.
+  // The reviewing sentinel (`reviewing:${scanRef}`) is written when a REVIEWING
+  // + final webhook is first processed, so retries and subsequent resolution
+  // webhooks (APPROVED/DENIED after human review) can still find the applicant.
+  const reviewingSentinel = `reviewing:${scanRef}`;
   const applicant = await db.applicant.findFirst({
     where: {
       OR: [
         { idenfyVerificationId: scanRef },
+        { idenfyVerificationId: reviewingSentinel },
         ...(clientId ? [{ id: clientId }] : []),
       ],
     },
@@ -95,22 +100,56 @@ export async function POST(request: Request) {
     return successResponse({ received: true, processed: false });
   }
 
-  // Atomically claim first-time processing. Two guards work together:
-  // - idenfyVerificationId: scanRef — only the current active session is processed;
-  //   stale webhooks from a previous session (after forceNewSession) are rejected.
-  // - idenfyStatus PENDING/IN_PROGRESS — prevents re-running the orchestrator on
-  //   webhook retries after a 500; once PASSED/FAILED is written, retries return 200.
-  const claimed = await db.applicant.updateMany({
-    where: {
-      id: applicant.id,
-      idenfyVerificationId: scanRef,
-      idenfyStatus: { in: ["PENDING", "IN_PROGRESS"] },
-    },
-    data: {
-      idenfyStatus: screeningStatus,
-      idenfyVerificationId: scanRef,
-    },
-  });
+  // Atomically claim first-time processing. The guard strategy differs by
+  // status to ensure idempotency for all webhook retry scenarios:
+  //
+  // Terminal (PASSED/FAILED):
+  //   Guard: idenfyVerificationId IN [scanRef, reviewingSentinel]
+  //     — accepts a prior REVIEWING sentinel so resolution webhooks (iDenfy
+  //       APPROVED/DENIED after human review) can still process.
+  //     — idenfyStatus PENDING/IN_PROGRESS ensures retries after a terminal
+  //       write return count=0 (status left the allowed set).
+  //   Data: restores idenfyVerificationId to scanRef (sentinel no longer needed).
+  //
+  // IN_PROGRESS / REVIEWING:
+  //   Guard: idenfyVerificationId = scanRef (not the sentinel)
+  //     — mirrors Checkr's { not: reportId } pattern: write a sentinel so the
+  //       guard fails on retries (sentinel ≠ scanRef → count=0 → idempotent).
+  //   Data: writes reviewingSentinel so retries cannot re-claim.
+  //
+  // Stale session webhooks (scanRef from an old session) are rejected in all
+  // paths because the current idenfyVerificationId won't match.
+  let claimed: { count: number };
+
+  const isReviewing =
+    screeningStatus === "IN_PROGRESS" &&
+    overallStatus.toUpperCase() === "REVIEWING";
+
+  if (isReviewing) {
+    claimed = await db.applicant.updateMany({
+      where: {
+        id: applicant.id,
+        idenfyVerificationId: scanRef, // must be original (not yet sentinel)
+        idenfyStatus: { in: ["PENDING", "IN_PROGRESS"] },
+      },
+      data: {
+        idenfyStatus: "IN_PROGRESS",
+        idenfyVerificationId: reviewingSentinel, // sentinel prevents idempotent retries
+      },
+    });
+  } else {
+    claimed = await db.applicant.updateMany({
+      where: {
+        id: applicant.id,
+        idenfyVerificationId: { in: [scanRef, reviewingSentinel] },
+        idenfyStatus: { in: ["PENDING", "IN_PROGRESS"] },
+      },
+      data: {
+        idenfyStatus: screeningStatus,
+        idenfyVerificationId: scanRef, // restore original scanRef on terminal write
+      },
+    });
+  }
 
   if (claimed.count === 0) {
     logger.info("iDenfy webhook already processed (idempotent retry)", {
@@ -126,10 +165,9 @@ export async function POST(request: Request) {
     mappedStatus: screeningStatus,
   });
 
-  // REVIEWING on a final webhook means the session is under human review at
-  // iDenfy and the outcome is not yet known. Alert the admin to follow up with
-  // iDenfy and advance the applicant manually once resolved.
-  if (overallStatus.toUpperCase() === "REVIEWING" && body.final) {
+  // REVIEWING: alert admin on first delivery only (guarded by claimed.count > 0).
+  // Fires after the idempotency claim so retries never re-send the email.
+  if (isReviewing) {
     logger.warn(
       "iDenfy final webhook with REVIEWING status — manual admin follow-up required",
       { applicantId: applicant.id, scanRef },
