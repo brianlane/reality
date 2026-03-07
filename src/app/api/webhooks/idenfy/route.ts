@@ -5,7 +5,7 @@ import {
   verifyIdenfySignature,
 } from "@/lib/background-checks/idenfy";
 import { onIdenfyComplete } from "@/lib/background-checks/orchestrator";
-import { notifyAdminCheckrFlagged } from "@/lib/email/admin-notifications";
+import { notifyAdminIdenfyReviewing } from "@/lib/email/admin-notifications";
 import { logger } from "@/lib/logger";
 
 import type { IdenfyWebhookPayload } from "@/lib/background-checks/idenfy";
@@ -172,10 +172,9 @@ export async function POST(request: Request) {
       "iDenfy final webhook with REVIEWING status — manual admin follow-up required",
       { applicantId: applicant.id, scanRef },
     );
-    notifyAdminCheckrFlagged({
+    notifyAdminIdenfyReviewing({
       applicantId: applicant.id,
-      result:
-        "iDenfy REVIEWING (manual review required — follow up with iDenfy)",
+      scanRef,
     }).catch((err: unknown) => {
       logger.warn("Failed to send admin alert for iDenfy REVIEWING status", {
         applicantId: applicant.id,

@@ -94,16 +94,22 @@ async function handleReportCompleted(data: {
     return errorResponse("VALIDATION_ERROR", "Missing candidate_id", 400);
   }
 
-  // Look up applicant by Checkr candidate ID
-  const applicant = await db.applicant.findFirst({
-    where: {
-      OR: [
-        { checkrCandidateId: candidateId },
-        // Fallback: try report ID
-        { checkrReportId: reportId },
-      ],
-    },
+  // Look up applicant: prefer checkrCandidateId (primary), then checkrReportId
+  // (fallback). Prefer non-deleted over soft-deleted to avoid writing to the
+  // wrong record when multiple could match (e.g., re-trigger edge cases).
+  const orderByDeletedAtFirst = {
+    deletedAt: { sort: "asc" as const, nulls: "first" as const },
+  };
+  let applicant = await db.applicant.findFirst({
+    where: { checkrCandidateId: candidateId },
+    orderBy: orderByDeletedAtFirst,
   });
+  if (!applicant) {
+    applicant = await db.applicant.findFirst({
+      where: { checkrReportId: reportId },
+      orderBy: orderByDeletedAtFirst,
+    });
+  }
 
   if (!applicant) {
     // Return 200 so Checkr does not retry indefinitely for a genuinely
