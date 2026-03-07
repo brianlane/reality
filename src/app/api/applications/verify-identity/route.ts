@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth";
 import { errorResponse, successResponse } from "@/lib/api-response";
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
     // Claim status in a deterministic order so failures can roll back to the
     // pre-claim state instead of always resetting to PENDING.
     let rollbackStatus: "PENDING" | "FAILED" | "IN_PROGRESS" | null = null;
+    let rollbackVerificationId: string | null = null;
 
     const claimedFromFailed = await db.applicant.updateMany({
       where: { id: applicant.id, idenfyStatus: "FAILED" },
@@ -92,12 +94,20 @@ export async function POST(request: Request) {
       if (claimedFromPending.count > 0) {
         rollbackStatus = "PENDING";
       } else if (forceNewSession === true) {
+        // Atomically claim by setting a unique placeholder. Only one request
+        // matches the current idenfyVerificationId; after update, others can't.
+        const claimToken = `claiming-${randomUUID()}`;
         const claimedFromInProgress = await db.applicant.updateMany({
-          where: { id: applicant.id, idenfyStatus: "IN_PROGRESS" },
-          data: { idenfyStatus: "IN_PROGRESS" },
+          where: {
+            id: applicant.id,
+            idenfyStatus: "IN_PROGRESS",
+            idenfyVerificationId: applicant.idenfyVerificationId,
+          },
+          data: { idenfyVerificationId: claimToken },
         });
         if (claimedFromInProgress.count > 0) {
           rollbackStatus = "IN_PROGRESS";
+          rollbackVerificationId = applicant.idenfyVerificationId;
         }
       }
     }
@@ -129,10 +139,15 @@ export async function POST(request: Request) {
         data: { idenfyVerificationId: session.scanRef },
       });
     } catch (err) {
-      // Roll back to the original pre-claim status.
+      // Roll back to the original pre-claim status (and verification ID for forceNewSession).
       await db.applicant.updateMany({
         where: { id: applicant.id, idenfyStatus: "IN_PROGRESS" },
-        data: { idenfyStatus: rollbackStatus },
+        data: {
+          idenfyStatus: rollbackStatus,
+          ...(rollbackVerificationId !== null
+            ? { idenfyVerificationId: rollbackVerificationId }
+            : {}),
+        },
       });
       throw err;
     }

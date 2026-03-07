@@ -65,13 +65,15 @@ export async function triggerCheckrInvitation(
     return { status: "already_in_progress" };
   }
 
+  let invitation: { id: string; package?: string };
+  let candidateId: string = "";
   try {
     // Re-read after atomic claim to avoid stale candidate IDs.
     const freshApplicant = await db.applicant.findUnique({
       where: { id: applicantId },
       select: { checkrCandidateId: true },
     });
-    let candidateId = freshApplicant?.checkrCandidateId ?? null;
+    candidateId = freshApplicant?.checkrCandidateId ?? "";
 
     if (!candidateId) {
       const candidate = await createCandidate({
@@ -87,31 +89,9 @@ export async function triggerCheckrInvitation(
       });
     }
 
-    const invitation = await createInvitation(candidateId);
-
-    // Audit log is compliance-critical; no .catch() — failures must propagate
-    // so callers (webhook, admin API) can retry and we roll back the status claim.
-    await db.screeningAuditLog.create({
-      data: {
-        userId: audit.userId,
-        applicantId,
-        action: audit.action,
-        metadata: {
-          candidateId,
-          invitationId: invitation.id,
-          ...(invitation.package ? { package: invitation.package } : {}),
-          ...(audit.metadata ?? {}),
-        },
-      },
-    });
-
-    return {
-      status: "invitation_sent",
-      candidateId,
-      invitationId: invitation.id,
-      packageName:
-        typeof invitation.package === "string" ? invitation.package : null,
-    };
+    invitation = await createInvitation(candidateId);
+    // From here, the invitation is sent externally. Do NOT roll back on later
+    // failures — retries would create duplicate invitations.
   } catch (err: unknown) {
     await db.applicant.updateMany({
       where: { id: applicantId, checkrStatus: "IN_PROGRESS" },
@@ -119,4 +99,31 @@ export async function triggerCheckrInvitation(
     });
     throw err;
   }
-}
+
+  // Audit log is compliance-critical; failures propagate. No rollback — the
+  // invitation is already sent; callers can retry and will get already_in_progress.
+  await db.screeningAuditLog.create({
+    data: {
+      userId: audit.userId,
+      applicantId,
+      action: audit.action,
+      metadata: {
+        candidateId,
+        invitationId: invitation.id,
+        ...(invitation.package ? { package: invitation.package } : {}),
+        ...(audit.metadata ?? {}),
+      },
+    },
+  });
+
+  return {
+    status: "invitation_sent",
+    candidateId,
+    invitationId: invitation.id,
+    packageName:
+      typeof invitation.package === "string" ? invitation.package : null,
+  };
+</think>
+
+<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
+Read
