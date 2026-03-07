@@ -3,6 +3,7 @@ import {
   createInvitation,
 } from "@/lib/background-checks/checkr";
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 type TriggerCheckrInvitationParams = {
   applicantId: string;
@@ -66,6 +67,9 @@ export async function triggerCheckrInvitation(
 
   let invitation: { id: string; package?: string };
   let candidateId: string = "";
+  // Holds the created audit record so we can enrich it with the invitationId
+  // after the invitation is confirmed sent (best-effort update below).
+  let auditRecord: { id: string } | null = null;
   try {
     // Re-read after atomic claim to avoid stale candidate IDs.
     const freshApplicant = await db.applicant.findUnique({
@@ -88,6 +92,22 @@ export async function triggerCheckrInvitation(
       });
     }
 
+    // Write the audit record BEFORE sending the invitation so it is within
+    // rollback territory: if this write fails, the status rolls back and the
+    // caller can retry cleanly. The invitationId is not yet known here; it is
+    // appended via a best-effort update once the invitation is confirmed sent.
+    // If createInvitation later throws, the audit record remains as evidence
+    // of the failed attempt — an accurate compliance trail.
+    auditRecord = await db.screeningAuditLog.create({
+      data: {
+        userId: audit.userId,
+        applicantId,
+        action: audit.action,
+        metadata: { candidateId, ...(audit.metadata ?? {}) },
+      },
+      select: { id: true },
+    });
+
     invitation = await createInvitation(candidateId);
     // From here, the invitation is sent externally. Do NOT roll back on later
     // failures — retries would create duplicate invitations.
@@ -99,21 +119,33 @@ export async function triggerCheckrInvitation(
     throw err;
   }
 
-  // Audit log is compliance-critical; failures propagate. No rollback — the
-  // invitation is already sent; callers can retry and will get already_in_progress.
-  await db.screeningAuditLog.create({
-    data: {
-      userId: audit.userId,
-      applicantId,
-      action: audit.action,
-      metadata: {
-        candidateId,
-        invitationId: invitation.id,
-        ...(invitation.package ? { package: invitation.package } : {}),
-        ...(audit.metadata ?? {}),
+  // Best-effort: enrich the audit record with the confirmed invitationId and
+  // package. The compliance-critical record already exists above; this update
+  // is additive and non-blocking. On failure, the record is still valid —
+  // the invitationId can be recovered from Checkr if needed.
+  db.screeningAuditLog
+    .update({
+      where: { id: auditRecord.id },
+      data: {
+        metadata: {
+          candidateId,
+          invitationId: invitation.id,
+          ...(invitation.package ? { package: invitation.package } : {}),
+          ...(audit.metadata ?? {}),
+        },
       },
-    },
-  });
+    })
+    .catch((err: unknown) => {
+      logger.warn(
+        "Failed to enrich audit log with invitationId after Checkr invitation — record exists but lacks invitationId",
+        {
+          applicantId,
+          auditRecordId: auditRecord!.id,
+          invitationId: invitation.id,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      );
+    });
 
   return {
     status: "invitation_sent",
