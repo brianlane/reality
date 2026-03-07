@@ -78,7 +78,7 @@ describe("triggerCheckrInvitation", () => {
       id: "audit-1",
     } as never);
     vi.mocked(db.screeningAuditLog.update).mockResolvedValue({} as never);
-    vi.mocked(createInvitation).mockResolvedValue({ id: "inv-1" });
+    vi.mocked(createInvitation).mockResolvedValue({ id: "inv-1" } as never);
 
     const result = await triggerCheckrInvitation(defaultParams);
 
@@ -104,7 +104,7 @@ describe("triggerCheckrInvitation", () => {
       id: "audit-1",
     } as never);
     vi.mocked(db.screeningAuditLog.update).mockResolvedValue({} as never);
-    vi.mocked(createInvitation).mockResolvedValue({ id: "inv-1" });
+    vi.mocked(createInvitation).mockResolvedValue({ id: "inv-1" } as never);
 
     const result = await triggerCheckrInvitation(defaultParams);
 
@@ -126,7 +126,7 @@ describe("triggerCheckrInvitation", () => {
       id: "audit-1",
     } as never);
     vi.mocked(db.screeningAuditLog.update).mockResolvedValue({} as never);
-    vi.mocked(createInvitation).mockResolvedValue({ id: "inv-1" });
+    vi.mocked(createInvitation).mockResolvedValue({ id: "inv-1" } as never);
 
     await triggerCheckrInvitation(defaultParams);
 
@@ -153,14 +153,14 @@ describe("triggerCheckrInvitation", () => {
     vi.mocked(db.applicant.findUnique).mockResolvedValue({
       checkrCandidateId: "cand-1",
     } as never);
-    vi.mocked(db.screeningAuditLog.create).mockImplementation(async () => {
+    vi.mocked(db.screeningAuditLog.create).mockImplementation((async () => {
       callOrder.push("audit_create");
-      return { id: "audit-1" } as never;
-    });
-    vi.mocked(createInvitation).mockImplementation(async () => {
+      return { id: "audit-1" };
+    }) as never);
+    vi.mocked(createInvitation).mockImplementation((async () => {
       callOrder.push("invitation_sent");
       return { id: "inv-1" };
-    });
+    }) as never);
     vi.mocked(db.screeningAuditLog.update).mockResolvedValue({} as never);
 
     await triggerCheckrInvitation(defaultParams);
@@ -234,7 +234,7 @@ describe("triggerCheckrInvitation", () => {
     vi.mocked(createInvitation).mockResolvedValue({
       id: "inv-1",
       package: "essential_criminal",
-    });
+    } as never);
     vi.mocked(db.screeningAuditLog.update).mockResolvedValue({} as never);
 
     await triggerCheckrInvitation(defaultParams);

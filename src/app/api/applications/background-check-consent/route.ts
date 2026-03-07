@@ -149,11 +149,11 @@ export async function POST(request: Request) {
       ip: clientIp,
     });
 
-    // If the application is already submitted, auto-initiate screening
-    if (
-      freshApplicant?.applicationStatus === "SUBMITTED" ||
-      freshApplicant?.applicationStatus === "SCREENING_IN_PROGRESS"
-    ) {
+    // If the application is already submitted, auto-initiate screening.
+    // Only check SUBMITTED — initiateScreening's updateMany guard only
+    // transitions from SUBMITTED, so calling it when already SCREENING_IN_PROGRESS
+    // would always match 0 rows and is a misleading no-op.
+    if (freshApplicant?.applicationStatus === "SUBMITTED") {
       initiateScreening(applicant.id).catch((err: unknown) => {
         logger.error("Failed to auto-initiate screening after consent", {
           applicantId: applicant.id,

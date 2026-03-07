@@ -195,4 +195,57 @@ describe("POST /api/applications/background-check-consent", () => {
     expect(data.status).toBe("consent_recorded");
     expect(db.$transaction).toHaveBeenCalled();
   });
+
+  it("calls initiateScreening when applicationStatus is SUBMITTED after consent", async () => {
+    const { getAuthUser } = await import("@/lib/auth");
+    const { db } = await import("@/lib/db");
+    const { initiateScreening } = await import(
+      "@/lib/background-checks/orchestrator",
+    );
+    vi.mocked(getAuthUser).mockResolvedValue({
+      userId: "user-1",
+      email: "jane@example.com",
+    } as never);
+    vi.mocked(db.applicant.findFirst).mockResolvedValue(
+      makeApplicant() as never,
+    );
+    vi.mocked(db.$transaction).mockResolvedValue([
+      {},
+      {},
+      { applicationStatus: "SUBMITTED" },
+    ] as never);
+
+    await POST(makeRequest(validBody));
+
+    await new Promise((r) => setTimeout(r, 0));
+    expect(initiateScreening).toHaveBeenCalledWith("app-1");
+  });
+
+  it("does NOT call initiateScreening when applicationStatus is SCREENING_IN_PROGRESS", async () => {
+    const { getAuthUser } = await import("@/lib/auth");
+    const { db } = await import("@/lib/db");
+    const { initiateScreening } = await import(
+      "@/lib/background-checks/orchestrator",
+    );
+    vi.mocked(getAuthUser).mockResolvedValue({
+      userId: "user-1",
+      email: "jane@example.com",
+    } as never);
+    vi.mocked(db.applicant.findFirst).mockResolvedValue(
+      makeApplicant() as never,
+    );
+    // Transaction returns SCREENING_IN_PROGRESS — screening already underway.
+    // initiateScreening's updateMany guard only matches SUBMITTED, so calling
+    // it here would be a no-op. The condition should not trigger.
+    vi.mocked(db.$transaction).mockResolvedValue([
+      {},
+      {},
+      { applicationStatus: "SCREENING_IN_PROGRESS" },
+    ] as never);
+
+    await POST(makeRequest(validBody));
+
+    await new Promise((r) => setTimeout(r, 0));
+    expect(initiateScreening).not.toHaveBeenCalled();
+  });
 });

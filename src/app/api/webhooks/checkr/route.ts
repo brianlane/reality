@@ -143,14 +143,26 @@ async function handleReportCompleted(data: {
     return successResponse({ received: true, processed: false });
   }
 
-  // Update the Checkr status and store report ID
-  await db.applicant.update({
-    where: { id: applicant.id },
+  // Atomically claim first-time processing by storing the report ID only when
+  // it has not been set yet. This makes the handler idempotent: if Checkr
+  // retries a webhook (e.g. after a transient 500), the guard matches 0 rows
+  // and we return 200 below without re-running the orchestrator — preventing
+  // duplicate appendNote writes and redundant finalization attempts.
+  const claimed = await db.applicant.updateMany({
+    where: { id: applicant.id, checkrReportId: null },
     data: {
       checkrStatus: screeningStatus,
       checkrReportId: reportId,
     },
   });
+
+  if (claimed.count === 0) {
+    logger.info("Checkr report already processed (idempotent retry)", {
+      applicantId: applicant.id,
+      reportId,
+    });
+    return successResponse({ received: true, processed: false });
+  }
 
   logger.info("Checkr report completed", {
     applicantId: applicant.id,
