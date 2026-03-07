@@ -100,11 +100,17 @@ export async function POST(request: Request) {
       });
     }
 
-    // Get IP address from request headers
+    // Get IP address from request headers.
+    // Validate against an IPv4/IPv6 character whitelist before storing — the
+    // X-Forwarded-For header is user-controllable and could contain arbitrary
+    // strings. This is a legally significant FCRA audit field, so we must not
+    // store attacker-supplied data verbatim.
     const headerList = await headers();
     const forwardedFor = headerList.get("x-forwarded-for");
     const realIp = headerList.get("x-real-ip");
-    const clientIp = forwardedFor?.split(",")[0]?.trim() || realIp || "unknown";
+    const rawIp = forwardedFor?.split(",")[0]?.trim() || realIp || "unknown";
+    // Only allow characters valid in IPv4/IPv6 addresses; fall back to "unknown"
+    const clientIp = /^[\d.:a-fA-F]+$/.test(rawIp) ? rawIp : "unknown";
 
     // Record consent and audit log atomically so the FCRA-critical digital
     // signature (fullName) is never lost if the write partially fails.
