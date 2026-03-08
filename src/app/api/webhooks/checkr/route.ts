@@ -60,6 +60,12 @@ export async function POST(request: Request) {
       return handleInvitationCompleted(eventData);
 
     case "continuous_monitor.updated":
+      if (!body.id) {
+        logger.warn(
+          "Checkr continuous_monitor.updated missing top-level event id",
+        );
+        return errorResponse("VALIDATION_ERROR", "Missing event id", 400);
+      }
       return handleContinuousMonitorUpdated(eventData, body.id);
 
     default:
