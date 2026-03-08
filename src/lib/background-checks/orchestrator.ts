@@ -131,15 +131,12 @@ export async function onIdenfyComplete(
 
   if (status === "FAILED") {
     // Identity verification failed -- mark overall screening as failed
-    await db.applicant.update({
-      where: { id: applicantId },
-      data: {
-        screeningStatus: "FAILED",
-        backgroundCheckNotes: appendNote(
-          applicant.backgroundCheckNotes,
-          "Identity verification failed",
-        ),
-      },
+    await db.$transaction(async (tx) => {
+      await tx.applicant.update({
+        where: { id: applicantId },
+        data: { screeningStatus: "FAILED" },
+      });
+      await atomicAppendNote(tx, applicantId, "Identity verification failed");
     });
 
     logger.warn("Identity verification failed for applicant", {
@@ -225,15 +222,16 @@ export async function onCheckrComplete(
     // for admin review. Setting screeningStatus ensures dashboards accurately
     // reflect that the pipeline is complete and the applicant needs attention,
     // rather than appearing stuck in IN_PROGRESS indefinitely.
-    await db.applicant.update({
-      where: { id: applicantId },
-      data: {
-        screeningStatus: "FAILED",
-        backgroundCheckNotes: appendNote(
-          applicant.backgroundCheckNotes,
-          `Checkr result: ${result || "consider"} -- requires admin review`,
-        ),
-      },
+    await db.$transaction(async (tx) => {
+      await tx.applicant.update({
+        where: { id: applicantId },
+        data: { screeningStatus: "FAILED" },
+      });
+      await atomicAppendNote(
+        tx,
+        applicantId,
+        `Checkr result: ${result || "consider"} -- requires admin review`,
+      );
     });
 
     logger.warn("Checkr result requires admin review", {
@@ -291,15 +289,12 @@ async function finalizeScreening(applicantId: string): Promise<void> {
 
   if (idenfyPassed && checkrPassed) {
     // Both passed -- screening complete
-    await db.applicant.update({
-      where: { id: applicantId },
-      data: {
-        screeningStatus: "PASSED",
-        backgroundCheckNotes: appendNote(
-          applicant.backgroundCheckNotes,
-          "All screening checks passed",
-        ),
-      },
+    await db.$transaction(async (tx) => {
+      await tx.applicant.update({
+        where: { id: applicantId },
+        data: { screeningStatus: "PASSED" },
+      });
+      await atomicAppendNote(tx, applicantId, "All screening checks passed");
     });
 
     logger.info("Screening finalized: PASSED", { applicantId });
@@ -411,15 +406,16 @@ async function finalizeScreening(applicantId: string): Promise<void> {
     // At least one failed
     const failedProvider = !idenfyPassed ? "iDenfy" : "Checkr";
 
-    await db.applicant.update({
-      where: { id: applicantId },
-      data: {
-        screeningStatus: "FAILED",
-        backgroundCheckNotes: appendNote(
-          applicant.backgroundCheckNotes,
-          `Screening failed: ${failedProvider} did not pass`,
-        ),
-      },
+    await db.$transaction(async (tx) => {
+      await tx.applicant.update({
+        where: { id: applicantId },
+        data: { screeningStatus: "FAILED" },
+      });
+      await atomicAppendNote(
+        tx,
+        applicantId,
+        `Screening failed: ${failedProvider} did not pass`,
+      );
     });
 
     logger.info("Screening finalized: FAILED", {
@@ -433,10 +429,35 @@ async function finalizeScreening(applicantId: string): Promise<void> {
 // Helpers
 // ============================================
 
-// Note: appendNote is called from within db.applicant.update — concurrent
-// webhook deliveries (e.g. iDenfy + Checkr completing simultaneously) can
-// produce last-write-wins overwrites on backgroundCheckNotes. This is
-// intentional: notes are informational only and do not affect pipeline state.
+/**
+ * Atomically appends a timestamped note to an applicant's backgroundCheckNotes
+ * using raw SQL. PostgreSQL's UPDATE acquires a row lock, so concurrent appends
+ * (e.g. iDenfy + Checkr webhooks arriving simultaneously) are serialized by the
+ * DB rather than racing in JavaScript read-modify-write.
+ *
+ * @param executor - db or a transaction client (both expose $executeRaw)
+ */
+export async function atomicAppendNote(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  executor: { $executeRaw: any },
+  applicantId: string,
+  note: string,
+): Promise<void> {
+  const entry = `[${new Date().toISOString()}] ${note}`;
+  await executor.$executeRaw`
+    UPDATE "Applicant"
+    SET "backgroundCheckNotes" = CASE
+      WHEN "backgroundCheckNotes" IS NULL THEN ${entry}
+      ELSE "backgroundCheckNotes" || E'\n' || ${entry}
+    END
+    WHERE id = ${applicantId}
+  `;
+}
+
+/**
+ * @deprecated Use atomicAppendNote for concurrent-safe note appending.
+ * Kept for contexts where raw SQL is not available (e.g. simple string building).
+ */
 export function appendNote(
   existingNotes: string | null,
   newNote: string,

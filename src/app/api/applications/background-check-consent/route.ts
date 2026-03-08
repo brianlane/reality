@@ -157,12 +157,26 @@ export async function POST(request: Request) {
       ip: clientIp,
     });
 
-    // If the application is already submitted, auto-initiate screening.
-    // Only check SUBMITTED — initiateScreening's updateMany guard only
-    // transitions from SUBMITTED, so calling it when already SCREENING_IN_PROGRESS
-    // would always match 0 rows and is a misleading no-op.
+    // Auto-initiate screening if the application is already submitted.
+    // First check the in-transaction read, then do a post-commit re-read to
+    // close the race window where consent and submit transactions both read
+    // before either commits — neither would see the other's write.
+    // initiateScreening's updateMany guard prevents duplicate transitions.
     let screeningInitiated = false;
-    if (freshApplicant?.applicationStatus === "SUBMITTED") {
+    let shouldCheckScreening =
+      freshApplicant?.applicationStatus === "SUBMITTED";
+
+    if (!shouldCheckScreening) {
+      // The in-transaction read may have missed a concurrent submit that
+      // hadn't committed yet. Re-read after our commit to catch it.
+      const postCommit = await db.applicant.findUnique({
+        where: { id: applicant.id },
+        select: { applicationStatus: true },
+      });
+      shouldCheckScreening = postCommit?.applicationStatus === "SUBMITTED";
+    }
+
+    if (shouldCheckScreening) {
       try {
         await initiateScreening(applicant.id);
         screeningInitiated = true;

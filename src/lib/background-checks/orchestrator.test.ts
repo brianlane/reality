@@ -2,16 +2,24 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
-vi.mock("@/lib/db", () => ({
-  db: {
+vi.mock("@/lib/db", () => {
+  const dbMock: Record<string, unknown> = {
     applicant: {
       findUnique: vi.fn(),
       update: vi.fn(),
       updateMany: vi.fn(),
     },
     screeningAuditLog: { create: vi.fn() },
-  },
-}));
+    $executeRaw: vi.fn().mockResolvedValue(0),
+    $transaction: vi.fn(),
+  };
+  // $transaction executes the callback with the same mock, so tx.applicant.update
+  // and tx.$executeRaw are captured by the same mock functions as db.*.
+  (dbMock.$transaction as ReturnType<typeof vi.fn>).mockImplementation(
+    async (cb: (tx: typeof dbMock) => Promise<unknown>) => cb(dbMock),
+  );
+  return { db: dbMock };
+});
 
 vi.mock("@/lib/email/status", () => ({
   sendApplicationStatusEmail: vi.fn().mockResolvedValue(undefined),
@@ -82,6 +90,26 @@ describe("appendNote", () => {
   it("preserves the exact text of the new note", () => {
     const result = appendNote(null, "Identity verification failed");
     expect(result).toContain("Identity verification failed");
+  });
+});
+
+describe("atomicAppendNote", () => {
+  let atomicAppendNote: (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    executor: { $executeRaw: any },
+    applicantId: string,
+    note: string,
+  ) => Promise<void>;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    ({ atomicAppendNote } = await import("./orchestrator"));
+  });
+
+  it("calls $executeRaw with the applicant ID and note", async () => {
+    const mockExecutor = { $executeRaw: vi.fn().mockResolvedValue(0) };
+    await atomicAppendNote(mockExecutor, "app-1", "test note");
+    expect(mockExecutor.$executeRaw).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -175,7 +203,7 @@ describe("onIdenfyComplete", () => {
     expect(db.applicant.findUnique).not.toHaveBeenCalled();
   });
 
-  it("marks screening FAILED when iDenfy fails", async () => {
+  it("marks screening FAILED when iDenfy fails (using atomic note append)", async () => {
     const { db } = await import("@/lib/db");
     vi.mocked(db.applicant.findUnique).mockResolvedValue(
       makeApplicant() as never,
@@ -184,11 +212,14 @@ describe("onIdenfyComplete", () => {
 
     await onIdenfyComplete("app-1", "FAILED");
 
+    // Uses $transaction for atomic status + note update
+    expect(db.$transaction).toHaveBeenCalled();
     expect(db.applicant.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ screeningStatus: "FAILED" }),
       }),
     );
+    expect(db.$executeRaw).toHaveBeenCalled();
   });
 
   it("triggers Checkr when iDenfy passes", async () => {
@@ -239,11 +270,14 @@ describe("onCheckrComplete", () => {
 
     await onCheckrComplete("app-1", "FAILED", "consider");
 
+    // Uses $transaction for atomic status + note update
+    expect(db.$transaction).toHaveBeenCalled();
     expect(db.applicant.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ screeningStatus: "FAILED" }),
       }),
     );
+    expect(db.$executeRaw).toHaveBeenCalled();
     expect(notifyAdminCheckrFlagged).toHaveBeenCalledWith(
       expect.objectContaining({ applicantId: "app-1", result: "consider" }),
     );

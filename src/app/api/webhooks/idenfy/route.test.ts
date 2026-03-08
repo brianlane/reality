@@ -325,9 +325,9 @@ describe("POST /api/webhooks/idenfy", () => {
     expect(onIdenfyComplete).toHaveBeenCalledWith("app-1", "PASSED");
   });
 
-  // ── Orchestrator failure ────────────────────────────────────────────────────
+  // ── Orchestrator failure + rollback ─────────────────────────────────────────
 
-  it("returns 500 when orchestrator throws", async () => {
+  it("returns 500 and rolls back idenfyStatus when orchestrator throws", async () => {
     const { verifyIdenfySignature, mapIdenfyStatus } =
       await import("@/lib/background-checks/idenfy");
     const { db } = await import("@/lib/db");
@@ -339,12 +339,68 @@ describe("POST /api/webhooks/idenfy", () => {
       makeApplicant() as never,
     );
     vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
-    vi.mocked(db.applicant.updateMany).mockResolvedValue({ count: 1 });
+    // First call: terminal claim succeeds. Second call: rollback.
+    vi.mocked(db.applicant.updateMany)
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 1 });
     vi.mocked(onIdenfyComplete).mockRejectedValue(
       new Error("orchestrator error"),
     );
 
     const res = await POST(makeRequest(makeFinalWebhook()));
     expect(res.status).toBe(500);
+
+    // Verify rollback: second updateMany call restores IN_PROGRESS
+    expect(db.applicant.updateMany).toHaveBeenCalledTimes(2);
+    expect(db.applicant.updateMany).toHaveBeenLastCalledWith({
+      where: {
+        id: "app-1",
+        idenfyStatus: "PASSED",
+        idenfyVerificationId: "scan-ref-1",
+      },
+      data: { idenfyStatus: "IN_PROGRESS" },
+    });
+  });
+
+  it("allows retry after orchestrator failure rollback", async () => {
+    const { verifyIdenfySignature, mapIdenfyStatus } =
+      await import("@/lib/background-checks/idenfy");
+    const { db } = await import("@/lib/db");
+    const { onIdenfyComplete } =
+      await import("@/lib/background-checks/orchestrator");
+    vi.mocked(verifyIdenfySignature).mockReturnValue(true);
+    vi.mocked(mapIdenfyStatus).mockReturnValue("PASSED");
+
+    // First delivery: orchestrator fails, idenfyStatus rolled back to IN_PROGRESS
+    vi.mocked(db.applicant.findFirst).mockResolvedValue(
+      makeApplicant() as never,
+    );
+    vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
+    vi.mocked(db.applicant.updateMany)
+      .mockResolvedValueOnce({ count: 1 }) // terminal claim
+      .mockResolvedValueOnce({ count: 1 }); // rollback
+    vi.mocked(onIdenfyComplete).mockRejectedValueOnce(new Error("transient"));
+
+    const res1 = await POST(makeRequest(makeFinalWebhook()));
+    expect(res1.status).toBe(500);
+
+    // Second delivery (retry): idenfyStatus was rolled back to IN_PROGRESS,
+    // so the terminal claim can succeed again
+    vi.clearAllMocks();
+    vi.mocked(verifyIdenfySignature).mockReturnValue(true);
+    vi.mocked(mapIdenfyStatus).mockReturnValue("PASSED");
+    // Applicant now has idenfyStatus=IN_PROGRESS (rolled back), idenfyVerificationId=scanRef
+    vi.mocked(db.applicant.findFirst).mockResolvedValue(
+      makeApplicant() as never,
+    );
+    vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
+    vi.mocked(db.applicant.updateMany).mockResolvedValue({ count: 1 });
+    vi.mocked(onIdenfyComplete).mockResolvedValue(undefined);
+
+    const res2 = await POST(makeRequest(makeFinalWebhook()));
+    expect(res2.status).toBe(200);
+    const data2 = await res2.json();
+    expect(data2.processed).toBe(true);
+    expect(onIdenfyComplete).toHaveBeenCalledWith("app-1", "PASSED");
   });
 });

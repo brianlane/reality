@@ -193,6 +193,32 @@ export async function POST(request: Request) {
   try {
     await onIdenfyComplete(applicant.id, screeningStatus);
   } catch (err: unknown) {
+    // Roll back idenfyStatus so the provider retry can re-claim. The terminal
+    // claim set idenfyStatus to PASSED/FAILED and idenfyVerificationId to scanRef.
+    // Rolling back to IN_PROGRESS re-opens the idenfyStatus guard while keeping
+    // idenfyVerificationId as scanRef so the retry's terminal guard still matches.
+    await db.applicant
+      .updateMany({
+        where: {
+          id: applicant.id,
+          idenfyStatus: screeningStatus,
+          idenfyVerificationId: scanRef,
+        },
+        data: { idenfyStatus: "IN_PROGRESS" },
+      })
+      .catch((rollbackErr: unknown) => {
+        logger.error(
+          "Failed to roll back idenfyStatus after orchestrator failure — provider retry will be blocked; manual intervention required",
+          {
+            applicantId: applicant.id,
+            scanRef,
+            error:
+              rollbackErr instanceof Error
+                ? rollbackErr.message
+                : String(rollbackErr),
+          },
+        );
+      });
     logger.error("Orchestrator onIdenfyComplete failed", {
       applicantId: applicant.id,
       error: err instanceof Error ? err.message : String(err),

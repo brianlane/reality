@@ -238,7 +238,7 @@ describe("POST /api/webhooks/checkr", () => {
     expect(onCheckrComplete).not.toHaveBeenCalled();
   });
 
-  it("returns 500 when orchestrator throws", async () => {
+  it("returns 500 and rolls back checkrReportId when orchestrator throws", async () => {
     const { verifyCheckrSignature, mapCheckrResult } =
       await import("@/lib/background-checks/checkr");
     const { db } = await import("@/lib/db");
@@ -250,11 +250,65 @@ describe("POST /api/webhooks/checkr", () => {
       makeApplicant() as never,
     );
     vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
-    vi.mocked(db.applicant.updateMany).mockResolvedValue({ count: 1 });
+    // First call: claim succeeds. Second call: rollback.
+    vi.mocked(db.applicant.updateMany)
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 1 });
     vi.mocked(onCheckrComplete).mockRejectedValue(new Error("DB error"));
 
     const res = await POST(makeRequest(makeReportCompletedEvent()));
     expect(res.status).toBe(500);
+
+    // Verify rollback: second updateMany call restores previous checkrReportId (null)
+    expect(db.applicant.updateMany).toHaveBeenCalledTimes(2);
+    expect(db.applicant.updateMany).toHaveBeenLastCalledWith({
+      where: { id: "app-1", checkrReportId: "report-1" },
+      data: { checkrReportId: null },
+    });
+  });
+
+  it("allows retry after orchestrator failure rollback", async () => {
+    const { verifyCheckrSignature, mapCheckrResult } =
+      await import("@/lib/background-checks/checkr");
+    const { db } = await import("@/lib/db");
+    const { onCheckrComplete } =
+      await import("@/lib/background-checks/orchestrator");
+    vi.mocked(verifyCheckrSignature).mockReturnValue(true);
+    vi.mocked(mapCheckrResult).mockReturnValue("PASSED");
+
+    // First delivery: orchestrator fails, reportId rolled back
+    vi.mocked(db.applicant.findFirst).mockResolvedValue(
+      makeApplicant() as never,
+    );
+    vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
+    vi.mocked(db.applicant.updateMany)
+      .mockResolvedValueOnce({ count: 1 }) // claim
+      .mockResolvedValueOnce({ count: 1 }); // rollback
+    vi.mocked(onCheckrComplete).mockRejectedValueOnce(new Error("transient"));
+
+    const res1 = await POST(makeRequest(makeReportCompletedEvent()));
+    expect(res1.status).toBe(500);
+
+    // Second delivery (retry): reportId was rolled back, so claim succeeds again
+    vi.clearAllMocks();
+    vi.mocked(verifyCheckrSignature).mockReturnValue(true);
+    vi.mocked(mapCheckrResult).mockReturnValue("PASSED");
+    // Applicant now has checkrReportId = null (rolled back)
+    vi.mocked(db.applicant.findFirst).mockResolvedValue(
+      makeApplicant() as never,
+    );
+    // Audit already exists from first delivery
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue({
+      id: "log-1",
+    } as never);
+    vi.mocked(db.applicant.updateMany).mockResolvedValue({ count: 1 });
+    vi.mocked(onCheckrComplete).mockResolvedValue(undefined);
+
+    const res2 = await POST(makeRequest(makeReportCompletedEvent()));
+    expect(res2.status).toBe(200);
+    const data2 = await res2.json();
+    expect(data2.processed).toBe(true);
+    expect(onCheckrComplete).toHaveBeenCalledWith("app-1", "PASSED", "clear");
   });
 
   // ── invitation.completed ────────────────────────────────────────────────────
@@ -267,6 +321,7 @@ describe("POST /api/webhooks/checkr", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant() as never,
     );
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue(null);
     vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
 
     const res = await POST(
@@ -285,6 +340,31 @@ describe("POST /api/webhooks/checkr", () => {
         }),
       }),
     );
+  });
+
+  it("returns 200 processed=false for invitation.completed idempotent retry", async () => {
+    const { verifyCheckrSignature } =
+      await import("@/lib/background-checks/checkr");
+    const { db } = await import("@/lib/db");
+    vi.mocked(verifyCheckrSignature).mockReturnValue(true);
+    vi.mocked(db.applicant.findFirst).mockResolvedValue(
+      makeApplicant() as never,
+    );
+    // Already logged from first delivery
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue({
+      id: "log-1",
+    } as never);
+
+    const res = await POST(
+      makeRequest({
+        type: "invitation.completed",
+        data: { object: { id: "inv-1", candidate_id: "cand-1" } },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.processed).toBe(false);
+    expect(db.screeningAuditLog.create).not.toHaveBeenCalled();
   });
 
   it("returns 200 processed=false for invitation.completed when applicant not found", async () => {
@@ -317,6 +397,7 @@ describe("POST /api/webhooks/checkr", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant() as never,
     );
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue(null);
     vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
 
     const res = await POST(
@@ -340,6 +421,40 @@ describe("POST /api/webhooks/checkr", () => {
       }),
     );
     expect(notifyAdminMonitoringAlert).toHaveBeenCalled();
+  });
+
+  it("returns 200 processed=false for continuous_monitor.updated idempotent retry", async () => {
+    const { verifyCheckrSignature } =
+      await import("@/lib/background-checks/checkr");
+    const { db } = await import("@/lib/db");
+    const { notifyAdminMonitoringAlert } =
+      await import("@/lib/email/admin-notifications");
+    vi.mocked(verifyCheckrSignature).mockReturnValue(true);
+    vi.mocked(db.applicant.findFirst).mockResolvedValue(
+      makeApplicant() as never,
+    );
+    // Recent alert exists (retry scenario)
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue({
+      id: "log-1",
+    } as never);
+
+    const res = await POST(
+      makeRequest({
+        type: "continuous_monitor.updated",
+        data: {
+          object: {
+            id: "monitor-1",
+            candidate_id: "cand-1",
+            status: "pending",
+          },
+        },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.processed).toBe(false);
+    expect(db.screeningAuditLog.create).not.toHaveBeenCalled();
+    expect(notifyAdminMonitoringAlert).not.toHaveBeenCalled();
   });
 
   it("returns 200 processed=false for continuous_monitor.updated with null candidate_id", async () => {

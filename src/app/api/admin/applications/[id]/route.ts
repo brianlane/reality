@@ -4,7 +4,7 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { adminApplicantUpdateSchema } from "@/lib/validations";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 import { cancelContinuousMonitoring } from "@/lib/background-checks/checkr";
-import { appendNote } from "@/lib/background-checks/orchestrator";
+import { atomicAppendNote } from "@/lib/background-checks/orchestrator";
 import { logger } from "@/lib/logger";
 import { Prisma } from "@prisma/client";
 
@@ -144,14 +144,6 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     reviewedBy: adminUser.id,
   };
 
-  // Append admin notes to preserve orchestrator audit trail instead of replacing
-  if (notesPayload != null && notesPayload.trim() !== "") {
-    updateData.backgroundCheckNotes = appendNote(
-      existing.backgroundCheckNotes,
-      notesPayload.trim(),
-    );
-  }
-
   const applicationStatusChangeRequested =
     body.applicant?.applicationStatus &&
     body.applicant.applicationStatus !== existing.applicationStatus;
@@ -161,10 +153,24 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     updateData.softRejectedFromStatus = null;
   }
 
-  const applicant = await db.applicant.update({
-    where: { id },
-    data: updateData,
-  });
+  // Use atomic note append (raw SQL) to prevent concurrent webhook deliveries
+  // from losing notes via last-write-wins when an admin saves at the same time.
+  let applicant;
+  if (notesPayload != null && notesPayload.trim() !== "") {
+    applicant = await db.$transaction(async (tx) => {
+      const result = await tx.applicant.update({
+        where: { id },
+        data: updateData,
+      });
+      await atomicAppendNote(tx, id, notesPayload.trim());
+      return result;
+    });
+  } else {
+    applicant = await db.applicant.update({
+      where: { id },
+      data: updateData,
+    });
+  }
 
   await db.adminAction.create({
     data: {

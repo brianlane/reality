@@ -157,9 +157,25 @@ export async function POST(request: NextRequest) {
         // Silently ignore - notification failure shouldn't affect the response
       });
 
-      // If FCRA consent has already been given, auto-initiate screening.
+      // Auto-initiate screening if FCRA consent has already been given.
+      // First check the in-transaction read, then do a post-commit re-read
+      // to close the race window where submit and consent transactions both
+      // read before either commits. initiateScreening's updateMany guard
+      // prevents duplicate transitions.
       let screeningInitiated = false;
-      if (freshApplicant?.backgroundCheckConsentAt) {
+      let hasConsent = !!freshApplicant?.backgroundCheckConsentAt;
+
+      if (!hasConsent) {
+        // The in-transaction read may have missed a concurrent consent that
+        // hadn't committed yet. Re-read after our commit to catch it.
+        const postCommit = await db.applicant.findUnique({
+          where: { id: applicant.id },
+          select: { backgroundCheckConsentAt: true },
+        });
+        hasConsent = !!postCommit?.backgroundCheckConsentAt;
+      }
+
+      if (hasConsent) {
         try {
           await initiateScreening(applicant.id);
           screeningInitiated = true;

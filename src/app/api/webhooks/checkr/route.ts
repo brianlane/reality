@@ -231,6 +231,29 @@ async function handleReportCompleted(data: {
   try {
     await onCheckrComplete(applicant.id, screeningStatus, result);
   } catch (err: unknown) {
+    // Roll back the idempotency marker so the provider retry can re-claim.
+    // Keep checkrStatus as-is — the mapped status is correct regardless of
+    // orchestration state, and rolling it back could conflict with a concurrent
+    // webhook for a different report.
+    const previousReportId = applicant.checkrReportId;
+    await db.applicant
+      .updateMany({
+        where: { id: applicant.id, checkrReportId: reportId },
+        data: { checkrReportId: previousReportId },
+      })
+      .catch((rollbackErr: unknown) => {
+        logger.error(
+          "Failed to roll back checkrReportId after orchestrator failure — provider retry will be blocked; manual intervention required",
+          {
+            applicantId: applicant.id,
+            reportId,
+            error:
+              rollbackErr instanceof Error
+                ? rollbackErr.message
+                : String(rollbackErr),
+          },
+        );
+      });
     logger.error("Orchestrator onCheckrComplete failed", {
       applicantId: applicant.id,
       error: err instanceof Error ? err.message : String(err),
@@ -263,6 +286,25 @@ async function handleInvitationCompleted(data: {
     logger.warn("Checkr invitation.completed: applicant not found", {
       candidateId,
     });
+    return successResponse({ received: true, processed: false });
+  }
+
+  // Idempotency: skip if this exact invitation was already logged (retry scenario).
+  const existingLog = await db.screeningAuditLog.findFirst({
+    where: {
+      applicantId: applicant.id,
+      action: "CHECKR_INVITATION_COMPLETED",
+      metadata: { path: ["invitationId"], equals: data.id },
+    },
+  });
+  if (existingLog) {
+    logger.info(
+      "Checkr invitation.completed already logged (idempotent retry)",
+      {
+        applicantId: applicant.id,
+        invitationId: data.id,
+      },
+    );
     return successResponse({ received: true, processed: false });
   }
 
@@ -306,6 +348,30 @@ async function handleContinuousMonitorUpdated(data: {
     logger.warn("Checkr continuous_monitor.updated: applicant not found", {
       candidateId,
     });
+    return successResponse({ received: true, processed: false });
+  }
+
+  // Idempotency: skip if this exact monitor event was already logged recently.
+  // Continuous monitoring may fire distinct alerts for the same subscription, but
+  // provider retries of the SAME event will have identical monitorId + status.
+  // A 60-second window prevents duplicates from retries while allowing genuinely
+  // new alerts that arrive later.
+  const recentAlert = await db.screeningAuditLog.findFirst({
+    where: {
+      applicantId: applicant.id,
+      action: "CONTINUOUS_MONITOR_ALERT",
+      metadata: {
+        path: ["monitorId"],
+        equals: data.id,
+      },
+      createdAt: { gte: new Date(Date.now() - 60_000) },
+    },
+  });
+  if (recentAlert) {
+    logger.info(
+      "Continuous monitoring alert already processed recently (idempotent retry)",
+      { applicantId: applicant.id, monitorId: data.id },
+    );
     return successResponse({ received: true, processed: false });
   }
 
