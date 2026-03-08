@@ -125,10 +125,11 @@ export default function AdminApplicationForm({
           }));
           initialLoadDone.current = true;
         } else {
+          // Only update screeningStatus on refresh — applicationStatus is an
+          // admin-editable field and overwriting it would silently revert
+          // unsaved dropdown changes the admin may have made.
           setForm((prev) => ({
             ...prev,
-            applicationStatus:
-              json.applicant.applicationStatus ?? prev.applicationStatus,
             screeningStatus:
               json.applicant.screeningStatus ?? prev.screeningStatus,
           }));
