@@ -24,6 +24,10 @@ CREATE TABLE "ScreeningAuditLog" (
 CREATE INDEX "ScreeningAuditLog_applicantId_idx" ON "ScreeningAuditLog"("applicantId");
 CREATE INDEX "ScreeningAuditLog_userId_idx" ON "ScreeningAuditLog"("userId");
 CREATE INDEX "ScreeningAuditLog_createdAt_idx" ON "ScreeningAuditLog"("createdAt");
+CREATE INDEX "ScreeningAuditLog_action_idx" ON "ScreeningAuditLog"("action");
+
+-- GIN index for JSONB metadata path queries used in webhook deduplication
+CREATE INDEX "ScreeningAuditLog_metadata_gin" ON "ScreeningAuditLog" USING GIN("metadata");
 
 -- AddForeignKey: User -> ScreeningAuditLog (SetNull on delete for FCRA retention)
 ALTER TABLE "ScreeningAuditLog" ADD CONSTRAINT "ScreeningAuditLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;

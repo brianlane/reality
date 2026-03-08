@@ -632,4 +632,5 @@ model ScreeningAuditLog {
   @@index([applicantId])
   @@index([userId])
   @@index([createdAt])
+  @@index([action])
 }

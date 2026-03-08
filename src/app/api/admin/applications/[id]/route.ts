@@ -158,12 +158,14 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   let applicant;
   if (notesPayload != null && notesPayload.trim() !== "") {
     applicant = await db.$transaction(async (tx) => {
-      const result = await tx.applicant.update({
+      await tx.applicant.update({
         where: { id },
         data: updateData,
       });
       await atomicAppendNote(tx, id, notesPayload.trim());
-      return result;
+      // Re-read after the atomic append so the returned object includes the
+      // up-to-date backgroundCheckNotes (the update above doesn't include it).
+      return tx.applicant.findUniqueOrThrow({ where: { id } });
     });
   } else {
     applicant = await db.applicant.update({

@@ -91,11 +91,25 @@ export async function POST(request: Request) {
       );
     }
 
-    // Already consented
+    // Already consented — still check if screening needs initiation in case
+    // a prior race condition between consent and submit prevented it.
     if (applicant.backgroundCheckConsentAt) {
+      let screeningInitiated = false;
+      if (applicant.applicationStatus === "SUBMITTED") {
+        try {
+          await initiateScreening(applicant.id);
+          screeningInitiated = true;
+        } catch (err: unknown) {
+          logger.error("Failed to auto-initiate screening on consent retry", {
+            applicantId: applicant.id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
       return successResponse({
         status: "already_consented",
         consentedAt: applicant.backgroundCheckConsentAt,
+        screeningInitiated,
         message: "Background check consent has already been recorded.",
       });
     }

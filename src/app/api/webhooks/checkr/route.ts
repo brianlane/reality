@@ -97,17 +97,24 @@ async function handleReportCompleted(data: {
   // Look up applicant: prefer checkrCandidateId (primary), then checkrReportId
   // (fallback). Prefer non-deleted over soft-deleted to avoid writing to the
   // wrong record when multiple could match (e.g., re-trigger edge cases).
-  const orderByDeletedAtFirst = {
-    deletedAt: { sort: "asc" as const, nulls: "first" as const },
-  };
+  // Use explicit deletedAt: null first, then fall back to any match, to avoid
+  // relying on orderBy nulls ordering behavior across Prisma versions.
   let applicant = await db.applicant.findFirst({
-    where: { checkrCandidateId: candidateId },
-    orderBy: orderByDeletedAtFirst,
+    where: { checkrCandidateId: candidateId, deletedAt: null },
   });
   if (!applicant) {
     applicant = await db.applicant.findFirst({
+      where: { checkrCandidateId: candidateId },
+    });
+  }
+  if (!applicant) {
+    applicant = await db.applicant.findFirst({
+      where: { checkrReportId: reportId, deletedAt: null },
+    });
+  }
+  if (!applicant) {
+    applicant = await db.applicant.findFirst({
       where: { checkrReportId: reportId },
-      orderBy: orderByDeletedAtFirst,
     });
   }
 

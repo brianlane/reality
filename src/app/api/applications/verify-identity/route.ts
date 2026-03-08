@@ -146,15 +146,31 @@ export async function POST(request: Request) {
       });
     } catch (err) {
       // Roll back to the original pre-claim status (and verification ID for forceNewSession).
-      await db.applicant.updateMany({
-        where: { id: applicant.id, idenfyStatus: "IN_PROGRESS" },
-        data: {
-          idenfyStatus: rollbackStatus,
-          ...(shouldRollbackVerificationId
-            ? { idenfyVerificationId: rollbackVerificationId }
-            : {}),
-        },
-      });
+      // Wrap rollback in its own try-catch so a DB failure during rollback doesn't
+      // replace the original error or leave the claiming-{uuid} placeholder permanently.
+      try {
+        await db.applicant.updateMany({
+          where: { id: applicant.id, idenfyStatus: "IN_PROGRESS" },
+          data: {
+            idenfyStatus: rollbackStatus,
+            ...(shouldRollbackVerificationId
+              ? { idenfyVerificationId: rollbackVerificationId }
+              : {}),
+          },
+        });
+      } catch (rollbackErr) {
+        logger.error(
+          "Failed to roll back idenfyStatus after session creation failure — applicant may be stuck; manual intervention required",
+          {
+            applicantId: applicant.id,
+            rollbackStatus,
+            error:
+              rollbackErr instanceof Error
+                ? rollbackErr.message
+                : String(rollbackErr),
+          },
+        );
+      }
       throw err;
     }
 

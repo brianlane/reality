@@ -48,6 +48,21 @@ export async function POST(request: Request) {
     );
   }
 
+  const knownStatuses = [
+    "APPROVED",
+    "DENIED",
+    "SUSPECTED",
+    "REVIEWING",
+    "EXPIRED",
+    "ACTIVE",
+  ];
+  if (!knownStatuses.includes(overallStatus.toUpperCase())) {
+    logger.warn("iDenfy webhook received unknown overallStatus", {
+      overallStatus,
+      scanRef,
+    });
+  }
+
   // Look up applicant by scanRef, the reviewing sentinel, or clientId.
   // The reviewing sentinel (`reviewing:${scanRef}`) is written when a REVIEWING
   // + final webhook is first processed, so retries and subsequent resolution

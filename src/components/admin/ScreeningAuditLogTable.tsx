@@ -40,6 +40,10 @@ export default function ScreeningAuditLogTable() {
       if (res.ok) {
         setLogs(data.logs);
         setTotal(data.total);
+        // Reset to first page if current offset is beyond total (e.g., data deleted)
+        if (offset > 0 && offset >= data.total) {
+          setOffset(0);
+        }
       } else {
         setError(data.error?.message || "Failed to load audit logs");
       }
@@ -143,7 +147,9 @@ export default function ScreeningAuditLogTable() {
       {/* Pagination */}
       <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 bg-slate-50">
         <p className="text-xs text-slate-500">
-          Showing {offset + 1}–{Math.min(offset + limit, total)} of {total}
+          {total === 0 || offset >= total
+            ? "No results"
+            : `Showing ${offset + 1}–${Math.min(offset + limit, total)} of ${total}`}
         </p>
         <div className="flex gap-2">
           <Button

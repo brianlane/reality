@@ -142,6 +142,26 @@ export async function POST(request: NextRequest) {
         });
       });
 
+      // Audit log for FCRA compliance
+      db.screeningAuditLog
+        .create({
+          data: {
+            userId: applicant.userId,
+            applicantId: applicant.id,
+            action: "APPLICATION_SUBMITTED",
+            metadata: {
+              submittedAt: new Date().toISOString(),
+              email: applicant.user.email,
+            },
+          },
+        })
+        .catch((err: unknown) => {
+          logger.error("Failed to create submission audit log", {
+            applicantId: applicant.id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
+
       // Notify admin that an application was submitted (non-blocking)
       notifyApplicationSubmitted({
         applicantId: applicant.id,
@@ -202,8 +222,9 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
-    // Log the error for debugging
-    console.error("Application submission error:", error);
+    logger.error("Application submission error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
 
     return errorResponse(
       "SERVER_ERROR",

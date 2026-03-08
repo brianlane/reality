@@ -165,6 +165,23 @@ export default function AdminApplicationForm({
     return () => controller.abort();
   }, [mode, applicationId, refreshKey]);
 
+  // Returns the applicationStatus to include in the PATCH payload, or undefined
+  // to omit it. Omitted when: (a) unchanged from initial value (prevents validation
+  // errors for invite-only statuses the admin hasn't touched), or (b) set to
+  // REJECTED (use the dedicated soft-reject endpoint instead).
+  function getApplicationStatusPayload(): string | undefined {
+    if (
+      mode === "edit" &&
+      form.applicationStatus === initialApplicationStatus
+    ) {
+      return undefined;
+    }
+    if (form.applicationStatus === "REJECTED") {
+      return undefined;
+    }
+    return form.applicationStatus;
+  }
+
   function updateField(name: string, value: string) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
@@ -222,15 +239,7 @@ export default function AdminApplicationForm({
                 incomeRange: form.incomeRange,
                 referredBy: form.referredBy.trim() || null,
                 aboutYourself: form.aboutYourself.trim() || undefined,
-                // Only include applicationStatus if it has changed from initial value
-                // This prevents validation errors for applicants in invite-only statuses
-                applicationStatus:
-                  mode === "edit" &&
-                  form.applicationStatus === initialApplicationStatus
-                    ? undefined
-                    : form.applicationStatus === "REJECTED"
-                      ? undefined
-                      : form.applicationStatus,
+                applicationStatus: getApplicationStatusPayload(),
                 screeningStatus: form.screeningStatus,
                 compatibilityScore: form.compatibilityScore
                   ? Number(form.compatibilityScore)
