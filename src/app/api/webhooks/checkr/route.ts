@@ -64,7 +64,7 @@ export async function POST(request: Request) {
         logger.warn(
           "Checkr continuous_monitor.updated missing top-level event id",
         );
-        return errorResponse("VALIDATION_ERROR", "Missing event id", 400);
+        return successResponse({ received: true, processed: false });
       }
       return handleContinuousMonitorUpdated(eventData, body.id);
 

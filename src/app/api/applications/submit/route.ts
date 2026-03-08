@@ -124,16 +124,30 @@ export async function POST(request: NextRequest) {
       // BEGIN...COMMIT block, so it sees the status write (read-your-own-writes).
       // Under READ COMMITTED it also sees any backgroundCheckConsentAt committed
       // by a concurrent consent route before the findUnique executes.
+      // Write SUBMITTED status, audit log, and re-read consent in one transaction
+      // so the FCRA audit record is never silently lost.
+      const submittedAt = new Date();
       const freshApplicant = await db.$transaction(async (tx) => {
         await tx.applicant.update({
           where: { id: applicant.id },
           data: {
             applicationStatus: "SUBMITTED",
-            submittedAt: new Date(),
+            submittedAt,
             screeningStatus: "PENDING",
             waitlistInviteToken: null,
             invitedOffWaitlistAt: null,
             invitedOffWaitlistBy: null,
+          },
+        });
+        await tx.screeningAuditLog.create({
+          data: {
+            userId: applicant.userId,
+            applicantId: applicant.id,
+            action: "APPLICATION_SUBMITTED",
+            metadata: {
+              submittedAt: submittedAt.toISOString(),
+              email: applicant.user.email,
+            },
           },
         });
         return tx.applicant.findUnique({
@@ -141,26 +155,6 @@ export async function POST(request: NextRequest) {
           select: { backgroundCheckConsentAt: true },
         });
       });
-
-      // Audit log for FCRA compliance
-      db.screeningAuditLog
-        .create({
-          data: {
-            userId: applicant.userId,
-            applicantId: applicant.id,
-            action: "APPLICATION_SUBMITTED",
-            metadata: {
-              submittedAt: new Date().toISOString(),
-              email: applicant.user.email,
-            },
-          },
-        })
-        .catch((err: unknown) => {
-          logger.error("Failed to create submission audit log", {
-            applicantId: applicant.id,
-            error: err instanceof Error ? err.message : String(err),
-          });
-        });
 
       // Notify admin that an application was submitted (non-blocking)
       notifyApplicationSubmitted({
