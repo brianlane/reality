@@ -13,6 +13,7 @@ const VALID_ACTIONS = new Set([
   "CHECKR_AUTO_TRIGGERED",
   "CONTINUOUS_MONITOR_ALERT",
   "FCRA_CONSENT_GIVEN",
+  "APPLICATION_SUBMITTED",
 ]);
 
 export async function GET(request: Request) {

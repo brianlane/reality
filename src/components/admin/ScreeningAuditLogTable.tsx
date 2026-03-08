@@ -69,6 +69,7 @@ export default function ScreeningAuditLogTable() {
       CHECKR_AUTO_TRIGGERED: "Checkr Auto-Triggered",
       CONTINUOUS_MONITOR_ALERT: "Monitoring Alert",
       FCRA_CONSENT_GIVEN: "FCRA Consent",
+      APPLICATION_SUBMITTED: "Application Submitted",
     };
     return labels[action] || action.replace(/_/g, " ");
   };
