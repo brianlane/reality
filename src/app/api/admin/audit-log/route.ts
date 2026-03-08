@@ -30,8 +30,11 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const applicantId = url.searchParams.get("applicantId");
   const action = url.searchParams.get("action");
-  const limit = Math.min(Number(url.searchParams.get("limit")) || 50, 500);
-  const offset = Number(url.searchParams.get("offset")) || 0;
+  const limit = Math.min(
+    Math.max(Number(url.searchParams.get("limit")) || 50, 1),
+    500,
+  );
+  const offset = Math.max(Number(url.searchParams.get("offset")) || 0, 0);
 
   if (action && !VALID_ACTIONS.has(action)) {
     return errorResponse(

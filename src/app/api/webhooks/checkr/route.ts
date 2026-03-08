@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       return handleInvitationCompleted(eventData);
 
     case "continuous_monitor.updated":
-      return handleContinuousMonitorUpdated(eventData);
+      return handleContinuousMonitorUpdated(eventData, body.id);
 
     default:
       logger.info("Checkr webhook event type not handled", { eventType });
@@ -329,12 +329,15 @@ async function handleInvitationCompleted(data: {
   return successResponse({ received: true, processed: true });
 }
 
-async function handleContinuousMonitorUpdated(data: {
-  id: string;
-  candidate_id?: string;
-  status?: string;
-  [key: string]: unknown;
-}) {
+async function handleContinuousMonitorUpdated(
+  data: {
+    id: string;
+    candidate_id?: string;
+    status?: string;
+    [key: string]: unknown;
+  },
+  eventId: string,
+) {
   const candidateId = data.candidate_id;
   if (!candidateId) {
     return successResponse({ received: true, processed: false });
@@ -351,26 +354,26 @@ async function handleContinuousMonitorUpdated(data: {
     return successResponse({ received: true, processed: false });
   }
 
-  // Idempotency: skip if this exact monitor event was already logged recently.
-  // Continuous monitoring may fire distinct alerts for the same subscription, but
-  // provider retries of the SAME event will have identical monitorId + status.
-  // A 60-second window prevents duplicates from retries while allowing genuinely
-  // new alerts that arrive later.
-  const recentAlert = await db.screeningAuditLog.findFirst({
+  // Idempotency: skip if this exact webhook event was already logged.
+  // We use the top-level event ID (body.id) — unique per delivery — rather than
+  // data.id (the monitor subscription ID) which is shared across all alerts for
+  // the same subscription. This avoids both false positives (dropping distinct
+  // alerts within a time window) and false negatives (duplicate logs from retries
+  // arriving after a time window expires).
+  const existingAlert = await db.screeningAuditLog.findFirst({
     where: {
       applicantId: applicant.id,
       action: "CONTINUOUS_MONITOR_ALERT",
       metadata: {
-        path: ["monitorId"],
-        equals: data.id,
+        path: ["eventId"],
+        equals: eventId,
       },
-      createdAt: { gte: new Date(Date.now() - 60_000) },
     },
   });
-  if (recentAlert) {
+  if (existingAlert) {
     logger.info(
-      "Continuous monitoring alert already processed recently (idempotent retry)",
-      { applicantId: applicant.id, monitorId: data.id },
+      "Continuous monitoring alert already processed (idempotent retry)",
+      { applicantId: applicant.id, eventId, monitorId: data.id },
     );
     return successResponse({ received: true, processed: false });
   }
@@ -382,6 +385,7 @@ async function handleContinuousMonitorUpdated(data: {
       applicantId: applicant.id,
       action: "CONTINUOUS_MONITOR_ALERT",
       metadata: {
+        eventId,
         monitorId: data.id,
         candidateId,
         status: data.status,

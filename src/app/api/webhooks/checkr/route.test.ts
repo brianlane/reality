@@ -402,6 +402,7 @@ describe("POST /api/webhooks/checkr", () => {
 
     const res = await POST(
       makeRequest({
+        id: "evt-100",
         type: "continuous_monitor.updated",
         data: {
           object: {
@@ -417,10 +418,49 @@ describe("POST /api/webhooks/checkr", () => {
     expect(data.processed).toBe(true);
     expect(db.screeningAuditLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ action: "CONTINUOUS_MONITOR_ALERT" }),
+        data: expect.objectContaining({
+          action: "CONTINUOUS_MONITOR_ALERT",
+          metadata: expect.objectContaining({ eventId: "evt-100" }),
+        }),
       }),
     );
     expect(notifyAdminMonitoringAlert).toHaveBeenCalled();
+  });
+
+  it("deduplicates by top-level event ID, not monitor subscription ID", async () => {
+    const { verifyCheckrSignature } =
+      await import("@/lib/background-checks/checkr");
+    const { db } = await import("@/lib/db");
+    vi.mocked(verifyCheckrSignature).mockReturnValue(true);
+    vi.mocked(db.applicant.findFirst).mockResolvedValue(
+      makeApplicant() as never,
+    );
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue(null);
+    vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
+
+    const res = await POST(
+      makeRequest({
+        id: "evt-200",
+        type: "continuous_monitor.updated",
+        data: {
+          object: {
+            id: "monitor-1",
+            candidate_id: "cand-1",
+            status: "pending",
+          },
+        },
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    // Verify idempotency lookup uses eventId path, not monitorId
+    expect(db.screeningAuditLog.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          metadata: { path: ["eventId"], equals: "evt-200" },
+        }),
+      }),
+    );
   });
 
   it("returns 200 processed=false for continuous_monitor.updated idempotent retry", async () => {
@@ -433,13 +473,14 @@ describe("POST /api/webhooks/checkr", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant() as never,
     );
-    // Recent alert exists (retry scenario)
+    // Existing alert with same eventId (retry scenario)
     vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue({
       id: "log-1",
     } as never);
 
     const res = await POST(
       makeRequest({
+        id: "evt-100",
         type: "continuous_monitor.updated",
         data: {
           object: {
@@ -464,6 +505,7 @@ describe("POST /api/webhooks/checkr", () => {
 
     const res = await POST(
       makeRequest({
+        id: "evt-300",
         type: "continuous_monitor.updated",
         data: { object: { id: "monitor-1", status: "pending" } }, // no candidate_id
       }),
