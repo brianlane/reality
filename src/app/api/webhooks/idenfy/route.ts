@@ -75,21 +75,34 @@ export async function POST(request: Request) {
 
   const screeningStatus = mapIdenfyStatus(overallStatus, { final: body.final });
 
-  // Log to screening audit (always, even for soft-deleted — compliance requirement).
-  // No .catch() — failures must return 500 so the provider retries; we cannot
-  // proceed without a legally required record.
-  await db.screeningAuditLog.create({
-    data: {
-      userId: null,
+  // FCRA-required audit log. Deduplicate on scanRef + overallStatus so provider
+  // retries of the same event don't create duplicate compliance records, while
+  // genuinely different events for the same scanRef (e.g. REVIEWING followed by
+  // APPROVED after human review) each get their own audit entry.
+  const existingAudit = await db.screeningAuditLog.findFirst({
+    where: {
       applicantId: applicant.id,
       action: "IDENFY_WEBHOOK",
-      metadata: {
-        scanRef,
-        overallStatus,
-        mappedStatus: screeningStatus,
-      },
+      AND: [
+        { metadata: { path: ["scanRef"], equals: scanRef } },
+        { metadata: { path: ["overallStatus"], equals: overallStatus } },
+      ],
     },
   });
+  if (!existingAudit) {
+    await db.screeningAuditLog.create({
+      data: {
+        userId: null,
+        applicantId: applicant.id,
+        action: "IDENFY_WEBHOOK",
+        metadata: {
+          scanRef,
+          overallStatus,
+          mappedStatus: screeningStatus,
+        },
+      },
+    });
+  }
 
   // Skip status updates and orchestration for soft-deleted applicants
   if (applicant.deletedAt) {

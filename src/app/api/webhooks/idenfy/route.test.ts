@@ -6,7 +6,7 @@ import { POST } from "./route";
 vi.mock("@/lib/db", () => ({
   db: {
     applicant: { findFirst: vi.fn(), updateMany: vi.fn() },
-    screeningAuditLog: { create: vi.fn() },
+    screeningAuditLog: { create: vi.fn(), findFirst: vi.fn() },
   },
 }));
 
@@ -152,6 +152,7 @@ describe("POST /api/webhooks/idenfy", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant() as never,
     );
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue(null);
     vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
     vi.mocked(db.applicant.updateMany).mockResolvedValue({ count: 1 });
 
@@ -175,7 +176,10 @@ describe("POST /api/webhooks/idenfy", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant() as never,
     );
-    vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
+    // Audit already exists from first delivery
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue({
+      id: "log-1",
+    } as never);
     // 0 rows claimed = already processed (PASSED/FAILED guard blocked it)
     vi.mocked(db.applicant.updateMany).mockResolvedValue({ count: 0 });
 
@@ -183,6 +187,8 @@ describe("POST /api/webhooks/idenfy", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.processed).toBe(false);
+    // Audit already existed, so create should NOT be called
+    expect(db.screeningAuditLog.create).not.toHaveBeenCalled();
     expect(onIdenfyComplete).not.toHaveBeenCalled();
   });
 
@@ -198,6 +204,7 @@ describe("POST /api/webhooks/idenfy", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant({ idenfyVerificationId: "new-scan-ref" }) as never,
     );
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue(null);
     vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
     // idenfyVerificationId guard rejects the stale scanRef → count=0
     vi.mocked(db.applicant.updateMany).mockResolvedValue({ count: 0 });
@@ -222,6 +229,7 @@ describe("POST /api/webhooks/idenfy", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant({ deletedAt: new Date() }) as never,
     );
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue(null);
     vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
 
     const res = await POST(makeRequest(makeFinalWebhook()));
@@ -246,6 +254,7 @@ describe("POST /api/webhooks/idenfy", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant() as never,
     );
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue(null);
     vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
     vi.mocked(db.applicant.updateMany).mockResolvedValue({ count: 1 });
 
@@ -278,6 +287,7 @@ describe("POST /api/webhooks/idenfy", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant({ idenfyVerificationId: "reviewing:scan-ref-1" }) as never,
     );
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue(null);
     vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
     // Guard fails because current value is sentinel, not scanRef → count=0
     vi.mocked(db.applicant.updateMany).mockResolvedValue({ count: 0 });
@@ -302,6 +312,7 @@ describe("POST /api/webhooks/idenfy", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant({ idenfyVerificationId: "reviewing:scan-ref-1" }) as never,
     );
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue(null);
     vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
     vi.mocked(db.applicant.updateMany).mockResolvedValue({ count: 1 });
 
@@ -338,6 +349,7 @@ describe("POST /api/webhooks/idenfy", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant() as never,
     );
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue(null);
     vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
     // First call: terminal claim succeeds. Second call: rollback.
     vi.mocked(db.applicant.updateMany)
@@ -375,6 +387,7 @@ describe("POST /api/webhooks/idenfy", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant() as never,
     );
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue(null);
     vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
     vi.mocked(db.applicant.updateMany)
       .mockResolvedValueOnce({ count: 1 }) // terminal claim
@@ -393,7 +406,10 @@ describe("POST /api/webhooks/idenfy", () => {
     vi.mocked(db.applicant.findFirst).mockResolvedValue(
       makeApplicant() as never,
     );
-    vi.mocked(db.screeningAuditLog.create).mockResolvedValue({} as never);
+    // Audit already exists from first delivery — dedup skips create
+    vi.mocked(db.screeningAuditLog.findFirst).mockResolvedValue({
+      id: "log-1",
+    } as never);
     vi.mocked(db.applicant.updateMany).mockResolvedValue({ count: 1 });
     vi.mocked(onIdenfyComplete).mockResolvedValue(undefined);
 
