@@ -84,9 +84,11 @@ export async function POST(request: Request) {
     // parts to be present (prevents e.g. "Jones" passing for firstName="Jo" lastName="Jones").
     const normalizedInput = fullName.trim().toLowerCase().replace(/\s+/g, " ");
     const normalizedFirst = applicant.user.firstName
+      .trim()
       .toLowerCase()
       .replace(/\s+/g, " ");
     const normalizedLast = applicant.user.lastName
+      .trim()
       .toLowerCase()
       .replace(/\s+/g, " ");
     const minExpected = `${normalizedFirst} ${normalizedLast}`;
