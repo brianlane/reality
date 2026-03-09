@@ -139,12 +139,19 @@ export function verifyIdenfySignature(
   payload: string,
 ): boolean {
   const config = getConfig();
-  const secret = config.webhookSecret || config.apiSecret;
 
-  if (!secret) {
+  if (!config.webhookSecret && !config.apiSecret) {
     logger.error("iDenfy webhook secret is not configured");
     return false;
   }
+
+  if (!config.webhookSecret) {
+    logger.warn(
+      "IDENFY_WEBHOOK_SECRET is not set — falling back to IDENFY_API_SECRET for webhook verification. Set IDENFY_WEBHOOK_SECRET explicitly for production use.",
+    );
+  }
+
+  const secret = config.webhookSecret || config.apiSecret!;
 
   try {
     const computedSignature = crypto

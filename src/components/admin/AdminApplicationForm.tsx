@@ -683,11 +683,20 @@ export default function AdminApplicationForm({
       </div>
       <div className="space-y-2">
         <label className="text-xs font-semibold text-navy-soft">
-          Review Notes
+          Add Note{" "}
+          <span className="font-normal text-navy-soft/60">
+            (appended to existing notes)
+          </span>
         </label>
+        {screeningData?.backgroundCheckNotes && (
+          <div className="rounded-md bg-slate-50 border border-slate-200 p-3 text-sm text-navy-soft whitespace-pre-wrap">
+            {screeningData.backgroundCheckNotes}
+          </div>
+        )}
         <Textarea
           value={form.notes}
           onChange={(event) => updateField("notes", event.target.value)}
+          placeholder="Type a new note to append..."
         />
       </div>
       {/* Screening Detail Panel */}
