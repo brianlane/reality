@@ -2,6 +2,8 @@ import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { sendApplicationStatusEmail } from "@/lib/email/status";
+import { logger } from "@/lib/logger";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -10,6 +12,21 @@ type RouteContext = {
 type RejectBody = {
   reason?: string;
 };
+
+const BACKGROUND_CHECK_KEYWORDS = [
+  "background",
+  "screening",
+  "checkr",
+  "idenfy",
+  "criminal",
+  "identity",
+  "verification",
+];
+
+function isBackgroundCheckRelated(reason: string): boolean {
+  const lower = reason.toLowerCase();
+  return BACKGROUND_CHECK_KEYWORDS.some((keyword) => lower.includes(keyword));
+}
 
 export async function POST(request: Request, { params }: RouteContext) {
   const { id } = await params;
@@ -35,6 +52,7 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   const existing = await db.applicant.findFirst({
     where: { id, deletedAt: null },
+    include: { user: { select: { email: true, firstName: true } } },
   });
   if (!existing) {
     return errorResponse("NOT_FOUND", "Applicant not found", 404);
@@ -62,6 +80,22 @@ export async function POST(request: Request, { params }: RouteContext) {
       metadata: { reason: body.reason },
     },
   });
+
+  // FCRA adverse action: send notification when rejection is background-check-related
+  const reason = body.reason ?? "";
+  if (isBackgroundCheckRelated(reason)) {
+    sendApplicationStatusEmail({
+      to: existing.user.email,
+      firstName: existing.user.firstName,
+      status: "REJECTED",
+      applicantId: applicant.id,
+    }).catch((err) => {
+      logger.error("Failed to send adverse action email", {
+        applicantId: applicant.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+  }
 
   return successResponse({
     applicant: {

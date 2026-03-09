@@ -61,6 +61,7 @@ function makeApplicant(overrides: Partial<Applicant> = {}): Applicant {
     backgroundCheckConsentIp: null,
     checkrCandidateId: null,
     continuousMonitoringId: null,
+    lastQuestionnaireDate: null,
     relationshipReadinessFlag: null,
     saScreeningFlag: null,
     screeningFlagDetails: null,

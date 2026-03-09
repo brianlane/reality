@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
+import { getAuthUser } from "@/lib/auth";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { logger } from "@/lib/logger";
 
 async function getApplicantForProlific(applicationId: string) {
   return db.applicant.findUnique({
@@ -10,6 +12,7 @@ async function getApplicantForProlific(applicationId: string) {
       applicationStatus: true,
       prolificCompletionCode: true,
       deletedAt: true,
+      user: { select: { email: true } },
     },
   });
 }
@@ -20,6 +23,11 @@ async function getApplicantForProlific(applicationId: string) {
  */
 export async function GET(request: NextRequest) {
   try {
+    const auth = await getAuthUser();
+    if (!auth) {
+      return errorResponse("UNAUTHORIZED", "User not authenticated", 401);
+    }
+
     const applicationId = request.nextUrl.searchParams.get("applicationId");
 
     if (!applicationId) {
@@ -30,6 +38,14 @@ export async function GET(request: NextRequest) {
 
     if (!applicant || applicant.deletedAt !== null) {
       return errorResponse("NOT_FOUND", "Applicant not found", 404);
+    }
+
+    // Ownership check
+    if (
+      !auth.email ||
+      applicant.user.email.toLowerCase() !== auth.email.toLowerCase()
+    ) {
+      return errorResponse("FORBIDDEN", "Access denied", 403);
     }
 
     if (
@@ -44,7 +60,9 @@ export async function GET(request: NextRequest) {
       prolificCompletionCode: applicant.prolificCompletionCode,
     });
   } catch (error) {
-    console.error("Error fetching Prolific completion code:", error);
+    logger.error("Error fetching Prolific completion code", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return errorResponse(
       "INTERNAL_ERROR",
       "Failed to fetch completion code",
@@ -59,6 +77,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const auth = await getAuthUser();
+    if (!auth) {
+      return errorResponse("UNAUTHORIZED", "User not authenticated", 401);
+    }
+
     const { applicationId } = await request.json();
 
     if (!applicationId) {
@@ -69,6 +92,14 @@ export async function POST(request: NextRequest) {
 
     if (!applicant || applicant.deletedAt !== null) {
       return errorResponse("NOT_FOUND", "Applicant not found", 404);
+    }
+
+    // Ownership check
+    if (
+      !auth.email ||
+      applicant.user.email.toLowerCase() !== auth.email.toLowerCase()
+    ) {
+      return errorResponse("FORBIDDEN", "Access denied", 403);
     }
 
     if (!applicant.prolificCompletionCode) {
@@ -87,7 +118,9 @@ export async function POST(request: NextRequest) {
       message: "Redirect tracked successfully",
     });
   } catch (error) {
-    console.error("Error tracking Prolific redirect:", error);
+    logger.error("Error tracking Prolific redirect", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return errorResponse("INTERNAL_ERROR", "Failed to track redirect", 500);
   }
 }

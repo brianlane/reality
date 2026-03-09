@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import { Prisma, QuestionnaireQuestion } from "@prisma/client";
 import type {
   ScreeningSignal,
@@ -26,8 +27,9 @@ function resolveSignals(
       q.prompt.toLowerCase().includes(signal.promptSubstring.toLowerCase()),
     );
     if (!question) {
-      console.warn(
-        `[screening] Signal "${signal.name}" could not be resolved — no active question matches prompt substring "${signal.promptSubstring}". Signal will be skipped.`,
+      logger.warn(
+        `Screening signal "${signal.name}" could not be resolved — no active question matches prompt substring. Signal will be skipped.`,
+        { signalName: signal.name, promptSubstring: signal.promptSubstring },
       );
       continue;
     }

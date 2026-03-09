@@ -151,6 +151,9 @@ model Applicant {
   checkrCandidateId     String?           @unique // Checkr's candidate UUID
   continuousMonitoringId String?          @unique // Checkr continuous monitoring subscription ID
   
+  // Questionnaire retake tracking
+  lastQuestionnaireDate DateTime?        // When questionnaire was last completed
+
   // Questionnaire Screening Flags
   relationshipReadinessFlag   FlagSeverity?
   saScreeningFlag             FlagSeverity?
