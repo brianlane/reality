@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { createVerificationSession } from "@/lib/background-checks/idenfy";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 
 /**
@@ -16,6 +17,19 @@ export async function POST(request: Request) {
     const auth = await getAuthUser();
     if (!auth) {
       return errorResponse("UNAUTHORIZED", "Authentication Required", 401);
+    }
+
+    // Rate limit per user — iDenfy sessions cost money
+    const rl = rateLimit(
+      `verify-identity:${auth.email}`,
+      RATE_LIMITS.SCREENING,
+    );
+    if (!rl.success) {
+      return errorResponse(
+        "TOO_MANY_REQUESTS",
+        "Too many verification attempts. Please try again later.",
+        429,
+      );
     }
 
     const body = await request.json();

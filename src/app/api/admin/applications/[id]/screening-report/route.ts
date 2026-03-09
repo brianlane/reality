@@ -64,10 +64,9 @@ export async function GET(_request: Request, { params }: RouteContext) {
   }
 
   // Log the access AFTER confirming the report was successfully fetched.
-  // Use separate try/catch so a transient audit-log failure does not block
-  // returning the report to the admin. A warning is surfaced in the response
-  // so the admin can see the gap and alert compliance if needed.
-  let auditLogFailed = false;
+  // FCRA compliance requires an audit trail for every report view. If the
+  // audit log cannot be written, we must NOT return report data — doing so
+  // would create an unaudited access that violates FCRA requirements.
   try {
     // adminUser.userId is the DB User.id (cuid) returned by requireAdminRole,
     // not the Supabase UUID from getAuthUser. It satisfies the ScreeningAuditLog FK.
@@ -83,23 +82,27 @@ export async function GET(_request: Request, { params }: RouteContext) {
       },
     });
   } catch (auditError) {
-    auditLogFailed = true;
-    logger.error("Failed to write screening audit log", {
-      reportId: applicant.checkrReportId,
-      applicantId: applicant.id,
-      adminUserId: adminUser.userId,
-      error:
-        auditError instanceof Error ? auditError.message : String(auditError),
-    });
+    logger.error(
+      "Failed to write screening audit log — blocking report access for FCRA compliance",
+      {
+        reportId: applicant.checkrReportId,
+        applicantId: applicant.id,
+        adminUserId: adminUser.userId,
+        error:
+          auditError instanceof Error ? auditError.message : String(auditError),
+      },
+    );
+    return errorResponse(
+      "INTERNAL_ERROR",
+      "Unable to record audit log. Report access blocked for compliance. Please retry or contact your compliance team.",
+      500,
+    );
   }
 
-  // Return a sanitized view -- only what the admin needs
+  // Return a sanitized view -- only what the admin needs.
+  // Note: PII (SSN, DOB, etc.) is never included — only screening results
+  // and status information needed for admin review decisions.
   return successResponse({
-    ...(auditLogFailed && {
-      warnings: [
-        "Audit log could not be written due to a database error. Please notify your compliance team.",
-      ],
-    }),
     reportId: report.id,
     status: report.status,
     result: report.result,

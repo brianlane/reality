@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     return successResponse({ received: true, processed: false });
   }
 
-  const screeningStatus = mapIdenfyStatus(overallStatus, { final: body.final });
+  const screeningStatus = mapIdenfyStatus(overallStatus);
 
   // FCRA-required audit log. Deduplicate on scanRef + overallStatus so provider
   // retries of the same event don't create duplicate compliance records, while

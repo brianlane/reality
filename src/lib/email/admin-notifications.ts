@@ -9,6 +9,7 @@
 
 import { sendEmail } from "./client";
 import { escapeHtml } from "./simple-status-view";
+import { logger } from "@/lib/logger";
 
 const EMAIL_ASSET_BASE_URL = (
   process.env.EMAIL_ASSET_BASE_URL ||
@@ -73,7 +74,7 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
   const adminEmail = process.env.ADMIN_EMAIL;
 
   if (!adminEmail) {
-    console.error(
+    logger.error(
       "ADMIN_EMAIL not configured - cannot send failure notification",
     );
     return;
@@ -195,9 +196,11 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
       text,
       emailType: "STATUS_UPDATE", // Using STATUS_UPDATE as a general admin notification type
     });
-    console.log("Admin notification sent successfully");
+    logger.info("Admin notification sent successfully");
   } catch (error) {
-    console.error("Failed to send admin notification:", error);
+    logger.error("Failed to send admin notification", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     // Don't throw - this is a notification about a failure, we don't want to create a cascade
   }
 }
@@ -208,7 +211,7 @@ export async function notifyQuestionnaireCompleted(
   const notificationEmail = process.env.NOTIFICATION_EMAIL;
 
   if (!notificationEmail) {
-    console.warn(
+    logger.warn(
       "NOTIFICATION_EMAIL not configured - skipping questionnaire completion notification",
     );
     return;
@@ -301,15 +304,13 @@ export async function notifyQuestionnaireCompleted(
       emailType: "STATUS_UPDATE",
       applicantId: params.applicantId,
     });
-    console.log(
-      "Questionnaire completion notification sent to",
-      notificationEmail,
-    );
+    logger.info("Questionnaire completion notification sent", {
+      to: notificationEmail,
+    });
   } catch (error) {
-    console.error(
-      "Failed to send questionnaire completion notification:",
-      error,
-    );
+    logger.error("Failed to send questionnaire completion notification", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     // Don't throw - notification failure shouldn't block the user flow
   }
 }
@@ -320,7 +321,7 @@ export async function notifyApplicationSubmitted(
   const notificationEmail = process.env.NOTIFICATION_EMAIL;
 
   if (!notificationEmail) {
-    console.warn(
+    logger.warn(
       "NOTIFICATION_EMAIL not configured - skipping application submission notification",
     );
     return;
@@ -474,12 +475,13 @@ export async function notifyApplicationSubmitted(
       emailType: "STATUS_UPDATE",
       applicantId: params.applicantId,
     });
-    console.log(
-      "Application submission notification sent to",
-      notificationEmail,
-    );
+    logger.info("Application submission notification sent", {
+      to: notificationEmail,
+    });
   } catch (error) {
-    console.error("Failed to send application submission notification:", error);
+    logger.error("Failed to send application submission notification", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     // Don't throw - notification failure shouldn't block the user flow
   }
 }
@@ -488,7 +490,7 @@ export async function notifyAdminCheckrFlagged(params: CheckrFlaggedParams) {
   const notificationEmail = process.env.NOTIFICATION_EMAIL;
 
   if (!notificationEmail) {
-    console.warn(
+    logger.warn(
       "NOTIFICATION_EMAIL not configured - skipping Checkr flagged result notification",
     );
     return;
@@ -566,7 +568,9 @@ export async function notifyAdminCheckrFlagged(params: CheckrFlaggedParams) {
       applicantId: params.applicantId,
     });
   } catch (error) {
-    console.error("Failed to send Checkr flagged result notification:", error);
+    logger.error("Failed to send Checkr flagged result notification", {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
@@ -576,7 +580,7 @@ export async function notifyAdminIdenfyReviewing(
   const notificationEmail = process.env.NOTIFICATION_EMAIL;
 
   if (!notificationEmail) {
-    console.warn(
+    logger.warn(
       "NOTIFICATION_EMAIL not configured - skipping iDenfy REVIEWING notification",
     );
     return;
@@ -654,7 +658,9 @@ export async function notifyAdminIdenfyReviewing(
       applicantId: params.applicantId,
     });
   } catch (error) {
-    console.error("Failed to send iDenfy REVIEWING notification:", error);
+    logger.error("Failed to send iDenfy REVIEWING notification", {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
@@ -664,7 +670,7 @@ export async function notifyAdminMonitoringAlert(
   const notificationEmail = process.env.NOTIFICATION_EMAIL;
 
   if (!notificationEmail) {
-    console.warn(
+    logger.warn(
       "NOTIFICATION_EMAIL not configured - skipping monitoring alert notification",
     );
     return;
@@ -748,6 +754,8 @@ export async function notifyAdminMonitoringAlert(
       applicantId: params.applicantId,
     });
   } catch (error) {
-    console.error("Failed to send monitoring alert notification:", error);
+    logger.error("Failed to send monitoring alert notification", {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }

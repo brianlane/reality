@@ -303,17 +303,40 @@ async function finalizeScreening(applicantId: string): Promise<void> {
     // Use atomic conditional update to prevent duplicate enrollments from
     // concurrent webhook deliveries.
     if (applicant.checkrCandidateId) {
-      const monitorClaimed = await db.applicant.updateMany({
+      // First try to claim the slot when it's null (normal case).
+      // If that fails, check for a stale placeholder from a crashed process
+      // (older than 5 minutes) and reclaim it.
+      const placeholder = `enrolling-${applicantId}`;
+      let monitorClaimed = await db.applicant.updateMany({
         where: {
           id: applicantId,
           continuousMonitoringId: null,
           checkrCandidateId: { not: null },
           deletedAt: null,
         },
-        // Set a unique placeholder to claim the slot; replaced with real ID below.
-        // Must be unique per applicant since continuousMonitoringId has @unique.
-        data: { continuousMonitoringId: `enrolling-${applicantId}` },
+        data: { continuousMonitoringId: placeholder },
       });
+
+      if (monitorClaimed.count === 0) {
+        // Check for stale placeholder from a crashed/timed-out process.
+        // updatedAt older than 5 minutes with the enrolling- prefix means
+        // the previous enrollment attempt likely failed silently.
+        const staleThreshold = new Date(Date.now() - 5 * 60 * 1000);
+        monitorClaimed = await db.applicant.updateMany({
+          where: {
+            id: applicantId,
+            continuousMonitoringId: { startsWith: "enrolling-" },
+            updatedAt: { lt: staleThreshold },
+            deletedAt: null,
+          },
+          data: { continuousMonitoringId: placeholder },
+        });
+        if (monitorClaimed.count > 0) {
+          logger.warn("Reclaimed stale monitoring enrollment placeholder", {
+            applicantId,
+          });
+        }
+      }
 
       if (monitorClaimed.count > 0) {
         enrollContinuousMonitoring(applicant.checkrCandidateId)

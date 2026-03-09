@@ -31,6 +31,11 @@ vi.mock("next/headers", () => ({
   }),
 }));
 
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimit: vi.fn().mockReturnValue({ success: true, remaining: 4 }),
+  RATE_LIMITS: { SCREENING: { interval: 900000, maxRequests: 5 } },
+}));
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function makeApplicant(overrides = {}) {

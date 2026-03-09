@@ -178,7 +178,6 @@ export function verifyIdenfySignature(
  */
 export function mapIdenfyStatus(
   status: string,
-  options?: { final?: boolean },
 ): "PASSED" | "FAILED" | "IN_PROGRESS" {
   switch (status.toUpperCase()) {
     case "APPROVED":

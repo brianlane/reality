@@ -100,29 +100,30 @@ async function handleReportCompleted(data: {
     return errorResponse("VALIDATION_ERROR", "Missing candidate_id", 400);
   }
 
-  // Look up applicant: prefer checkrCandidateId (primary), then checkrReportId
-  // (fallback). Prefer non-deleted over soft-deleted to avoid writing to the
-  // wrong record when multiple could match (e.g., re-trigger edge cases).
-  // Use explicit deletedAt: null first, then fall back to any match, to avoid
-  // relying on orderBy nulls ordering behavior across Prisma versions.
-  let applicant = await db.applicant.findFirst({
-    where: { checkrCandidateId: candidateId, deletedAt: null },
+  // Look up applicant by candidateId or reportId in a single query.
+  // Prefer non-deleted over soft-deleted, and candidateId over reportId,
+  // to avoid the bug where a soft-deleted match on candidateId would shadow
+  // a non-deleted match on reportId in the old sequential lookup.
+  const candidates = await db.applicant.findMany({
+    where: {
+      OR: [{ checkrCandidateId: candidateId }, { checkrReportId: reportId }],
+    },
   });
-  if (!applicant) {
-    applicant = await db.applicant.findFirst({
-      where: { checkrCandidateId: candidateId },
-    });
-  }
-  if (!applicant) {
-    applicant = await db.applicant.findFirst({
-      where: { checkrReportId: reportId, deletedAt: null },
-    });
-  }
-  if (!applicant) {
-    applicant = await db.applicant.findFirst({
-      where: { checkrReportId: reportId },
-    });
-  }
+
+  // Pick the best match: non-deleted > soft-deleted, candidateId > reportId
+  const applicant =
+    candidates.length > 0
+      ? candidates.sort((a, b) => {
+          // Non-deleted first
+          const aDeleted = a.deletedAt ? 1 : 0;
+          const bDeleted = b.deletedAt ? 1 : 0;
+          if (aDeleted !== bDeleted) return aDeleted - bDeleted;
+          // CandidateId match first
+          const aCandidate = a.checkrCandidateId === candidateId ? 0 : 1;
+          const bCandidate = b.checkrCandidateId === candidateId ? 0 : 1;
+          return aCandidate - bCandidate;
+        })[0]
+      : null;
 
   if (!applicant) {
     // Return 200 so Checkr does not retry indefinitely for a genuinely

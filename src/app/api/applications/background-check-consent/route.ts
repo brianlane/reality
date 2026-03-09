@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { initiateScreening } from "@/lib/background-checks/orchestrator";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 
 /**
@@ -17,6 +18,19 @@ export async function POST(request: Request) {
     const auth = await getAuthUser();
     if (!auth) {
       return errorResponse("UNAUTHORIZED", "Authentication required", 401);
+    }
+
+    // Rate limit per user to prevent abuse
+    const rl = rateLimit(
+      `bg-check-consent:${auth.email}`,
+      RATE_LIMITS.SCREENING,
+    );
+    if (!rl.success) {
+      return errorResponse(
+        "TOO_MANY_REQUESTS",
+        "Too many consent attempts. Please try again later.",
+        429,
+      );
     }
 
     const body = await request.json();
@@ -78,10 +92,13 @@ export async function POST(request: Request) {
 
     // Validate the digital signature matches the applicant's legal name on file.
     // Case-insensitive, whitespace-normalized to handle minor formatting differences.
-    // The input must contain firstName as the first word(s) and lastName as the last
-    // word(s), with at least a space between them. This allows middle names, initials,
-    // or suffixes that aren't captured in the User model fields, while requiring both
-    // parts to be present (prevents e.g. "Jones" passing for firstName="Jo" lastName="Jones").
+    // The input must start with the exact firstName token(s), end with the exact
+    // lastName token(s), and have at least one space between them. Middle names,
+    // initials, or suffixes between firstName and lastName are allowed.
+    //
+    // We split into word tokens and compare structurally rather than using
+    // startsWith/endsWith on the full string — this avoids false positives when
+    // one name is a substring of the other (e.g. firstName="Jo", lastName="Jones").
     const normalizedInput = fullName.trim().toLowerCase().replace(/\s+/g, " ");
     const normalizedFirst = applicant.user.firstName
       .trim()
@@ -100,15 +117,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const minExpected = `${normalizedFirst} ${normalizedLast}`;
-    if (
-      normalizedInput.length < minExpected.length ||
-      !normalizedInput.startsWith(normalizedFirst) ||
-      !normalizedInput.endsWith(normalizedLast) ||
-      normalizedInput[normalizedFirst.length] !== " " ||
-      normalizedInput[normalizedInput.length - normalizedLast.length - 1] !==
-        " "
-    ) {
+    const inputWords = normalizedInput.split(" ");
+    const firstWords = normalizedFirst.split(" ");
+    const lastWords = normalizedLast.split(" ");
+
+    // Must have at least firstName words + lastName words (with possible middle parts)
+    const nameValid =
+      inputWords.length >= firstWords.length + lastWords.length &&
+      firstWords.every((w, i) => inputWords[i] === w) &&
+      lastWords.every(
+        (w, i) => inputWords[inputWords.length - lastWords.length + i] === w,
+      );
+
+    if (!nameValid) {
       return errorResponse(
         "VALIDATION_ERROR",
         "The name entered does not match your legal name on file. Please type your full legal name, starting with your first name and ending with your last name.",
@@ -147,9 +168,9 @@ export async function POST(request: Request) {
     const headerList = await headers();
     const forwardedFor = headerList.get("x-forwarded-for");
     const realIp = headerList.get("x-real-ip");
-    const rawIp = forwardedFor?.split(",")[0]?.trim() || realIp || "unknown";
-    // Only allow characters valid in IPv4/IPv6 addresses; fall back to "unknown"
-    const clientIp = /^[\d.:a-fA-F]+$/.test(rawIp) ? rawIp : "unknown";
+    const rawIp = forwardedFor?.split(",")[0]?.trim() || realIp || null;
+    // Only allow characters valid in IPv4/IPv6 addresses; fall back to null
+    const clientIp = rawIp && /^[\d.:a-fA-F]+$/.test(rawIp) ? rawIp : null;
 
     // Record consent and audit log atomically so the FCRA-critical digital
     // signature (fullName) is never lost if the write partially fails.
