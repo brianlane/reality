@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import ScreeningDetail from "@/components/admin/ScreeningDetail";
+import type { ScreeningData } from "@/components/admin/screening-types";
 import { runSkipPaymentFlow } from "@/lib/admin/skip-payment";
 
 type AdminApplicationFormProps = {
@@ -48,10 +50,30 @@ export default function AdminApplicationForm({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [screeningData, setScreeningData] = useState<ScreeningData | null>(
+    null,
+  );
+  // Counter to trigger re-fetching application data from the screening detail panel
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [screeningDataRefreshedAt, setScreeningDataRefreshedAt] =
+    useState<Date | null>(null);
+  const incrementRefreshKey = () => setRefreshKey((k) => k + 1);
+  // Track whether the initial load has completed. On subsequent refreshes
+  // (triggered by screening actions), we only update screening data to avoid
+  // silently overwriting unsaved form edits the admin may have made.
+  const initialLoadDone = useRef(false);
+
+  // Reset when applicationId changes so we do a full load for the new applicant.
+  // Without this, client-side navigation reusing the component would take the
+  // "refresh" path and leave stale data from the previous applicant.
+  useEffect(() => {
+    initialLoadDone.current = false;
+  }, [applicationId]);
 
   useEffect(() => {
     if (mode !== "edit" || !applicationId) return;
     const controller = new AbortController();
+    const isRefresh = initialLoadDone.current;
 
     const loadApplication = async () => {
       try {
@@ -70,34 +92,67 @@ export default function AdminApplicationForm({
           return;
         }
         const status = json.applicant.applicationStatus ?? "SUBMITTED";
-        setInitialApplicationStatus(status);
-        setForm((prev) => ({
-          ...prev,
-          email: json.applicant.email ?? "",
-          firstName: json.applicant.firstName ?? "",
-          lastName: json.applicant.lastName ?? "",
-          age: String(json.applicant.age ?? ""),
-          gender: json.applicant.gender ?? "MAN",
-          location: json.applicant.location ?? "",
-          cityFrom: json.applicant.cityFrom ?? "",
-          industry: json.applicant.industry ?? "",
-          occupation: json.applicant.occupation ?? "",
-          employer: json.applicant.employer ?? "",
-          education: json.applicant.education ?? "",
-          incomeRange: json.applicant.incomeRange ?? "",
-          referredBy: json.applicant.referredBy ?? "",
-          aboutYourself: json.applicant.aboutYourself ?? "",
-          applicationStatus: status,
-          screeningStatus: json.applicant.screeningStatus ?? "PENDING",
-          compatibilityScore:
-            json.applicant.compatibilityScore !== null &&
-            json.applicant.compatibilityScore !== undefined
-              ? String(json.applicant.compatibilityScore)
+
+        if (!isRefresh) {
+          setInitialApplicationStatus(status);
+          setForm((prev) => ({
+            ...prev,
+            email: json.applicant.email ?? "",
+            firstName: json.applicant.firstName ?? "",
+            lastName: json.applicant.lastName ?? "",
+            age: String(json.applicant.age ?? ""),
+            gender: json.applicant.gender ?? "MAN",
+            location: json.applicant.location ?? "",
+            cityFrom: json.applicant.cityFrom ?? "",
+            industry: json.applicant.industry ?? "",
+            occupation: json.applicant.occupation ?? "",
+            employer: json.applicant.employer ?? "",
+            education: json.applicant.education ?? "",
+            incomeRange: json.applicant.incomeRange ?? "",
+            referredBy: json.applicant.referredBy ?? "",
+            aboutYourself: json.applicant.aboutYourself ?? "",
+            applicationStatus: status,
+            screeningStatus: json.applicant.screeningStatus ?? "PENDING",
+            compatibilityScore:
+              json.applicant.compatibilityScore !== null &&
+              json.applicant.compatibilityScore !== undefined
+                ? String(json.applicant.compatibilityScore)
+                : "",
+            notes: "",
+            photos: Array.isArray(json.applicant.photos)
+              ? json.applicant.photos.join(", ")
               : "",
-          photos: Array.isArray(json.applicant.photos)
-            ? json.applicant.photos.join(", ")
-            : "",
-        }));
+          }));
+          initialLoadDone.current = true;
+        } else {
+          // Only update screeningStatus on refresh — applicationStatus is an
+          // admin-editable field and overwriting it would silently revert
+          // unsaved dropdown changes the admin may have made.
+          setForm((prev) => ({
+            ...prev,
+            screeningStatus:
+              json.applicant.screeningStatus ?? prev.screeningStatus,
+          }));
+        }
+
+        setScreeningData({
+          screeningStatus: json.screening?.screeningStatus ?? "PENDING",
+          idenfyStatus: json.screening?.idenfyStatus ?? "PENDING",
+          idenfyVerificationId: json.screening?.idenfyVerificationId ?? null,
+          checkrStatus: json.screening?.checkrStatus ?? "PENDING",
+          checkrReportId: json.screening?.checkrReportId ?? null,
+          checkrCandidateId: json.screening?.checkrCandidateId ?? null,
+          backgroundCheckConsentAt:
+            json.screening?.backgroundCheckConsentAt ?? null,
+          backgroundCheckConsentIp:
+            json.screening?.backgroundCheckConsentIp ?? null,
+          backgroundCheckNotes: json.screening?.backgroundCheckNotes ?? null,
+          continuousMonitoringId:
+            json.screening?.continuousMonitoringId ?? null,
+        });
+        if (isRefresh) {
+          setScreeningDataRefreshedAt(new Date());
+        }
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
           setError("Failed to load application.");
@@ -108,7 +163,24 @@ export default function AdminApplicationForm({
     loadApplication();
 
     return () => controller.abort();
-  }, [mode, applicationId]);
+  }, [mode, applicationId, refreshKey]);
+
+  // Returns the applicationStatus to include in the PATCH payload, or undefined
+  // to omit it. Omitted when: (a) unchanged from initial value (prevents validation
+  // errors for invite-only statuses the admin hasn't touched), or (b) set to
+  // REJECTED (use the dedicated soft-reject endpoint instead).
+  function getApplicationStatusPayload(): string | undefined {
+    if (
+      mode === "edit" &&
+      form.applicationStatus === initialApplicationStatus
+    ) {
+      return undefined;
+    }
+    if (form.applicationStatus === "REJECTED") {
+      return undefined;
+    }
+    return form.applicationStatus;
+  }
 
   function updateField(name: string, value: string) {
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -167,20 +239,16 @@ export default function AdminApplicationForm({
                 incomeRange: form.incomeRange,
                 referredBy: form.referredBy.trim() || null,
                 aboutYourself: form.aboutYourself.trim() || undefined,
-                // Only include applicationStatus if it has changed from initial value
-                // This prevents validation errors for applicants in invite-only statuses
-                applicationStatus:
-                  mode === "edit" &&
-                  form.applicationStatus === initialApplicationStatus
-                    ? undefined
-                    : form.applicationStatus === "REJECTED"
-                      ? undefined
-                      : form.applicationStatus,
+                applicationStatus: getApplicationStatusPayload(),
                 screeningStatus: form.screeningStatus,
                 compatibilityScore: form.compatibilityScore
                   ? Number(form.compatibilityScore)
                   : undefined,
-                backgroundCheckNotes: form.notes || null,
+                ...(form.notes?.trim()
+                  ? {
+                      backgroundCheckNotes: form.notes.trim(),
+                    }
+                  : {}),
                 photos: form.photos
                   ? form.photos.split(",").map((item) => item.trim())
                   : undefined,
@@ -207,6 +275,10 @@ export default function AdminApplicationForm({
         return;
       }
       setSuccess("Application saved.");
+      if (payload.applicant && "backgroundCheckNotes" in payload.applicant) {
+        setForm((prev) => ({ ...prev, notes: "" }));
+        incrementRefreshKey();
+      }
       // Update initial status to current value after successful save
       // This ensures subsequent status changes are detected correctly
       if (
@@ -611,13 +683,40 @@ export default function AdminApplicationForm({
       </div>
       <div className="space-y-2">
         <label className="text-xs font-semibold text-navy-soft">
-          Review Notes
+          Add Note{" "}
+          <span className="font-normal text-navy-soft/60">
+            (appended to existing notes)
+          </span>
         </label>
+        {screeningData?.backgroundCheckNotes && (
+          <div className="rounded-md bg-slate-50 border border-slate-200 p-3 text-sm text-navy-soft whitespace-pre-wrap">
+            {screeningData.backgroundCheckNotes}
+          </div>
+        )}
         <Textarea
           value={form.notes}
           onChange={(event) => updateField("notes", event.target.value)}
+          placeholder="Type a new note to append..."
         />
       </div>
+      {/* Screening Detail Panel */}
+      {mode === "edit" && applicationId && screeningData && (
+        <>
+          {screeningDataRefreshedAt && (
+            <p className="text-xs text-navy-soft/60">
+              Screening data refreshed at{" "}
+              {screeningDataRefreshedAt.toLocaleTimeString()}. Any unsaved form
+              edits above are preserved.
+            </p>
+          )}
+          <ScreeningDetail
+            applicationId={applicationId}
+            screening={screeningData}
+            onRefresh={incrementRefreshKey}
+          />
+        </>
+      )}
+
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"

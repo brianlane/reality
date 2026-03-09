@@ -9,6 +9,7 @@
 
 import { sendEmail } from "./client";
 import { escapeHtml } from "./simple-status-view";
+import { logger } from "@/lib/logger";
 
 const EMAIL_ASSET_BASE_URL = (
   process.env.EMAIL_ASSET_BASE_URL ||
@@ -28,6 +29,22 @@ interface QuestionnaireCompletedParams {
   firstName: string;
   lastName: string;
   email: string;
+}
+
+interface CheckrFlaggedParams {
+  applicantId: string;
+  result: string;
+}
+
+interface IdenfyReviewingParams {
+  applicantId: string;
+  scanRef: string;
+}
+
+interface MonitoringAlertParams {
+  applicantId: string;
+  candidateId: string;
+  monitorStatus: string | undefined;
 }
 
 interface ApplicationSubmittedParams {
@@ -57,7 +74,7 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
   const adminEmail = process.env.ADMIN_EMAIL;
 
   if (!adminEmail) {
-    console.error(
+    logger.error(
       "ADMIN_EMAIL not configured - cannot send failure notification",
     );
     return;
@@ -179,9 +196,11 @@ export async function notifyAdminOfEmailFailure(params: EmailFailureParams) {
       text,
       emailType: "STATUS_UPDATE", // Using STATUS_UPDATE as a general admin notification type
     });
-    console.log("Admin notification sent successfully");
+    logger.info("Admin notification sent successfully");
   } catch (error) {
-    console.error("Failed to send admin notification:", error);
+    logger.error("Failed to send admin notification", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     // Don't throw - this is a notification about a failure, we don't want to create a cascade
   }
 }
@@ -192,7 +211,7 @@ export async function notifyQuestionnaireCompleted(
   const notificationEmail = process.env.NOTIFICATION_EMAIL;
 
   if (!notificationEmail) {
-    console.warn(
+    logger.warn(
       "NOTIFICATION_EMAIL not configured - skipping questionnaire completion notification",
     );
     return;
@@ -285,15 +304,13 @@ export async function notifyQuestionnaireCompleted(
       emailType: "STATUS_UPDATE",
       applicantId: params.applicantId,
     });
-    console.log(
-      "Questionnaire completion notification sent to",
-      notificationEmail,
-    );
+    logger.info("Questionnaire completion notification sent", {
+      to: notificationEmail,
+    });
   } catch (error) {
-    console.error(
-      "Failed to send questionnaire completion notification:",
-      error,
-    );
+    logger.error("Failed to send questionnaire completion notification", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     // Don't throw - notification failure shouldn't block the user flow
   }
 }
@@ -304,7 +321,7 @@ export async function notifyApplicationSubmitted(
   const notificationEmail = process.env.NOTIFICATION_EMAIL;
 
   if (!notificationEmail) {
-    console.warn(
+    logger.warn(
       "NOTIFICATION_EMAIL not configured - skipping application submission notification",
     );
     return;
@@ -458,12 +475,287 @@ export async function notifyApplicationSubmitted(
       emailType: "STATUS_UPDATE",
       applicantId: params.applicantId,
     });
-    console.log(
-      "Application submission notification sent to",
-      notificationEmail,
-    );
+    logger.info("Application submission notification sent", {
+      to: notificationEmail,
+    });
   } catch (error) {
-    console.error("Failed to send application submission notification:", error);
+    logger.error("Failed to send application submission notification", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     // Don't throw - notification failure shouldn't block the user flow
+  }
+}
+
+export async function notifyAdminCheckrFlagged(params: CheckrFlaggedParams) {
+  const notificationEmail = process.env.NOTIFICATION_EMAIL;
+
+  if (!notificationEmail) {
+    logger.warn(
+      "NOTIFICATION_EMAIL not configured - skipping Checkr flagged result notification",
+    );
+    return;
+  }
+
+  const safeApplicantId = escapeHtml(params.applicantId);
+  const safeResult = escapeHtml(params.result);
+  const adminApplicationUrl = `${APP_BASE_URL}/admin/applications/${encodeURIComponent(params.applicantId)}`;
+  const safeAdminUrl = escapeHtml(adminApplicationUrl);
+  const subject = `⚠️ Background Check Requires Review: ${params.result}`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Background Check Review Required</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
+  <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <div style="background-color: #d97706; padding: 32px 20px; text-align: center;">
+      <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Background Check Review Required</h1>
+    </div>
+    <div style="padding: 32px;">
+      <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+        A Checkr background check returned a result that requires admin review before a membership decision can be made.
+      </p>
+      <div style="background-color: #fff7ed; border-left: 4px solid #d97706; padding: 20px; margin: 24px 0; border-radius: 4px;">
+        <h3 style="color: #92400e; margin: 0 0 16px; font-size: 16px; font-weight: 600;">Details</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600; width: 140px;">Applicant ID:</td>
+            <td style="padding: 8px 0; color: #1a2332; font-family: monospace; font-size: 14px;">${safeApplicantId}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Checkr Result:</td>
+            <td style="padding: 8px 0; color: #92400e; font-weight: 600;">${safeResult}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Time:</td>
+            <td style="padding: 8px 0; color: #1a2332;">${new Date().toLocaleString()}</td>
+          </tr>
+        </table>
+      </div>
+      <p style="margin: 24px 0 0;">
+        <a href="${safeAdminUrl}" style="display: inline-block; background-color: #1a2332; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 14px; border-radius: 6px;">
+          Review Application
+        </a>
+      </p>
+    </div>
+    <div style="background-color: #f8f9fa; padding: 24px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
+      <p style="color: #718096; font-size: 12px; margin: 0;">Reality Matchmaking - Admin Notification</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  const text =
+    "BACKGROUND CHECK REVIEW REQUIRED\n\n" +
+    "A Checkr background check returned a result that requires admin review.\n\n" +
+    `Applicant ID: ${params.applicantId}\n` +
+    `Checkr Result: ${params.result}\n` +
+    `Time: ${new Date().toLocaleString()}\n\n` +
+    `Review Application: ${adminApplicationUrl}`;
+
+  try {
+    await sendEmail({
+      to: notificationEmail,
+      subject,
+      html,
+      text,
+      emailType: "STATUS_UPDATE",
+      applicantId: params.applicantId,
+    });
+  } catch (error) {
+    logger.error("Failed to send Checkr flagged result notification", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+export async function notifyAdminIdenfyReviewing(
+  params: IdenfyReviewingParams,
+) {
+  const notificationEmail = process.env.NOTIFICATION_EMAIL;
+
+  if (!notificationEmail) {
+    logger.warn(
+      "NOTIFICATION_EMAIL not configured - skipping iDenfy REVIEWING notification",
+    );
+    return;
+  }
+
+  const safeApplicantId = escapeHtml(params.applicantId);
+  const safeScanRef = escapeHtml(params.scanRef);
+  const adminApplicationUrl = `${APP_BASE_URL}/admin/applications/${encodeURIComponent(params.applicantId)}`;
+  const safeAdminUrl = escapeHtml(adminApplicationUrl);
+  const subject = `⚠️ Identity Verification Manual Review Required (iDenfy)`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iDenfy Manual Review Required</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
+  <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <div style="background-color: #d97706; padding: 32px 20px; text-align: center;">
+      <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Identity Verification Manual Review Required</h1>
+    </div>
+    <div style="padding: 32px;">
+      <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+        An iDenfy identity verification session requires manual review. Follow up in the iDenfy dashboard to complete the verification.
+      </p>
+      <div style="background-color: #fff7ed; border-left: 4px solid #d97706; padding: 20px; margin: 24px 0; border-radius: 4px;">
+        <h3 style="color: #92400e; margin: 0 0 16px; font-size: 16px; font-weight: 600;">Details</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600; width: 140px;">Applicant ID:</td>
+            <td style="padding: 8px 0; color: #1a2332; font-family: monospace; font-size: 14px;">${safeApplicantId}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">iDenfy Scan Ref:</td>
+            <td style="padding: 8px 0; color: #92400e; font-weight: 600;">${safeScanRef}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Time:</td>
+            <td style="padding: 8px 0; color: #1a2332;">${new Date().toLocaleString()}</td>
+          </tr>
+        </table>
+      </div>
+      <p style="margin: 24px 0 0;">
+        <a href="${safeAdminUrl}" style="display: inline-block; background-color: #1a2332; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 14px; border-radius: 6px;">
+          Review Application
+        </a>
+      </p>
+    </div>
+    <div style="background-color: #f8f9fa; padding: 24px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
+      <p style="color: #718096; font-size: 12px; margin: 0;">Reality Matchmaking - Admin Notification</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  const text =
+    "IDENTITY VERIFICATION MANUAL REVIEW REQUIRED (IDENFY)\n\n" +
+    "An iDenfy identity verification session requires manual review. Follow up in the iDenfy dashboard.\n\n" +
+    `Applicant ID: ${params.applicantId}\n` +
+    `iDenfy Scan Ref: ${params.scanRef}\n` +
+    `Time: ${new Date().toLocaleString()}\n\n` +
+    `Review Application: ${adminApplicationUrl}`;
+
+  try {
+    await sendEmail({
+      to: notificationEmail,
+      subject,
+      html,
+      text,
+      emailType: "STATUS_UPDATE",
+      applicantId: params.applicantId,
+    });
+  } catch (error) {
+    logger.error("Failed to send iDenfy REVIEWING notification", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+export async function notifyAdminMonitoringAlert(
+  params: MonitoringAlertParams,
+) {
+  const notificationEmail = process.env.NOTIFICATION_EMAIL;
+
+  if (!notificationEmail) {
+    logger.warn(
+      "NOTIFICATION_EMAIL not configured - skipping monitoring alert notification",
+    );
+    return;
+  }
+
+  const safeApplicantId = escapeHtml(params.applicantId);
+  const safeCandidateId = escapeHtml(params.candidateId);
+  const safeStatus = escapeHtml(params.monitorStatus ?? "unknown");
+  const adminApplicationUrl = `${APP_BASE_URL}/admin/applications/${encodeURIComponent(params.applicantId)}`;
+  const safeAdminUrl = escapeHtml(adminApplicationUrl);
+  const subject = "🚨 Continuous Monitoring Alert — Member Background Change";
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Continuous Monitoring Alert</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
+  <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <div style="background-color: #dc2626; padding: 32px 20px; text-align: center;">
+      <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Continuous Monitoring Alert</h1>
+    </div>
+    <div style="padding: 32px;">
+      <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+        Checkr's continuous monitoring has detected a new record for an active member. <strong>Immediate review is required.</strong>
+      </p>
+      <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 20px; margin: 24px 0; border-radius: 4px;">
+        <h3 style="color: #991b1b; margin: 0 0 16px; font-size: 16px; font-weight: 600;">Alert Details</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600; width: 140px;">Applicant ID:</td>
+            <td style="padding: 8px 0; color: #1a2332; font-family: monospace; font-size: 14px;">${safeApplicantId}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Checkr Candidate:</td>
+            <td style="padding: 8px 0; color: #1a2332; font-family: monospace; font-size: 14px;">${safeCandidateId}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Monitor Status:</td>
+            <td style="padding: 8px 0; color: #991b1b; font-weight: 600;">${safeStatus}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Time:</td>
+            <td style="padding: 8px 0; color: #1a2332;">${new Date().toLocaleString()}</td>
+          </tr>
+        </table>
+      </div>
+      <p style="margin: 24px 0 0;">
+        <a href="${safeAdminUrl}" style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 14px; border-radius: 6px;">
+          Review Member Application
+        </a>
+      </p>
+    </div>
+    <div style="background-color: #f8f9fa; padding: 24px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
+      <p style="color: #718096; font-size: 12px; margin: 0;">Reality Matchmaking - Admin Notification</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  const text =
+    "CONTINUOUS MONITORING ALERT — MEMBER BACKGROUND CHANGE\n\n" +
+    "Checkr's continuous monitoring has detected a new record. Immediate review required.\n\n" +
+    `Applicant ID: ${params.applicantId}\n` +
+    `Checkr Candidate: ${params.candidateId}\n` +
+    `Monitor Status: ${params.monitorStatus ?? "unknown"}\n` +
+    `Time: ${new Date().toLocaleString()}\n\n` +
+    `Review Application: ${adminApplicationUrl}`;
+
+  try {
+    await sendEmail({
+      to: notificationEmail,
+      subject,
+      html,
+      text,
+      emailType: "STATUS_UPDATE",
+      applicantId: params.applicantId,
+    });
+  } catch (error) {
+    logger.error("Failed to send monitoring alert notification", {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
