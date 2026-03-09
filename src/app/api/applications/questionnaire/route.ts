@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { applicantQuestionnaireSubmitSchema } from "@/lib/validations";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { logger } from "@/lib/logger";
 import {
   QuestionnaireOptions,
   validateAnswerForQuestion,
@@ -318,6 +319,23 @@ export async function POST(request: NextRequest) {
     return errorResponse(errorCode, access.error, access.statusCode);
   }
 
+  // Questionnaire retake policy: 6-month minimum wait between completions
+  const SIX_MONTHS_MS = 6 * 30 * 24 * 60 * 60 * 1000;
+  if (
+    access.applicant.lastQuestionnaireDate &&
+    Date.now() - access.applicant.lastQuestionnaireDate.getTime() <
+      SIX_MONTHS_MS
+  ) {
+    const earliestRetake = new Date(
+      access.applicant.lastQuestionnaireDate.getTime() + SIX_MONTHS_MS,
+    );
+    return errorResponse(
+      "RETAKE_TOO_EARLY",
+      `Questionnaire retake not allowed until ${earliestRetake.toLocaleDateString()}`,
+      403,
+    );
+  }
+
   // Same filtering logic as GET: research participants see all content,
   // application participants only see non-research content
   const postForResearchFilter = access.isResearchMode
@@ -525,9 +543,12 @@ export async function POST(request: NextRequest) {
   // will remain stale until the next successful compute (admin can trigger
   // manually via the Recompute button on the application detail page).
   computeAndStoreScreeningFlags(applicationId).catch((err) => {
-    console.error(
-      `[screening] Failed to recompute flags for applicant ${applicationId} after questionnaire save — flags may be stale. Error:`,
-      err,
+    logger.error(
+      "Failed to recompute screening flags after questionnaire save — flags may be stale",
+      {
+        applicantId: applicationId,
+        error: err instanceof Error ? err.message : String(err),
+      },
     );
   });
 

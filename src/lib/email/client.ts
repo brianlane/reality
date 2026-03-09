@@ -8,6 +8,7 @@ import { Resend } from "resend";
 import { minify } from "html-minifier-terser";
 import { SendEmailParams } from "./types";
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 // Lazy initialization to avoid build-time errors
 let resendClient: Resend | null = null;
@@ -34,14 +35,14 @@ export async function sendEmail(params: SendEmailParams) {
 
   // Warn if text content is missing (important for deliverability and accessibility)
   if (!params.text) {
-    console.warn(
-      `[Email Warning] Missing plain text content for ${params.emailType} email to ${params.to}. ` +
-        "Plain text versions improve deliverability and prevent email client clipping.",
+    logger.warn(
+      `Missing plain text content for ${params.emailType} email. Plain text versions improve deliverability.`,
+      { emailType: params.emailType },
     );
   } else if (params.text.length < 100) {
-    console.warn(
-      `[Email Warning] Plain text content is very short (${params.text.length} chars) for ${params.emailType} email to ${params.to}. ` +
-        "Short text content may cause email clients like Gmail to clip the message.",
+    logger.warn(
+      `Plain text content is very short (${params.text.length} chars) for ${params.emailType} email`,
+      { emailType: params.emailType },
     );
   }
 
@@ -68,21 +69,25 @@ export async function sendEmail(params: SendEmailParams) {
     const savings = originalSize - minifiedSize;
     const savingsPercent = ((savings / originalSize) * 100).toFixed(1);
 
-    console.log(
-      `[Email Minification] ${params.emailType}: ${originalSize} → ${minifiedSize} bytes (${savingsPercent}% reduction)`,
+    logger.info(
+      `Email minification: ${originalSize} → ${minifiedSize} bytes (${savingsPercent}% reduction)`,
+      { emailType: params.emailType },
     );
 
     // Warn if still approaching Gmail's 102KB limit
     if (minifiedSize > 80000) {
-      console.warn(
-        `[Email Warning] ${params.emailType} HTML size is ${minifiedSize} bytes, approaching Gmail's 102KB clipping limit`,
+      logger.warn(
+        `Email HTML size is ${minifiedSize} bytes, approaching Gmail's 102KB clipping limit`,
+        { emailType: params.emailType },
       );
     }
   } catch (minifyError) {
-    console.error(
-      "HTML minification failed, using original HTML:",
-      minifyError,
-    );
+    logger.error("HTML minification failed, using original HTML", {
+      error:
+        minifyError instanceof Error
+          ? minifyError.message
+          : String(minifyError),
+    });
     // Continue with original HTML if minification fails
   }
 
@@ -111,22 +116,22 @@ export async function sendEmail(params: SendEmailParams) {
       },
     });
   } catch (logError) {
-    console.error("Failed to log email to database:", logError);
+    logger.error("Failed to log email to database", {
+      error: logError instanceof Error ? logError.message : String(logError),
+    });
     // Continue execution - logging failure shouldn't prevent email sending
   }
 
   if (error) {
-    console.error("Email sending failed:", {
+    logger.error("Email sending failed", {
       emailType: params.emailType,
-      recipient: params.to,
       error: error.message,
     });
     throw new Error(`Failed to send email: ${error.message}`);
   }
 
-  console.log("Email sent successfully:", {
+  logger.info("Email sent successfully", {
     emailType: params.emailType,
-    recipient: params.to,
     resendId: data?.id,
   });
 

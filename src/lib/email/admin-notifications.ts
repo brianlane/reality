@@ -31,6 +31,13 @@ interface QuestionnaireCompletedParams {
   email: string;
 }
 
+interface ScreeningPassedParams {
+  applicantId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 interface CheckrFlaggedParams {
   applicantId: string;
   result: string;
@@ -755,6 +762,113 @@ export async function notifyAdminMonitoringAlert(
     });
   } catch (error) {
     logger.error("Failed to send monitoring alert notification", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+export async function notifyAdminScreeningPassed(
+  params: ScreeningPassedParams,
+) {
+  const notificationEmail = process.env.NOTIFICATION_EMAIL;
+
+  if (!notificationEmail) {
+    logger.warn(
+      "NOTIFICATION_EMAIL not configured - skipping screening passed notification",
+    );
+    return;
+  }
+
+  const safeFirstName = escapeHtml(params.firstName);
+  const safeLastName = escapeHtml(params.lastName);
+  const safeEmail = escapeHtml(params.email);
+  const safeApplicantId = escapeHtml(params.applicantId);
+  const adminApplicationUrl = `${APP_BASE_URL}/admin/applications/${encodeURIComponent(params.applicantId)}`;
+  const safeAdminUrl = escapeHtml(adminApplicationUrl);
+  const subject = `${params.firstName} ${params.lastName} has passed all screening and is ready for your review`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screening Passed</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;">
+  <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <div style="background-color: #22c55e; padding: 32px 20px; text-align: center;">
+      <img
+        src="${EMAIL_ASSET_BASE_URL}/email-logo.png"
+        alt="Reality Matchmaking logo"
+        width="60"
+        height="60"
+        style="display: inline-block; margin-bottom: 16px; border: 0; outline: none; text-decoration: none;"
+      />
+      <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Screening Passed</h1>
+    </div>
+    <div style="padding: 32px;">
+      <p style="color: #1a2332; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+        An applicant has passed all screening checks (identity verification and background check) and is ready for your review.
+      </p>
+      <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 20px; margin: 24px 0; border-radius: 4px;">
+        <h3 style="color: #166534; margin: 0 0 16px; font-size: 16px; font-weight: 600;">Applicant Details</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600; width: 140px;">Name:</td>
+            <td style="padding: 8px 0; color: #1a2332;">${safeFirstName} ${safeLastName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Email:</td>
+            <td style="padding: 8px 0; color: #1a2332;">${safeEmail}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Applicant ID:</td>
+            <td style="padding: 8px 0; color: #1a2332; font-family: monospace; font-size: 14px;">${safeApplicantId}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #4a5568; font-weight: 600;">Completed At:</td>
+            <td style="padding: 8px 0; color: #1a2332;">${new Date().toLocaleString()}</td>
+          </tr>
+        </table>
+      </div>
+      <p style="margin: 24px 0 0;">
+        <a href="${safeAdminUrl}" style="display: inline-block; background-color: #1a2332; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 10px 14px; border-radius: 6px;">
+          Review Application
+        </a>
+      </p>
+    </div>
+    <div style="background-color: #f8f9fa; padding: 24px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
+      <p style="color: #718096; font-size: 12px; margin: 0;">Reality Matchmaking - Admin Notification</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  const text =
+    "SCREENING PASSED\n\n" +
+    "An applicant has passed all screening checks and is ready for your review.\n\n" +
+    `Name: ${params.firstName} ${params.lastName}\n` +
+    `Email: ${params.email}\n` +
+    `Applicant ID: ${params.applicantId}\n` +
+    `Completed At: ${new Date().toLocaleString()}\n\n` +
+    `Review Application: ${adminApplicationUrl}`;
+
+  try {
+    await sendEmail({
+      to: notificationEmail,
+      subject,
+      html,
+      text,
+      emailType: "STATUS_UPDATE",
+      applicantId: params.applicantId,
+    });
+    logger.info("Screening passed notification sent", {
+      applicantId: params.applicantId,
+    });
+  } catch (error) {
+    logger.error("Failed to send screening passed notification", {
       error: error instanceof Error ? error.message : String(error),
     });
   }

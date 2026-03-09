@@ -13,8 +13,7 @@ export async function getAuthUser(): Promise<AuthUser | null> {
   // SECURITY: Never enable this in production unless CI is explicitly allowed
   const e2eBypassAllowed =
     process.env.E2E_AUTH_ENABLED === "true" &&
-    (process.env.NODE_ENV !== "production" ||
-      (process.env.CI === "true" && process.env.E2E_AUTH_ALLOW_CI === "true"));
+    process.env.NODE_ENV !== "production";
   if (e2eBypassAllowed) {
     const userId = headerList.get("x-e2e-user-id");
     const email = headerList.get("x-e2e-user-email");

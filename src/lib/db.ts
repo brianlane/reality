@@ -9,6 +9,14 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 // - DATABASE_SSL=false: Disable SSL entirely (not recommended for remote DBs)
 // - DATABASE_SSL_REJECT_UNAUTHORIZED=false: Accept self-signed certificates
 // By default, SSL is enabled with certificate validation based on environment
+// Prevent accidentally disabling SSL in production
+if (
+  process.env.NODE_ENV === "production" &&
+  process.env.DATABASE_SSL === "false"
+) {
+  throw new Error("DATABASE_SSL=false is not allowed in production");
+}
+
 const sslConfig =
   process.env.DATABASE_SSL === "false"
     ? false

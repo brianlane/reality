@@ -9,6 +9,7 @@
 
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { errorResponse } from "@/lib/api-response";
+import { logger } from "@/lib/logger";
 import type { TestEmailType } from "@/lib/email/types";
 import {
   getWaitlistConfirmationHTML,
@@ -122,7 +123,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Email preview generation failed:", error);
+    logger.error("Email preview generation failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return errorResponse(
       "INTERNAL_SERVER_ERROR",
       `Failed to generate preview: ${(error as Error).message}`,

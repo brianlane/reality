@@ -203,6 +203,8 @@ export default function AdminQuestionnaireResponses({
                       </span>
                     </div>
                     {question.richText ? (
+                      // richText is pre-sanitized by the API (sanitize-html)
+                      // in src/app/api/admin/applications/[id]/responses/route.ts
                       <div
                         className="prose prose-sm mt-1 max-w-none text-navy-soft"
                         dangerouslySetInnerHTML={{

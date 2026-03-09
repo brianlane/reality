@@ -1,5 +1,6 @@
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import {
   computeDistinctMatches,
   preloadAnswerCache,
@@ -218,7 +219,9 @@ export async function POST(
         });
       } catch (error) {
         if (!signal.aborted) {
-          console.error("SSE match scoring error:", error);
+          logger.error("SSE match scoring error", {
+            error: error instanceof Error ? error.message : String(error),
+          });
           try {
             const message =
               error instanceof Error

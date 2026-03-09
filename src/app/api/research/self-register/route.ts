@@ -203,7 +203,9 @@ export async function POST(request: Request) {
         409,
       );
     }
-    console.error("Research self-registration error:", error);
+    logger.error("Research self-registration error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return errorResponse(
       "INTERNAL_ERROR",
       "Failed to register for research study",

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { logger } from "@/lib/logger";
 
 const BLOCKED_PATH_PREFIXES = ["/admin"];
 
@@ -26,13 +27,15 @@ export async function GET(request: Request) {
   if (code) {
     const supabase = await createSupabaseServerClient();
     if (!supabase) {
-      console.error("[auth/callback] Supabase client could not be initialized");
+      logger.error("Auth callback: Supabase client could not be initialized");
       return NextResponse.redirect(`${origin}/sign-in?error=auth-code-error`);
     }
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
-      console.error("[auth/callback] Code exchange failed:", error.message);
+      logger.error("Auth callback: Code exchange failed", {
+        error: error.message,
+      });
       if (safePath === "/reset-password") {
         return NextResponse.redirect(
           `${origin}/forgot-password?error=link-expired`,

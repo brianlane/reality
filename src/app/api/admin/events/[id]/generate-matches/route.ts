@@ -1,6 +1,7 @@
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { logger } from "@/lib/logger";
 import { getRecommendations } from "@/lib/matching/recommendations";
 import {
   computeDistinctMatches,
@@ -202,7 +203,9 @@ export async function POST(
         avgScore,
       });
     } catch (error) {
-      console.error("Failed to create explicit matches:", error);
+      logger.error("Failed to create explicit matches", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return errorResponse(
         "DATABASE_ERROR",
         "Failed to create matches in database",
@@ -355,10 +358,10 @@ export async function POST(
           });
         }
       } catch (error) {
-        console.error(
-          `Failed to get recommendations for ${applicant.id}:`,
-          error,
-        );
+        logger.error("Failed to get recommendations", {
+          applicantId: applicant.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
   }
@@ -417,7 +420,9 @@ export async function POST(
       });
       matchesCreated = result.count;
     } catch (error) {
-      console.error("Failed to create matches:", error);
+      logger.error("Failed to create matches", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return errorResponse(
         "DATABASE_ERROR",
         "Failed to create matches in database",

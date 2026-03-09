@@ -32,9 +32,11 @@ function getIdentifier(
   request: NextRequest,
   configKey: keyof typeof RATE_LIMITS,
 ) {
-  const forwarded = request.headers.get("x-forwarded-for");
+  // Prefer x-real-ip (set by Vercel's edge network, cannot be spoofed by clients)
+  // over x-forwarded-for (can contain client-appended values)
   const realIp = request.headers.get("x-real-ip");
-  const ip = forwarded?.split(",")[0]?.trim() || realIp?.trim() || "anonymous";
+  const forwarded = request.headers.get("x-forwarded-for");
+  const ip = realIp?.trim() || forwarded?.split(",")[0]?.trim() || "anonymous";
 
   if (configKey === "API") {
     return `${ip}:${configKey.toLowerCase()}:${request.nextUrl.pathname}`;
@@ -165,8 +167,7 @@ export async function proxy(request: NextRequest) {
 
   const e2eEnabled =
     process.env.E2E_AUTH_ENABLED === "true" &&
-    (process.env.NODE_ENV !== "production" ||
-      (process.env.CI === "true" && process.env.E2E_AUTH_ALLOW_CI === "true"));
+    process.env.NODE_ENV !== "production";
   const e2eUserId = request.headers.get("x-e2e-user-id");
   const e2eUserEmail = request.headers.get("x-e2e-user-email");
   const e2eUser: AuthUser | null =

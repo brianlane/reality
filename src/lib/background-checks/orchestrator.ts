@@ -12,7 +12,10 @@ import { logger } from "@/lib/logger";
 import { enrollContinuousMonitoring } from "@/lib/background-checks/checkr";
 import { triggerCheckrInvitation } from "@/lib/background-checks/checkr-trigger";
 import { sendApplicationStatusEmail } from "@/lib/email/status";
-import { notifyAdminCheckrFlagged } from "@/lib/email/admin-notifications";
+import {
+  notifyAdminCheckrFlagged,
+  notifyAdminScreeningPassed,
+} from "@/lib/email/admin-notifications";
 
 // ============================================
 // Step 1: Initiate Screening
@@ -298,6 +301,19 @@ async function finalizeScreening(applicantId: string): Promise<void> {
     });
 
     logger.info("Screening finalized: PASSED", { applicantId });
+
+    // Notify admin that this applicant is ready for review (non-blocking)
+    notifyAdminScreeningPassed({
+      applicantId,
+      firstName: applicant.user.firstName,
+      lastName: applicant.user.lastName,
+      email: applicant.user.email,
+    }).catch((err: unknown) => {
+      logger.warn("Failed to send screening passed admin notification", {
+        applicantId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
 
     // Enroll in continuous monitoring (non-blocking).
     // Use atomic conditional update to prevent duplicate enrollments from

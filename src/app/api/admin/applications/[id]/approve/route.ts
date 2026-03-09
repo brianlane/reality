@@ -4,6 +4,7 @@ import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { sendApplicationApprovalEmail } from "@/lib/email/approval";
 import { computeAndStoreApplicantCompatibility } from "@/lib/compatibility/scoring";
+import { logger } from "@/lib/logger";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -84,13 +85,20 @@ export async function POST(request: Request, { params }: RouteContext) {
     to: applicant.user.email,
     firstName: applicant.user.firstName,
     applicantId: applicant.id,
-  }).catch((err) => console.error("Failed to send approval email:", err));
+  }).catch((err) =>
+    logger.error("Failed to send approval email", {
+      error: err instanceof Error ? err.message : String(err),
+    }),
+  );
 
   // Auto-compute compatibility score against the approved pool (fire-and-forget).
   // Skip if the admin explicitly provided a manual score — don't overwrite it.
   if (body.compatibilityScore === undefined) {
     computeAndStoreApplicantCompatibility(id).catch((err) =>
-      console.error(`Failed to compute compatibility score for ${id}:`, err),
+      logger.error("Failed to compute compatibility score", {
+        applicantId: id,
+        error: err instanceof Error ? err.message : String(err),
+      }),
     );
   }
 

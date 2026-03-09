@@ -18,12 +18,10 @@ export async function POST(request: Request) {
   try {
     signatureValid = verifyCheckrSignature(signature, payload);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(
-      "FORBIDDEN",
-      `Webhook verification failed: ${errorMessage}`,
-      403,
-    );
+    logger.error("Checkr webhook signature verification error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return errorResponse("FORBIDDEN", "Invalid signature", 403);
   }
 
   if (!signatureValid) {

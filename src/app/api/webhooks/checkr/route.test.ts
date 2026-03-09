@@ -82,7 +82,7 @@ describe("POST /api/webhooks/checkr", () => {
     const res = await POST(makeRequest(makeReportCompletedEvent()));
     expect(res.status).toBe(403);
     const data = await res.json();
-    expect(data.error?.message).toContain("Missing webhook secret");
+    expect(data.error?.message).toBe("Invalid signature");
   });
 
   it("returns 403 when signature is invalid", async () => {

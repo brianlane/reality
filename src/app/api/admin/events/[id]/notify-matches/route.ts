@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 import { sendMatchNotificationEmail } from "@/lib/email/matches";
+import { logger } from "@/lib/logger";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -102,9 +103,10 @@ export async function POST(_request: Request, { params }: RouteContext) {
       applicantSent = true;
       notifiedCount++;
     } catch {
-      console.error(
-        `Failed to notify applicant ${match.applicantId} for match ${match.id}`,
-      );
+      logger.error("Failed to notify applicant for match", {
+        applicantId: match.applicantId,
+        matchId: match.id,
+      });
       failedCount++;
     }
 
@@ -121,9 +123,10 @@ export async function POST(_request: Request, { params }: RouteContext) {
       partnerSent = true;
       notifiedCount++;
     } catch {
-      console.error(
-        `Failed to notify partner ${match.partnerId} for match ${match.id}`,
-      );
+      logger.error("Failed to notify partner for match", {
+        partnerId: match.partnerId,
+        matchId: match.id,
+      });
       failedCount++;
     }
 
