@@ -636,4 +636,5 @@ model ScreeningAuditLog {
   @@index([userId])
   @@index([createdAt])
   @@index([action])
+  @@index([metadata], type: Gin)
 }
