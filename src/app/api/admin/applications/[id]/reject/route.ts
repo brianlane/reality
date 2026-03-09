@@ -68,6 +68,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       reviewedBy: adminUser.id,
       rejectionReason: body.reason ?? "Soft rejected",
     },
+    include: { user: { select: { email: true, firstName: true } } },
   });
 
   await db.adminAction.create({
@@ -85,8 +86,8 @@ export async function POST(request: Request, { params }: RouteContext) {
   const reason = body.reason ?? "";
   if (isBackgroundCheckRelated(reason)) {
     sendApplicationStatusEmail({
-      to: existing.user.email,
-      firstName: existing.user.firstName,
+      to: applicant.user.email,
+      firstName: applicant.user.firstName,
       status: "REJECTED",
       applicantId: applicant.id,
     }).catch((err) => {
