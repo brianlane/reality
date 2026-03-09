@@ -78,15 +78,22 @@ export async function POST(request: Request) {
 
     // Validate the digital signature matches the applicant's legal name on file.
     // Case-insensitive, whitespace-normalized to handle minor formatting differences.
+    // The input must start with firstName and end with lastName, allowing middle
+    // names, initials, or suffixes that aren't captured in the User model fields.
     const normalizedInput = fullName.trim().toLowerCase().replace(/\s+/g, " ");
-    const expectedName =
-      `${applicant.user.firstName} ${applicant.user.lastName}`
-        .toLowerCase()
-        .replace(/\s+/g, " ");
-    if (normalizedInput !== expectedName) {
+    const normalizedFirst = applicant.user.firstName
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+    const normalizedLast = applicant.user.lastName
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+    if (
+      !normalizedInput.startsWith(normalizedFirst) ||
+      !normalizedInput.endsWith(normalizedLast)
+    ) {
       return errorResponse(
         "VALIDATION_ERROR",
-        "The name entered does not match your legal name on file. Please type your full legal name exactly as it appears.",
+        "The name entered does not match your legal name on file. Please type your full legal name, starting with your first name and ending with your last name.",
         400,
       );
     }

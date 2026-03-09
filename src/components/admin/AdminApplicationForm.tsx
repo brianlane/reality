@@ -277,6 +277,7 @@ export default function AdminApplicationForm({
       setSuccess("Application saved.");
       if (payload.applicant && "backgroundCheckNotes" in payload.applicant) {
         setForm((prev) => ({ ...prev, notes: "" }));
+        incrementRefreshKey();
       }
       // Update initial status to current value after successful save
       // This ensures subsequent status changes are detected correctly
