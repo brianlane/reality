@@ -105,7 +105,9 @@ export async function POST(request: Request) {
       normalizedInput.length < minExpected.length ||
       !normalizedInput.startsWith(normalizedFirst) ||
       !normalizedInput.endsWith(normalizedLast) ||
-      normalizedInput[normalizedFirst.length] !== " "
+      normalizedInput[normalizedFirst.length] !== " " ||
+      normalizedInput[normalizedInput.length - normalizedLast.length - 1] !==
+        " "
     ) {
       return errorResponse(
         "VALIDATION_ERROR",
