@@ -78,8 +78,10 @@ export async function POST(request: Request) {
 
     // Validate the digital signature matches the applicant's legal name on file.
     // Case-insensitive, whitespace-normalized to handle minor formatting differences.
-    // The input must start with firstName and end with lastName, allowing middle
-    // names, initials, or suffixes that aren't captured in the User model fields.
+    // The input must contain firstName as the first word(s) and lastName as the last
+    // word(s), with at least a space between them. This allows middle names, initials,
+    // or suffixes that aren't captured in the User model fields, while requiring both
+    // parts to be present (prevents e.g. "Jones" passing for firstName="Jo" lastName="Jones").
     const normalizedInput = fullName.trim().toLowerCase().replace(/\s+/g, " ");
     const normalizedFirst = applicant.user.firstName
       .toLowerCase()
@@ -87,9 +89,12 @@ export async function POST(request: Request) {
     const normalizedLast = applicant.user.lastName
       .toLowerCase()
       .replace(/\s+/g, " ");
+    const minExpected = `${normalizedFirst} ${normalizedLast}`;
     if (
+      normalizedInput.length < minExpected.length ||
       !normalizedInput.startsWith(normalizedFirst) ||
-      !normalizedInput.endsWith(normalizedLast)
+      !normalizedInput.endsWith(normalizedLast) ||
+      normalizedInput[normalizedFirst.length] !== " "
     ) {
       return errorResponse(
         "VALIDATION_ERROR",
