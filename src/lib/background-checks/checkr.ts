@@ -87,7 +87,7 @@ export type CheckrContinuousMonitor = {
 };
 
 export type CheckrWebhookPayload = {
-  id: string;
+  id?: string;
   object: string;
   type: string;
   created_at: string;

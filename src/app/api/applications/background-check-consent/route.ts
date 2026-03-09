@@ -91,6 +91,15 @@ export async function POST(request: Request) {
       .trim()
       .toLowerCase()
       .replace(/\s+/g, " ");
+
+    if (!normalizedFirst || !normalizedLast) {
+      return errorResponse(
+        "VALIDATION_ERROR",
+        "Your name on file is incomplete. Please contact support to update your profile before consenting.",
+        400,
+      );
+    }
+
     const minExpected = `${normalizedFirst} ${normalizedLast}`;
     if (
       normalizedInput.length < minExpected.length ||
