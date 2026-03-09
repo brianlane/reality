@@ -47,3 +47,6 @@ next-env.d.ts
 ALL_TESTS_PASSING.md
 BUGFIX_SUMMARY.md
 CURSOR_BUGS_FIXED*.md
+
+# Sentry Config File
+.env.sentry-build-plugin
