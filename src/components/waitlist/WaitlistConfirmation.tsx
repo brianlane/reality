@@ -6,12 +6,14 @@ type WaitlistConfirmationProps = {
   firstName?: string;
   isSubmitted?: boolean;
   applicationId?: string;
+  needsFcraConsent?: boolean;
 };
 
 export default function WaitlistConfirmation({
   firstName,
   isSubmitted = false,
   applicationId,
+  needsFcraConsent = false,
 }: WaitlistConfirmationProps) {
   return (
     <div className="mx-auto max-w-2xl space-y-8 py-8">
@@ -44,13 +46,33 @@ export default function WaitlistConfirmation({
                 review. We&apos;ll notify you once we&apos;ve reviewed your
                 submission.
               </p>
+              {needsFcraConsent && (
+                <p className="text-navy-soft mt-4">
+                  To complete your application review, please authorize our
+                  background check process.
+                </p>
+              )}
             </div>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center justify-center rounded-md bg-navy px-6 py-3 text-sm font-medium text-white transition hover:bg-navy/90"
-            >
-              View Dashboard
-            </Link>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-center sm:gap-4">
+              {needsFcraConsent && applicationId && (
+                <Link
+                  href={`/apply/background-check-consent?id=${applicationId}`}
+                  className="inline-flex items-center justify-center rounded-md bg-navy px-6 py-3 text-sm font-medium text-white transition hover:bg-navy/90"
+                >
+                  Complete Background Check Authorization
+                </Link>
+              )}
+              <Link
+                href="/dashboard"
+                className={`inline-flex items-center justify-center rounded-md px-6 py-3 text-sm font-medium transition ${
+                  needsFcraConsent
+                    ? "border border-navy text-navy hover:bg-navy/5"
+                    : "bg-navy text-white hover:bg-navy/90"
+                }`}
+              >
+                View Dashboard
+              </Link>
+            </div>
             {applicationId && (
               <p className="text-xs text-navy-soft/60">
                 Application ID: {applicationId}

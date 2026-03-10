@@ -7,7 +7,12 @@ import { APP_STATUS } from "@/lib/application-status";
 import { getApplicationStatusConfig } from "@/lib/applicant-status-ui";
 
 type DashboardResponse = {
-  application: { id: string; status: string; submittedAt?: string | null };
+  application: {
+    id: string;
+    status: string;
+    submittedAt?: string | null;
+    backgroundCheckConsentAt?: string | null;
+  };
   stats: {
     eventsAttended: number;
     matchesReceived: number;
@@ -52,9 +57,34 @@ export default function ApplicantDashboardSummary() {
   const statusConfig = getApplicationStatusConfig(status);
   const showActionBanner =
     status === APP_STATUS.DRAFT || status === APP_STATUS.PAYMENT_PENDING;
+  const showFcraConsentBanner =
+    (status === APP_STATUS.SUBMITTED ||
+      status === APP_STATUS.SCREENING_IN_PROGRESS) &&
+    !data.application.backgroundCheckConsentAt;
 
   return (
     <>
+      {showFcraConsentBanner ? (
+        <Card className="border-copper/30 bg-copper/5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-semibold text-navy">
+                Complete Background Check Authorization
+              </h2>
+              <p className="mt-1 text-sm text-navy-soft">
+                Your application requires background check consent before we can
+                proceed with verification.
+              </p>
+            </div>
+            <Link
+              href={`/apply/background-check-consent?id=${data.application.id}`}
+              className="inline-flex shrink-0 items-center justify-center rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition hover:bg-copper"
+            >
+              Authorize Background Check
+            </Link>
+          </div>
+        </Card>
+      ) : null}
       {showActionBanner && statusConfig.ctaLabel && statusConfig.ctaHref ? (
         <Card className="border-copper/30 bg-copper/5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { getApplicationStatusConfig } from "@/lib/applicant-status-ui";
+import { APP_STATUS } from "@/lib/application-status";
 
 type ApplicationData = {
   id: string;
   status: string;
   submittedAt?: string | null;
   reviewedAt?: string | null;
+  backgroundCheckConsentAt?: string | null;
 };
 
 export default function ApplicantApplicationPage() {
@@ -71,7 +73,18 @@ export default function ApplicantApplicationPage() {
             </div>
           </div>
           <p className="mt-4 text-sm text-navy-soft">{config.description}</p>
-          {config.ctaLabel && config.ctaHref ? (
+          {(data.status === APP_STATUS.SUBMITTED ||
+            data.status === APP_STATUS.SCREENING_IN_PROGRESS) &&
+          !data.backgroundCheckConsentAt ? (
+            <div className="mt-6">
+              <Link
+                href={`/apply/background-check-consent?id=${data.id}`}
+                className="inline-flex items-center justify-center rounded-md bg-navy px-4 py-2 text-sm font-medium text-white transition hover:bg-copper"
+              >
+                Complete Background Check Authorization
+              </Link>
+            </div>
+          ) : config.ctaLabel && config.ctaHref ? (
             <div className="mt-6">
               <Link
                 href={config.ctaHref}

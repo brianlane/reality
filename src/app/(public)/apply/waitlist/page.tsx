@@ -12,6 +12,7 @@ export default async function WaitlistPage({ searchParams }: PageProps) {
 
   let firstName: string | undefined;
   let isSubmitted = false;
+  let needsFcraConsent = false;
 
   if (applicationId) {
     try {
@@ -19,6 +20,7 @@ export default async function WaitlistPage({ searchParams }: PageProps) {
         where: { id: applicationId },
         select: {
           applicationStatus: true,
+          backgroundCheckConsentAt: true,
           user: {
             select: { firstName: true },
           },
@@ -26,6 +28,7 @@ export default async function WaitlistPage({ searchParams }: PageProps) {
       });
       firstName = applicant?.user.firstName;
       isSubmitted = applicant?.applicationStatus === "SUBMITTED";
+      needsFcraConsent = isSubmitted && !applicant?.backgroundCheckConsentAt;
     } catch (error) {
       console.error("Error fetching applicant:", error);
     }
@@ -45,6 +48,7 @@ export default async function WaitlistPage({ searchParams }: PageProps) {
             firstName={firstName}
             isSubmitted={isSubmitted}
             applicationId={applicationId}
+            needsFcraConsent={needsFcraConsent}
           />
         </Suspense>
       </div>

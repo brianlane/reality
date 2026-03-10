@@ -26,5 +26,6 @@ export async function GET() {
     status: applicant.applicationStatus,
     submittedAt: applicant.submittedAt,
     reviewedAt: applicant.reviewedAt,
+    backgroundCheckConsentAt: applicant.backgroundCheckConsentAt,
   });
 }

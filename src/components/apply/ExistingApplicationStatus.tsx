@@ -125,6 +125,18 @@ export default function ExistingApplicationStatus({ application }: Props) {
     );
   }
 
+  const needsFcraConsent =
+    (displayStatus === "SUBMITTED" ||
+      displayStatus === "SCREENING_IN_PROGRESS") &&
+    !application.backgroundCheckConsentAt;
+
+  const actionHref = needsFcraConsent
+    ? `/apply/background-check-consent?id=${application.id}`
+    : content.actionHref;
+  const actionText = needsFcraConsent
+    ? "Complete Background Check Authorization"
+    : shared.actionText;
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
       <div className="flex flex-col items-center text-center space-y-6">
@@ -137,14 +149,22 @@ export default function ExistingApplicationStatus({ application }: Props) {
         {/* Description */}
         <p className="text-lg text-navy-soft max-w-2xl">{shared.description}</p>
 
-        {/* Action Button */}
-        <div className="pt-4">
+        {/* Action Button(s) */}
+        <div className="pt-4 flex flex-col items-center gap-3">
           <Link
-            href={content.actionHref}
+            href={actionHref}
             className="inline-block rounded-md bg-navy px-8 py-4 text-base font-medium text-white hover:bg-copper transition-colors"
           >
-            {shared.actionText}
+            {actionText}
           </Link>
+          {needsFcraConsent && (
+            <Link
+              href="/dashboard"
+              className="text-sm text-navy-soft hover:text-navy underline"
+            >
+              View Dashboard
+            </Link>
+          )}
         </div>
 
         {/* Application ID reference */}
