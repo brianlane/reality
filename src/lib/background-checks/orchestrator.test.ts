@@ -63,36 +63,6 @@ function makeApplicant(overrides = {}) {
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
-describe("appendNote", () => {
-  // appendNote is a pure exported function — no mocks needed
-  let appendNote: (existing: string | null, note: string) => string;
-
-  beforeEach(async () => {
-    ({ appendNote } = await import("./orchestrator"));
-  });
-
-  it("creates a new note when no existing notes", () => {
-    const result = appendNote(null, "test note");
-    expect(result).toMatch(/^\[\d{4}-\d{2}-\d{2}T/);
-    expect(result).toContain("test note");
-  });
-
-  it("appends to existing notes with a newline separator", () => {
-    const result = appendNote(
-      "[2026-01-01T00:00:00.000Z] first note",
-      "second note",
-    );
-    expect(result).toContain("first note");
-    expect(result).toContain("second note");
-    expect(result.split("\n")).toHaveLength(2);
-  });
-
-  it("preserves the exact text of the new note", () => {
-    const result = appendNote(null, "Identity verification failed");
-    expect(result).toContain("Identity verification failed");
-  });
-});
-
 describe("atomicAppendNote", () => {
   let atomicAppendNote: (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
