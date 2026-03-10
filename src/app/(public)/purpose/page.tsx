@@ -2,9 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Purpose | Reality Matchmaking",
+  title: "How It Works | Reality Matchmaking",
   description:
-    "Discover why Reality Matchmaking exists — reintroducing real-world dating dynamics to create meaningful connections through curated, in-person events.",
+    "See how Reality Matchmaking works — blind-first speed dating, curated matches, vetted professionals, background checks, and personality-driven events.",
+  openGraph: {
+    title: "How It Works | Reality Matchmaking",
+    description:
+      "See how Reality Matchmaking works — blind-first speed dating, curated matches, vetted professionals, background checks, and personality-driven events.",
+  },
 };
 
 export default function PurposePage() {

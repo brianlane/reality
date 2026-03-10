@@ -230,6 +230,12 @@ export default function Stage1QualificationForm({
       }
 
       const data = await response.json();
+
+      // Fire Meta Pixel Lead event on successful application
+      if (typeof window !== "undefined" && typeof window.fbq === "function") {
+        window.fbq("track", "Lead");
+      }
+
       router.push(`/apply/waitlist?id=${data.applicationId}`);
     } catch (error) {
       console.error("Stage 1 submission error:", error);

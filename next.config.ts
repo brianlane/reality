@@ -48,11 +48,11 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // TipTap requires unsafe-eval
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://connect.facebook.net", // TipTap requires unsafe-eval
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https:",
+              "img-src 'self' data: https: https://www.facebook.com",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co https://*.stripe.com",
+              "connect-src 'self' https://*.supabase.co https://*.stripe.com https://www.facebook.com https://connect.facebook.net",
               "frame-src 'self' https://js.stripe.com https://*.stripe.com", // Allow same-origin iframes for email previews
               "frame-ancestors 'self'", // Allow being framed by same origin
               "base-uri 'self'",

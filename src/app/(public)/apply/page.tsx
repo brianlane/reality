@@ -1,9 +1,21 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Stage1QualificationForm from "@/components/forms/Stage1QualificationForm";
 import ExistingApplicationStatus from "@/components/apply/ExistingApplicationStatus";
 import { getAuthUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+
+export const metadata: Metadata = {
+  title: "Apply | Reality Matchmaking",
+  description:
+    "Apply for Reality Matchmaking — selective matchmaking events for professionals. Background-checked, personality-first dating with curated matches.",
+  openGraph: {
+    title: "Apply | Reality Matchmaking",
+    description:
+      "Apply for Reality Matchmaking — selective matchmaking events for professionals. Background-checked, personality-first dating with curated matches.",
+  },
+};
 
 export default async function ApplyPage() {
   // Check if user is authenticated and has an existing application
