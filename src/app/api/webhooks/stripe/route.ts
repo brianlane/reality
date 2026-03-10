@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { verifyStripeWebhook, getPaymentIntentMetadata } from "@/lib/stripe";
 import { sendPaymentConfirmationEmail } from "@/lib/email/payment";
+import { logger } from "@/lib/logger";
 import type Stripe from "stripe";
 
 export async function POST(request: Request) {
@@ -16,12 +17,10 @@ export async function POST(request: Request) {
   try {
     event = verifyStripeWebhook(payload, signature);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return errorResponse(
-      "FORBIDDEN",
-      `Webhook verification failed: ${errorMessage}`,
-      403,
-    );
+    logger.error("Stripe webhook signature verification error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return errorResponse("FORBIDDEN", "Invalid signature", 403);
   }
 
   try {
@@ -77,10 +76,12 @@ export async function POST(request: Request) {
               });
             }
           } catch (stripeError) {
-            console.error(
-              "Failed to fetch PaymentIntent metadata for refund:",
-              stripeError,
-            );
+            logger.error("Failed to fetch PaymentIntent metadata for refund", {
+              error:
+                stripeError instanceof Error
+                  ? stripeError.message
+                  : String(stripeError),
+            });
             // Continue without the payment record - will skip refund
           }
         }
@@ -202,10 +203,12 @@ export async function POST(request: Request) {
             applicantId: payment.applicantId,
           });
         } catch (emailError) {
-          console.error(
-            "Failed to send payment confirmation email:",
-            emailError,
-          );
+          logger.error("Failed to send payment confirmation email", {
+            error:
+              emailError instanceof Error
+                ? emailError.message
+                : String(emailError),
+          });
           // Don't fail the webhook if email fails
         }
       }

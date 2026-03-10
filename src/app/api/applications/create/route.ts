@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { createApplicationSchema } from "@/lib/validations";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
-const INVITE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
+const INVITE_EXPIRATION_MS = 14 * 24 * 60 * 60 * 1000;
 
 export async function POST(request: NextRequest) {
   try {

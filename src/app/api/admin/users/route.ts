@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { logger } from "@/lib/logger";
 import { adminUserCreateSchema } from "@/lib/validations";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 
@@ -115,7 +116,9 @@ export async function GET(request: Request) {
           });
 
         if (error) {
-          console.error("Error fetching auth users:", error);
+          logger.error("Error fetching auth users", {
+            error: error instanceof Error ? error.message : String(error),
+          });
           break;
         }
 
@@ -142,7 +145,9 @@ export async function GET(request: Request) {
         );
       }
     } catch (error) {
-      console.error("Error fetching Supabase session data:", error);
+      logger.error("Error fetching Supabase session data", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       // Continue without session data
     }
   }

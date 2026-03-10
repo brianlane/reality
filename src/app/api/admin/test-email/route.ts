@@ -6,6 +6,7 @@
 
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { logger } from "@/lib/logger";
 import {
   sendWaitlistConfirmationEmail,
   sendWaitlistInviteEmail,
@@ -168,7 +169,9 @@ export async function POST(request: Request) {
       resendId: result?.id,
     });
   } catch (error) {
-    console.error("Test email send failed:", error);
+    logger.error("Test email send failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return errorResponse(
       "INTERNAL_SERVER_ERROR",
       `Failed to send test email: ${(error as Error).message}`,

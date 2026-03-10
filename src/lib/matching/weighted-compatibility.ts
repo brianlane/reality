@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import {
   QuestionnaireQuestion,
   QuestionnaireQuestionType,
@@ -330,7 +331,11 @@ export async function scoreAllPairs(
           });
         }
       } catch (error) {
-        console.error(`Failed to score pair ${man.id} x ${woman.id}:`, error);
+        logger.error("Failed to score pair", {
+          manId: man.id,
+          womanId: woman.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
         allScores.push({
           manId: man.id,
           womanId: woman.id,

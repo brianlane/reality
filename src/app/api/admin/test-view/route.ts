@@ -7,6 +7,7 @@
 
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { errorResponse } from "@/lib/api-response";
+import { logger } from "@/lib/logger";
 import { getSimpleStatusViewHTML } from "@/lib/email/simple-status-view";
 import type { StatusContentKey } from "@/lib/status-content";
 import { NextResponse } from "next/server";
@@ -93,7 +94,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Test view generation failed:", error);
+    logger.error("Test view generation failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return errorResponse(
       "INTERNAL_SERVER_ERROR",
       `Failed to generate view: ${(error as Error).message}`,

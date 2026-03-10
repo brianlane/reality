@@ -21,8 +21,14 @@ export async function GET(request: Request) {
 
   try {
     const url = new URL(request.url);
-    const page = Number(url.searchParams.get("page") ?? "1");
-    const limit = Number(url.searchParams.get("limit") ?? "50");
+    const page = Math.max(
+      1,
+      parseInt(url.searchParams.get("page") ?? "1", 10) || 1,
+    );
+    const limit = Math.min(
+      100,
+      Math.max(1, parseInt(url.searchParams.get("limit") ?? "50", 10) || 50),
+    );
     const includeDeleted = url.searchParams.get("includeDeleted") === "true";
     const search = url.searchParams.get("search") ?? undefined;
     const location = url.searchParams.get("location") ?? undefined;

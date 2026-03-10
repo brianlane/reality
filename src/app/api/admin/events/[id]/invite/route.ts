@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { getOrCreateAdminUser } from "@/lib/admin-helpers";
 import { inviteApplicantsSchema } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 import { sendEventInvitationEmail } from "@/lib/email/events";
 
 type RouteContext = {
@@ -131,10 +132,11 @@ export async function POST(request: Request, { params }: RouteContext) {
         applicantId: applicant.id,
       });
     } catch (emailError) {
-      console.error(
-        `Failed to send event invitation email to ${applicant.user.email}:`,
-        emailError,
-      );
+      logger.error("Failed to send event invitation email", {
+        email: applicant.user.email,
+        error:
+          emailError instanceof Error ? emailError.message : String(emailError),
+      });
       // Continue sending to other applicants even if one fails
     }
   }

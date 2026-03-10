@@ -5,6 +5,8 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { ensureApplicantAccount } from "@/lib/account-init";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notifyApplicationSubmitted } from "@/lib/email/admin-notifications";
+import { initiateScreening } from "@/lib/background-checks/orchestrator";
+import { logger } from "@/lib/logger";
 import { createPaymentCheckout } from "@/lib/stripe";
 import { PHOTO_MIN_COUNT } from "@/lib/photo-config";
 
@@ -117,16 +119,41 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      await db.applicant.update({
-        where: { id: applicant.id },
-        data: {
-          applicationStatus: "SUBMITTED",
-          submittedAt: new Date(),
-          screeningStatus: "PENDING",
-          waitlistInviteToken: null,
-          invitedOffWaitlistAt: null,
-          invitedOffWaitlistBy: null,
-        },
+      // Write SUBMITTED and re-read backgroundCheckConsentAt in the same
+      // DB transaction. The findUnique runs after the update within the same
+      // BEGIN...COMMIT block, so it sees the status write (read-your-own-writes).
+      // Under READ COMMITTED it also sees any backgroundCheckConsentAt committed
+      // by a concurrent consent route before the findUnique executes.
+      // Write SUBMITTED status, audit log, and re-read consent in one transaction
+      // so the FCRA audit record is never silently lost.
+      const submittedAt = new Date();
+      const freshApplicant = await db.$transaction(async (tx) => {
+        await tx.applicant.update({
+          where: { id: applicant.id },
+          data: {
+            applicationStatus: "SUBMITTED",
+            submittedAt,
+            screeningStatus: "PENDING",
+            waitlistInviteToken: null,
+            invitedOffWaitlistAt: null,
+            invitedOffWaitlistBy: null,
+          },
+        });
+        await tx.screeningAuditLog.create({
+          data: {
+            userId: applicant.userId,
+            applicantId: applicant.id,
+            action: "APPLICATION_SUBMITTED",
+            metadata: {
+              submittedAt: submittedAt.toISOString(),
+              email: applicant.user.email,
+            },
+          },
+        });
+        return tx.applicant.findUnique({
+          where: { id: applicant.id },
+          select: { backgroundCheckConsentAt: true },
+        });
       });
 
       // Notify admin that an application was submitted (non-blocking)
@@ -144,9 +171,42 @@ export async function POST(request: NextRequest) {
         // Silently ignore - notification failure shouldn't affect the response
       });
 
+      // Auto-initiate screening if FCRA consent has already been given.
+      // First check the in-transaction read, then do a post-commit re-read
+      // to close the race window where submit and consent transactions both
+      // read before either commits. initiateScreening's updateMany guard
+      // prevents duplicate transitions.
+      let screeningInitiated = false;
+      let hasConsent = !!freshApplicant?.backgroundCheckConsentAt;
+
+      if (!hasConsent) {
+        // The in-transaction read may have missed a concurrent consent that
+        // hadn't committed yet. Re-read after our commit to catch it.
+        const postCommit = await db.applicant.findUnique({
+          where: { id: applicant.id },
+          select: { backgroundCheckConsentAt: true },
+        });
+        hasConsent = !!postCommit?.backgroundCheckConsentAt;
+      }
+
+      if (hasConsent) {
+        try {
+          await initiateScreening(applicant.id);
+          screeningInitiated = true;
+        } catch (err: unknown) {
+          // Log at error level so it surfaces in monitoring. The admin can
+          // manually trigger screening via /api/applications/background-check.
+          logger.error("Failed to auto-initiate screening after submission", {
+            applicantId: applicant.id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+
       return successResponse({
         applicationId: applicant.id,
         status: "SUBMITTED",
+        screeningInitiated,
       });
     } else {
       return errorResponse(
@@ -156,8 +216,9 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
-    // Log the error for debugging
-    console.error("Application submission error:", error);
+    logger.error("Application submission error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
 
     return errorResponse(
       "SERVER_ERROR",

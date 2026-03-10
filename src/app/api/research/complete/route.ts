@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
         researchInviteUsedAt: applicant.researchInviteUsedAt ?? new Date(),
         prolificCompletionCode: completionCode,
         prolificPartnerPid: partnerPid,
+        lastQuestionnaireDate: new Date(),
       },
     });
 

@@ -22,6 +22,11 @@ const SENSITIVE_FIELDS = [
   "ssn",
   "email", // Optionally redact email in logs
   "phone",
+  "dob",
+  "dateOfBirth",
+  "authToken", // iDenfy auth tokens
+  // Note: scanRef is intentionally NOT redacted -- it's an opaque session
+  // identifier (not PII) needed to correlate iDenfy events across the pipeline.
 ];
 
 function redactSensitiveData(
@@ -101,7 +106,7 @@ export const logger = {
     if (shouldLog("debug")) {
       // In development, use console for better DX
       if (process.env.NODE_ENV === "development") {
-        console.debug(`[DEBUG] ${message}`, context || "");
+        console.debug("[DEBUG]", message, context || "");
       } else {
         console.log(formatLog("debug", message, context));
       }
@@ -111,7 +116,7 @@ export const logger = {
   info(message: string, context?: LogContext) {
     if (shouldLog("info")) {
       if (process.env.NODE_ENV === "development") {
-        console.info(`[INFO] ${message}`, context || "");
+        console.info("[INFO]", message, context || "");
       } else {
         console.log(formatLog("info", message, context));
       }
@@ -121,7 +126,7 @@ export const logger = {
   warn(message: string, context?: LogContext) {
     if (shouldLog("warn")) {
       if (process.env.NODE_ENV === "development") {
-        console.warn(`[WARN] ${message}`, context || "");
+        console.warn("[WARN]", message, context || "");
       } else {
         console.warn(formatLog("warn", message, context));
       }
@@ -131,7 +136,7 @@ export const logger = {
   error(message: string, context?: LogContext) {
     if (shouldLog("error")) {
       if (process.env.NODE_ENV === "development") {
-        console.error(`[ERROR] ${message}`, context || "");
+        console.error("[ERROR]", message, context || "");
       } else {
         console.error(formatLog("error", message, context));
       }

@@ -96,4 +96,6 @@ export const RATE_LIMITS = {
   UPLOAD: { interval: 60 * 1000, maxRequests: 10 }, // 10 uploads per minute
   // Very strict for webhooks (internal only)
   WEBHOOK: { interval: 60 * 1000, maxRequests: 100 }, // 100 per minute
+  // Strict limits for screening endpoints (iDenfy sessions cost money)
+  SCREENING: { interval: 15 * 60 * 1000, maxRequests: 5 }, // 5 requests per 15 minutes
 } as const;
