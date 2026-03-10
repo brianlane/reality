@@ -232,10 +232,8 @@ export default function Stage1QualificationForm({
       const data = await response.json();
 
       // Fire Meta Pixel Lead event on successful application
-      // Use sendBeacon-style delay to ensure the pixel request completes before navigation
       if (typeof window !== "undefined" && typeof window.fbq === "function") {
         window.fbq("track", "Lead");
-        await new Promise((resolve) => setTimeout(resolve, 300));
       }
 
       router.push(`/apply/waitlist?id=${data.applicationId}`);
