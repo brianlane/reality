@@ -59,9 +59,8 @@
 ### Section A: Personal Background
 
 1. What age range are you looking to date? `[AGE_RANGE | w=0.9]`
-2. What is your occupation? `[TEXT | w=0]`
-3. Explain your job without actually saying what you do. `[TEXTAREA | w=0]`
-4. Do you have income from sources other than your primary salary (e.g., investments, dividends, or properties)? `[DROPDOWN: Yes, No, Prefer not to say | w=0.3]`
+2. Explain your job without actually saying what you do. `[TEXTAREA | w=0]`
+3. Do you have income from sources other than your primary salary (e.g., investments, dividends, or properties)? `[DROPDOWN: Yes, No, Prefer not to say | w=0.3]`
 
 ### Section B: Family & Children
 
