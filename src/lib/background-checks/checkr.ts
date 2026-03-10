@@ -156,21 +156,17 @@ export function mapCheckrResult(result: string | null): "PASSED" | "FAILED" {
 // API Client - Helper
 // ============================================
 
-function buildAuthHeader(): string {
-  const config = requireConfig();
-  return `Basic ${Buffer.from(`${config.apiKey}:`).toString("base64")}`;
-}
-
 async function checkrFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
   const config = requireConfig();
   const url = `${config.baseUrl}${path}`;
+  const authHeader = `Basic ${Buffer.from(`${config.apiKey}:`).toString("base64")}`;
   const response = await fetch(url, {
     ...options,
     headers: {
-      Authorization: buildAuthHeader(),
+      Authorization: authHeader,
       "Content-Type": "application/json",
       ...options.headers,
     },
@@ -294,12 +290,13 @@ export async function cancelContinuousMonitoring(
   logger.info("Canceling continuous monitoring", { monitoringId });
 
   const config = requireConfig();
+  const authHeader = `Basic ${Buffer.from(`${config.apiKey}:`).toString("base64")}`;
   const response = await fetch(
     `${config.baseUrl}/v1/continuous_monitoring/${monitoringId}`,
     {
       method: "DELETE",
       headers: {
-        Authorization: buildAuthHeader(),
+        Authorization: authHeader,
       },
     },
   );

@@ -7,6 +7,7 @@
  * Each step is triggered by webhooks from the respective provider.
  */
 
+import { Applicant, User } from "@prisma/client";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { enrollContinuousMonitoring } from "@/lib/background-checks/checkr";
@@ -18,14 +19,19 @@ import {
 } from "@/lib/email/admin-notifications";
 
 // ============================================
-// Step 1: Initiate Screening
+// Helpers
 // ============================================
 
+type ApplicantWithUser = Applicant & { user: User };
+
 /**
- * Entry point after FCRA consent is given and the application is submitted.
- * Sets the application to SCREENING_IN_PROGRESS and triggers iDenfy verification.
+ * Look up an applicant by ID including their user. Throws if not found.
+ * Returns null if the applicant has been soft-deleted (caller should return early).
  */
-export async function initiateScreening(applicantId: string): Promise<void> {
+async function findActiveApplicant(
+  applicantId: string,
+  stepName: string,
+): Promise<ApplicantWithUser | null> {
   const applicant = await db.applicant.findUnique({
     where: { id: applicantId },
     include: { user: true },
@@ -36,11 +42,29 @@ export async function initiateScreening(applicantId: string): Promise<void> {
   }
 
   if (applicant.deletedAt) {
-    logger.info("Skipping screening initiation for soft-deleted applicant", {
+    logger.info(`Skipping ${stepName} for soft-deleted applicant`, {
       applicantId,
     });
-    return;
+    return null;
   }
+
+  return applicant;
+}
+
+// ============================================
+// Step 1: Initiate Screening
+// ============================================
+
+/**
+ * Entry point after FCRA consent is given and the application is submitted.
+ * Sets the application to SCREENING_IN_PROGRESS and triggers iDenfy verification.
+ */
+export async function initiateScreening(applicantId: string): Promise<void> {
+  const applicant = await findActiveApplicant(
+    applicantId,
+    "screening initiation",
+  );
+  if (!applicant) return;
 
   if (!applicant.backgroundCheckConsentAt) {
     throw new Error(`FCRA consent not provided for applicant: ${applicantId}`);
@@ -111,21 +135,8 @@ export async function onIdenfyComplete(
     return;
   }
 
-  const applicant = await db.applicant.findUnique({
-    where: { id: applicantId },
-    include: { user: true },
-  });
-
-  if (!applicant) {
-    throw new Error(`Applicant not found: ${applicantId}`);
-  }
-
-  if (applicant.deletedAt) {
-    logger.info("Skipping iDenfy completion for soft-deleted applicant", {
-      applicantId,
-    });
-    return;
-  }
+  const applicant = await findActiveApplicant(applicantId, "iDenfy completion");
+  if (!applicant) return;
 
   logger.info("iDenfy complete, orchestrating next step", {
     applicantId,
@@ -196,21 +207,8 @@ export async function onCheckrComplete(
   status: "PASSED" | "FAILED",
   result: string | null,
 ): Promise<void> {
-  const applicant = await db.applicant.findUnique({
-    where: { id: applicantId },
-    include: { user: true },
-  });
-
-  if (!applicant) {
-    throw new Error(`Applicant not found: ${applicantId}`);
-  }
-
-  if (applicant.deletedAt) {
-    logger.info("Skipping Checkr completion for soft-deleted applicant", {
-      applicantId,
-    });
-    return;
-  }
+  const applicant = await findActiveApplicant(applicantId, "Checkr completion");
+  if (!applicant) return;
 
   logger.info("Checkr complete, orchestrating next step", {
     applicantId,
@@ -267,25 +265,8 @@ export async function onCheckrComplete(
  * Enrolls in continuous monitoring if both pass.
  */
 async function finalizeScreening(applicantId: string): Promise<void> {
-  const applicant = await db.applicant.findUnique({
-    where: { id: applicantId },
-    include: { user: true },
-  });
-
-  if (!applicant) {
-    throw new Error(`Applicant not found: ${applicantId}`);
-  }
-
-  // Do not process soft-deleted applicants. A Checkr webhook may arrive
-  // after an admin has soft-deleted the applicant; enrolling them in
-  // continuous monitoring would incur ongoing costs and contradict the
-  // admin's explicit deletion intent.
-  if (applicant.deletedAt) {
-    logger.info("Skipping finalization for soft-deleted applicant", {
-      applicantId,
-    });
-    return;
-  }
+  const applicant = await findActiveApplicant(applicantId, "finalization");
+  if (!applicant) return;
 
   const idenfyPassed = applicant.idenfyStatus === "PASSED";
   const checkrPassed = applicant.checkrStatus === "PASSED";
@@ -464,10 +445,6 @@ async function finalizeScreening(applicantId: string): Promise<void> {
   }
 }
 
-// ============================================
-// Helpers
-// ============================================
-
 /**
  * Atomically appends a timestamped note to an applicant's backgroundCheckNotes
  * using raw SQL. PostgreSQL's UPDATE acquires a row lock, so concurrent appends
@@ -491,17 +468,4 @@ export async function atomicAppendNote(
     END
     WHERE id = ${applicantId}
   `;
-}
-
-/**
- * @deprecated Use atomicAppendNote for concurrent-safe note appending.
- * Kept for contexts where raw SQL is not available (e.g. simple string building).
- */
-export function appendNote(
-  existingNotes: string | null,
-  newNote: string,
-): string {
-  const timestamp = new Date().toISOString();
-  const entry = `[${timestamp}] ${newNote}`;
-  return existingNotes ? `${existingNotes}\n${entry}` : entry;
 }
