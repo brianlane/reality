@@ -9,6 +9,18 @@ export const metadata: Metadata = {
     title: "How It Works | Reality Matchmaking",
     description:
       "See how Reality Matchmaking works — blind-first speed dating, curated matches, vetted professionals, background checks, and personality-driven events.",
+    url: "https://www.realitymatchmaking.com/purpose",
+    siteName: "Reality Matchmaking",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: "/logo.png",
+        width: 1200,
+        height: 630,
+        alt: "Reality Matchmaking",
+      },
+    ],
   },
 };
 

@@ -5,10 +5,21 @@ export const metadata: Metadata = {
   description:
     "Done with dating apps? Reality Matchmaking hosts vetted, blind-first matchmaking events for professionals. Background-checked members, curated matches, personality before appearance.",
   openGraph: {
-    title:
-      "Reality Matchmaking | Curated Dating Events for Professionals",
+    title: "Reality Matchmaking | Curated Dating Events for Professionals",
     description:
       "Done with dating apps? Reality Matchmaking hosts vetted, blind-first matchmaking events for professionals. Background-checked members, curated matches, personality before appearance.",
+    url: "https://www.realitymatchmaking.com",
+    siteName: "Reality Matchmaking",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: "/logo.png",
+        width: 1200,
+        height: 630,
+        alt: "Reality Matchmaking",
+      },
+    ],
   },
 };
 

@@ -87,7 +87,9 @@ export default function RootLayout({
     },
   };
 
-  const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+  const rawPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+  const metaPixelId =
+    rawPixelId && /^\d+$/.test(rawPixelId) ? rawPixelId : null;
 
   return (
     <html lang="en">

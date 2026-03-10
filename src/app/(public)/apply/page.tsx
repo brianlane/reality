@@ -14,6 +14,18 @@ export const metadata: Metadata = {
     title: "Apply | Reality Matchmaking",
     description:
       "Apply for Reality Matchmaking — selective matchmaking events for professionals. Background-checked, personality-first dating with curated matches.",
+    url: "https://www.realitymatchmaking.com/apply",
+    siteName: "Reality Matchmaking",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: "/logo.png",
+        width: 1200,
+        height: 630,
+        alt: "Reality Matchmaking",
+      },
+    ],
   },
 };
 
