@@ -7,6 +7,8 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 import { runSkipPaymentFlow } from "@/lib/admin/skip-payment";
+import type { Stage1Responses } from "@/types/stage1";
+import Stage1DetailsPanel from "@/components/admin/Stage1DetailsPanel";
 
 type AdminUserFormProps = {
   userId?: string;
@@ -23,6 +25,8 @@ type UserDetail = {
   applicant?: {
     id: string;
     applicationStatus: string;
+    stage1Responses?: Stage1Responses | null;
+    stage1CompletedAt?: string | null;
   } | null;
   deletedAt: string | null;
 };
@@ -338,6 +342,24 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
           </Select>
         ) : null}
       </div>
+      {mode === "edit" &&
+      user?.applicant &&
+      ((user.applicant.stage1Responses &&
+        Object.keys(user.applicant.stage1Responses as Stage1Responses).length >
+          0) ||
+        user.applicant.stage1CompletedAt) ? (
+        <Stage1DetailsPanel
+          stage1Responses={
+            user.applicant.stage1Responses as Stage1Responses | null | undefined
+          }
+          completedAt={
+            user.applicant.stage1CompletedAt ??
+            (user.applicant.stage1Responses as Stage1Responses | null)
+              ?.submittedAt ??
+            null
+          }
+        />
+      ) : null}
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"

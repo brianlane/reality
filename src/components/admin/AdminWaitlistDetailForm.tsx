@@ -7,11 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
+import type { Stage1Responses } from "@/types/stage1";
+import Stage1DetailsPanel from "@/components/admin/Stage1DetailsPanel";
 
 type WaitlistDetail = {
   id: string;
   user: { firstName: string; lastName: string; email: string };
   applicationStatus: string;
+  stage1Responses: Stage1Responses | null;
+  stage1CompletedAt: string | null;
   waitlistReason: string | null;
   waitlistPosition: number | null;
   waitlistedAt: string | null;
@@ -179,6 +183,11 @@ export default function AdminWaitlistDetailForm({
     return <Card>Loading waitlist detail...</Card>;
   }
 
+  const stage1 = data.stage1Responses as Stage1Responses | null;
+  const hasStage1Data =
+    (stage1 && Object.keys(stage1).length > 0) || data.stage1CompletedAt;
+  const completedAt = data.stage1CompletedAt ?? stage1?.submittedAt ?? null;
+
   return (
     <Card className="space-y-4">
       <div>
@@ -186,6 +195,14 @@ export default function AdminWaitlistDetailForm({
           {data.user.firstName} {data.user.lastName}
         </div>
         <div className="text-sm text-navy-soft">{data.user.email}</div>
+        {hasStage1Data ? (
+          <div className="mt-4">
+            <Stage1DetailsPanel
+              stage1Responses={stage1}
+              completedAt={completedAt}
+            />
+          </div>
+        ) : null}
         <div className="mt-3 max-w-sm space-y-2">
           <label className="text-xs font-semibold text-navy-soft">
             Application Status

@@ -45,6 +45,8 @@ export async function GET(request: Request, { params }: RouteContext) {
         email: applicant.user.email,
       },
       applicationStatus: applicant.applicationStatus,
+      stage1Responses: applicant.stage1Responses,
+      stage1CompletedAt: applicant.stage1CompletedAt,
       waitlistReason: applicant.waitlistReason,
       waitlistPosition: applicant.waitlistPosition,
       waitlistedAt: applicant.waitlistedAt,
