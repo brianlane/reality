@@ -13,6 +13,18 @@ type AdminUserFormProps = {
   mode: "create" | "edit";
 };
 
+type Stage1Responses = {
+  age?: number;
+  email?: string;
+  firstName?: string;
+  gender?: string;
+  instagram?: string;
+  lastName?: string;
+  location?: string;
+  phone?: string;
+  submittedAt?: string;
+};
+
 type UserDetail = {
   id: string;
   clerkId: string;
@@ -23,6 +35,8 @@ type UserDetail = {
   applicant?: {
     id: string;
     applicationStatus: string;
+    stage1Responses?: Stage1Responses | null;
+    stage1CompletedAt?: string | null;
   } | null;
   deletedAt: string | null;
 };
@@ -338,6 +352,81 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
           </Select>
         ) : null}
       </div>
+      {mode === "edit" &&
+      user?.applicant?.stage1Responses &&
+      Object.keys(user.applicant.stage1Responses as Stage1Responses).length >
+        0 ? (
+        <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-navy-soft">
+            Stage 1 Details
+          </div>
+          <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
+            {(() => {
+              const s = user.applicant!.stage1Responses as Stage1Responses;
+              return (
+                <>
+                  {s.firstName != null && (
+                    <>
+                      <dt className="text-navy-soft">First name</dt>
+                      <dd className="font-medium text-navy">{s.firstName}</dd>
+                    </>
+                  )}
+                  {s.lastName != null && (
+                    <>
+                      <dt className="text-navy-soft">Last name</dt>
+                      <dd className="font-medium text-navy">{s.lastName}</dd>
+                    </>
+                  )}
+                  {s.email != null && (
+                    <>
+                      <dt className="text-navy-soft">Email</dt>
+                      <dd className="font-medium text-navy">{s.email}</dd>
+                    </>
+                  )}
+                  {s.phone != null && (
+                    <>
+                      <dt className="text-navy-soft">Phone</dt>
+                      <dd className="font-medium text-navy">{s.phone}</dd>
+                    </>
+                  )}
+                  {s.age != null && (
+                    <>
+                      <dt className="text-navy-soft">Age</dt>
+                      <dd className="font-medium text-navy">{s.age}</dd>
+                    </>
+                  )}
+                  {s.gender != null && (
+                    <>
+                      <dt className="text-navy-soft">Gender</dt>
+                      <dd className="font-medium text-navy">{s.gender}</dd>
+                    </>
+                  )}
+                  {s.location != null && (
+                    <>
+                      <dt className="text-navy-soft">Location</dt>
+                      <dd className="font-medium text-navy">{s.location}</dd>
+                    </>
+                  )}
+                  {s.instagram != null && (
+                    <>
+                      <dt className="text-navy-soft">Instagram</dt>
+                      <dd className="font-medium text-navy">{s.instagram}</dd>
+                    </>
+                  )}
+                  {s.submittedAt != null && (
+                    <>
+                      <dt className="text-navy-soft">Submitted at</dt>
+                      <dd className="font-medium text-navy">
+                        {new Date(s.submittedAt).toLocaleString()}
+                      </dd>
+                    </>
+                  )}
+                </>
+              );
+            })()}
+          </dl>
+        </div>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
