@@ -7,22 +7,11 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 import { runSkipPaymentFlow } from "@/lib/admin/skip-payment";
+import type { Stage1Responses } from "@/types/stage1";
 
 type AdminUserFormProps = {
   userId?: string;
   mode: "create" | "edit";
-};
-
-type Stage1Responses = {
-  age?: number;
-  email?: string;
-  firstName?: string;
-  gender?: string;
-  instagram?: string;
-  lastName?: string;
-  location?: string;
-  phone?: string;
-  submittedAt?: string;
 };
 
 type UserDetail = {
@@ -353,71 +342,78 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
         ) : null}
       </div>
       {mode === "edit" &&
-      user?.applicant?.stage1Responses &&
-      Object.keys(user.applicant.stage1Responses as Stage1Responses).length >
-        0 ? (
+      user?.applicant &&
+      ((user.applicant.stage1Responses &&
+        Object.keys(user.applicant.stage1Responses as Stage1Responses).length >
+          0) ||
+        user.applicant.stage1CompletedAt) ? (
         <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
           <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-navy-soft">
             Stage 1 Details
           </div>
           <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
             {(() => {
-              const s = user.applicant!.stage1Responses as Stage1Responses;
+              const s = user.applicant.stage1Responses as
+                | Stage1Responses
+                | null
+                | undefined;
+              const completedAt =
+                user.applicant.stage1CompletedAt ?? s?.submittedAt ?? null;
               return (
                 <>
-                  {s.firstName != null && (
+                  {s?.firstName != null && (
                     <>
                       <dt className="text-navy-soft">First name</dt>
                       <dd className="font-medium text-navy">{s.firstName}</dd>
                     </>
                   )}
-                  {s.lastName != null && (
+                  {s?.lastName != null && (
                     <>
                       <dt className="text-navy-soft">Last name</dt>
                       <dd className="font-medium text-navy">{s.lastName}</dd>
                     </>
                   )}
-                  {s.email != null && (
+                  {s?.email != null && (
                     <>
                       <dt className="text-navy-soft">Email</dt>
                       <dd className="font-medium text-navy">{s.email}</dd>
                     </>
                   )}
-                  {s.phone != null && (
+                  {s?.phone != null && (
                     <>
                       <dt className="text-navy-soft">Phone</dt>
                       <dd className="font-medium text-navy">{s.phone}</dd>
                     </>
                   )}
-                  {s.age != null && (
+                  {s?.age != null && (
                     <>
                       <dt className="text-navy-soft">Age</dt>
                       <dd className="font-medium text-navy">{s.age}</dd>
                     </>
                   )}
-                  {s.gender != null && (
+                  {s?.gender != null && (
                     <>
                       <dt className="text-navy-soft">Gender</dt>
                       <dd className="font-medium text-navy">{s.gender}</dd>
                     </>
                   )}
-                  {s.location != null && (
+                  {s?.location != null && (
                     <>
                       <dt className="text-navy-soft">Location</dt>
                       <dd className="font-medium text-navy">{s.location}</dd>
                     </>
                   )}
-                  {s.instagram != null && (
+                  {s?.instagram != null && (
                     <>
                       <dt className="text-navy-soft">Instagram</dt>
                       <dd className="font-medium text-navy">{s.instagram}</dd>
                     </>
                   )}
-                  {s.submittedAt != null && (
+                  {completedAt != null && (
                     <>
-                      <dt className="text-navy-soft">Submitted at</dt>
+                      <dt className="text-navy-soft">Completed at</dt>
                       <dd className="font-medium text-navy">
-                        {new Date(s.submittedAt).toLocaleString()}
+                        {new Date(completedAt).toLocaleString()}
                       </dd>
                     </>
                   )}
