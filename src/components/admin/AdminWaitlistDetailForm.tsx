@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 import type { Stage1Responses } from "@/types/stage1";
+import Stage1DetailsPanel from "@/components/admin/Stage1DetailsPanel";
 
 type WaitlistDetail = {
   id: string;
@@ -195,68 +196,11 @@ export default function AdminWaitlistDetailForm({
         </div>
         <div className="text-sm text-navy-soft">{data.user.email}</div>
         {hasStage1Data ? (
-          <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-4">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-navy-soft">
-              Stage 1 Details
-            </div>
-            <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
-              {stage1?.firstName != null && (
-                <>
-                  <dt className="text-navy-soft">First name</dt>
-                  <dd className="font-medium text-navy">{stage1.firstName}</dd>
-                </>
-              )}
-              {stage1?.lastName != null && (
-                <>
-                  <dt className="text-navy-soft">Last name</dt>
-                  <dd className="font-medium text-navy">{stage1.lastName}</dd>
-                </>
-              )}
-              {stage1?.email != null && (
-                <>
-                  <dt className="text-navy-soft">Email</dt>
-                  <dd className="font-medium text-navy">{stage1.email}</dd>
-                </>
-              )}
-              {stage1?.phone != null && (
-                <>
-                  <dt className="text-navy-soft">Phone</dt>
-                  <dd className="font-medium text-navy">{stage1.phone}</dd>
-                </>
-              )}
-              {stage1?.age != null && (
-                <>
-                  <dt className="text-navy-soft">Age</dt>
-                  <dd className="font-medium text-navy">{stage1.age}</dd>
-                </>
-              )}
-              {stage1?.gender != null && (
-                <>
-                  <dt className="text-navy-soft">Gender</dt>
-                  <dd className="font-medium text-navy">{stage1.gender}</dd>
-                </>
-              )}
-              {stage1?.location != null && (
-                <>
-                  <dt className="text-navy-soft">Location</dt>
-                  <dd className="font-medium text-navy">{stage1.location}</dd>
-                </>
-              )}
-              {stage1?.instagram != null && (
-                <>
-                  <dt className="text-navy-soft">Instagram</dt>
-                  <dd className="font-medium text-navy">{stage1.instagram}</dd>
-                </>
-              )}
-              {completedAt != null && (
-                <>
-                  <dt className="text-navy-soft">Completed at</dt>
-                  <dd className="font-medium text-navy">
-                    {new Date(completedAt).toLocaleString()}
-                  </dd>
-                </>
-              )}
-            </dl>
+          <div className="mt-4">
+            <Stage1DetailsPanel
+              stage1Responses={stage1}
+              completedAt={completedAt}
+            />
           </div>
         ) : null}
         <div className="mt-3 max-w-sm space-y-2">

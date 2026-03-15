@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { getAuthHeaders } from "@/lib/supabase/auth-headers";
 import { runSkipPaymentFlow } from "@/lib/admin/skip-payment";
 import type { Stage1Responses } from "@/types/stage1";
+import Stage1DetailsPanel from "@/components/admin/Stage1DetailsPanel";
 
 type AdminUserFormProps = {
   userId?: string;
@@ -347,81 +348,17 @@ export default function AdminUserForm({ userId, mode }: AdminUserFormProps) {
         Object.keys(user.applicant.stage1Responses as Stage1Responses).length >
           0) ||
         user.applicant.stage1CompletedAt) ? (
-        <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-navy-soft">
-            Stage 1 Details
-          </div>
-          <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
-            {(() => {
-              const s = user.applicant.stage1Responses as
-                | Stage1Responses
-                | null
-                | undefined;
-              const completedAt =
-                user.applicant.stage1CompletedAt ?? s?.submittedAt ?? null;
-              return (
-                <>
-                  {s?.firstName != null && (
-                    <>
-                      <dt className="text-navy-soft">First name</dt>
-                      <dd className="font-medium text-navy">{s.firstName}</dd>
-                    </>
-                  )}
-                  {s?.lastName != null && (
-                    <>
-                      <dt className="text-navy-soft">Last name</dt>
-                      <dd className="font-medium text-navy">{s.lastName}</dd>
-                    </>
-                  )}
-                  {s?.email != null && (
-                    <>
-                      <dt className="text-navy-soft">Email</dt>
-                      <dd className="font-medium text-navy">{s.email}</dd>
-                    </>
-                  )}
-                  {s?.phone != null && (
-                    <>
-                      <dt className="text-navy-soft">Phone</dt>
-                      <dd className="font-medium text-navy">{s.phone}</dd>
-                    </>
-                  )}
-                  {s?.age != null && (
-                    <>
-                      <dt className="text-navy-soft">Age</dt>
-                      <dd className="font-medium text-navy">{s.age}</dd>
-                    </>
-                  )}
-                  {s?.gender != null && (
-                    <>
-                      <dt className="text-navy-soft">Gender</dt>
-                      <dd className="font-medium text-navy">{s.gender}</dd>
-                    </>
-                  )}
-                  {s?.location != null && (
-                    <>
-                      <dt className="text-navy-soft">Location</dt>
-                      <dd className="font-medium text-navy">{s.location}</dd>
-                    </>
-                  )}
-                  {s?.instagram != null && (
-                    <>
-                      <dt className="text-navy-soft">Instagram</dt>
-                      <dd className="font-medium text-navy">{s.instagram}</dd>
-                    </>
-                  )}
-                  {completedAt != null && (
-                    <>
-                      <dt className="text-navy-soft">Completed at</dt>
-                      <dd className="font-medium text-navy">
-                        {new Date(completedAt).toLocaleString()}
-                      </dd>
-                    </>
-                  )}
-                </>
-              );
-            })()}
-          </dl>
-        </div>
+        <Stage1DetailsPanel
+          stage1Responses={
+            user.applicant.stage1Responses as Stage1Responses | null | undefined
+          }
+          completedAt={
+            user.applicant.stage1CompletedAt ??
+            (user.applicant.stage1Responses as Stage1Responses | null)
+              ?.submittedAt ??
+            null
+          }
+        />
       ) : null}
       <div className="flex flex-wrap gap-2">
         <Button
