@@ -40,8 +40,9 @@ export async function POST(request: Request, { params }: RouteContext) {
   const updateResult = await db.applicant.updateMany({
     where: {
       id,
-      applicationStatus: "WAITLIST",
-      invitedOffWaitlistAt: null,
+      applicationStatus: {
+        in: ["WAITLIST", "WAITLIST_INVITED"],
+      },
       deletedAt: null,
     },
     data: {
@@ -61,18 +62,13 @@ export async function POST(request: Request, { params }: RouteContext) {
       return errorResponse("NOT_FOUND", "Applicant not found", 404);
     }
 
-    if (existing.invitedOffWaitlistAt) {
-      return errorResponse(
-        "ALREADY_INVITED",
-        "Applicant has already been invited off the waitlist",
-        400,
-      );
-    }
-
-    if (existing.applicationStatus !== "WAITLIST") {
+    if (
+      existing.applicationStatus !== "WAITLIST" &&
+      existing.applicationStatus !== "WAITLIST_INVITED"
+    ) {
       return errorResponse(
         "INVALID_STATUS",
-        "Applicant is not on the waitlist",
+        "Applicant is not eligible for a waitlist invite",
         400,
       );
     }

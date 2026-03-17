@@ -87,6 +87,10 @@ export default function WaitlistConfirmation({
             <p className="text-lg text-navy-soft">
               Thank you for your interest{firstName ? `, ${firstName}` : ""}.
             </p>
+            <p className="text-sm text-navy-soft">
+              Keep an eye on your inbox and spam folder for updates and your
+              invitation link.
+            </p>
           </div>
         )}
       </div>
