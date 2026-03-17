@@ -11,6 +11,7 @@
 import { sendEmail } from "./client";
 import { escapeHtml } from "./simple-status-view";
 import { logger } from "@/lib/logger";
+import { emitDebugRuntimeLog } from "@/lib/debug-runtime-log";
 
 const EMAIL_ASSET_BASE_URL = (
   process.env.EMAIL_ASSET_BASE_URL ||
@@ -129,27 +130,19 @@ async function sendAdminNotification(
 ): Promise<void> {
   const to = process.env[envVar];
   // #region agent log
-  fetch("http://127.0.0.1:7384/ingest/5d3b9455-6cdd-4488-9517-e1b206ec1797", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "2bf863",
+  emitDebugRuntimeLog({
+    runId: "research-complete-debug",
+    hypothesisId: "H2",
+    location:
+      "src/lib/email/admin-notifications.ts:sendAdminNotification:env-check",
+    message: "Admin notification environment check",
+    data: {
+      envVar,
+      hasRecipientConfigured: Boolean(to),
+      logLabel,
     },
-    body: JSON.stringify({
-      sessionId: "2bf863",
-      runId: "research-complete-debug",
-      hypothesisId: "H2",
-      location:
-        "src/lib/email/admin-notifications.ts:sendAdminNotification:env-check",
-      message: "Admin notification environment check",
-      data: {
-        envVar,
-        hasRecipientConfigured: Boolean(to),
-        logLabel,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
+    timestamp: Date.now(),
+  });
   // #endregion
   if (!to) {
     const level = envVar === "ADMIN_EMAIL" ? "error" : "warn";
@@ -159,27 +152,19 @@ async function sendAdminNotification(
 
   try {
     // #region agent log
-    fetch("http://127.0.0.1:7384/ingest/5d3b9455-6cdd-4488-9517-e1b206ec1797", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "2bf863",
+    emitDebugRuntimeLog({
+      runId: "research-complete-debug",
+      hypothesisId: "H3",
+      location:
+        "src/lib/email/admin-notifications.ts:sendAdminNotification:send-attempt",
+      message: "Attempting admin notification send",
+      data: {
+        envVar,
+        emailType: "STATUS_UPDATE",
+        hasApplicantId: Boolean(content.applicantId),
       },
-      body: JSON.stringify({
-        sessionId: "2bf863",
-        runId: "research-complete-debug",
-        hypothesisId: "H3",
-        location:
-          "src/lib/email/admin-notifications.ts:sendAdminNotification:send-attempt",
-        message: "Attempting admin notification send",
-        data: {
-          envVar,
-          emailType: "STATUS_UPDATE",
-          hasApplicantId: Boolean(content.applicantId),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
+      timestamp: Date.now(),
+    });
     // #endregion
     await sendEmail({
       to,
@@ -191,50 +176,34 @@ async function sendAdminNotification(
     });
     logger.info(`${logLabel} sent`, { to });
     // #region agent log
-    fetch("http://127.0.0.1:7384/ingest/5d3b9455-6cdd-4488-9517-e1b206ec1797", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "2bf863",
-      },
-      body: JSON.stringify({
-        sessionId: "2bf863",
-        runId: "research-complete-debug",
-        hypothesisId: "H4",
-        location:
-          "src/lib/email/admin-notifications.ts:sendAdminNotification:send-success",
-        message: "Admin notification send completed",
-        data: { logLabel, envVar },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
+    emitDebugRuntimeLog({
+      runId: "research-complete-debug",
+      hypothesisId: "H4",
+      location:
+        "src/lib/email/admin-notifications.ts:sendAdminNotification:send-success",
+      message: "Admin notification send completed",
+      data: { logLabel, envVar },
+      timestamp: Date.now(),
+    });
     // #endregion
   } catch (error) {
     logger.error(`Failed to send ${logLabel}`, {
       error: error instanceof Error ? error.message : String(error),
     });
     // #region agent log
-    fetch("http://127.0.0.1:7384/ingest/5d3b9455-6cdd-4488-9517-e1b206ec1797", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "2bf863",
+    emitDebugRuntimeLog({
+      runId: "research-complete-debug",
+      hypothesisId: "H4",
+      location:
+        "src/lib/email/admin-notifications.ts:sendAdminNotification:send-error",
+      message: "Admin notification send failed",
+      data: {
+        logLabel,
+        envVar,
+        error: error instanceof Error ? error.message : String(error),
       },
-      body: JSON.stringify({
-        sessionId: "2bf863",
-        runId: "research-complete-debug",
-        hypothesisId: "H4",
-        location:
-          "src/lib/email/admin-notifications.ts:sendAdminNotification:send-error",
-        message: "Admin notification send failed",
-        data: {
-          logLabel,
-          envVar,
-          error: error instanceof Error ? error.message : String(error),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
+      timestamp: Date.now(),
+    });
     // #endregion
   }
 }
