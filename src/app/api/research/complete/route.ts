@@ -15,6 +15,24 @@ export async function POST(request: NextRequest) {
     const { applicationId } = submitApplicationSchema.parse(
       await request.json(),
     );
+    // #region agent log
+    fetch("http://127.0.0.1:7384/ingest/5d3b9455-6cdd-4488-9517-e1b206ec1797", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "2bf863",
+      },
+      body: JSON.stringify({
+        sessionId: "2bf863",
+        runId: "research-complete-debug",
+        hypothesisId: "H1",
+        location: "src/app/api/research/complete/route.ts:POST:parsed",
+        message: "Research completion request received",
+        data: { hasApplicationId: Boolean(applicationId) },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
 
     const applicant = await db.applicant.findUnique({
       where: { id: applicationId },
@@ -48,6 +66,28 @@ export async function POST(request: NextRequest) {
         400,
       );
     }
+    // #region agent log
+    fetch("http://127.0.0.1:7384/ingest/5d3b9455-6cdd-4488-9517-e1b206ec1797", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "2bf863",
+      },
+      body: JSON.stringify({
+        sessionId: "2bf863",
+        runId: "research-complete-debug",
+        hypothesisId: "H1",
+        location: "src/app/api/research/complete/route.ts:POST:pre-update",
+        message: "Applicant eligible for completion flow",
+        data: {
+          applicantFound: Boolean(applicant),
+          invited: Boolean(applicant.researchInvitedAt),
+          status: applicant.applicationStatus,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
 
     // Extract partner PID from questionnaire answers using keyword-based matching
     // so prompt wording changes don't silently break this flow.
@@ -133,13 +173,56 @@ export async function POST(request: NextRequest) {
     }
 
     // Notify admin that a research questionnaire was completed (non-blocking)
+    // #region agent log
+    fetch("http://127.0.0.1:7384/ingest/5d3b9455-6cdd-4488-9517-e1b206ec1797", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "2bf863",
+      },
+      body: JSON.stringify({
+        sessionId: "2bf863",
+        runId: "research-complete-debug",
+        hypothesisId: "H5",
+        location: "src/app/api/research/complete/route.ts:POST:notify",
+        message: "Scheduling questionnaire completion admin notification",
+        data: { applicantId: applicant.id },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     notifyQuestionnaireCompleted({
       applicantId: applicant.id,
       firstName: applicant.user.firstName,
       lastName: applicant.user.lastName,
       email: applicant.user.email,
-    }).catch(() => {
-      // Silently ignore - notification failure shouldn't affect the response
+    }).catch((error) => {
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7384/ingest/5d3b9455-6cdd-4488-9517-e1b206ec1797",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "2bf863",
+          },
+          body: JSON.stringify({
+            sessionId: "2bf863",
+            runId: "research-complete-debug",
+            hypothesisId: "H5",
+            location:
+              "src/app/api/research/complete/route.ts:POST:notify-catch",
+            message:
+              "Questionnaire completion admin notification promise rejected",
+            data: {
+              applicantId: applicant.id,
+              error: error instanceof Error ? error.message : String(error),
+            },
+            timestamp: Date.now(),
+          }),
+        },
+      ).catch(() => {});
+      // #endregion
     });
 
     return successResponse({

@@ -24,6 +24,28 @@ function getResendClient(): Resend {
 }
 
 export async function sendEmail(params: SendEmailParams) {
+  // #region agent log
+  fetch("http://127.0.0.1:7384/ingest/5d3b9455-6cdd-4488-9517-e1b206ec1797", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "2bf863",
+    },
+    body: JSON.stringify({
+      sessionId: "2bf863",
+      runId: "research-complete-debug",
+      hypothesisId: "H3",
+      location: "src/lib/email/client.ts:sendEmail:env-check",
+      message: "Email client environment check",
+      data: {
+        emailType: params.emailType,
+        hasResendApiKey: Boolean(process.env.RESEND_API_KEY),
+        hasFromAddress: Boolean(process.env.EMAIL_FROM_ADDRESS),
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   // Validate required environment variables
   if (!process.env.RESEND_API_KEY) {
     throw new Error("RESEND_API_KEY environment variable is not set");
@@ -101,6 +123,29 @@ export async function sendEmail(params: SendEmailParams) {
     ...(params.text && { text: params.text }),
     ...(params.replyTo && { reply_to: params.replyTo }),
   });
+  // #region agent log
+  fetch("http://127.0.0.1:7384/ingest/5d3b9455-6cdd-4488-9517-e1b206ec1797", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "2bf863",
+    },
+    body: JSON.stringify({
+      sessionId: "2bf863",
+      runId: "research-complete-debug",
+      hypothesisId: "H4",
+      location: "src/lib/email/client.ts:sendEmail:resend-response",
+      message: "Resend API response received",
+      data: {
+        emailType: params.emailType,
+        hasDataId: Boolean(data?.id),
+        hasError: Boolean(error),
+        errorMessage: error?.message || null,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
 
   // Log email send to database (don't throw if logging fails)
   try {
