@@ -360,21 +360,23 @@ export default function AdminWaitlistTable({
                     )}
                   </td>
                   <td className="py-2">
-                    {!applicant.invitedOffWaitlistAt ? (
-                      <button
-                        type="button"
-                        onClick={() => inviteSingle(applicant.id)}
-                        disabled={isLoading}
-                        className="text-xs font-medium text-copper hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Invite
-                      </button>
-                    ) : (
-                      <span className="text-xs text-gray-400">
+                    <button
+                      type="button"
+                      onClick={() => inviteSingle(applicant.id)}
+                      disabled={isLoading}
+                      className="text-xs font-medium text-copper hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {applicant.invitedOffWaitlistAt
+                        ? "Resend Invite"
+                        : "Invite"}
+                    </button>
+                    {applicant.invitedOffWaitlistAt ? (
+                      <div className="text-xs text-gray-400">
+                        Last sent{" "}
                         {formatDateOnly(applicant.invitedOffWaitlistAt) ??
                           "N/A"}
-                      </span>
-                    )}
+                      </div>
+                    ) : null}
                     <div>
                       <Link
                         href={`/admin/waitlist/${applicant.id}`}

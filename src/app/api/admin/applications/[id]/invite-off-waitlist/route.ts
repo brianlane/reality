@@ -33,11 +33,21 @@ export async function POST(request: Request, { params }: RouteContext) {
     email: auth.email,
   });
 
-  // Generate unique invite token (32-byte hex = 64 characters)
-  const inviteToken = randomBytes(32).toString("hex");
+  let applicant: {
+    id: string;
+    invitedOffWaitlistAt: Date | null;
+    user: {
+      email: string;
+      firstName: string;
+    };
+  } | null = null;
+  let inviteToken: string;
+  let isResend = false;
 
-  // Update applicant with invite details atomically
-  const updateResult = await db.applicant.updateMany({
+  // Keep first-time invite atomic so concurrent requests don't mint
+  // multiple competing tokens.
+  const firstInviteToken = randomBytes(32).toString("hex");
+  const firstInviteResult = await db.applicant.updateMany({
     where: {
       id,
       applicationStatus: "WAITLIST",
@@ -48,50 +58,77 @@ export async function POST(request: Request, { params }: RouteContext) {
       applicationStatus: "WAITLIST_INVITED",
       invitedOffWaitlistAt: new Date(),
       invitedOffWaitlistBy: adminUser.id,
-      waitlistInviteToken: inviteToken,
+      waitlistInviteToken: firstInviteToken,
     },
   });
 
-  if (updateResult.count === 0) {
+  if (firstInviteResult.count > 0) {
+    inviteToken = firstInviteToken;
+    applicant = await db.applicant.findFirst({
+      where: { id, deletedAt: null },
+      include: {
+        user: {
+          select: {
+            email: true,
+            firstName: true,
+          },
+        },
+      },
+    });
+  } else {
     const existing = await db.applicant.findFirst({
       where: { id, deletedAt: null },
+      include: {
+        user: {
+          select: {
+            email: true,
+            firstName: true,
+          },
+        },
+      },
     });
 
-    if (!existing) {
+    if (!existing || !existing.user) {
       return errorResponse("NOT_FOUND", "Applicant not found", 404);
     }
 
-    if (existing.invitedOffWaitlistAt) {
-      return errorResponse(
-        "ALREADY_INVITED",
-        "Applicant has already been invited off the waitlist",
-        400,
-      );
-    }
-
-    if (existing.applicationStatus !== "WAITLIST") {
+    if (
+      existing.applicationStatus !== "WAITLIST" &&
+      existing.applicationStatus !== "WAITLIST_INVITED"
+    ) {
       return errorResponse(
         "INVALID_STATUS",
-        "Applicant is not on the waitlist",
+        "Applicant is not eligible for a waitlist invite",
         400,
       );
     }
 
-    // Should not reach here - updateMany failed for unknown reason
-    return errorResponse("UNKNOWN_ERROR", "Failed to invite applicant", 500);
-  }
+    // Preserve current token on resend so failed email delivery never
+    // invalidates a previously working link.
+    const shouldReuseToken = !!existing.waitlistInviteToken;
+    isResend = existing.applicationStatus === "WAITLIST_INVITED";
+    inviteToken = shouldReuseToken
+      ? existing.waitlistInviteToken!
+      : randomBytes(32).toString("hex");
 
-  const applicant = await db.applicant.findFirst({
-    where: { id, deletedAt: null },
-    include: {
-      user: {
-        select: {
-          email: true,
-          firstName: true,
+    applicant = await db.applicant.update({
+      where: { id: existing.id },
+      data: {
+        applicationStatus: "WAITLIST_INVITED",
+        invitedOffWaitlistAt: new Date(),
+        invitedOffWaitlistBy: adminUser.id,
+        ...(shouldReuseToken ? {} : { waitlistInviteToken: inviteToken }),
+      },
+      include: {
+        user: {
+          select: {
+            email: true,
+            firstName: true,
+          },
         },
       },
-    },
-  });
+    });
+  }
 
   if (!applicant || !applicant.user) {
     return errorResponse("NOT_FOUND", "Applicant not found", 404);
@@ -104,8 +141,8 @@ export async function POST(request: Request, { params }: RouteContext) {
       type: "INVITE_OFF_WAITLIST",
       targetId: applicant.id,
       targetType: "applicant",
-      description: `Invited ${applicant.user.firstName} off waitlist`,
-      metadata: { inviteToken },
+      description: `${isResend ? "Resent invite to" : "Invited"} ${applicant.user.firstName} off waitlist`,
+      metadata: { inviteToken, resent: isResend },
     },
   });
 

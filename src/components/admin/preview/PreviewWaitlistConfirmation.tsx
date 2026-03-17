@@ -20,6 +20,10 @@ export default function PreviewWaitlistConfirmation() {
             Thank you for your interest. We&rsquo;ve received your application
             and you&rsquo;re now on our waitlist.
           </p>
+          <p className="text-sm text-navy-soft">
+            Keep an eye on your inbox and spam folder for updates and your
+            invitation link.
+          </p>
         </div>
 
         <div className="border-t pt-4 space-y-2">
