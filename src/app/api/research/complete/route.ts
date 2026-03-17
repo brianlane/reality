@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, after } from "next/server";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { submitApplicationSchema } from "@/lib/validations";
@@ -101,45 +101,46 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Check if partner has also completed (for couples)
-    if (partnerPid) {
-      const partner = await checkPartnerCompletion(applicant.id);
+    // Schedule post-response work so emails send reliably in serverless.
+    // Partner check and admin notification are isolated so a failure in one
+    // does not prevent the other from running.
+    after(async () => {
+      if (partnerPid) {
+        try {
+          const partner = await checkPartnerCompletion(applicant.id);
 
-      if (partner) {
-        // Both partners completed! Fetch partner's user data for email
-        const partnerUser = await db.user.findUnique({
-          where: { id: partner.userId },
-          select: { firstName: true, lastName: true },
-        });
+          if (partner) {
+            const partnerUser = await db.user.findUnique({
+              where: { id: partner.userId },
+              select: { firstName: true, lastName: true },
+            });
 
-        if (partnerUser) {
-          // Send notification email (non-blocking)
-          sendCoupleCompletionEmail({
-            applicant1: {
-              name: `${applicant.user.firstName} ${applicant.user.lastName}`,
-              prolificPid: applicant.prolificPid ?? undefined,
-              applicationId: applicant.id,
-            },
-            applicant2: {
-              name: `${partnerUser.firstName} ${partnerUser.lastName}`,
-              prolificPid: partner.prolificPid ?? undefined,
-              applicationId: partner.id,
-            },
-          }).catch(() => {
-            // Silently ignore - notification failure shouldn't affect the response
-          });
+            if (partnerUser) {
+              await sendCoupleCompletionEmail({
+                applicant1: {
+                  name: `${applicant.user.firstName} ${applicant.user.lastName}`,
+                  prolificPid: applicant.prolificPid ?? undefined,
+                  applicationId: applicant.id,
+                },
+                applicant2: {
+                  name: `${partnerUser.firstName} ${partnerUser.lastName}`,
+                  prolificPid: partner.prolificPid ?? undefined,
+                  applicationId: partner.id,
+                },
+              });
+            }
+          }
+        } catch {
+          // Partner check/email failed; continue to admin notification
         }
       }
-    }
 
-    // Notify admin that a research questionnaire was completed (non-blocking)
-    notifyQuestionnaireCompleted({
-      applicantId: applicant.id,
-      firstName: applicant.user.firstName,
-      lastName: applicant.user.lastName,
-      email: applicant.user.email,
-    }).catch(() => {
-      // Silently ignore - notification failure shouldn't affect the response
+      await notifyQuestionnaireCompleted({
+        applicantId: applicant.id,
+        firstName: applicant.user.firstName,
+        lastName: applicant.user.lastName,
+        email: applicant.user.email,
+      }).catch(() => {});
     });
 
     return successResponse({

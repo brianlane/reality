@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, after } from "next/server";
 import { db } from "@/lib/db";
 import { submitApplicationSchema } from "@/lib/validations";
 import { errorResponse, successResponse } from "@/lib/api-response";
@@ -156,19 +156,18 @@ export async function POST(request: NextRequest) {
         });
       });
 
-      // Notify admin that an application was submitted (non-blocking)
-      notifyApplicationSubmitted({
-        applicantId: applicant.id,
-        firstName: applicant.user.firstName,
-        lastName: applicant.user.lastName,
-        email: applicant.user.email,
-        age: applicant.age,
-        gender: applicant.gender,
-        location: applicant.location,
-        incomeRange: applicant.incomeRange,
-        firstPhotoUrl: applicant.photos[0],
-      }).catch(() => {
-        // Silently ignore - notification failure shouldn't affect the response
+      after(async () => {
+        await notifyApplicationSubmitted({
+          applicantId: applicant.id,
+          firstName: applicant.user.firstName,
+          lastName: applicant.user.lastName,
+          email: applicant.user.email,
+          age: applicant.age,
+          gender: applicant.gender,
+          location: applicant.location,
+          incomeRange: applicant.incomeRange,
+          firstPhotoUrl: applicant.photos[0],
+        }).catch(() => {});
       });
 
       // Auto-initiate screening if FCRA consent has already been given.
