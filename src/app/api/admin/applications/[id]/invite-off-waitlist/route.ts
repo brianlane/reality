@@ -33,59 +33,106 @@ export async function POST(request: Request, { params }: RouteContext) {
     email: auth.email,
   });
 
-  const existing = await db.applicant.findFirst({
-    where: { id, deletedAt: null },
-    include: {
-      user: {
-        select: {
-          email: true,
-          firstName: true,
-        },
-      },
+  let applicant: {
+    id: string;
+    invitedOffWaitlistAt: Date | null;
+    user: {
+      email: string;
+      firstName: string;
+    };
+  } | null = null;
+  let inviteToken: string;
+  let isResend = false;
+
+  // Keep first-time invite atomic so concurrent requests don't mint
+  // multiple competing tokens.
+  const firstInviteToken = randomBytes(32).toString("hex");
+  const firstInviteResult = await db.applicant.updateMany({
+    where: {
+      id,
+      applicationStatus: "WAITLIST",
+      invitedOffWaitlistAt: null,
+      deletedAt: null,
     },
-  });
-
-  if (!existing || !existing.user) {
-    return errorResponse("NOT_FOUND", "Applicant not found", 404);
-  }
-
-  if (
-    existing.applicationStatus !== "WAITLIST" &&
-    existing.applicationStatus !== "WAITLIST_INVITED"
-  ) {
-    return errorResponse(
-      "INVALID_STATUS",
-      "Applicant is not eligible for a waitlist invite",
-      400,
-    );
-  }
-
-  const shouldReuseToken =
-    existing.applicationStatus === "WAITLIST_INVITED" &&
-    !!existing.waitlistInviteToken;
-  // Preserve current token on resend so failed email delivery never invalidates
-  // a previously working link.
-  const inviteToken = shouldReuseToken
-    ? existing.waitlistInviteToken!
-    : randomBytes(32).toString("hex");
-
-  const applicant = await db.applicant.update({
-    where: { id: existing.id },
     data: {
       applicationStatus: "WAITLIST_INVITED",
       invitedOffWaitlistAt: new Date(),
       invitedOffWaitlistBy: adminUser.id,
-      ...(shouldReuseToken ? {} : { waitlistInviteToken: inviteToken }),
-    },
-    include: {
-      user: {
-        select: {
-          email: true,
-          firstName: true,
-        },
-      },
+      waitlistInviteToken: firstInviteToken,
     },
   });
+
+  if (firstInviteResult.count > 0) {
+    inviteToken = firstInviteToken;
+    applicant = await db.applicant.findFirst({
+      where: { id, deletedAt: null },
+      include: {
+        user: {
+          select: {
+            email: true,
+            firstName: true,
+          },
+        },
+      },
+    });
+  } else {
+    const existing = await db.applicant.findFirst({
+      where: { id, deletedAt: null },
+      include: {
+        user: {
+          select: {
+            email: true,
+            firstName: true,
+          },
+        },
+      },
+    });
+
+    if (!existing || !existing.user) {
+      return errorResponse("NOT_FOUND", "Applicant not found", 404);
+    }
+
+    if (
+      existing.applicationStatus !== "WAITLIST" &&
+      existing.applicationStatus !== "WAITLIST_INVITED"
+    ) {
+      return errorResponse(
+        "INVALID_STATUS",
+        "Applicant is not eligible for a waitlist invite",
+        400,
+      );
+    }
+
+    // Preserve current token on resend so failed email delivery never
+    // invalidates a previously working link.
+    const shouldReuseToken = !!existing.waitlistInviteToken;
+    isResend = existing.applicationStatus === "WAITLIST_INVITED";
+    inviteToken = shouldReuseToken
+      ? existing.waitlistInviteToken!
+      : randomBytes(32).toString("hex");
+
+    applicant = await db.applicant.update({
+      where: { id: existing.id },
+      data: {
+        applicationStatus: "WAITLIST_INVITED",
+        invitedOffWaitlistAt: new Date(),
+        invitedOffWaitlistBy: adminUser.id,
+        ...(shouldReuseToken ? {} : { waitlistInviteToken: inviteToken }),
+      },
+      include: {
+        user: {
+          select: {
+            email: true,
+            firstName: true,
+          },
+        },
+      },
+    });
+  }
+
+  if (!applicant || !applicant.user) {
+    return errorResponse("NOT_FOUND", "Applicant not found", 404);
+  }
 
   // Create AdminAction record
   await db.adminAction.create({
@@ -94,8 +141,8 @@ export async function POST(request: Request, { params }: RouteContext) {
       type: "INVITE_OFF_WAITLIST",
       targetId: applicant.id,
       targetType: "applicant",
-      description: `${shouldReuseToken ? "Resent invite to" : "Invited"} ${applicant.user.firstName} off waitlist`,
-      metadata: { inviteToken, resent: shouldReuseToken },
+      description: `${isResend ? "Resent invite to" : "Invited"} ${applicant.user.firstName} off waitlist`,
+      metadata: { inviteToken, resent: isResend },
     },
   });
 
