@@ -9,7 +9,6 @@ import { minify } from "html-minifier-terser";
 import { SendEmailParams } from "./types";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { emitDebugRuntimeLog } from "@/lib/debug-runtime-log";
 
 // Lazy initialization to avoid build-time errors
 let resendClient: Resend | null = null;
@@ -25,20 +24,6 @@ function getResendClient(): Resend {
 }
 
 export async function sendEmail(params: SendEmailParams) {
-  // #region agent log
-  emitDebugRuntimeLog({
-    runId: "research-complete-debug",
-    hypothesisId: "H3",
-    location: "src/lib/email/client.ts:sendEmail:env-check",
-    message: "Email client environment check",
-    data: {
-      emailType: params.emailType,
-      hasResendApiKey: Boolean(process.env.RESEND_API_KEY),
-      hasFromAddress: Boolean(process.env.EMAIL_FROM_ADDRESS),
-    },
-    timestamp: Date.now(),
-  });
-  // #endregion
   // Validate required environment variables
   if (!process.env.RESEND_API_KEY) {
     throw new Error("RESEND_API_KEY environment variable is not set");
@@ -116,21 +101,6 @@ export async function sendEmail(params: SendEmailParams) {
     ...(params.text && { text: params.text }),
     ...(params.replyTo && { reply_to: params.replyTo }),
   });
-  // #region agent log
-  emitDebugRuntimeLog({
-    runId: "research-complete-debug",
-    hypothesisId: "H4",
-    location: "src/lib/email/client.ts:sendEmail:resend-response",
-    message: "Resend API response received",
-    data: {
-      emailType: params.emailType,
-      hasDataId: Boolean(data?.id),
-      hasError: Boolean(error),
-      errorMessage: error?.message || null,
-    },
-    timestamp: Date.now(),
-  });
-  // #endregion
 
   // Log email send to database (don't throw if logging fails)
   try {

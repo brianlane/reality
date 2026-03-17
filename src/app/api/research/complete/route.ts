@@ -9,23 +9,12 @@ import {
   buildProlificRedirectUrl,
 } from "@/lib/research/prolific";
 import { sendCoupleCompletionEmail } from "@/lib/email/couple-completion";
-import { emitDebugRuntimeLog } from "@/lib/debug-runtime-log";
 
 export async function POST(request: NextRequest) {
   try {
     const { applicationId } = submitApplicationSchema.parse(
       await request.json(),
     );
-    // #region agent log
-    emitDebugRuntimeLog({
-      runId: "research-complete-debug",
-      hypothesisId: "H1",
-      location: "src/app/api/research/complete/route.ts:POST:parsed",
-      message: "Research completion request received",
-      data: { hasApplicationId: Boolean(applicationId) },
-      timestamp: Date.now(),
-    });
-    // #endregion
 
     const applicant = await db.applicant.findUnique({
       where: { id: applicationId },
@@ -59,20 +48,6 @@ export async function POST(request: NextRequest) {
         400,
       );
     }
-    // #region agent log
-    emitDebugRuntimeLog({
-      runId: "research-complete-debug",
-      hypothesisId: "H1",
-      location: "src/app/api/research/complete/route.ts:POST:pre-update",
-      message: "Applicant eligible for completion flow",
-      data: {
-        applicantFound: Boolean(applicant),
-        invited: Boolean(applicant.researchInvitedAt),
-        status: applicant.applicationStatus,
-      },
-      timestamp: Date.now(),
-    });
-    // #endregion
 
     // Extract partner PID from questionnaire answers using keyword-based matching
     // so prompt wording changes don't silently break this flow.
@@ -158,35 +133,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Notify admin that a research questionnaire was completed (non-blocking)
-    // #region agent log
-    emitDebugRuntimeLog({
-      runId: "research-complete-debug",
-      hypothesisId: "H5",
-      location: "src/app/api/research/complete/route.ts:POST:notify",
-      message: "Scheduling questionnaire completion admin notification",
-      data: { applicantId: applicant.id },
-      timestamp: Date.now(),
-    });
-    // #endregion
     notifyQuestionnaireCompleted({
       applicantId: applicant.id,
       firstName: applicant.user.firstName,
       lastName: applicant.user.lastName,
       email: applicant.user.email,
-    }).catch((error) => {
-      // #region agent log
-      emitDebugRuntimeLog({
-        runId: "research-complete-debug",
-        hypothesisId: "H5",
-        location: "src/app/api/research/complete/route.ts:POST:notify-catch",
-        message: "Questionnaire completion admin notification promise rejected",
-        data: {
-          applicantId: applicant.id,
-          error: error instanceof Error ? error.message : String(error),
-        },
-        timestamp: Date.now(),
-      });
-      // #endregion
+    }).catch(() => {
+      // Silently ignore - notification failure shouldn't affect the response
     });
 
     return successResponse({
