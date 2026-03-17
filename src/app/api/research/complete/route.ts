@@ -101,31 +101,37 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Schedule post-response work so emails send reliably in serverless
+    // Schedule post-response work so emails send reliably in serverless.
+    // Partner check and admin notification are isolated so a failure in one
+    // does not prevent the other from running.
     after(async () => {
       if (partnerPid) {
-        const partner = await checkPartnerCompletion(applicant.id);
+        try {
+          const partner = await checkPartnerCompletion(applicant.id);
 
-        if (partner) {
-          const partnerUser = await db.user.findUnique({
-            where: { id: partner.userId },
-            select: { firstName: true, lastName: true },
-          });
+          if (partner) {
+            const partnerUser = await db.user.findUnique({
+              where: { id: partner.userId },
+              select: { firstName: true, lastName: true },
+            });
 
-          if (partnerUser) {
-            await sendCoupleCompletionEmail({
-              applicant1: {
-                name: `${applicant.user.firstName} ${applicant.user.lastName}`,
-                prolificPid: applicant.prolificPid ?? undefined,
-                applicationId: applicant.id,
-              },
-              applicant2: {
-                name: `${partnerUser.firstName} ${partnerUser.lastName}`,
-                prolificPid: partner.prolificPid ?? undefined,
-                applicationId: partner.id,
-              },
-            }).catch(() => {});
+            if (partnerUser) {
+              await sendCoupleCompletionEmail({
+                applicant1: {
+                  name: `${applicant.user.firstName} ${applicant.user.lastName}`,
+                  prolificPid: applicant.prolificPid ?? undefined,
+                  applicationId: applicant.id,
+                },
+                applicant2: {
+                  name: `${partnerUser.firstName} ${partnerUser.lastName}`,
+                  prolificPid: partner.prolificPid ?? undefined,
+                  applicationId: partner.id,
+                },
+              });
+            }
           }
+        } catch {
+          // Partner check/email failed; continue to admin notification
         }
       }
 
