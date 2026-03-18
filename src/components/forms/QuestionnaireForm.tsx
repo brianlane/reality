@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { useApplicationDraft } from "./useApplicationDraft";
 import RichTextEditor from "./RichTextEditor";
+import { VoiceTextareaInput } from "./VoiceTextareaInput";
 import { ERROR_MESSAGES } from "@/lib/error-messages";
 
 type QuestionType =
@@ -906,12 +906,14 @@ export default function QuestionnaireForm({
                       {question.helperText}
                     </p>
                   ) : null}
-                  <Textarea
+                  <VoiceTextareaInput
                     rows={4}
                     value={String(answer.value ?? "")}
                     required={question.isRequired}
-                    onChange={(event) =>
-                      updateAnswer(question.id, { value: event.target.value })
+                    questionId={question.id}
+                    applicationId={applicationId}
+                    onChange={(val) =>
+                      updateAnswer(question.id, { value: val })
                     }
                   />
                 </div>

@@ -69,6 +69,9 @@ export async function GET(_request: Request, { params }: RouteContext) {
             value: unknown;
             richText: string | null;
             answeredAt: string;
+            voiceStatus: string | null;
+            voiceProvider: string | null;
+            voiceTranscribedAt: string | null;
           }>;
         }
       >;
@@ -115,6 +118,9 @@ export async function GET(_request: Request, { params }: RouteContext) {
           })
         : null,
       answeredAt: answer.updatedAt.toISOString(),
+      voiceStatus: answer.voiceStatus ?? null,
+      voiceProvider: answer.voiceProvider ?? null,
+      voiceTranscribedAt: answer.voiceTranscribedAt?.toISOString() ?? null,
     });
   }
 
