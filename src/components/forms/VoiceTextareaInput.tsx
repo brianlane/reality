@@ -9,6 +9,7 @@ import {
   VOICE_POLL_MAX_ATTEMPTS,
   type VoiceStatus,
 } from "@/lib/voice-config";
+import { ERROR_MESSAGES } from "@/lib/error-messages";
 
 // Flag 4: Async processing UX — all states the voice pipeline can be in.
 type VoicePhase =
@@ -125,7 +126,7 @@ export function VoiceTextareaInput({
             clearPoll();
             setVoicePhase({
               phase: "failed",
-              message: `Transcription failed (${data.voiceErrorCode ?? "unknown"}). Please try again.`,
+              message: ERROR_MESSAGES.VOICE_TRANSCRIPTION_FAILED,
               storagePath,
             });
           }
@@ -173,9 +174,7 @@ export function VoiceTextareaInput({
           };
           setVoicePhase({
             phase: "failed",
-            message:
-              data?.error?.message ??
-              "Failed to get upload URL. Please try again.",
+            message: data?.error?.message ?? ERROR_MESSAGES.VOICE_UPLOAD_FAILED,
           });
           return;
         }
@@ -195,8 +194,7 @@ export function VoiceTextareaInput({
         if (!uploadRes.ok) {
           setVoicePhase({
             phase: "failed",
-            message:
-              "Upload failed. Please check your connection and try again.",
+            message: ERROR_MESSAGES.VOICE_UPLOAD_FAILED,
           });
           return;
         }
@@ -283,9 +281,9 @@ export function VoiceTextareaInput({
       const name = err instanceof Error ? err.name : "";
       const message =
         name === "NotAllowedError"
-          ? "Microphone access was denied. Please allow microphone access in your browser settings and try again."
+          ? ERROR_MESSAGES.VOICE_PERMISSION_DENIED
           : name === "NotFoundError"
-            ? "No microphone found. Please connect a microphone and try again."
+            ? ERROR_MESSAGES.VOICE_NO_MICROPHONE
             : "Could not start recording. Please check microphone permissions.";
       setVoicePhase({ phase: "failed", message });
     }

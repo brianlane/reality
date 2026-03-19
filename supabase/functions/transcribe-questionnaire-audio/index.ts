@@ -303,10 +303,13 @@ async function upsertVoiceResult(
     .maybeSingle();
 
   if (existing) {
+    // Guard: only apply if the row still points to this webhook's audio file.
+    // Prevents a late-arriving webhook from overwriting a newer recording's result.
     const { error } = await supabase
       .from("QuestionnaireAnswer")
       .update(voiceFields)
-      .eq("id", existing.id);
+      .eq("id", existing.id)
+      .eq("voiceAudioPath", storagePath);
     if (error) {
       console.error("[transcribe] Failed to update answer row:", error.message);
     }

@@ -1,4 +1,4 @@
-import { ApplicationStatus, Prisma, type Applicant } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { applicantQuestionnaireSubmitSchema } from "@/lib/validations";
@@ -9,19 +9,8 @@ import {
   validateAnswerForQuestion,
 } from "@/lib/questionnaire";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
-import {
-  APP_STATUS,
-  QUESTIONNAIRE_NON_RESEARCH_ALLOWED_STATUSES,
-} from "@/lib/application-status";
-import { ERROR_MESSAGES } from "@/lib/error-messages";
 import { computeAndStoreScreeningFlags } from "@/lib/screening";
-const RESEARCH_ACCESS_STATUSES: ApplicationStatus[] = [
-  APP_STATUS.RESEARCH_INVITED,
-  APP_STATUS.RESEARCH_IN_PROGRESS,
-];
-const NON_RESEARCH_ALLOWED_STATUSES: ApplicationStatus[] = [
-  ...QUESTIONNAIRE_NON_RESEARCH_ALLOWED_STATUSES,
-];
+import { requireInvitedApplicant } from "@/lib/questionnaire-access";
 
 // Negative patterns for consent validation
 // Use word boundary regex to avoid matching substrings (e.g., "no" in "acknowledge")
@@ -87,82 +76,6 @@ function isAffirmativeConsentValue(
 
   // For dropdown/text values, check if it's an affirmative response
   return isAffirmativeString(String(value));
-}
-
-type InvitedApplicantResult =
-  | { applicant: Applicant; isResearchMode: boolean }
-  | { error: string; statusCode: number };
-
-async function requireInvitedApplicant(
-  applicationId: string,
-): Promise<InvitedApplicantResult> {
-  const applicant = await db.applicant.findFirst({
-    where: {
-      id: applicationId,
-      deletedAt: null,
-    },
-    include: {
-      user: {
-        select: {
-          email: true,
-        },
-      },
-    },
-  });
-
-  if (!applicant) {
-    return { error: "Applicant not found or not invited.", statusCode: 404 };
-  }
-
-  const isResearchApplicant = RESEARCH_ACCESS_STATUSES.includes(
-    applicant.applicationStatus,
-  );
-
-  if (isResearchApplicant) {
-    if (!applicant.researchInvitedAt) {
-      return {
-        error: ERROR_MESSAGES.APP_NOT_FOUND_OR_INVITED,
-        statusCode: 404,
-      };
-    }
-    // If the caller has an authenticated session, verify they own this record.
-    // This prevents a regular user with a stale research applicationId in
-    // localStorage from loading another person's research questionnaire.
-    // Unauthenticated research links (auth=null) are still allowed through.
-    const auth = await getAuthUser();
-    if (auth?.email) {
-      if (auth.email.toLowerCase() !== applicant.user.email.toLowerCase()) {
-        return {
-          error: ERROR_MESSAGES.OWN_APPLICATION_ONLY,
-          statusCode: 403,
-        };
-      }
-    }
-    return { applicant, isResearchMode: true };
-  }
-
-  const auth = await getAuthUser();
-  if (!auth?.email) {
-    // 401 = Unauthorized (authentication required)
-    return { error: ERROR_MESSAGES.SIGN_IN_TO_CONTINUE, statusCode: 401 };
-  }
-
-  if (auth.email.toLowerCase() !== applicant.user.email.toLowerCase()) {
-    // 403 = Forbidden (authenticated but insufficient permissions)
-    return {
-      error: ERROR_MESSAGES.OWN_APPLICATION_ONLY,
-      statusCode: 403,
-    };
-  }
-
-  if (!NON_RESEARCH_ALLOWED_STATUSES.includes(applicant.applicationStatus)) {
-    return {
-      error: ERROR_MESSAGES.QUESTIONNAIRE_STATUS_UNAVAILABLE,
-      statusCode: 403,
-    };
-  }
-
-  return { applicant, isResearchMode: false };
 }
 
 export async function GET(request: NextRequest) {
