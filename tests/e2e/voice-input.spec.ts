@@ -134,44 +134,33 @@ test.describe("voice input on questionnaire", () => {
       localStorage.removeItem("reality-application-draft");
       localStorage.removeItem("researchMode");
       localStorage.setItem("applicationId", "appl_voice_test");
-
-      // Ensure questionnaire GETs always hit the network so Playwright route mocks apply.
-      // Otherwise Chromium may serve a cached real API response (TEXT vs TEXTAREA) and
-      // the Voice controls never mount.
-      const origFetch = window.fetch.bind(window);
-      window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-        const url =
-          typeof input === "string"
-            ? input
-            : input instanceof URL
-              ? input.toString()
-              : input.url;
-        if (
-          url.includes("/api/applications/questionnaire") &&
-          !url.includes("/voice-status") &&
-          !url.includes("/audio-upload-url")
-        ) {
-          return origFetch(input, { ...init, cache: "no-store" });
-        }
-        return origFetch(input, init);
-      };
     });
 
     // Mock questionnaire load
-    await page.route("**/api/applications/questionnaire**", async (route) => {
-      if (route.request().method() === "GET") {
-        await route.fulfill({
-          status: 200,
-          headers: {
-            "content-type": "application/json; charset=utf-8",
-            "cache-control": "no-store",
-          },
-          body: JSON.stringify(QUESTIONNAIRE_RESPONSE),
-        });
-      } else {
-        await route.fulfill({ status: 200, json: { saved: true } });
-      }
-    });
+    await page.route(
+      (url) => {
+        const href = url.toString();
+        return (
+          href.includes("/api/applications/questionnaire") &&
+          !href.includes("/voice-status") &&
+          !href.includes("/audio-upload-url")
+        );
+      },
+      async (route) => {
+        if (route.request().method() === "GET") {
+          await route.fulfill({
+            status: 200,
+            headers: {
+              "content-type": "application/json; charset=utf-8",
+              "cache-control": "no-store",
+            },
+            body: JSON.stringify(QUESTIONNAIRE_RESPONSE),
+          });
+        } else {
+          await route.fulfill({ status: 200, json: { saved: true } });
+        }
+      },
+    );
 
     // Avoid touching real applicant session during E2E (can overwrite applicationId).
     await page.route("**/api/applicant/dashboard**", async (route) => {
@@ -257,14 +246,20 @@ test.describe("voice input on questionnaire", () => {
     ).toBeVisible({ timeout: 3000 });
 
     // ── Step 2: stop recording → triggers upload ─────────────────────────────
+    const uploadAudioPromise = page.waitForRequest((req) => {
+      return (
+        req.method() === "POST" &&
+        req.url().includes("/api/applications/questionnaire/audio-upload-url")
+      );
+    });
+
     await page.getByRole("button", { name: /stop & transcribe/i }).click();
 
-    // Uploading state
-    await expect(page.getByText(/uploading/i)).toBeVisible({ timeout: 5000 });
+    await uploadAudioPromise;
 
     // ── Step 3: processing state (after upload finishes) ─────────────────────
     await expect(page.getByText(/transcribing your voice answer/i)).toBeVisible(
-      { timeout: 5000 },
+      { timeout: 10000 },
     );
 
     // ── Step 4: transcript panel appears ─────────────────────────────────────

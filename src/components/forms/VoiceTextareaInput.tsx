@@ -1,4 +1,5 @@
 "use client";
+"use no forget";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,6 +44,7 @@ export function VoiceTextareaInput({
   rows = 4,
   required,
 }: VoiceTextareaInputProps) {
+  "use no memo";
   const [voicePhase, setVoicePhase] = useState<VoicePhase>({ phase: "idle" });
   const [elapsed, setElapsed] = useState(0);
 
