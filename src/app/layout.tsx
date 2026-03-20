@@ -118,6 +118,7 @@ export default function RootLayout({
         )}
         {metaPixelId && (
           <noscript>
+            {/* eslint-disable-next-line @next/next/no-img-element -- Meta Pixel noscript fallback requires a plain img beacon */}
             <img
               height="1"
               width="1"
