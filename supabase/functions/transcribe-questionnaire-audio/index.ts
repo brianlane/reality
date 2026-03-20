@@ -80,6 +80,8 @@ Deno.serve(async (req: Request) => {
 
   const [applicationId, questionId] = parts;
   const mimeType = payload.record.metadata?.mimetype ?? "audio/webm";
+  const originalFileName =
+    storagePath.split("/").filter(Boolean).pop() ?? "audio.audio";
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
@@ -153,7 +155,11 @@ Deno.serve(async (req: Request) => {
 
   if (GROQ_API_KEY) {
     try {
-      transcript = await transcribeWithGroq(audioBlob, mimeType);
+      transcript = await transcribeWithGroq(
+        audioBlob,
+        mimeType,
+        originalFileName,
+      );
       provider = "groq";
       console.log("[transcribe] Groq transcription succeeded");
     } catch (err) {
@@ -216,11 +222,12 @@ Deno.serve(async (req: Request) => {
 async function transcribeWithGroq(
   audioBlob: Blob,
   mimeType: string,
+  originalFileName: string,
 ): Promise<string> {
   const formData = new FormData();
   formData.append(
     "file",
-    new File([audioBlob], `audio${mimeTypeToExt(mimeType)}`, {
+    new File([audioBlob], originalFileName, {
       type: mimeType,
     }),
   );
@@ -328,16 +335,4 @@ async function upsertVoiceResult(
       console.error("[transcribe] Failed to insert answer row:", error.message);
     }
   }
-}
-
-function mimeTypeToExt(mimeType: string): string {
-  const base = mimeType.split(";")[0].trim().toLowerCase();
-  const map: Record<string, string> = {
-    "audio/webm": ".webm",
-    "audio/mp4": ".mp4",
-    "audio/mpeg": ".mp3",
-    "audio/wav": ".wav",
-    "audio/ogg": ".ogg",
-  };
-  return map[base] ?? ".audio";
 }
