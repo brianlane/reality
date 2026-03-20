@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     applicationId?: string;
     questionId?: string;
     mimeType?: string;
-    fileSize?: number;
+    fileSize?: unknown;
   };
   try {
     body = await request.json();
@@ -31,6 +31,16 @@ export async function POST(request: NextRequest) {
     return errorResponse("VALIDATION_ERROR", "Missing required fields.", 400);
   }
 
+  const normalizedFileSize =
+    typeof fileSize === "number" ? fileSize : Number(fileSize);
+  if (!Number.isFinite(normalizedFileSize)) {
+    return errorResponse(
+      "VALIDATION_ERROR",
+      "fileSize must be a valid number.",
+      400,
+    );
+  }
+
   // Flag 2: validate codec
   if (!isMimeTypeAllowed(mimeType)) {
     return errorResponse(
@@ -41,10 +51,10 @@ export async function POST(request: NextRequest) {
   }
 
   // Flag 3: validate file size
-  if (fileSize <= 0) {
+  if (normalizedFileSize <= 0) {
     return errorResponse("VALIDATION_ERROR", "Audio file is empty.", 400);
   }
-  if (fileSize > VOICE_MAX_FILE_SIZE_BYTES) {
+  if (normalizedFileSize > VOICE_MAX_FILE_SIZE_BYTES) {
     return errorResponse(
       "VALIDATION_ERROR",
       `Audio file too large. Maximum is ${VOICE_MAX_FILE_SIZE_BYTES / 1024 / 1024}MB.`,

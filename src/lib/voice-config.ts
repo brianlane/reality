@@ -13,8 +13,6 @@ export const VOICE_ALLOWED_MIME_TYPES = [
   "audio/ogg;codecs=opus",
 ] as const;
 
-export type VoiceAllowedMimeType = (typeof VOICE_ALLOWED_MIME_TYPES)[number];
-
 // Flag 3: Recording limits — enforced in both UI and upload URL issuance.
 export const VOICE_MAX_DURATION_SECONDS = 180; // 3 minutes
 export const VOICE_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
