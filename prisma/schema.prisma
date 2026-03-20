@@ -294,12 +294,23 @@ model QuestionnaireAnswer {
   question    QuestionnaireQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
   value       Json?
   richText    String?               @db.Text
+
+  // Voice transcription metadata (Flag 1: value stays plain text for backward compat)
+  voiceAudioPath      String?           // Supabase Storage path (Flag 6)
+  voiceMimeType       String?           // Original audio codec (Flag 2)
+  voiceTranscript     String?           @db.Text // Raw transcript from provider
+  voiceStatus         String?           // processing | transcribed | failed (Flag 4)
+  voiceProvider       String?           // groq | huggingface (Flag 5)
+  voiceTranscribedAt  DateTime?
+  voiceErrorCode      String?
+
   createdAt   DateTime              @default(now())
   updatedAt   DateTime              @updatedAt
 
   @@unique([applicantId, questionId])
   @@index([applicantId])
   @@index([questionId])
+  @@index([voiceStatus])
 }
 
 

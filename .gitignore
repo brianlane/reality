@@ -50,3 +50,6 @@ CURSOR_BUGS_FIXED*.md
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Supabase CLI generated temp files
+supabase/.temp/

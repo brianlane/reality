@@ -42,8 +42,9 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Permissions-Policy",
+            // microphone=(self) allows recording on same-origin questionnaire pages
             value:
-              "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+              "camera=(), microphone=(self), geolocation=(), interest-cohort=()",
           },
           {
             key: "Content-Security-Policy",
@@ -58,6 +59,7 @@ const nextConfig: NextConfig = {
               "frame-ancestors 'self'", // Allow being framed by same origin
               "base-uri 'self'",
               "worker-src 'self' blob:",
+              "media-src 'self' blob:",
               "form-action 'self'",
             ].join("; "),
           },

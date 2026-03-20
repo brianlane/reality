@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { useApplicationDraft } from "./useApplicationDraft";
 import RichTextEditor from "./RichTextEditor";
+import { VoiceTextareaInput } from "./VoiceTextareaInput";
 import { ERROR_MESSAGES } from "@/lib/error-messages";
 
 type QuestionType =
@@ -173,6 +173,10 @@ function isConsentPage(page: PageInfo | undefined): boolean {
   if (!page) return false;
   // Only pages with "consent" in the title require consent validation
   return page.title.toLowerCase().includes("consent");
+}
+
+function isEmptyTextLikeValue(value: unknown): boolean {
+  return String(value ?? "").trim().length === 0;
 }
 
 export default function QuestionnaireForm({
@@ -654,14 +658,31 @@ export default function QuestionnaireForm({
     return errors;
   }
 
+  function getRequiredTextareaErrors(): Record<string, string> {
+    const errors: Record<string, string> = {};
+
+    for (const section of sections) {
+      for (const question of section.questions) {
+        if (!question.isRequired || question.type !== "TEXTAREA") continue;
+        if (isEmptyTextLikeValue(answers[question.id]?.value)) {
+          errors[question.id] = "This field is required.";
+        }
+      }
+    }
+
+    return errors;
+  }
+
   function validateCurrentPageFields(): boolean {
     const checkboxErrors = getCheckboxSelectionErrors();
     const numericErrors = getNumericFieldErrors();
     const structuredErrors = getStructuredFieldErrors();
+    const requiredTextareaErrors = getRequiredTextareaErrors();
     const nextErrors = {
       ...checkboxErrors,
       ...numericErrors,
       ...structuredErrors,
+      ...requiredTextareaErrors,
     };
 
     // Always write one deterministic error map so validation behavior never
@@ -906,14 +927,22 @@ export default function QuestionnaireForm({
                       {question.helperText}
                     </p>
                   ) : null}
-                  <Textarea
+                  <VoiceTextareaInput
                     rows={4}
                     value={String(answer.value ?? "")}
                     required={question.isRequired}
-                    onChange={(event) =>
-                      updateAnswer(question.id, { value: event.target.value })
-                    }
+                    questionId={question.id}
+                    applicationId={applicationId}
+                    onChange={(val) => {
+                      updateAnswer(question.id, { value: val });
+                      clearFieldError(question.id);
+                    }}
                   />
+                  {fieldErrors[question.id] ? (
+                    <p className="text-xs text-red-500">
+                      {fieldErrors[question.id]}
+                    </p>
+                  ) : null}
                 </div>
               );
             }

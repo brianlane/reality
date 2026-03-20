@@ -16,4 +16,11 @@ export const ERROR_MESSAGES = {
   ACCOUNT_EXISTS_PASSWORD_INCORRECT:
     "An account exists with this email but the password is incorrect. Please try again or reset your password.",
   PREVIEW_MODE_SUBMIT_DISABLED: "Preview mode - form submission is disabled",
+  VOICE_UPLOAD_FAILED: "Failed to upload voice recording. Please try again.",
+  VOICE_TRANSCRIPTION_FAILED:
+    "Voice transcription failed. You can still type your answer.",
+  VOICE_PERMISSION_DENIED:
+    "Microphone access was denied. Please allow microphone access in your browser settings.",
+  VOICE_NO_MICROPHONE:
+    "No microphone found. Please connect a microphone and try again.",
 } as const;
