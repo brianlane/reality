@@ -186,6 +186,14 @@ test.describe("voice input on questionnaire", () => {
     await page.route("**/api/applicant/application**", async (route) => {
       await route.fulfill({ status: 401, body: "{}" });
     });
+
+    // Manual fallback trigger route (non-fatal in client flow).
+    await page.route(
+      "**/api/applications/questionnaire/audio-upload-complete",
+      async (route) => {
+        await route.fulfill({ status: 200, json: { queued: true } });
+      },
+    );
   });
 
   test("happy path: record → upload → transcribed → Use as answer populates textarea", async ({
