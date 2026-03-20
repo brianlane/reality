@@ -87,6 +87,9 @@ export function VoiceTextareaInput({
   const startPolling = useCallback(
     (storagePath: string) => {
       if (!applicationId) return;
+      // Clear any previously running poll so the old interval isn't leaked if
+      // startPolling is somehow called while a poll is already active.
+      clearPoll();
       pollAttemptsRef.current = 0;
 
       pollRef.current = setInterval(async () => {
