@@ -118,6 +118,21 @@ const QUESTIONNAIRE_RESPONSE = {
   answers: {},
 };
 
+// CSP connect-src only allows https://*.supabase.co (plus a few other hosts).
+// A fake example.com storage URL is blocked, so uploadAudio's fetch throws and
+// the UI shows a generic unexpected error.
+const E2E_FAKE_SUPABASE_ORIGIN = "https://e2e-voice-fake.supabase.co";
+
+function e2eFakeSignedPutUrl(suffix: string): string {
+  return `${E2E_FAKE_SUPABASE_ORIGIN}/storage/v1/object/signed/${suffix}`;
+}
+
+async function routeFakeSupabaseSignedPut(page: Page) {
+  await page.route("**/*e2e-voice-fake.supabase.co/**", async (route) => {
+    await route.fulfill({ status: 200, body: "" });
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -185,20 +200,15 @@ test.describe("voice input on questionnaire", () => {
         await route.fulfill({
           status: 200,
           json: {
-            signedUrl: "https://fake-storage.example.com/signed-upload",
+            signedUrl: e2eFakeSignedPutUrl("happy"),
             storagePath: "appl_voice_test/q_voice/1711234567890.webm",
           },
         });
       },
     );
 
-    // Signed PUT to Supabase Storage — always succeeds
-    await page.route(
-      "https://fake-storage.example.com/signed-upload",
-      async (route) => {
-        await route.fulfill({ status: 200, body: "" });
-      },
-    );
+    // Signed PUT to mocked Supabase Storage — always succeeds
+    await routeFakeSupabaseSignedPut(page);
 
     // voice-status: first call returns "processing", second returns "transcribed"
     await page.route(
@@ -296,19 +306,14 @@ test.describe("voice input on questionnaire", () => {
         await route.fulfill({
           status: 200,
           json: {
-            signedUrl: "https://fake-storage.example.com/signed-upload-pending",
+            signedUrl: e2eFakeSignedPutUrl("pending"),
             storagePath: "appl_voice_test/q_voice/1711234567890.webm",
           },
         });
       },
     );
 
-    await page.route(
-      "https://fake-storage.example.com/signed-upload-pending",
-      async (route) => {
-        await route.fulfill({ status: 200, body: "" });
-      },
-    );
+    await routeFakeSupabaseSignedPut(page);
 
     await page.route(
       "**/api/applications/questionnaire/voice-status**",
@@ -365,18 +370,13 @@ test.describe("voice input on questionnaire", () => {
         await route.fulfill({
           status: 200,
           json: {
-            signedUrl: "https://fake-storage.example.com/signed-upload-fail",
+            signedUrl: e2eFakeSignedPutUrl("fail"),
             storagePath: "appl_voice_test/q_voice/1711234567890.webm",
           },
         });
       },
     );
-    await page.route(
-      "https://fake-storage.example.com/signed-upload-fail",
-      async (route) => {
-        await route.fulfill({ status: 200, body: "" });
-      },
-    );
+    await routeFakeSupabaseSignedPut(page);
 
     // voice-status immediately returns "failed"
     await page.route(
