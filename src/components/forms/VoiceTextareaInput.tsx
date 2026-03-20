@@ -243,7 +243,6 @@ export function VoiceTextareaInput({
           console.error("voice upload failed", {
             status: uploadRes.status,
             statusText: uploadRes.statusText,
-            uploadUrl,
             uploadErrorText,
           });
           setVoicePhase({
@@ -255,6 +254,21 @@ export function VoiceTextareaInput({
 
         // Flag 4: transition to processing and begin polling
         setVoicePhase({ phase: "processing", storagePath });
+        // Reliability fallback: explicitly trigger edge transcription in case
+        // storage webhooks are delayed/misconfigured in production.
+        void fetch("/api/applications/questionnaire/audio-upload-complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            applicationId,
+            questionId,
+            storagePath,
+            mimeType: normalizedMimeType,
+            fileSize: blob.size,
+          }),
+        }).catch(() => {
+          // Non-fatal: polling may still succeed via the native storage webhook path.
+        });
         startPolling(storagePath);
       } catch {
         setVoicePhase({

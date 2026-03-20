@@ -27,7 +27,7 @@ export type VoiceStatus = "processing" | "transcribed" | "failed";
 
 // Polling config for the frontend status check loop.
 export const VOICE_POLL_INTERVAL_MS = 2500;
-export const VOICE_POLL_MAX_ATTEMPTS = 36; // ~90 seconds max
+export const VOICE_POLL_MAX_ATTEMPTS = 20; // ~50 seconds max
 
 // Flag 2: Normalize and validate MIME type (strip codec params for comparison).
 export function isMimeTypeAllowed(mimeType: string): boolean {
