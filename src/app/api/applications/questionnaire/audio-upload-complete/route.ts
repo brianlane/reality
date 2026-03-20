@@ -119,7 +119,24 @@ export async function POST(request: NextRequest) {
       storagePath,
       error: error.message,
     });
-    // Non-fatal because storage webhook may still trigger naturally.
+    // Fast-fail this attempt so the client doesn't sit in "processing" timeout
+    // when both webhook + manual trigger are unavailable.
+    await db.questionnaireAnswer
+      .updateMany({
+        where: {
+          applicantId: applicationId,
+          questionId,
+          voiceAudioPath: storagePath,
+          OR: [{ voiceStatus: null }, { voiceStatus: { not: "transcribed" } }],
+        },
+        data: {
+          voiceStatus: "failed",
+          voiceErrorCode: "TRIGGER_FAILED",
+        },
+      })
+      .catch(() => {
+        // Best effort only; keep response successful.
+      });
     return successResponse({ queued: false });
   }
 

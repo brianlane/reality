@@ -266,9 +266,29 @@ export function VoiceTextareaInput({
             mimeType: normalizedMimeType,
             fileSize: blob.size,
           }),
-        }).catch(() => {
-          // Non-fatal: polling may still succeed via the native storage webhook path.
-        });
+        })
+          .then(async (res) => {
+            if (!res.ok) {
+              console.warn("audio-upload-complete returned non-OK status", {
+                status: res.status,
+              });
+              return;
+            }
+            const data = (await res.json().catch(() => ({}))) as {
+              queued?: boolean;
+            };
+            if (data.queued === false) {
+              console.warn(
+                "audio-upload-complete could not queue transcription; awaiting webhook fallback",
+              );
+            }
+          })
+          .catch(() => {
+            // Non-fatal: polling may still succeed via the native storage webhook path.
+            console.warn(
+              "audio-upload-complete request failed; awaiting webhook fallback",
+            );
+          });
         startPolling(storagePath);
       } catch {
         setVoicePhase({
