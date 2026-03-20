@@ -103,23 +103,10 @@ Deno.serve(async (req: Request) => {
     return new Response("OK", { status: 200 });
   }
 
-  // Validate this is an active TEXTAREA question (defense in depth)
-  const { data: question } = await supabase
-    .from("QuestionnaireQuestion")
-    .select("id, type")
-    .eq("id", questionId)
-    .eq("type", "TEXTAREA")
-    .eq("isActive", true)
-    .is("deletedAt", null)
-    .maybeSingle();
-
-  if (!question) {
-    console.error(
-      "[transcribe] Question not found or not TEXTAREA:",
-      questionId,
-    );
-    return new Response("OK", { status: 200 });
-  }
+  // Note: question type/ownership validation is already enforced by
+  // /api/applications/questionnaire/audio-upload-url before any signed upload
+  // URL is issued. Re-validating here via PostgREST can produce false negatives
+  // in some production schemas and leave voiceStatus stuck at "processing".
 
   // Download audio from private storage using the service-role client.
   // This avoids hard-coding storage REST URL path variants.
