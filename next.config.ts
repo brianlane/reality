@@ -60,7 +60,7 @@ const nextConfig: NextConfig = {
               "base-uri 'self'",
               "worker-src 'self' blob:",
               "media-src 'self' blob:",
-              "form-action 'self'",
+              "form-action 'self' https://*.supabase.co https://www.facebook.com https://connect.facebook.net",
             ].join("; "),
           },
         ],

@@ -192,6 +192,10 @@ export function VoiceTextareaInput({
       }
 
       try {
+        const normalizedMimeType =
+          (blob.type || "audio/webm").split(";")[0].trim().toLowerCase() ||
+          "audio/webm";
+
         const urlRes = await fetch(
           "/api/applications/questionnaire/audio-upload-url",
           {
@@ -200,7 +204,7 @@ export function VoiceTextareaInput({
             body: JSON.stringify({
               applicationId,
               questionId,
-              mimeType: blob.type || "audio/webm",
+              mimeType: normalizedMimeType,
               fileSize: blob.size,
             }),
           },
@@ -222,14 +226,26 @@ export function VoiceTextareaInput({
           storagePath: string;
         };
 
+        const uploadUrl =
+          signedUrl.startsWith("http://") || signedUrl.startsWith("https://")
+            ? signedUrl
+            : (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "") + signedUrl;
+
         // Upload directly to Supabase Storage via the signed URL
-        const uploadRes = await fetch(signedUrl, {
+        const uploadRes = await fetch(uploadUrl, {
           method: "PUT",
-          headers: { "Content-Type": blob.type || "audio/webm" },
+          headers: { "Content-Type": normalizedMimeType },
           body: blob,
         });
 
         if (!uploadRes.ok) {
+          const uploadErrorText = await uploadRes.text().catch(() => "");
+          console.error("voice upload failed", {
+            status: uploadRes.status,
+            statusText: uploadRes.statusText,
+            uploadUrl,
+            uploadErrorText,
+          });
           setVoicePhase({
             phase: "failed",
             message: ERROR_MESSAGES.VOICE_UPLOAD_FAILED,
