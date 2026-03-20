@@ -54,6 +54,9 @@ export function VoiceTextareaInput({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollAttemptsRef = useRef(0);
+  const pollGenerationRef = useRef(0);
+  const pollRequestControllerRef = useRef<AbortController | null>(null);
+  const pollInFlightRef = useRef(false);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -68,6 +71,12 @@ export function VoiceTextareaInput({
       clearInterval(pollRef.current);
       pollRef.current = null;
     }
+    if (pollRequestControllerRef.current) {
+      pollRequestControllerRef.current.abort();
+      pollRequestControllerRef.current = null;
+    }
+    pollInFlightRef.current = false;
+    pollGenerationRef.current += 1;
     pollAttemptsRef.current = 0;
   }, []);
 
@@ -92,26 +101,41 @@ export function VoiceTextareaInput({
       // Clear any previously running poll so the old interval isn't leaked if
       // startPolling is somehow called while a poll is already active.
       clearPoll();
+      const generation = pollGenerationRef.current;
       pollAttemptsRef.current = 0;
 
       pollRef.current = setInterval(async () => {
+        if (generation !== pollGenerationRef.current) {
+          return;
+        }
+        if (pollInFlightRef.current) {
+          return;
+        }
+        pollInFlightRef.current = true;
         pollAttemptsRef.current += 1;
 
         // Flag 4: timeout after max polling attempts
         if (pollAttemptsRef.current > VOICE_POLL_MAX_ATTEMPTS) {
-          clearPoll();
-          setVoicePhase({
-            phase: "failed",
-            message: "Transcription timed out. Please try again.",
-            storagePath,
-          });
+          if (generation === pollGenerationRef.current) {
+            clearPoll();
+            setVoicePhase({
+              phase: "failed",
+              message: "Transcription timed out. Please try again.",
+              storagePath,
+            });
+          }
           return;
         }
+
+        const controller = new AbortController();
+        pollRequestControllerRef.current = controller;
 
         try {
           const res = await fetch(
             `/api/applications/questionnaire/voice-status?applicationId=${encodeURIComponent(applicationId)}&questionId=${encodeURIComponent(questionId)}`,
+            { signal: controller.signal },
           );
+          if (generation !== pollGenerationRef.current) return;
           if (!res.ok) return;
 
           const data = (await res.json()) as {
@@ -119,6 +143,7 @@ export function VoiceTextareaInput({
             voiceTranscript: string | null;
             voiceErrorCode: string | null;
           };
+          if (generation !== pollGenerationRef.current) return;
 
           if (data.voiceStatus === "transcribed" && data.voiceTranscript) {
             clearPoll();
@@ -136,8 +161,16 @@ export function VoiceTextareaInput({
             });
           }
           // voiceStatus === "processing" or null → keep polling
-        } catch {
+        } catch (err) {
           // Network error — keep polling; don't abort
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return;
+          }
+        } finally {
+          if (pollRequestControllerRef.current === controller) {
+            pollRequestControllerRef.current = null;
+          }
+          pollInFlightRef.current = false;
         }
       }, VOICE_POLL_INTERVAL_MS);
     },

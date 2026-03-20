@@ -108,6 +108,7 @@ Deno.serve(async (req: Request) => {
     .eq("id", questionId)
     .eq("type", "TEXTAREA")
     .eq("isActive", true)
+    .is("deletedAt", null)
     .maybeSingle();
 
   if (!question) {
@@ -118,18 +119,18 @@ Deno.serve(async (req: Request) => {
     return new Response("OK", { status: 200 });
   }
 
-  // Download audio from private storage using service role key
-  const audioUrl = `${SUPABASE_URL}/storage/v1/object/${VOICE_AUDIO_BUCKET}/${storagePath}`;
+  // Download audio from private storage using the service-role client.
+  // This avoids hard-coding storage REST URL path variants.
   let audioBlob: Blob;
 
   try {
-    const audioResponse = await fetch(audioUrl, {
-      headers: { Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
-    });
-    if (!audioResponse.ok) {
-      throw new Error(`Storage download failed: ${audioResponse.status}`);
+    const { data, error } = await supabase.storage
+      .from(VOICE_AUDIO_BUCKET)
+      .download(storagePath);
+    if (error || !data) {
+      throw new Error(error?.message ?? "Storage download failed");
     }
-    audioBlob = await audioResponse.blob();
+    audioBlob = data;
   } catch (err) {
     console.error("[transcribe] Failed to download audio:", err);
     await upsertVoiceResult(
