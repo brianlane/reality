@@ -122,9 +122,12 @@ export async function POST(request: NextRequest) {
     // Fast-fail this attempt so the client doesn't sit in "processing" timeout
     // when both webhook + manual trigger are unavailable.
     await db.questionnaireAnswer
-      .update({
+      .updateMany({
         where: {
-          applicantId_questionId: { applicantId: applicationId, questionId },
+          applicantId: applicationId,
+          questionId,
+          voiceAudioPath: storagePath,
+          OR: [{ voiceStatus: null }, { voiceStatus: { not: "transcribed" } }],
         },
         data: {
           voiceStatus: "failed",
