@@ -166,6 +166,31 @@ export async function POST(request: NextRequest) {
         }
       }
     }
+
+    // Hard guarantee: edge function update path requires a row with matching
+    // applicant/question and current storage path.
+    const ensured = await db.questionnaireAnswer.findUnique({
+      where: {
+        applicantId_questionId: { applicantId: applicationId, questionId },
+      },
+      select: {
+        id: true,
+        voiceAudioPath: true,
+      },
+    });
+    if (!ensured || ensured.voiceAudioPath !== storagePath) {
+      logger.error("audio-upload-complete: failed to ensure answer row state", {
+        applicationId,
+        questionId,
+        storagePath,
+        ensuredVoiceAudioPath: ensured?.voiceAudioPath ?? null,
+      });
+      return errorResponse(
+        "INTERNAL_SERVER_ERROR",
+        "Failed to initialize transcription state.",
+        500,
+      );
+    }
   } catch (err) {
     logger.error("audio-upload-complete: failed to upsert answer row", {
       applicationId,
