@@ -113,48 +113,54 @@ export async function POST(request: NextRequest) {
   //
   // Important: do not clobber a transcription result that has already completed
   // for this exact storagePath (webhook/manual trigger may race).
+  //
+  // Use an atomic update-first/create-fallback pattern:
+  // 1) updateMany with a guard that preserves already-completed same-path rows
+  // 2) if nothing updated, try create
+  // 3) on unique conflict, another concurrent request created it — continue
   try {
-    const existing = await db.questionnaireAnswer.findUnique({
+    const { count: updatedRows } = await db.questionnaireAnswer.updateMany({
       where: {
-        applicantId_questionId: { applicantId: applicationId, questionId },
+        applicantId: applicationId,
+        questionId,
+        NOT: {
+          voiceStatus: "transcribed",
+          voiceAudioPath: storagePath,
+        },
       },
-      select: {
-        voiceStatus: true,
-        voiceAudioPath: true,
+      data: {
+        voiceAudioPath: storagePath,
+        voiceMimeType: mimeType,
+        voiceStatus: "processing",
+        voiceTranscript: null,
+        voiceTranscribedAt: null,
+        voiceProvider: null,
+        voiceErrorCode: null,
       },
     });
 
-    if (!existing) {
-      await db.questionnaireAnswer.create({
-        data: {
-          applicantId: applicationId,
-          questionId,
-          value: Prisma.DbNull,
-          voiceAudioPath: storagePath,
-          voiceMimeType: mimeType,
-          voiceStatus: "processing",
-        },
-      });
-    } else {
-      const alreadyCompletedForThisUpload =
-        existing.voiceStatus === "transcribed" &&
-        existing.voiceAudioPath === storagePath;
-
-      if (!alreadyCompletedForThisUpload) {
-        await db.questionnaireAnswer.update({
-          where: {
-            applicantId_questionId: { applicantId: applicationId, questionId },
-          },
+    if (updatedRows === 0) {
+      try {
+        await db.questionnaireAnswer.create({
           data: {
+            applicantId: applicationId,
+            questionId,
+            value: Prisma.DbNull,
             voiceAudioPath: storagePath,
             voiceMimeType: mimeType,
             voiceStatus: "processing",
-            voiceTranscript: null,
-            voiceTranscribedAt: null,
-            voiceProvider: null,
-            voiceErrorCode: null,
           },
         });
+      } catch (err) {
+        // Concurrent create race is expected under retries; treat as success.
+        if (
+          err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === "P2002"
+        ) {
+          // no-op
+        } else {
+          throw err;
+        }
       }
     }
   } catch (err) {
