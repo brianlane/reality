@@ -3,6 +3,7 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { logger } from "@/lib/logger";
 import { requireInvitedApplicant } from "@/lib/questionnaire-access";
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import {
   isMimeTypeAllowed,
   VOICE_AUDIO_BUCKET,
@@ -106,6 +107,40 @@ export async function POST(request: NextRequest) {
       },
     },
   };
+
+  // Ensure a row exists before invoking edge transcription. This avoids the
+  // edge function needing INSERT privileges in production.
+  await db.questionnaireAnswer
+    .upsert({
+      where: {
+        applicantId_questionId: { applicantId: applicationId, questionId },
+      },
+      update: {
+        voiceAudioPath: storagePath,
+        voiceMimeType: mimeType,
+        voiceStatus: "processing",
+        voiceTranscript: null,
+        voiceTranscribedAt: null,
+        voiceProvider: null,
+        voiceErrorCode: null,
+      },
+      create: {
+        applicantId: applicationId,
+        questionId,
+        value: Prisma.DbNull,
+        voiceAudioPath: storagePath,
+        voiceMimeType: mimeType,
+        voiceStatus: "processing",
+      },
+    })
+    .catch((err: unknown) => {
+      logger.warn("audio-upload-complete: failed to upsert answer row", {
+        applicationId,
+        questionId,
+        storagePath,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
 
   const { error } = await supabase.functions.invoke(
     "transcribe-questionnaire-audio",

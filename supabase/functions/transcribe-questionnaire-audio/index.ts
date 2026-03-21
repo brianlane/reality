@@ -289,7 +289,7 @@ async function upsertVoiceResult(
     updatedAt: now,
   };
 
-  // Try to update an existing row first
+  // Update an existing row only; row creation is handled by app APIs.
   const { data: existing } = await supabase
     .from("QuestionnaireAnswer")
     .select("id")
@@ -309,17 +309,10 @@ async function upsertVoiceResult(
       console.error("[transcribe] Failed to update answer row:", error.message);
     }
   } else {
-    // Create a new answer row with voice metadata only (value = null until user saves)
-    const { error } = await supabase.from("QuestionnaireAnswer").insert({
-      id: crypto.randomUUID(),
-      applicantId: applicationId,
+    console.warn(
+      "[transcribe] No answer row found to update; skipping write",
+      applicationId,
       questionId,
-      value: null,
-      createdAt: now,
-      ...voiceFields,
-    });
-    if (error) {
-      console.error("[transcribe] Failed to insert answer row:", error.message);
-    }
+    );
   }
 }
