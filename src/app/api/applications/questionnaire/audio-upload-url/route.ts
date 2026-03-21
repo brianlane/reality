@@ -123,9 +123,9 @@ export async function POST(request: NextRequest) {
   }
 
   // Mark voice as processing so the status poll has an initial state immediately.
-  // Non-fatal: upload URL is still returned even if this write fails.
-  await db.questionnaireAnswer
-    .upsert({
+  // Fail fast if this write fails — edge transcription now expects the row to exist.
+  try {
+    await db.questionnaireAnswer.upsert({
       where: {
         applicantId_questionId: { applicantId: applicationId, questionId },
       },
@@ -146,17 +146,20 @@ export async function POST(request: NextRequest) {
         voiceMimeType: mimeType,
         voiceStatus: "processing",
       },
-    })
-    .catch((err: unknown) => {
-      logger.warn(
-        "audio-upload-url: failed to mark voice as processing (non-fatal)",
-        {
-          applicantId: applicationId,
-          questionId,
-          error: err instanceof Error ? err.message : String(err),
-        },
-      );
     });
+  } catch (err) {
+    logger.error("audio-upload-url: failed to initialize voice answer row", {
+      applicantId: applicationId,
+      questionId,
+      storagePath,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return errorResponse(
+      "INTERNAL_SERVER_ERROR",
+      "Failed to initialize voice transcription. Please try again.",
+      500,
+    );
+  }
 
   logger.info("audio-upload-url: signed URL created", {
     storagePath,
