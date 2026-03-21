@@ -123,10 +123,13 @@ export async function POST(request: NextRequest) {
       where: {
         applicantId: applicationId,
         questionId,
-        NOT: {
-          voiceStatus: "transcribed",
-          voiceAudioPath: storagePath,
-        },
+        // Update whenever the row is not already "transcribed" for this exact
+        // upload path. Use explicit OR so NULL voiceStatus rows are included.
+        OR: [
+          { voiceStatus: null },
+          { voiceStatus: { not: "transcribed" } },
+          { voiceAudioPath: { not: storagePath } },
+        ],
       },
       data: {
         voiceAudioPath: storagePath,
