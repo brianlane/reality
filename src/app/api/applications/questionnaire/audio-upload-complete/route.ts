@@ -110,8 +110,8 @@ export async function POST(request: NextRequest) {
 
   // Ensure a row exists before invoking edge transcription. This avoids the
   // edge function needing INSERT privileges in production.
-  await db.questionnaireAnswer
-    .upsert({
+  try {
+    await db.questionnaireAnswer.upsert({
       where: {
         applicantId_questionId: { applicantId: applicationId, questionId },
       },
@@ -132,15 +132,20 @@ export async function POST(request: NextRequest) {
         voiceMimeType: mimeType,
         voiceStatus: "processing",
       },
-    })
-    .catch((err: unknown) => {
-      logger.warn("audio-upload-complete: failed to upsert answer row", {
-        applicationId,
-        questionId,
-        storagePath,
-        error: err instanceof Error ? err.message : String(err),
-      });
     });
+  } catch (err) {
+    logger.error("audio-upload-complete: failed to upsert answer row", {
+      applicationId,
+      questionId,
+      storagePath,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return errorResponse(
+      "INTERNAL_SERVER_ERROR",
+      "Failed to initialize transcription state.",
+      500,
+    );
+  }
 
   const { error } = await supabase.functions.invoke(
     "transcribe-questionnaire-audio",
