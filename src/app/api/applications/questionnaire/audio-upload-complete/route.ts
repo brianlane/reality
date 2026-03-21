@@ -110,29 +110,53 @@ export async function POST(request: NextRequest) {
 
   // Ensure a row exists before invoking edge transcription. This avoids the
   // edge function needing INSERT privileges in production.
+  //
+  // Important: do not clobber a transcription result that has already completed
+  // for this exact storagePath (webhook/manual trigger may race).
   try {
-    await db.questionnaireAnswer.upsert({
+    const existing = await db.questionnaireAnswer.findUnique({
       where: {
         applicantId_questionId: { applicantId: applicationId, questionId },
       },
-      update: {
-        voiceAudioPath: storagePath,
-        voiceMimeType: mimeType,
-        voiceStatus: "processing",
-        voiceTranscript: null,
-        voiceTranscribedAt: null,
-        voiceProvider: null,
-        voiceErrorCode: null,
-      },
-      create: {
-        applicantId: applicationId,
-        questionId,
-        value: Prisma.DbNull,
-        voiceAudioPath: storagePath,
-        voiceMimeType: mimeType,
-        voiceStatus: "processing",
+      select: {
+        voiceStatus: true,
+        voiceAudioPath: true,
       },
     });
+
+    if (!existing) {
+      await db.questionnaireAnswer.create({
+        data: {
+          applicantId: applicationId,
+          questionId,
+          value: Prisma.DbNull,
+          voiceAudioPath: storagePath,
+          voiceMimeType: mimeType,
+          voiceStatus: "processing",
+        },
+      });
+    } else {
+      const alreadyCompletedForThisUpload =
+        existing.voiceStatus === "transcribed" &&
+        existing.voiceAudioPath === storagePath;
+
+      if (!alreadyCompletedForThisUpload) {
+        await db.questionnaireAnswer.update({
+          where: {
+            applicantId_questionId: { applicantId: applicationId, questionId },
+          },
+          data: {
+            voiceAudioPath: storagePath,
+            voiceMimeType: mimeType,
+            voiceStatus: "processing",
+            voiceTranscript: null,
+            voiceTranscribedAt: null,
+            voiceProvider: null,
+            voiceErrorCode: null,
+          },
+        });
+      }
+    }
   } catch (err) {
     logger.error("audio-upload-complete: failed to upsert answer row", {
       applicationId,
