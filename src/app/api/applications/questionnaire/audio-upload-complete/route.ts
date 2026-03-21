@@ -3,6 +3,7 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { logger } from "@/lib/logger";
 import { requireInvitedApplicant } from "@/lib/questionnaire-access";
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import {
   isMimeTypeAllowed,
   VOICE_AUDIO_BUCKET,
@@ -106,6 +107,78 @@ export async function POST(request: NextRequest) {
       },
     },
   };
+
+  // Ensure a row exists before invoking edge transcription. This avoids the
+  // edge function needing INSERT privileges in production.
+  //
+  // Important: do not clobber a transcription result that has already completed
+  // for this exact storagePath (webhook/manual trigger may race).
+  //
+  // Use an atomic update-first/create-fallback pattern:
+  // 1) updateMany with a guard that preserves already-completed same-path rows
+  // 2) if nothing updated, try create
+  // 3) on unique conflict, another concurrent request created it — continue
+  try {
+    const { count: updatedRows } = await db.questionnaireAnswer.updateMany({
+      where: {
+        applicantId: applicationId,
+        questionId,
+        // Update whenever the row is not already "transcribed" for this exact
+        // upload path. Use explicit OR so NULL voiceStatus rows are included.
+        OR: [
+          { voiceStatus: null },
+          { voiceStatus: { not: "transcribed" } },
+          { voiceAudioPath: { not: storagePath } },
+        ],
+      },
+      data: {
+        voiceAudioPath: storagePath,
+        voiceMimeType: mimeType,
+        voiceStatus: "processing",
+        voiceTranscript: null,
+        voiceTranscribedAt: null,
+        voiceProvider: null,
+        voiceErrorCode: null,
+      },
+    });
+
+    if (updatedRows === 0) {
+      try {
+        await db.questionnaireAnswer.create({
+          data: {
+            applicantId: applicationId,
+            questionId,
+            value: Prisma.DbNull,
+            voiceAudioPath: storagePath,
+            voiceMimeType: mimeType,
+            voiceStatus: "processing",
+          },
+        });
+      } catch (err) {
+        // Concurrent create race is expected under retries; treat as success.
+        if (
+          err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === "P2002"
+        ) {
+          // no-op
+        } else {
+          throw err;
+        }
+      }
+    }
+  } catch (err) {
+    logger.error("audio-upload-complete: failed to upsert answer row", {
+      applicationId,
+      questionId,
+      storagePath,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return errorResponse(
+      "INTERNAL_SERVER_ERROR",
+      "Failed to initialize transcription state.",
+      500,
+    );
+  }
 
   const { error } = await supabase.functions.invoke(
     "transcribe-questionnaire-audio",
