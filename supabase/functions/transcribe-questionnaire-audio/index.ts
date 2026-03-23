@@ -49,6 +49,20 @@ interface VoiceUpdateParams {
   errorCode?: string;
 }
 
+interface TranscribeResult {
+  status: "transcribed" | "failed" | "skipped";
+  transcript?: string;
+  provider?: string;
+  errorCode?: string;
+}
+
+function jsonResponse(result: TranscribeResult, httpStatus = 200): Response {
+  return new Response(JSON.stringify(result), {
+    status: httpStatus,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
@@ -67,7 +81,7 @@ Deno.serve(async (req: Request) => {
     payload.schema !== "storage" ||
     payload.record?.bucket_id !== VOICE_AUDIO_BUCKET
   ) {
-    return new Response("OK", { status: 200 });
+    return jsonResponse({ status: "skipped" });
   }
 
   const storagePath = payload.record.name;
@@ -75,7 +89,7 @@ Deno.serve(async (req: Request) => {
 
   if (parts.length < 3) {
     console.error("[transcribe] Invalid storage path format:", storagePath);
-    return new Response("OK", { status: 200 });
+    return jsonResponse({ status: "failed", errorCode: "INVALID_PATH" });
   }
 
   const [applicationId, questionId] = parts;
@@ -90,7 +104,7 @@ Deno.serve(async (req: Request) => {
   // Idempotency: skip if this exact path was already transcribed
   const { data: existing } = await supabase
     .from("QuestionnaireAnswer")
-    .select("id, voiceStatus, voiceAudioPath")
+    .select("id, voiceStatus, voiceAudioPath, voiceTranscript, voiceProvider")
     .eq("applicantId", applicationId)
     .eq("questionId", questionId)
     .maybeSingle();
@@ -100,7 +114,11 @@ Deno.serve(async (req: Request) => {
     existing?.voiceAudioPath === storagePath
   ) {
     console.log("[transcribe] Already transcribed, skipping:", storagePath);
-    return new Response("OK", { status: 200 });
+    return jsonResponse({
+      status: "transcribed",
+      transcript: existing.voiceTranscript ?? undefined,
+      provider: existing.voiceProvider ?? undefined,
+    });
   }
 
   // Note: question type/ownership validation is already enforced by
@@ -133,7 +151,10 @@ Deno.serve(async (req: Request) => {
         errorCode: "AUDIO_DOWNLOAD_FAILED",
       },
     );
-    return new Response("OK", { status: 200 });
+    return jsonResponse({
+      status: "failed",
+      errorCode: "AUDIO_DOWNLOAD_FAILED",
+    });
   }
 
   // Provider chain: Groq (primary) → HuggingFace (fallback)
@@ -187,7 +208,7 @@ Deno.serve(async (req: Request) => {
         errorCode,
       },
     );
-    return new Response("OK", { status: 200 });
+    return jsonResponse({ status: "failed", errorCode });
   }
 
   await upsertVoiceResult(
@@ -203,7 +224,11 @@ Deno.serve(async (req: Request) => {
     },
   );
 
-  return new Response("OK", { status: 200 });
+  return jsonResponse({
+    status: "transcribed",
+    transcript,
+    provider: provider ?? undefined,
+  });
 });
 
 async function transcribeWithGroq(

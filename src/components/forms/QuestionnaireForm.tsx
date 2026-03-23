@@ -203,6 +203,11 @@ export default function QuestionnaireForm({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [applicationId, setApplicationId] = useState<string | null>(null);
+  // Tracks which TEXTAREA questions have a confirmed voice recording saved.
+  // Either non-empty text OR a confirmed recording satisfies a required question.
+  const [confirmedAudio, setConfirmedAudio] = useState<Record<string, boolean>>(
+    {},
+  );
   const isResearchMode = mode === "research";
   const initialResumePageIdRef = useRef(draft.currentPageId);
 
@@ -664,9 +669,11 @@ export default function QuestionnaireForm({
     for (const section of sections) {
       for (const question of section.questions) {
         if (!question.isRequired || question.type !== "TEXTAREA") continue;
-        if (isEmptyTextLikeValue(answers[question.id]?.value)) {
-          errors[question.id] = "This field is required.";
-        }
+        // Either typed text OR a confirmed voice recording satisfies the requirement.
+        if (!isEmptyTextLikeValue(answers[question.id]?.value)) continue;
+        if (confirmedAudio[question.id]) continue;
+        errors[question.id] =
+          "Please type an answer or save a voice recording.";
       }
     }
 
@@ -936,6 +943,13 @@ export default function QuestionnaireForm({
                     onChange={(val) => {
                       updateAnswer(question.id, { value: val });
                       clearFieldError(question.id);
+                    }}
+                    onAudioConfirmed={(confirmed) => {
+                      setConfirmedAudio((prev) => ({
+                        ...prev,
+                        [question.id]: confirmed,
+                      }));
+                      if (confirmed) clearFieldError(question.id);
                     }}
                   />
                   {fieldErrors[question.id] ? (

@@ -12,6 +12,11 @@ type QuestionResponse = {
   value: unknown;
   richText: string | null;
   answeredAt: string;
+  voiceStatus: string | null;
+  voiceProvider: string | null;
+  voiceTranscript: string | null;
+  voiceTranscribedAt: string | null;
+  voiceAudioUrl: string | null;
 };
 
 type SectionData = {
@@ -73,6 +78,64 @@ function formatValue(value: unknown, type: string): string {
   }
 
   return String(value);
+}
+
+function VoiceAnswerPanel({ question }: { question: QuestionResponse }) {
+  if (!question.voiceStatus) return null;
+
+  const statusLabel: Record<string, string> = {
+    processing: "Transcribing…",
+    transcribed: "Transcribed",
+    failed: "Transcription failed",
+  };
+
+  const providerLabel = question.voiceProvider
+    ? ({ groq: "Groq Whisper", huggingface: "HuggingFace Whisper" }[
+        question.voiceProvider
+      ] ?? question.voiceProvider)
+    : null;
+
+  return (
+    <div className="mt-2 rounded-md border border-slate-200 bg-slate-50 p-2.5 space-y-1.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-navy-soft">
+          Voice recording
+        </span>
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+            question.voiceStatus === "transcribed"
+              ? "bg-green-100 text-green-700"
+              : question.voiceStatus === "failed"
+                ? "bg-red-100 text-red-600"
+                : "bg-amber-100 text-amber-700"
+          }`}
+        >
+          {statusLabel[question.voiceStatus] ?? question.voiceStatus}
+        </span>
+        {providerLabel && (
+          <span className="text-xs text-slate-400">via {providerLabel}</span>
+        )}
+      </div>
+
+      {question.voiceTranscript && (
+        <div>
+          <p className="text-xs font-medium text-navy-soft mb-0.5">
+            Transcript
+          </p>
+          <p className="text-sm text-navy whitespace-pre-wrap leading-relaxed">
+            {question.voiceTranscript}
+          </p>
+        </div>
+      )}
+
+      {question.voiceAudioUrl && (
+        <div>
+          <p className="text-xs font-medium text-navy-soft mb-0.5">Audio</p>
+          <audio src={question.voiceAudioUrl} controls className="w-full h-9" />
+        </div>
+      )}
+    </div>
+  );
 }
 
 function getTypeBadge(type: string): string {
@@ -216,6 +279,7 @@ export default function AdminQuestionnaireResponses({
                         {formatValue(question.value, question.type)}
                       </p>
                     )}
+                    <VoiceAnswerPanel question={question} />
                   </div>
                 ))}
               </div>
