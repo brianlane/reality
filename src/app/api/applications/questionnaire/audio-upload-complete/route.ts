@@ -272,61 +272,80 @@ export async function POST(request: NextRequest) {
 
   // Write the transcription result via Prisma (same DB, avoids PostgREST
   // permission issues the edge function may encounter in some environments).
-  if (result?.status === "transcribed" && result.transcript) {
-    await db.questionnaireAnswer.updateMany({
-      where: {
-        applicantId: applicationId,
+  // Wrapped in try-catch: a DB error here must not crash the route since the
+  // edge function already ran. The client fires this request fire-and-forget.
+  try {
+    if (result?.status === "transcribed" && result.transcript) {
+      await db.questionnaireAnswer.updateMany({
+        where: {
+          applicantId: applicationId,
+          questionId,
+          voiceAudioPath: storagePath,
+        },
+        data: {
+          voiceStatus: "transcribed",
+          voiceTranscript: result.transcript,
+          voiceProvider: result.provider ?? null,
+          voiceTranscribedAt: new Date(),
+          voiceErrorCode: null,
+        },
+      });
+      logger.info("audio-upload-complete: transcription written to DB", {
+        applicationId,
         questionId,
-        voiceAudioPath: storagePath,
-      },
-      data: {
-        voiceStatus: "transcribed",
-        voiceTranscript: result.transcript,
-        voiceProvider: result.provider ?? null,
-        voiceTranscribedAt: new Date(),
-        voiceErrorCode: null,
-      },
-    });
-    logger.info("audio-upload-complete: transcription written to DB", {
-      applicationId,
-      questionId,
-      storagePath,
-      provider: result.provider ?? null,
-    });
-  } else if (result?.status === "failed") {
-    await db.questionnaireAnswer.updateMany({
-      where: {
-        applicantId: applicationId,
+        storagePath,
+        provider: result.provider ?? null,
+      });
+    } else if (result?.status === "failed") {
+      await db.questionnaireAnswer.updateMany({
+        where: {
+          applicantId: applicationId,
+          questionId,
+          voiceAudioPath: storagePath,
+          OR: [{ voiceStatus: null }, { voiceStatus: { not: "transcribed" } }],
+        },
+        data: {
+          voiceStatus: "failed",
+          voiceErrorCode: result.errorCode ?? "TRANSCRIPTION_FAILED",
+        },
+      });
+      logger.info(
+        "audio-upload-complete: transcription failed, written to DB",
+        {
+          applicationId,
+          questionId,
+          storagePath,
+          errorCode: result.errorCode ?? null,
+        },
+      );
+    } else if (result?.status === "skipped") {
+      logger.warn(
+        "audio-upload-complete: edge function skipped transcription",
+        {
+          applicationId,
+          questionId,
+          storagePath,
+        },
+      );
+    } else {
+      logger.warn("audio-upload-complete: unexpected edge function response", {
+        applicationId,
         questionId,
-        voiceAudioPath: storagePath,
-        OR: [{ voiceStatus: null }, { voiceStatus: { not: "transcribed" } }],
+        storagePath,
+        result,
+      });
+    }
+  } catch (err) {
+    logger.error(
+      "audio-upload-complete: failed to write transcription result",
+      {
+        applicationId,
+        questionId,
+        storagePath,
+        status: result?.status ?? null,
+        error: err instanceof Error ? err.message : String(err),
       },
-      data: {
-        voiceStatus: "failed",
-        voiceErrorCode: result.errorCode ?? "TRANSCRIPTION_FAILED",
-      },
-    });
-    logger.info("audio-upload-complete: transcription failed, written to DB", {
-      applicationId,
-      questionId,
-      storagePath,
-      errorCode: result.errorCode ?? null,
-    });
-  } else if (result?.status === "skipped") {
-    // Edge function skipped (e.g. wrong bucket). Leave status for webhook to handle.
-    logger.warn("audio-upload-complete: edge function skipped transcription", {
-      applicationId,
-      questionId,
-      storagePath,
-    });
-  } else {
-    // Unexpected or null response — leave as "processing" so polling continues briefly.
-    logger.warn("audio-upload-complete: unexpected edge function response", {
-      applicationId,
-      questionId,
-      storagePath,
-      result,
-    });
+    );
   }
 
   return successResponse({ queued: true });

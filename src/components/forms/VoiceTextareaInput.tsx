@@ -370,7 +370,7 @@ export function VoiceTextareaInput({
           <p className="text-xs font-medium text-navy-soft">
             Review your recording before saving
           </p>
-          <audio src={voicePhase.blobUrl} controls className="w-full h-9" />
+          <audio src={voicePhase.blobUrl} controls className="w-full" />
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <button
               type="button"
@@ -398,9 +398,9 @@ export function VoiceTextareaInput({
 
       {/* Confirmed: saved indicator + playback */}
       {voicePhase.phase === "confirmed" && (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-3 space-y-2">
+        <div className="rounded-lg border border-copper/40 bg-copper/5 p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-green-700">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-copper-dark">
               <CheckIcon />
               Voice recording saved
             </p>
@@ -412,7 +412,7 @@ export function VoiceTextareaInput({
               Re-record
             </button>
           </div>
-          <audio src={voicePhase.blobUrl} controls className="w-full h-9" />
+          <audio src={voicePhase.blobUrl} controls className="w-full" />
         </div>
       )}
     </div>

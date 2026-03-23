@@ -62,7 +62,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
       voicePaths.map(async ({ answerId, path }) => {
         const { data, error } = await supabase.storage
           .from(VOICE_AUDIO_BUCKET)
-          .createSignedUrl(path, 3600);
+          .createSignedUrl(path, 86400); // 24-hour expiry for admin review sessions
         if (!error && data?.signedUrl) {
           voiceAudioUrlMap.set(answerId, data.signedUrl);
         }

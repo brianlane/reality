@@ -333,14 +333,22 @@ function stripHtml(value: string) {
 
 export async function validateAnswerForQuestion(
   question: QuestionRecord,
-  answer: { value: unknown; richText?: string | null },
+  answer: {
+    value: unknown;
+    richText?: string | null;
+    /**
+     * TEXTAREA only: pass true when a confirmed voice recording exists for
+     * this question so an empty text value still satisfies `isRequired`.
+     */
+    hasVoiceRecording?: boolean;
+  },
 ): Promise<AnswerValidationResult> {
   const { type, isRequired, options } = question;
   const value = answer.value;
 
   if (type === "TEXT" || type === "TEXTAREA") {
     const textValue = typeof value === "string" ? value.trim() : "";
-    if (isRequired && !textValue) {
+    if (isRequired && !textValue && !answer.hasVoiceRecording) {
       return { ok: false, message: "This field is required." };
     }
 
