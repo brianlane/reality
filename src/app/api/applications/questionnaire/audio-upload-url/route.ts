@@ -122,42 +122,35 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Reserve a row and mark it as pending upload. voiceAudioPath is intentionally
-  // left null here — audio-upload-complete (called only after a successful PUT)
-  // is the sole writer of voiceAudioPath. This prevents a stale path in the DB
-  // when the storage upload fails or is cancelled after re-recording.
+  // Important: do not mutate questionnaireAnswer state here.
+  // This endpoint only issues a signed upload URL. If a re-record upload fails
+  // after this call, any existing confirmed voiceAudioPath/transcript must stay
+  // intact. audio-upload-complete (called only after successful PUT) is the
+  // sole place that updates voiceAudioPath/voiceStatus/transcription fields.
+  //
+  // We still ensure a row exists for new questions so downstream code that
+  // expects an answer record can continue to rely on applicantId+questionId.
   try {
     await db.questionnaireAnswer.upsert({
       where: {
         applicantId_questionId: { applicantId: applicationId, questionId },
       },
-      update: {
-        voiceAudioPath: null,
-        voiceMimeType: mimeType,
-        voiceStatus: "processing",
-        voiceTranscript: null,
-        voiceTranscribedAt: null,
-        voiceProvider: null,
-        voiceErrorCode: null,
-      },
+      update: {},
       create: {
         applicantId: applicationId,
         questionId,
         value: Prisma.DbNull,
-        voiceMimeType: mimeType,
-        voiceStatus: "processing",
       },
     });
   } catch (err) {
-    logger.error("audio-upload-url: failed to initialize voice answer row", {
+    logger.error("audio-upload-url: failed to ensure voice answer row", {
       applicantId: applicationId,
       questionId,
-      storagePath,
       error: err instanceof Error ? err.message : String(err),
     });
     return errorResponse(
       "INTERNAL_SERVER_ERROR",
-      "Failed to initialize voice transcription. Please try again.",
+      "Failed to prepare voice upload. Please try again.",
       500,
     );
   }
