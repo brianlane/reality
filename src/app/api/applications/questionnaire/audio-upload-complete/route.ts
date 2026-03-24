@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { NextRequest } from "next/server";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { logger } from "@/lib/logger";
@@ -28,6 +29,13 @@ export async function POST(request: NextRequest) {
   }
 
   const { applicationId, questionId, storagePath, mimeType, fileSize } = body;
+  logger.info("audio-upload-complete: request received", {
+    applicationId,
+    questionId,
+    storagePath,
+    mimeType,
+    fileSize,
+  });
   if (!applicationId || !questionId || !storagePath || !mimeType) {
     return errorResponse("VALIDATION_ERROR", "Missing required fields.", 400);
   }
@@ -160,12 +168,25 @@ export async function POST(request: NextRequest) {
           err instanceof Prisma.PrismaClientKnownRequestError &&
           err.code === "P2002"
         ) {
-          // no-op
+          logger.info(
+            "audio-upload-complete: create raced (P2002), continuing",
+            {
+              applicationId,
+              questionId,
+              storagePath,
+            },
+          );
         } else {
           throw err;
         }
       }
     }
+    logger.info("audio-upload-complete: row initialization completed", {
+      applicationId,
+      questionId,
+      storagePath,
+      updatedRows,
+    });
 
     // Hard guarantee: edge function update path requires a row with matching
     // applicant/question and current storage path.
@@ -205,38 +226,132 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { error } = await supabase.functions.invoke(
-    "transcribe-questionnaire-audio",
-    { body: payload },
-  );
+  // voiceAudioPath is now confirmed in the DB. Return to the client immediately
+  // so the UI can show "confirmed" with the guarantee that server-side form
+  // validation (voiceAudioPath: { not: null }) will pass. Transcription runs
+  // after the response via after() so it never blocks the client.
+  after(async () => {
+    type EdgeResult = {
+      status?: "transcribed" | "failed" | "skipped";
+      transcript?: string;
+      provider?: string;
+      errorCode?: string;
+    };
 
-  if (error) {
-    logger.warn("audio-upload-complete: manual transcription trigger failed", {
+    const { error, data } = await supabase.functions.invoke<EdgeResult>(
+      "transcribe-questionnaire-audio",
+      { body: payload },
+    );
+
+    if (error) {
+      logger.warn(
+        "audio-upload-complete: manual transcription trigger failed",
+        {
+          applicationId,
+          questionId,
+          storagePath,
+          error: error.message,
+        },
+      );
+      await db.questionnaireAnswer
+        .updateMany({
+          where: {
+            applicantId: applicationId,
+            questionId,
+            voiceAudioPath: storagePath,
+            OR: [
+              { voiceStatus: null },
+              { voiceStatus: { not: "transcribed" } },
+            ],
+          },
+          data: { voiceStatus: "failed", voiceErrorCode: "TRIGGER_FAILED" },
+        })
+        .catch(() => {});
+      return;
+    }
+
+    const result = data as EdgeResult | null;
+    logger.info("audio-upload-complete: edge function returned", {
       applicationId,
       questionId,
       storagePath,
-      error: error.message,
+      status: result?.status ?? null,
+      hasTranscript: Boolean(result?.transcript),
+      provider: result?.provider ?? null,
+      errorCode: result?.errorCode ?? null,
     });
-    // Fast-fail this attempt so the client doesn't sit in "processing" timeout
-    // when both webhook + manual trigger are unavailable.
-    await db.questionnaireAnswer
-      .updateMany({
-        where: {
-          applicantId: applicationId,
+
+    try {
+      if (result?.status === "transcribed" && result.transcript) {
+        await db.questionnaireAnswer.updateMany({
+          where: {
+            applicantId: applicationId,
+            questionId,
+            voiceAudioPath: storagePath,
+          },
+          data: {
+            voiceStatus: "transcribed",
+            voiceTranscript: result.transcript,
+            voiceProvider: result.provider ?? null,
+            voiceTranscribedAt: new Date(),
+            voiceErrorCode: null,
+          },
+        });
+        logger.info("audio-upload-complete: transcription written to DB", {
+          applicationId,
           questionId,
-          voiceAudioPath: storagePath,
-          OR: [{ voiceStatus: null }, { voiceStatus: { not: "transcribed" } }],
+          storagePath,
+          provider: result.provider ?? null,
+        });
+      } else if (result?.status === "failed") {
+        await db.questionnaireAnswer.updateMany({
+          where: {
+            applicantId: applicationId,
+            questionId,
+            voiceAudioPath: storagePath,
+            OR: [
+              { voiceStatus: null },
+              { voiceStatus: { not: "transcribed" } },
+            ],
+          },
+          data: {
+            voiceStatus: "failed",
+            voiceErrorCode: result.errorCode ?? "TRANSCRIPTION_FAILED",
+          },
+        });
+        logger.info(
+          "audio-upload-complete: transcription failed, written to DB",
+          {
+            applicationId,
+            questionId,
+            storagePath,
+            errorCode: result.errorCode ?? null,
+          },
+        );
+      } else if (result?.status === "skipped") {
+        logger.warn(
+          "audio-upload-complete: edge function skipped transcription",
+          { applicationId, questionId, storagePath },
+        );
+      } else {
+        logger.warn(
+          "audio-upload-complete: unexpected edge function response",
+          { applicationId, questionId, storagePath, result },
+        );
+      }
+    } catch (err) {
+      logger.error(
+        "audio-upload-complete: failed to write transcription result",
+        {
+          applicationId,
+          questionId,
+          storagePath,
+          status: result?.status ?? null,
+          error: err instanceof Error ? err.message : String(err),
         },
-        data: {
-          voiceStatus: "failed",
-          voiceErrorCode: "TRIGGER_FAILED",
-        },
-      })
-      .catch(() => {
-        // Best effort only; keep response successful.
-      });
-    return successResponse({ queued: false });
-  }
+      );
+    }
+  });
 
   return successResponse({ queued: true });
 }

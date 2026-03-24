@@ -174,11 +174,20 @@ export async function GET(request: NextRequest) {
   ]);
 
   const answerMap = answers.reduce<
-    Record<string, { value: unknown; richText?: string | null }>
+    Record<
+      string,
+      {
+        value: unknown;
+        richText?: string | null;
+        voiceAudioPath?: string | null;
+      }
+    >
   >((acc, answer) => {
     acc[answer.questionId] = {
       value: answer.value,
       richText: answer.richText ?? null,
+      // Included so the client can restore confirmedAudio state after refresh.
+      voiceAudioPath: answer.voiceAudioPath ?? null,
     };
     return acc;
   }, {});
@@ -393,6 +402,35 @@ export async function POST(request: NextRequest) {
     richText: string | null;
   }> = [];
 
+  // Pre-fetch voice recordings for required TEXTAREA questions that have an
+  // empty submitted value. A confirmed recording satisfies the requirement
+  // even when the applicant left the text field blank.
+  const emptyRequiredTextareaIds = body.answers
+    .filter((a) => {
+      const q = questionMap.get(a.questionId);
+      return (
+        q?.type === "TEXTAREA" &&
+        q.isRequired &&
+        (a.value === null ||
+          a.value === undefined ||
+          String(a.value).trim() === "")
+      );
+    })
+    .map((a) => a.questionId);
+
+  const questionsWithVoice = new Set<string>();
+  if (emptyRequiredTextareaIds.length > 0) {
+    const voiceRows = await db.questionnaireAnswer.findMany({
+      where: {
+        applicantId: applicationId,
+        questionId: { in: emptyRequiredTextareaIds },
+        voiceAudioPath: { not: null },
+      },
+      select: { questionId: true },
+    });
+    voiceRows.forEach((r) => questionsWithVoice.add(r.questionId));
+  }
+
   for (const answer of body.answers) {
     const question = questionMap.get(answer.questionId);
     if (!question) {
@@ -408,7 +446,11 @@ export async function POST(request: NextRequest) {
         isRequired: question.isRequired,
         options: question.options as QuestionnaireOptions,
       },
-      { value: answer.value, richText: answer.richText },
+      {
+        value: answer.value,
+        richText: answer.richText,
+        hasVoiceRecording: questionsWithVoice.has(answer.questionId),
+      },
     );
 
     if (!validation.ok) {

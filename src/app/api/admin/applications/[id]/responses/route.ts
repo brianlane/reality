@@ -2,6 +2,8 @@ import sanitizeHtml from "sanitize-html";
 import { getAuthUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { getSupabaseClient } from "@/lib/storage/client";
+import { VOICE_AUDIO_BUCKET } from "@/lib/voice-config";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -48,6 +50,26 @@ export async function GET(_request: Request, { params }: RouteContext) {
     orderBy: { createdAt: "asc" },
   });
 
+  // Pre-generate signed download URLs (1-hour expiry) for any voice recordings.
+  const supabase = getSupabaseClient();
+  const voiceAudioUrlMap = new Map<string, string>();
+  if (supabase) {
+    const voicePaths = answers
+      .filter((a) => a.voiceAudioPath)
+      .map((a) => ({ answerId: a.id, path: a.voiceAudioPath! }));
+
+    await Promise.all(
+      voicePaths.map(async ({ answerId, path }) => {
+        const { data, error } = await supabase.storage
+          .from(VOICE_AUDIO_BUCKET)
+          .createSignedUrl(path, 86400); // 24-hour expiry for admin review sessions
+        if (!error && data?.signedUrl) {
+          voiceAudioUrlMap.set(answerId, data.signedUrl);
+        }
+      }),
+    );
+  }
+
   // Organize answers by page > section > question
   const pageMap = new Map<
     string,
@@ -71,7 +93,9 @@ export async function GET(_request: Request, { params }: RouteContext) {
             answeredAt: string;
             voiceStatus: string | null;
             voiceProvider: string | null;
+            voiceTranscript: string | null;
             voiceTranscribedAt: string | null;
+            voiceAudioUrl: string | null;
           }>;
         }
       >;
@@ -120,7 +144,9 @@ export async function GET(_request: Request, { params }: RouteContext) {
       answeredAt: answer.updatedAt.toISOString(),
       voiceStatus: answer.voiceStatus ?? null,
       voiceProvider: answer.voiceProvider ?? null,
+      voiceTranscript: answer.voiceTranscript ?? null,
       voiceTranscribedAt: answer.voiceTranscribedAt?.toISOString() ?? null,
+      voiceAudioUrl: voiceAudioUrlMap.get(answer.id) ?? null,
     });
   }
 

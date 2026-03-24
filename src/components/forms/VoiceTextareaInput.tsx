@@ -6,20 +6,18 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   VOICE_MAX_DURATION_SECONDS,
   VOICE_MAX_FILE_SIZE_BYTES,
-  VOICE_POLL_INTERVAL_MS,
-  VOICE_POLL_MAX_ATTEMPTS,
-  type VoiceStatus,
 } from "@/lib/voice-config";
 import { ERROR_MESSAGES } from "@/lib/error-messages";
 
-// Flag 4: Async processing UX — all states the voice pipeline can be in.
+// Client UI states for the voice recording flow.
+// Transcription is server-side only; clients only record, review, and confirm.
 type VoicePhase =
   | { phase: "idle" }
   | { phase: "recording"; startedAt: number }
+  | { phase: "recorded"; blob: Blob; mimeType: string; blobUrl: string }
   | { phase: "uploading" }
-  | { phase: "processing"; storagePath: string }
-  | { phase: "transcribed"; transcript: string; storagePath: string }
-  | { phase: "failed"; message: string; storagePath?: string };
+  | { phase: "confirmed"; blobUrl: string }
+  | { phase: "failed"; message: string };
 
 interface VoiceTextareaInputProps {
   value: string;
@@ -28,6 +26,8 @@ interface VoiceTextareaInputProps {
   applicationId: string | null;
   rows?: number;
   required?: boolean;
+  /** Called when a recording is confirmed (true) or discarded (false). */
+  onAudioConfirmed?: (confirmed: boolean) => void;
 }
 
 function formatDuration(seconds: number): string {
@@ -43,6 +43,7 @@ export function VoiceTextareaInput({
   applicationId,
   rows = 4,
   required,
+  onAudioConfirmed,
 }: VoiceTextareaInputProps) {
   "use no memo";
   const [voicePhase, setVoicePhase] = useState<VoicePhase>({ phase: "idle" });
@@ -52,11 +53,15 @@ export function VoiceTextareaInput({
   const chunksRef = useRef<Blob[]>([]);
   const cancelledRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pollAttemptsRef = useRef(0);
-  const pollGenerationRef = useRef(0);
-  const pollRequestControllerRef = useRef<AbortController | null>(null);
-  const pollInFlightRef = useRef(false);
+  // Track current blob URL so we can revoke it when re-recording or on unmount.
+  const blobUrlRef = useRef<string | null>(null);
+
+  const revokeBlobUrl = useCallback(() => {
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+  }, []);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -66,25 +71,11 @@ export function VoiceTextareaInput({
     setElapsed(0);
   }, []);
 
-  const clearPoll = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-    if (pollRequestControllerRef.current) {
-      pollRequestControllerRef.current.abort();
-      pollRequestControllerRef.current = null;
-    }
-    pollInFlightRef.current = false;
-    pollGenerationRef.current += 1;
-    pollAttemptsRef.current = 0;
-  }, []);
-
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       clearTimer();
-      clearPoll();
+      revokeBlobUrl();
       if (
         mediaRecorderRef.current &&
         mediaRecorderRef.current.state !== "inactive"
@@ -93,96 +84,28 @@ export function VoiceTextareaInput({
         mediaRecorderRef.current.stop();
       }
     };
-  }, [clearTimer, clearPoll]);
+  }, [clearTimer, revokeBlobUrl]);
 
-  const startPolling = useCallback(
-    (storagePath: string) => {
-      if (!applicationId) return;
-      // Clear any previously running poll so the old interval isn't leaked if
-      // startPolling is somehow called while a poll is already active.
-      clearPoll();
-      const generation = pollGenerationRef.current;
-      pollAttemptsRef.current = 0;
-
-      pollRef.current = setInterval(async () => {
-        if (generation !== pollGenerationRef.current) {
-          return;
-        }
-        if (pollInFlightRef.current) {
-          return;
-        }
-        pollInFlightRef.current = true;
-        pollAttemptsRef.current += 1;
-
-        // Flag 4: timeout after max polling attempts
-        if (pollAttemptsRef.current > VOICE_POLL_MAX_ATTEMPTS) {
-          if (generation === pollGenerationRef.current) {
-            clearPoll();
-            setVoicePhase({
-              phase: "failed",
-              message: "Transcription timed out. Please try again.",
-              storagePath,
-            });
-          }
-          return;
-        }
-
-        const controller = new AbortController();
-        pollRequestControllerRef.current = controller;
-
-        try {
-          const res = await fetch(
-            `/api/applications/questionnaire/voice-status?applicationId=${encodeURIComponent(applicationId)}&questionId=${encodeURIComponent(questionId)}`,
-            { signal: controller.signal },
-          );
-          if (generation !== pollGenerationRef.current) return;
-          if (!res.ok) return;
-
-          const data = (await res.json()) as {
-            voiceStatus: VoiceStatus | null;
-            voiceTranscript: string | null;
-            voiceErrorCode: string | null;
-          };
-          if (generation !== pollGenerationRef.current) return;
-
-          if (data.voiceStatus === "transcribed" && data.voiceTranscript) {
-            clearPoll();
-            setVoicePhase({
-              phase: "transcribed",
-              transcript: data.voiceTranscript,
-              storagePath,
-            });
-          } else if (data.voiceStatus === "failed") {
-            clearPoll();
-            setVoicePhase({
-              phase: "failed",
-              message: ERROR_MESSAGES.VOICE_TRANSCRIPTION_FAILED,
-              storagePath,
-            });
-          }
-          // voiceStatus === "processing" or null → keep polling
-        } catch (err) {
-          // Network error — keep polling; don't abort
-          if (err instanceof DOMException && err.name === "AbortError") {
-            return;
-          }
-        } finally {
-          if (pollRequestControllerRef.current === controller) {
-            pollRequestControllerRef.current = null;
-          }
-          pollInFlightRef.current = false;
-        }
-      }, VOICE_POLL_INTERVAL_MS);
+  const resetToIdle = useCallback(
+    (wasConfirmed: boolean) => {
+      revokeBlobUrl();
+      setVoicePhase({ phase: "idle" });
+      if (wasConfirmed) {
+        onAudioConfirmed?.(false);
+      }
     },
-    [applicationId, questionId, clearPoll],
+    [revokeBlobUrl, onAudioConfirmed],
   );
 
-  const uploadAudio = useCallback(
-    async (blob: Blob) => {
+  const uploadAndConfirm = useCallback(
+    async (blob: Blob, blobUrl: string) => {
       if (!applicationId) return;
       setVoicePhase({ phase: "uploading" });
+      // Revoke any prior confirmation immediately. It will be re-issued on
+      // success. This prevents stale confirmedAudio=true when a re-upload
+      // attempt fails (e.g. after page refresh restored a previous recording).
+      onAudioConfirmed?.(false);
 
-      // Flag 3: client-side size guard
       if (blob.size > VOICE_MAX_FILE_SIZE_BYTES) {
         setVoicePhase({
           phase: "failed",
@@ -231,7 +154,6 @@ export function VoiceTextareaInput({
             ? signedUrl
             : (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "") + signedUrl;
 
-        // Upload directly to Supabase Storage via the signed URL
         const uploadRes = await fetch(uploadUrl, {
           method: "PUT",
           headers: { "Content-Type": normalizedMimeType },
@@ -252,44 +174,54 @@ export function VoiceTextareaInput({
           return;
         }
 
-        // Flag 4: transition to processing and begin polling
-        setVoicePhase({ phase: "processing", storagePath });
-        // Reliability fallback: explicitly trigger edge transcription in case
-        // storage webhooks are delayed/misconfigured in production.
-        void fetch("/api/applications/questionnaire/audio-upload-complete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            applicationId,
-            questionId,
-            storagePath,
-            mimeType: normalizedMimeType,
-            fileSize: blob.size,
-          }),
-        })
-          .then(async (res) => {
-            if (!res.ok) {
-              console.warn("audio-upload-complete returned non-OK status", {
-                status: res.status,
-              });
-              return;
-            }
-            const data = (await res.json().catch(() => ({}))) as {
-              queued?: boolean;
+        // Await audio-upload-complete so voiceAudioPath is written to the DB
+        // before the UI transitions to "confirmed". This eliminates the race
+        // where a quick form submission would reach the server before the DB
+        // write, causing a valid recording to be rejected. The route returns
+        // immediately after the DB write; transcription runs server-side via
+        // after() and never blocks this await.
+        //
+        // Both a non-ok response AND a network error mean the DB write did not
+        // complete, so we must fail rather than falsely confirm — otherwise the
+        // user would see "Voice recording saved" but server-side validation
+        // would reject their form submission (voiceAudioPath still null in DB).
+        try {
+          const completeRes = await fetch(
+            "/api/applications/questionnaire/audio-upload-complete",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                applicationId,
+                questionId,
+                storagePath,
+                mimeType: normalizedMimeType,
+                fileSize: blob.size,
+              }),
+            },
+          );
+          if (!completeRes.ok) {
+            const errData = (await completeRes.json().catch(() => ({}))) as {
+              error?: { message?: string };
             };
-            if (data.queued === false) {
-              console.warn(
-                "audio-upload-complete could not queue transcription; awaiting webhook fallback",
-              );
-            }
-          })
-          .catch(() => {
-            // Non-fatal: polling may still succeed via the native storage webhook path.
-            console.warn(
-              "audio-upload-complete request failed; awaiting webhook fallback",
-            );
+            setVoicePhase({
+              phase: "failed",
+              message:
+                errData?.error?.message ?? ERROR_MESSAGES.VOICE_UPLOAD_FAILED,
+            });
+            return;
+          }
+        } catch {
+          // Network failure — voiceAudioPath was not written to DB.
+          setVoicePhase({
+            phase: "failed",
+            message: ERROR_MESSAGES.VOICE_UPLOAD_FAILED,
           });
-        startPolling(storagePath);
+          return;
+        }
+
+        setVoicePhase({ phase: "confirmed", blobUrl });
+        onAudioConfirmed?.(true);
       } catch {
         setVoicePhase({
           phase: "failed",
@@ -297,7 +229,7 @@ export function VoiceTextareaInput({
         });
       }
     },
-    [applicationId, questionId, startPolling],
+    [applicationId, questionId, onAudioConfirmed],
   );
 
   const stopRecording = useCallback(() => {
@@ -322,7 +254,6 @@ export function VoiceTextareaInput({
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Flag 2: prefer webm/opus (Chrome/Firefox), fall back to mp4 (Safari)
       const mimeType =
         [
           "audio/webm;codecs=opus",
@@ -345,19 +276,26 @@ export function VoiceTextareaInput({
 
       recorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop());
-        if (cancelledRef.current) return; // discard without uploading
-        const blob = new Blob(chunksRef.current, {
-          type: mimeType || "audio/webm",
+        if (cancelledRef.current) return;
+        const effectiveMime = mimeType || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type: effectiveMime });
+        // Revoke any previous blob URL before creating a new one.
+        revokeBlobUrl();
+        const blobUrl = URL.createObjectURL(blob);
+        blobUrlRef.current = blobUrl;
+        setVoicePhase({
+          phase: "recorded",
+          blob,
+          mimeType: effectiveMime,
+          blobUrl,
         });
-        void uploadAudio(blob);
       };
 
-      recorder.start(250); // collect chunks every 250ms
+      recorder.start(250);
       const startedAt = Date.now();
       setVoicePhase({ phase: "recording", startedAt });
       setElapsed(0);
 
-      // Flag 3: auto-stop at max duration
       timerRef.current = setInterval(() => {
         const secs = Math.floor((Date.now() - startedAt) / 1000);
         setElapsed(secs);
@@ -375,7 +313,7 @@ export function VoiceTextareaInput({
             : "Could not start recording. Please check microphone permissions.";
       setVoicePhase({ phase: "failed", message });
     }
-  }, [applicationId, stopRecording, uploadAudio]);
+  }, [applicationId, stopRecording, revokeBlobUrl]);
 
   const cancelRecording = useCallback(() => {
     cancelledRef.current = true;
@@ -389,34 +327,15 @@ export function VoiceTextareaInput({
     setVoicePhase({ phase: "idle" });
   }, [clearTimer]);
 
-  const useTranscript = useCallback(() => {
-    if (voicePhase.phase !== "transcribed") return;
-    onChange(voicePhase.transcript);
-    setVoicePhase({ phase: "idle" });
-  }, [voicePhase, onChange]);
-
-  const appendTranscript = useCallback(() => {
-    if (voicePhase.phase !== "transcribed") return;
-    const sep = value.trim().length > 0 ? "\n\n" : "";
-    onChange(value + sep + voicePhase.transcript);
-    setVoicePhase({ phase: "idle" });
-  }, [voicePhase, value, onChange]);
-
-  const resetVoice = useCallback(() => {
-    clearPoll();
-    clearTimer();
-    setVoicePhase({ phase: "idle" });
-  }, [clearPoll, clearTimer]);
-
   const isBusy =
-    voicePhase.phase === "uploading" || voicePhase.phase === "processing";
+    voicePhase.phase === "uploading" || voicePhase.phase === "recording";
 
   return (
     <div className="space-y-2">
       <Textarea
         rows={rows}
         value={value}
-        required={required}
+        required={required && voicePhase.phase !== "confirmed"}
         onChange={(e) => onChange(e.target.value)}
         disabled={isBusy}
         className={isBusy ? "opacity-60" : undefined}
@@ -447,7 +366,7 @@ export function VoiceTextareaInput({
               onClick={stopRecording}
               className="inline-flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-colors"
             >
-              Stop &amp; transcribe
+              Stop recording
             </button>
             <button
               type="button"
@@ -462,14 +381,7 @@ export function VoiceTextareaInput({
         {voicePhase.phase === "uploading" && (
           <span className="flex items-center gap-1.5 text-xs text-navy-soft">
             <SpinnerIcon />
-            Uploading…
-          </span>
-        )}
-
-        {voicePhase.phase === "processing" && (
-          <span className="flex items-center gap-1.5 text-xs text-navy-soft">
-            <SpinnerIcon />
-            Transcribing your voice answer…
+            Saving recording…
           </span>
         )}
 
@@ -478,7 +390,7 @@ export function VoiceTextareaInput({
             <span className="text-xs text-red-600">{voicePhase.message}</span>
             <button
               type="button"
-              onClick={resetVoice}
+              onClick={() => resetToIdle(false)}
               className="text-xs text-navy-soft hover:text-navy underline"
             >
               Try again
@@ -487,40 +399,51 @@ export function VoiceTextareaInput({
         )}
       </div>
 
-      {/* Transcript suggestion panel — shown when transcription is ready */}
-      {voicePhase.phase === "transcribed" && (
-        <div className="rounded-lg border border-copper/40 bg-copper/5 p-3 space-y-2">
-          <p className="text-xs font-semibold text-copper-dark">
-            Voice transcript ready — review and use below
+      {/* Recorded: playback + confirm/discard */}
+      {voicePhase.phase === "recorded" && (
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
+          <p className="text-xs font-medium text-navy-soft">
+            Review your recording before saving
           </p>
-          <p className="text-sm text-navy-soft whitespace-pre-wrap leading-relaxed">
-            {voicePhase.transcript}
-          </p>
+          <audio src={voicePhase.blobUrl} controls className="w-full" />
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <button
               type="button"
-              onClick={useTranscript}
-              className="rounded-md bg-copper px-3 py-1.5 text-xs font-semibold text-white hover:bg-copper-dark transition-colors"
+              onClick={() =>
+                void uploadAndConfirm(voicePhase.blob, voicePhase.blobUrl)
+              }
+              className="inline-flex items-center gap-1.5 rounded-md bg-copper px-3 py-1.5 text-xs font-semibold text-white hover:bg-copper-dark transition-colors"
             >
-              Use as answer
+              Save recording
             </button>
-            {value.trim().length > 0 && (
-              <button
-                type="button"
-                onClick={appendTranscript}
-                className="rounded-md border border-copper text-copper px-3 py-1.5 text-xs font-medium hover:bg-copper/10 transition-colors"
-              >
-                Append to answer
-              </button>
-            )}
             <button
               type="button"
-              onClick={resetVoice}
+              onClick={() => resetToIdle(false)}
               className="text-xs text-navy-soft hover:text-navy underline"
             >
-              Dismiss
+              Re-record
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Confirmed: saved indicator + playback */}
+      {voicePhase.phase === "confirmed" && (
+        <div className="rounded-lg border border-copper/40 bg-copper/5 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-copper-dark">
+              <CheckIcon />
+              Voice recording saved
+            </p>
+            <button
+              type="button"
+              onClick={() => resetToIdle(true)}
+              className="text-xs text-navy-soft hover:text-navy underline"
+            >
+              Re-record
+            </button>
+          </div>
+          <audio src={voicePhase.blobUrl} controls className="w-full" />
         </div>
       )}
     </div>
@@ -561,6 +484,24 @@ function SpinnerIcon() {
       aria-hidden="true"
     >
       <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="20 6 9 17 4 12" />
     </svg>
   );
 }
