@@ -98,7 +98,7 @@ export function VoiceTextareaInput({
   );
 
   const uploadAndConfirm = useCallback(
-    async (blob: Blob, mimeType: string, blobUrl: string) => {
+    async (blob: Blob, blobUrl: string) => {
       if (!applicationId) return;
       setVoicePhase({ phase: "uploading" });
 
@@ -375,11 +375,7 @@ export function VoiceTextareaInput({
             <button
               type="button"
               onClick={() =>
-                void uploadAndConfirm(
-                  voicePhase.blob,
-                  voicePhase.mimeType,
-                  voicePhase.blobUrl,
-                )
+                void uploadAndConfirm(voicePhase.blob, voicePhase.blobUrl)
               }
               className="inline-flex items-center gap-1.5 rounded-md bg-copper px-3 py-1.5 text-xs font-semibold text-white hover:bg-copper-dark transition-colors"
             >

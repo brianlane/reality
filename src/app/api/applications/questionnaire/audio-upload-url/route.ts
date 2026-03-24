@@ -122,15 +122,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Mark voice as processing so the status poll has an initial state immediately.
-  // Fail fast if this write fails — edge transcription now expects the row to exist.
+  // Reserve a row and mark it as pending upload. voiceAudioPath is intentionally
+  // left null here — audio-upload-complete (called only after a successful PUT)
+  // is the sole writer of voiceAudioPath. This prevents a stale path in the DB
+  // when the storage upload fails or is cancelled after re-recording.
   try {
     await db.questionnaireAnswer.upsert({
       where: {
         applicantId_questionId: { applicantId: applicationId, questionId },
       },
       update: {
-        voiceAudioPath: storagePath,
+        voiceAudioPath: null,
         voiceMimeType: mimeType,
         voiceStatus: "processing",
         voiceTranscript: null,
@@ -142,7 +144,6 @@ export async function POST(request: NextRequest) {
         applicantId: applicationId,
         questionId,
         value: Prisma.DbNull,
-        voiceAudioPath: storagePath,
         voiceMimeType: mimeType,
         voiceStatus: "processing",
       },
