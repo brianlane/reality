@@ -101,6 +101,10 @@ export function VoiceTextareaInput({
     async (blob: Blob, blobUrl: string) => {
       if (!applicationId) return;
       setVoicePhase({ phase: "uploading" });
+      // Revoke any prior confirmation immediately. It will be re-issued on
+      // success. This prevents stale confirmedAudio=true when a re-upload
+      // attempt fails (e.g. after page refresh restored a previous recording).
+      onAudioConfirmed?.(false);
 
       if (blob.size > VOICE_MAX_FILE_SIZE_BYTES) {
         setVoicePhase({
@@ -170,23 +174,31 @@ export function VoiceTextareaInput({
           return;
         }
 
-        // Recording confirmed — transition before firing background transcription.
+        // Await audio-upload-complete so voiceAudioPath is written to the DB
+        // before the UI transitions to "confirmed". This eliminates the race
+        // where a quick form submission would reach the server before the DB
+        // write, causing a valid recording to be rejected. The route returns
+        // immediately after the DB write; transcription runs server-side via
+        // after() and never blocks this await.
+        try {
+          await fetch("/api/applications/questionnaire/audio-upload-complete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              applicationId,
+              questionId,
+              storagePath,
+              mimeType: normalizedMimeType,
+              fileSize: blob.size,
+            }),
+          });
+        } catch {
+          // Non-fatal: the audio file is in storage. A background process can
+          // still transcribe it. Show confirmed anyway.
+        }
+
         setVoicePhase({ phase: "confirmed", blobUrl });
         onAudioConfirmed?.(true);
-
-        // Fire-and-forget: trigger server-side transcription for admin review.
-        // The client does not poll for the result.
-        void fetch("/api/applications/questionnaire/audio-upload-complete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            applicationId,
-            questionId,
-            storagePath,
-            mimeType: normalizedMimeType,
-            fileSize: blob.size,
-          }),
-        }).catch(() => {});
       } catch {
         setVoicePhase({
           phase: "failed",
