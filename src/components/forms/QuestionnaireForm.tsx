@@ -677,6 +677,62 @@ export default function QuestionnaireForm({
     return errors;
   }
 
+  function getRequiredSimpleFieldErrors(): Record<string, string> {
+    const errors: Record<string, string> = {};
+
+    for (const section of sections) {
+      for (const question of section.questions) {
+        if (!question.isRequired) continue;
+        const answer = answers[question.id];
+
+        if (question.type === "TEXT") {
+          // Numeric TEXT is already covered by getNumericFieldErrors.
+          if (getTextOptions(question)) continue;
+          if (isEmptyTextLikeValue(answer?.value))
+            errors[question.id] = "This field is required.";
+        } else if (
+          question.type === "DROPDOWN" ||
+          question.type === "RADIO_7"
+        ) {
+          const val = String(answer?.value ?? "").trim();
+          if (!val) errors[question.id] = "Please select an option.";
+        } else if (question.type === "CHECKBOXES") {
+          // Only check "at least one selected" here; exact-count maxSelections
+          // is handled by getCheckboxSelectionErrors.
+          const opts = question.options as CheckboxOptions | string[] | null;
+          const hasMaxSelections =
+            !Array.isArray(opts) &&
+            opts !== null &&
+            typeof opts === "object" &&
+            "maxSelections" in opts;
+          if (hasMaxSelections) continue;
+          const selected = Array.isArray(answer?.value) ? answer.value : [];
+          if (selected.length === 0)
+            errors[question.id] = "Please select at least one option.";
+        } else if (question.type === "NUMBER_SCALE") {
+          const val = answer?.value;
+          if (
+            val === "" ||
+            val === null ||
+            val === undefined ||
+            isNaN(Number(val))
+          )
+            errors[question.id] = "This field is required.";
+        } else if (question.type === "AGE_RANGE") {
+          const ageVal = answer?.value as
+            | { min?: number; max?: number }
+            | undefined;
+          if (ageVal?.min === undefined)
+            errors[question.id] = "Please select a minimum age.";
+          else if (ageVal?.max === undefined)
+            errors[question.id] = "Please select a maximum age.";
+        }
+      }
+    }
+
+    return errors;
+  }
+
   function getRequiredTextareaErrors(): Record<string, string> {
     const errors: Record<string, string> = {};
 
@@ -695,11 +751,15 @@ export default function QuestionnaireForm({
   }
 
   function validateCurrentPageFields(): boolean {
+    const requiredSimpleErrors = getRequiredSimpleFieldErrors();
     const checkboxErrors = getCheckboxSelectionErrors();
     const numericErrors = getNumericFieldErrors();
     const structuredErrors = getStructuredFieldErrors();
     const requiredTextareaErrors = getRequiredTextareaErrors();
+    // requiredSimpleErrors is spread first so more-specific validators
+    // (numeric, textarea) can override its generic "required" messages.
     const nextErrors = {
+      ...requiredSimpleErrors,
       ...checkboxErrors,
       ...numericErrors,
       ...structuredErrors,
@@ -1014,9 +1074,10 @@ export default function QuestionnaireForm({
                   <Select
                     value={String(answer.value ?? "")}
                     required={question.isRequired}
-                    onChange={(event) =>
-                      updateAnswer(question.id, { value: event.target.value })
-                    }
+                    onChange={(event) => {
+                      updateAnswer(question.id, { value: event.target.value });
+                      clearFieldError(question.id);
+                    }}
                   >
                     <option value="">Select...</option>
                     {options.map((option, idx) => (
@@ -1025,6 +1086,11 @@ export default function QuestionnaireForm({
                       </option>
                     ))}
                   </Select>
+                  {fieldErrors[question.id] ? (
+                    <p className="text-xs text-red-500">
+                      {fieldErrors[question.id]}
+                    </p>
+                  ) : null}
                 </div>
               );
             }
@@ -1054,14 +1120,20 @@ export default function QuestionnaireForm({
                           value={option}
                           checked={answer.value === option}
                           required={question.isRequired}
-                          onChange={() =>
-                            updateAnswer(question.id, { value: option })
-                          }
+                          onChange={() => {
+                            updateAnswer(question.id, { value: option });
+                            clearFieldError(question.id);
+                          }}
                         />
                         {option}
                       </label>
                     ))}
                   </div>
+                  {fieldErrors[question.id] ? (
+                    <p className="text-xs text-red-500">
+                      {fieldErrors[question.id]}
+                    </p>
+                  ) : null}
                 </div>
               );
             }
@@ -1165,17 +1237,23 @@ export default function QuestionnaireForm({
                       step={options?.step ?? 1}
                       value={String(answer.value ?? "")}
                       required={question.isRequired}
-                      onChange={(event) =>
+                      onChange={(event) => {
                         updateAnswer(question.id, {
                           value: event.target.value,
-                        })
-                      }
+                        });
+                        clearFieldError(question.id);
+                      }}
                     />
                     <div className="flex justify-between text-xs text-navy-soft">
                       <span>{minLabel}</span>
                       <span>{maxLabel}</span>
                     </div>
                   </div>
+                  {fieldErrors[question.id] ? (
+                    <p className="text-xs text-red-500">
+                      {fieldErrors[question.id]}
+                    </p>
+                  ) : null}
                 </div>
               );
             }
@@ -1214,6 +1292,7 @@ export default function QuestionnaireForm({
                               min: val === "" ? undefined : Number(val),
                             },
                           });
+                          clearFieldError(question.id);
                         }}
                       >
                         <option value="">Select...</option>
@@ -1237,6 +1316,7 @@ export default function QuestionnaireForm({
                               max: val === "" ? undefined : Number(val),
                             },
                           });
+                          clearFieldError(question.id);
                         }}
                       >
                         <option value="">Select...</option>
@@ -1248,6 +1328,11 @@ export default function QuestionnaireForm({
                       </Select>
                     </div>
                   </div>
+                  {fieldErrors[question.id] ? (
+                    <p className="text-xs text-red-500">
+                      {fieldErrors[question.id]}
+                    </p>
+                  ) : null}
                 </div>
               );
             }

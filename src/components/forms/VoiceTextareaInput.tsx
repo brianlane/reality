@@ -180,21 +180,44 @@ export function VoiceTextareaInput({
         // write, causing a valid recording to be rejected. The route returns
         // immediately after the DB write; transcription runs server-side via
         // after() and never blocks this await.
+        //
+        // Both a non-ok response AND a network error mean the DB write did not
+        // complete, so we must fail rather than falsely confirm — otherwise the
+        // user would see "Voice recording saved" but server-side validation
+        // would reject their form submission (voiceAudioPath still null in DB).
         try {
-          await fetch("/api/applications/questionnaire/audio-upload-complete", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              applicationId,
-              questionId,
-              storagePath,
-              mimeType: normalizedMimeType,
-              fileSize: blob.size,
-            }),
-          });
+          const completeRes = await fetch(
+            "/api/applications/questionnaire/audio-upload-complete",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                applicationId,
+                questionId,
+                storagePath,
+                mimeType: normalizedMimeType,
+                fileSize: blob.size,
+              }),
+            },
+          );
+          if (!completeRes.ok) {
+            const errData = (await completeRes.json().catch(() => ({}))) as {
+              error?: { message?: string };
+            };
+            setVoicePhase({
+              phase: "failed",
+              message:
+                errData?.error?.message ?? ERROR_MESSAGES.VOICE_UPLOAD_FAILED,
+            });
+            return;
+          }
         } catch {
-          // Non-fatal: the audio file is in storage. A background process can
-          // still transcribe it. Show confirmed anyway.
+          // Network failure — voiceAudioPath was not written to DB.
+          setVoicePhase({
+            phase: "failed",
+            message: ERROR_MESSAGES.VOICE_UPLOAD_FAILED,
+          });
+          return;
         }
 
         setVoicePhase({ phase: "confirmed", blobUrl });
