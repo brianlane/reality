@@ -83,6 +83,8 @@ type Section = {
 type AnswerState = {
   value: unknown;
   richText?: string | null;
+  /** Set by the server when a voice recording has been uploaded for this answer. */
+  voiceAudioPath?: string | null;
 };
 
 type PageInfo = {
@@ -382,9 +384,21 @@ export default function QuestionnaireForm({
 
         const fetchedPages = json.pages ?? [];
         const fetchedSections = (json.sections ?? []) as Section[];
+        const fetchedAnswers = (json.answers ?? {}) as Record<
+          string,
+          AnswerState
+        >;
         setPages(fetchedPages);
         setAllSections(fetchedSections);
-        setAnswers(json.answers ?? {});
+        setAnswers(fetchedAnswers);
+
+        // Restore confirmedAudio for questions that already have a saved
+        // voice recording, so validation isn't broken after a page refresh.
+        const restoredConfirmedAudio: Record<string, boolean> = {};
+        for (const [qId, ans] of Object.entries(fetchedAnswers)) {
+          if (ans.voiceAudioPath) restoredConfirmedAudio[qId] = true;
+        }
+        setConfirmedAudio(restoredConfirmedAudio);
 
         // Determine current page from draft or start at first page
         const resumePageId = initialResumePageIdRef.current;
@@ -841,7 +855,7 @@ export default function QuestionnaireForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-8" noValidate>
       {!previewMode && pages.length > 0 && (
         <div className="rounded-md bg-slate-50 p-4">
           <div className="text-sm font-medium text-navy">

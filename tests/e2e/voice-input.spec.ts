@@ -426,8 +426,8 @@ test.describe("voice input on questionnaire", () => {
       .waitFor({ timeout: 5000 });
     await page.getByRole("button", { name: /save recording/i }).click();
 
-    // Error state
-    await expect(page.getByText(/upload failed/i)).toBeVisible({
+    // Error state — matches "Failed to upload voice recording. Please try again."
+    await expect(page.getByText(/failed to upload/i)).toBeVisible({
       timeout: 10000,
     });
 

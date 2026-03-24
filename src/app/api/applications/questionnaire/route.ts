@@ -174,11 +174,20 @@ export async function GET(request: NextRequest) {
   ]);
 
   const answerMap = answers.reduce<
-    Record<string, { value: unknown; richText?: string | null }>
+    Record<
+      string,
+      {
+        value: unknown;
+        richText?: string | null;
+        voiceAudioPath?: string | null;
+      }
+    >
   >((acc, answer) => {
     acc[answer.questionId] = {
       value: answer.value,
       richText: answer.richText ?? null,
+      // Included so the client can restore confirmedAudio state after refresh.
+      voiceAudioPath: answer.voiceAudioPath ?? null,
     };
     return acc;
   }, {});
