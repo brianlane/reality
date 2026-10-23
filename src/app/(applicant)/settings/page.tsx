@@ -5,6 +5,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AgentConsentPanel } from "@/components/applicant/AgentConsentPanel";
 import { validatePassword } from "@/lib/utils";
 
 export default function ApplicantSettingsPage() {
@@ -168,6 +169,8 @@ export default function ApplicantSettingsPage() {
           </Button>
         </form>
       </Card>
+
+      <AgentConsentPanel />
     </div>
   );
 }
