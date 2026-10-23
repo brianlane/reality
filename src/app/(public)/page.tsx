@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import LogoCircles from "@/components/layout/LogoCircles";
 import HomeCTA from "@/components/layout/HomeCTA";
 
@@ -32,6 +33,7 @@ export default function HomePage() {
   }, []);
 
   return (
+    <>
     <section className="mx-auto flex min-h-screen w-full flex-col items-center justify-center px-6">
       {/* Logo — fades in first, alone at center */}
       <div
@@ -80,5 +82,30 @@ export default function HomePage() {
         </div>
       </div>
     </section>
+
+    {/* Agent layer teaser */}
+    <section className="w-full border-t border-slate-200 bg-white px-6 py-20">
+      <div className="mx-auto flex max-w-2xl flex-col items-center text-center">
+        <p className="text-sm font-medium uppercase tracking-widest text-copper">
+          Coming soon
+        </p>
+        <h2 className="mt-4 text-3xl font-bold tracking-tight text-navy">
+          Our curators have always prepared your matches. Now your agent
+          prepares you.
+        </h2>
+        <p className="mt-4 text-lg leading-relaxed text-navy-soft">
+          Your personal AI agent briefs you before each match and debriefs
+          with you after — sharing only structured summaries, never your
+          stories, and only with your consent.
+        </p>
+        <Link
+          href="/how-agents-work"
+          className="mt-8 inline-block rounded-md border border-copper px-6 py-3 font-semibold text-copper hover:bg-copper hover:text-white"
+        >
+          How your agent works
+        </Link>
+      </div>
+    </section>
+    </>
   );
 }
