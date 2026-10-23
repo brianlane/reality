@@ -6,6 +6,7 @@ import { ensureApplicantAccount } from "@/lib/account-init";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notifyApplicationSubmitted } from "@/lib/email/admin-notifications";
 import { initiateScreening } from "@/lib/background-checks/orchestrator";
+import { generateAgentProfile } from "@/lib/agent/profile-generator";
 import { logger } from "@/lib/logger";
 import { createPaymentCheckout } from "@/lib/stripe";
 import { PHOTO_MIN_COUNT } from "@/lib/photo-config";
@@ -168,6 +169,11 @@ export async function POST(request: NextRequest) {
           incomeRange: applicant.incomeRange,
           firstPhotoUrl: applicant.photos[0],
         }).catch(() => {});
+
+        // Fire-and-forget: build the applicant's agent profile from their
+        // questionnaire answers. The generator is idempotent and no-ops
+        // when Gemini isn't configured, so this is safe to always schedule.
+        await generateAgentProfile(applicant.id);
       });
 
       // Auto-initiate screening if FCRA consent has already been given.
