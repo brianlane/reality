@@ -72,7 +72,17 @@ export async function generateAgentProfile(
   }
 
   try {
-    const [answers, existing] = await Promise.all([
+    type AnswerWithQuestion = {
+      updatedAt: Date;
+      value: unknown;
+      richText: string | null;
+      question: {
+        prompt: string;
+        type: string;
+        section: { title: string } | null;
+      };
+    };
+    const [answers, existing] = (await Promise.all([
       db.questionnaireAnswer.findMany({
         where: { applicantId },
         include: {
@@ -87,7 +97,7 @@ export async function generateAgentProfile(
         orderBy: { question: { order: "asc" } },
       }),
       db.agentProfile.findUnique({ where: { applicantId } }),
-    ]);
+    ])) as [AnswerWithQuestion[], { generatedAt: Date | null } | null];
 
     if (answers.length === 0) {
       logger.info("Agent profile generation skipped: no answers", {
