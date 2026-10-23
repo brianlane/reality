@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { AgentDebriefForm } from "@/components/applicant/AgentDebriefForm";
 
 type MatchDetail = {
   id: string;
@@ -169,6 +170,8 @@ export default function ApplicantMatchDetailPage() {
           </p>
         ) : null}
       </Card>
+
+      <AgentDebriefForm matchId={match.id} outcome={match.outcome} />
     </div>
   );
 }
