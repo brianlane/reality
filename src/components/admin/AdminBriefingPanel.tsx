@@ -87,6 +87,10 @@ export default function AdminBriefingPanel({
 }) {
   const [briefings, setBriefings] = useState<Briefing[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [candidateId, setCandidateId] = useState("");
+  const [audience, setAudience] = useState<"CURATOR" | "APPLICANT">("CURATOR");
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -109,6 +113,36 @@ export default function AdminBriefingPanel({
     void load();
   }, [load]);
 
+  async function generate() {
+    if (!candidateId.trim() || generating) return;
+    setGenerating(true);
+    setGenerateError(null);
+    try {
+      const headers = await getAuthHeaders();
+      if (!headers) return;
+      const res = await fetch(
+        `/api/admin/applicants/${applicantId}/briefings/generate`,
+        {
+          method: "POST",
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify({ candidateId: candidateId.trim(), audience }),
+        },
+      );
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error?.message ?? "Failed to generate briefing");
+      }
+      setCandidateId("");
+      await load();
+    } catch (e) {
+      setGenerateError(
+        e instanceof Error ? e.message : "Failed to generate briefing",
+      );
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   return (
     <Card>
       <div className="flex items-center justify-between">
@@ -125,6 +159,54 @@ export default function AdminBriefingPanel({
 
       <div className="mt-4">
         {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <div className="mb-4 flex flex-wrap items-end gap-2 rounded-md bg-slate-50 p-3">
+          <div>
+            <label
+              htmlFor="briefing-candidate"
+              className="text-xs font-medium text-navy-soft"
+            >
+              Candidate applicant ID
+            </label>
+            <input
+              id="briefing-candidate"
+              value={candidateId}
+              onChange={(e) => setCandidateId(e.target.value)}
+              placeholder="applicant id"
+              className="mt-1 block w-64 rounded-md border border-stone-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="briefing-audience"
+              className="text-xs font-medium text-navy-soft"
+            >
+              Audience
+            </label>
+            <select
+              id="briefing-audience"
+              value={audience}
+              onChange={(e) =>
+                setAudience(e.target.value as "CURATOR" | "APPLICANT")
+              }
+              className="mt-1 block rounded-md border border-stone-300 px-3 py-2 text-sm"
+            >
+              <option value="CURATOR">Curator</option>
+              <option value="APPLICANT">Applicant</option>
+            </select>
+          </div>
+          <Button
+            variant="outline"
+            disabled={generating || !candidateId.trim()}
+            onClick={() => void generate()}
+          >
+            {generating ? "Generating…" : "Generate briefing"}
+          </Button>
+        </div>
+        {generateError && (
+          <p className="mb-4 text-sm text-red-600">{generateError}</p>
+        )}
+
         {!error && briefings === null && (
           <p className="text-sm text-navy-soft">Loading…</p>
         )}
