@@ -54,8 +54,8 @@ export default function HowAgentsWorkPage() {
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-navy-soft">
             Your personal AI agent learns how you connect — from your
-            questionnaire, and over time from your dates — and quietly does
-            the homework before each match: where you&apos;ll click, where
+            questionnaire, and over time from your dates — and quietly does the
+            homework before each match: where you&apos;ll click, where
             you&apos;ll be tested, and what to talk about first.
           </p>
         </div>
@@ -120,9 +120,7 @@ export default function HowAgentsWorkPage() {
       {/* What it never shares */}
       <section className="border-b border-slate-200">
         <div className="mx-auto max-w-3xl px-6 py-16">
-          <h2 className="text-2xl font-bold text-navy">
-            What it never shares
-          </h2>
+          <h2 className="text-2xl font-bold text-navy">What it never shares</h2>
           <ul className="mt-6 space-y-3">
             {NEVER.map((item) => (
               <li key={item} className="flex items-start gap-3 text-navy-soft">
