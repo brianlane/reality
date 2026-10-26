@@ -28,7 +28,7 @@
     "source-map-js": "1.2.2",
     "@fastify/busboy": "3.2.2",
     "@ai-sdk/provider-utils": {
-      "undici": "6.29.0"
+      "undici": "6.29.1"
     }
   },
   "scripts": {
