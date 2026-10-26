@@ -1,5 +1,6 @@
 import AdminApplicationForm from "@/components/admin/AdminApplicationForm";
 import AdminApplicationTimeline from "@/components/admin/AdminApplicationTimeline";
+import AdminBriefingPanel from "@/components/admin/AdminBriefingPanel";
 import AdminQuestionnaireResponses from "@/components/admin/AdminQuestionnaireResponses";
 import AdminScreeningFlags from "@/components/admin/AdminScreeningFlags";
 
@@ -16,6 +17,7 @@ export default async function AdminApplicationDetailPage({
       <h1 className="text-2xl font-semibold text-navy">Application Detail</h1>
       <AdminApplicationTimeline applicationId={id} />
       <AdminScreeningFlags applicantId={id} />
+      <AdminBriefingPanel applicantId={id} />
       <AdminApplicationForm mode="edit" applicationId={id} />
       <AdminQuestionnaireResponses applicantId={id} />
     </div>
