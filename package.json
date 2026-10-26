@@ -26,7 +26,10 @@
     "browserslist": "4.29.4",
     "fast-uri": "3.1.9",
     "source-map-js": "1.2.2",
-    "@fastify/busboy": "3.2.2"
+    "@fastify/busboy": "3.2.2",
+    "@ai-sdk/provider-utils": {
+      "undici": "6.29.0"
+    }
   },
   "scripts": {
     "dev": "next dev",
