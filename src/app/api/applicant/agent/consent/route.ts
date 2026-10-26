@@ -25,10 +25,14 @@ const DEFAULT_CONSENT = {
 async function requireApplicant() {
   const auth = await getAuthUser();
   if (!auth) {
-    return { error: errorResponse("UNAUTHORIZED", "User not authenticated", 401) };
+    return {
+      error: errorResponse("UNAUTHORIZED", "User not authenticated", 401),
+    };
   }
   if (isAdminEmail(auth.email)) {
-    return { error: errorResponse("FORBIDDEN", "Applicant access required", 403) };
+    return {
+      error: errorResponse("FORBIDDEN", "Applicant access required", 403),
+    };
   }
   if (!auth.email) {
     return { error: errorResponse("UNAUTHORIZED", "Email not available", 401) };
@@ -104,12 +108,9 @@ export async function PUT(request: Request) {
     const cleaned: Record<string, boolean> = {};
     for (const [key, value] of Object.entries(dimensionToggles)) {
       if (!(SHARABLE_DIMENSIONS as readonly string[]).includes(key)) {
-        return errorResponse(
-          "INVALID_BODY",
-          `Unknown dimension: ${key}`,
-          400,
-          [{ field: "dimensionToggles", message: `Unknown dimension: ${key}` }],
-        );
+        return errorResponse("INVALID_BODY", `Unknown dimension: ${key}`, 400, [
+          { field: "dimensionToggles", message: `Unknown dimension: ${key}` },
+        ]);
       }
       if (typeof value !== "boolean") {
         return errorResponse(
