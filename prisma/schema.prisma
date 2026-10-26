@@ -183,6 +183,7 @@ model Applicant {
   screeningAuditLogs    ScreeningAuditLog[]
   agentProfile          AgentProfile?
   briefings             Briefing[]
+  agentConsent          AgentConsent?
 
   @@index([applicationStatus])
   @@index([gender])
@@ -651,6 +652,37 @@ model Briefing {
   @@index([matchId])
   @@index([audience])
   @@index([createdAt])
+  @@index([deletedAt])
+}
+
+// ============================================
+// AGENT CONSENT (agent-to-agent compatibility)
+// ============================================
+// Per-applicant consent for what their agent may share. See
+// PRDs/AGENT_TO_AGENT_COMPATIBILITY.md (consent flows).
+
+model AgentConsent {
+  id          String    @id @default(cuid())
+  applicantId String    @unique
+  applicant   Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  // Per-dimension sharing toggles, keyed by Tier 1 dimension name
+  // (e.g. "conflict", "values", "family"). false = never share.
+  // Absent key = default sharing per onboarding consent.
+  dimensionToggles Json      @default("{}")
+
+  // When true, the principal reviews each pouch summary before it is shared.
+  pouchReviewMode  Boolean   @default(false)
+
+  // Master kill switch: while true the agent shares nothing at all.
+  agentPaused      Boolean   @default(false)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  deletedBy   String?
+
+  @@index([applicantId])
   @@index([deletedAt])
 }
 
