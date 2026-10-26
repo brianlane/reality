@@ -9,8 +9,7 @@ import { google } from "@ai-sdk/google";
  *
  * Model override: set AGENT_MODEL to pin a different Gemini model id.
  */
-export const AGENT_MODEL_ID =
-  process.env.AGENT_MODEL ?? "gemini-2.5-flash";
+export const AGENT_MODEL_ID = process.env.AGENT_MODEL ?? "gemini-2.5-flash";
 
 export function agentModel() {
   return google(AGENT_MODEL_ID);

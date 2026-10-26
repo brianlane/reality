@@ -130,9 +130,7 @@ export default function AdminBriefingPanel({
       );
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(
-          json?.error?.message ?? "Failed to generate briefing",
-        );
+        throw new Error(json?.error?.message ?? "Failed to generate briefing");
       }
       setCandidateId("");
       await load();
@@ -214,8 +212,8 @@ export default function AdminBriefingPanel({
         )}
         {!error && briefings !== null && briefings.length === 0 && (
           <p className="text-sm text-navy-soft">
-            No briefings yet. Briefings are generated once the agent pipeline
-            is live.
+            No briefings yet. Briefings are generated once the agent pipeline is
+            live.
           </p>
         )}
         {!error &&

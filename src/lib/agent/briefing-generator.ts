@@ -18,12 +18,20 @@ const briefingContentSchema = z.object({
       }),
     )
     .max(5)
-    .describe("Where this pairing will be tested, derived from real differences"),
+    .describe(
+      "Where this pairing will be tested, derived from real differences",
+    ),
   threads: z
     .array(
       z.object({
-        prompt: z.string().max(140).describe("A conversation opener or question"),
-        why: z.string().max(200).describe("Why this thread matters for this pair"),
+        prompt: z
+          .string()
+          .max(140)
+          .describe("A conversation opener or question"),
+        why: z
+          .string()
+          .max(200)
+          .describe("Why this thread matters for this pair"),
       }),
     )
     .max(5)
@@ -59,7 +67,9 @@ export async function generateBriefing(input: GenerateBriefingInput) {
   const { applicantId, candidateId, matchId, audience } = input;
 
   if (!isAgentConfigured()) {
-    throw new Error("Gemini API key not configured (GOOGLE_GENERATIVE_AI_API_KEY)");
+    throw new Error(
+      "Gemini API key not configured (GOOGLE_GENERATIVE_AI_API_KEY)",
+    );
   }
 
   const [profileA, profileB, scoring] = await Promise.all([
