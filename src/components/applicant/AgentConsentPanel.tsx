@@ -107,9 +107,9 @@ export function AgentConsentPanel() {
       <div>
         <h2 className="text-lg font-semibold">Your agent&apos;s privacy</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Your AI agent only ever shares structured summaries with another
-          agent — never your stories, messages, or details. Control what it
-          may share here.
+          Your AI agent only ever shares structured summaries with another agent
+          — never your stories, messages, or details. Control what it may share
+          here.
         </p>
       </div>
 
