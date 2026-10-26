@@ -22,13 +22,17 @@ const dimensionSchema = z.object({
 
 const profileDimensionsSchema = z.object({
   attachment: dimensionSchema.describe("Attachment style and closeness needs"),
-  conflict: dimensionSchema.describe("Conflict style, repair attempts, boundaries"),
+  conflict: dimensionSchema.describe(
+    "Conflict style, repair attempts, boundaries",
+  ),
   values: dimensionSchema.describe("Core values, beliefs, life philosophy"),
   lifeArchitecture: dimensionSchema.describe(
     "Kids, location, career ambition, lifestyle, money psychology",
   ),
   readiness: dimensionSchema.describe("Relationship readiness and intent"),
-  family: dimensionSchema.describe("Family background and current entanglement"),
+  family: dimensionSchema.describe(
+    "Family background and current entanglement",
+  ),
 });
 
 export type ProfileDimensions = z.infer<typeof profileDimensionsSchema>;
@@ -61,9 +65,7 @@ Rules:
  * changed since the profile was generated. Never throws — safe for
  * fire-and-forget use after submission.
  */
-export async function generateAgentProfile(
-  applicantId: string,
-): Promise<void> {
+export async function generateAgentProfile(applicantId: string): Promise<void> {
   if (!isAgentConfigured()) {
     logger.info("Agent profile generation skipped: Gemini not configured", {
       applicantId,
