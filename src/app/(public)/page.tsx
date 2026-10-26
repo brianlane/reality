@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import LogoCircles from "@/components/layout/LogoCircles";
 import HomeCTA from "@/components/layout/HomeCTA";
 
@@ -32,53 +33,79 @@ export default function HomePage() {
   }, []);
 
   return (
-    <section className="mx-auto flex min-h-screen w-full flex-col items-center justify-center px-6">
-      {/* Logo — fades in first, alone at center */}
-      <div
-        className="flex flex-col items-center gap-8"
-        style={{
-          opacity: logoIn ? 1 : 0,
-          transition: "opacity 0.9s ease-out",
-        }}
-      >
-        <LogoCircles />
-        <div className="flex flex-col items-center leading-none">
-          <span className="text-6xl font-bold text-copper tracking-tight">
-            REALITY
-          </span>
-          <span className="text-sm uppercase tracking-wider text-navy-soft font-medium mt-2">
-            Matchmaking
-          </span>
-        </div>
-      </div>
-
-      {/* Copy + Buttons — expands below, pushing logo upward */}
-      <div
-        style={{
-          maxHeight: expandDone ? "none" : contentIn ? "400px" : "0",
-          opacity: contentIn ? 1 : 0,
-          overflow: expandDone ? "visible" : "hidden",
-          marginTop: contentIn ? "3rem" : "0",
-          transition:
-            "max-height 0.9s ease-out, opacity 0.7s ease-out, margin-top 0.9s ease-out",
-        }}
-      >
-        <div className="flex flex-col items-center gap-6 text-center">
-          <p className="text-lg tracking-wide text-navy-soft">
-            You were never the problem.
-          </p>
-          <p className="text-lg tracking-wide text-navy-soft">
-            Swipes don&apos;t spark chemistry.
-          </p>
-          <p className="text-xl font-bold tracking-wide text-navy -mt-3">
-            Reality does.
-          </p>
+    <>
+      <section className="mx-auto flex min-h-screen w-full flex-col items-center justify-center px-6">
+        {/* Logo — fades in first, alone at center */}
+        <div
+          className="flex flex-col items-center gap-8"
+          style={{
+            opacity: logoIn ? 1 : 0,
+            transition: "opacity 0.9s ease-out",
+          }}
+        >
+          <LogoCircles />
+          <div className="flex flex-col items-center leading-none">
+            <span className="text-6xl font-bold text-copper tracking-tight">
+              REALITY
+            </span>
+            <span className="text-sm uppercase tracking-wider text-navy-soft font-medium mt-2">
+              Matchmaking
+            </span>
+          </div>
         </div>
 
-        <div className="mt-12 flex flex-col items-center gap-3 w-full max-w-md">
-          <HomeCTA />
+        {/* Copy + Buttons — expands below, pushing logo upward */}
+        <div
+          style={{
+            maxHeight: expandDone ? "none" : contentIn ? "400px" : "0",
+            opacity: contentIn ? 1 : 0,
+            overflow: expandDone ? "visible" : "hidden",
+            marginTop: contentIn ? "3rem" : "0",
+            transition:
+              "max-height 0.9s ease-out, opacity 0.7s ease-out, margin-top 0.9s ease-out",
+          }}
+        >
+          <div className="flex flex-col items-center gap-6 text-center">
+            <p className="text-lg tracking-wide text-navy-soft">
+              You were never the problem.
+            </p>
+            <p className="text-lg tracking-wide text-navy-soft">
+              Swipes don&apos;t spark chemistry.
+            </p>
+            <p className="text-xl font-bold tracking-wide text-navy -mt-3">
+              Reality does.
+            </p>
+          </div>
+
+          <div className="mt-12 flex flex-col items-center gap-3 w-full max-w-md">
+            <HomeCTA />
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      {/* Agent layer teaser */}
+      <section className="w-full border-t border-slate-200 bg-white px-6 py-20">
+        <div className="mx-auto flex max-w-2xl flex-col items-center text-center">
+          <p className="text-sm font-medium uppercase tracking-widest text-copper">
+            Coming soon
+          </p>
+          <h2 className="mt-4 text-3xl font-bold tracking-tight text-navy">
+            Our curators have always prepared your matches. Now your agent
+            prepares you.
+          </h2>
+          <p className="mt-4 text-lg leading-relaxed text-navy-soft">
+            Your personal AI agent briefs you before each match and debriefs
+            with you after — sharing only structured summaries, never your
+            stories, and only with your consent.
+          </p>
+          <Link
+            href="/how-agents-work"
+            className="mt-8 inline-block rounded-md border border-copper px-6 py-3 font-semibold text-copper hover:bg-copper hover:text-white"
+          >
+            How your agent works
+          </Link>
+        </div>
+      </section>
+    </>
   );
 }
