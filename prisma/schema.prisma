@@ -181,6 +181,8 @@ model Applicant {
   matchesAsPartner      Match[]           @relation("PartnerMatches")
   emailLogs             EmailLog[]
   screeningAuditLogs    ScreeningAuditLog[]
+  agentProfile          AgentProfile?
+  briefings             Briefing[]
 
   @@index([applicationStatus])
   @@index([gender])
@@ -554,6 +556,102 @@ model MatchAnalytics {
   @@index([matchId])
   @@index([dateAccepted])
   @@index([relationshipFormed])
+}
+
+
+// ============================================
+// AGENT-TO-AGENT COMPATIBILITY (frontier feature)
+// ============================================
+// Derived agent-held data. Tier 1 dimensions may be shared agent-to-agent
+// under consent; Tier 2 raw narrative never leaves the server. See
+// PRDs/AGENT_TO_AGENT_COMPATIBILITY.md.
+
+enum AgentDepth {
+  THIN      // questionnaire bootstrap only
+  GROWING   // questionnaire + some observed/debrief data
+  DEEP      // rich longitudinal profile
+}
+
+enum BriefingAudience {
+  CURATOR   // curator-facing, admin dashboard
+  APPLICANT // applicant-facing, pre-event / pre-date
+}
+
+model AgentProfile {
+  id            String     @id @default(cuid())
+  applicantId   String     @unique
+  applicant     Applicant  @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  version       Int        @default(1)   // increments on each recompute
+  depth         AgentDepth @default(THIN) // honest labeling of profile depth
+
+  // Derived Tier 1 dimensions (structured summaries only; never raw narrative).
+  // e.g. { attachment: {...}, conflict: {...}, values: {...}, lifeArchitecture: {...}, readiness: {...} }
+  dimensions    Json?
+
+  // Source pointers for recompute provenance (not duplicated data).
+  // e.g. { questionnaireAt: "...", debriefIds: [...], eventIds: [...] }
+  sources       Json?
+
+  generatedAt   DateTime   @default(now())
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+  deletedBy     String?
+
+  briefings     Briefing[]
+
+  @@index([applicantId])
+  @@index([depth])
+  @@index([deletedAt])
+}
+
+// Audit log: what one agent shared with another, when. Follows the
+// ScreeningAuditLog pattern. Payload itself is never stored here.
+model PouchExchange {
+  id               String   @id @default(cuid())
+  fromApplicantId  String
+  toApplicantId    String
+
+  // Dimension names shared (e.g. ["conflict", "values"]); never Tier 2.
+  dimensionsShared String[]
+  // Hash of the Tier 1 payload for auditability without storing it.
+  payloadHash      String?
+  // When the principal approved this exchange (null = standing consent mode).
+  consentedAt      DateTime?
+
+  createdAt        DateTime @default(now())
+
+  @@index([fromApplicantId])
+  @@index([toApplicantId])
+  @@index([createdAt])
+}
+
+model Briefing {
+  id             String           @id @default(cuid())
+  agentProfileId String?
+  agentProfile   AgentProfile?    @relation(fields: [agentProfileId], references: [id], onDelete: SetNull)
+  applicantId    String
+  applicant      Applicant        @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  matchId        String?          // optional: briefing scoped to a specific pairing
+
+  audience       BriefingAudience
+
+  // Fault lines + conversation threads, narrated from Tier 1 dimensions.
+  // Must never contain Tier 2 material.
+  content        Json
+  model          String?          // LLM model used, for audit
+
+  createdAt      DateTime         @default(now())
+  deletedAt      DateTime?
+  deletedBy      String?
+
+  @@index([applicantId])
+  @@index([agentProfileId])
+  @@index([matchId])
+  @@index([audience])
+  @@index([createdAt])
+  @@index([deletedAt])
 }
 
 // ============================================
