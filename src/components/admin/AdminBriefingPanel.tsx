@@ -130,8 +130,8 @@ export default function AdminBriefingPanel({
         )}
         {!error && briefings !== null && briefings.length === 0 && (
           <p className="text-sm text-navy-soft">
-            No briefings yet. Briefings are generated once the agent pipeline
-            is live.
+            No briefings yet. Briefings are generated once the agent pipeline is
+            live.
           </p>
         )}
         {!error &&
