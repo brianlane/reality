@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { getAuthUser, isAdminEmail } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { errorResponse, successResponse } from "@/lib/api-response";
@@ -71,7 +72,11 @@ export async function POST(request: Request, { params }: RouteContext) {
     return errorResponse("INVALID_BODY", "dateHappened must be a boolean", 400);
   }
   if (wouldSeeAgain !== undefined && typeof wouldSeeAgain !== "boolean") {
-    return errorResponse("INVALID_BODY", "wouldSeeAgain must be a boolean", 400);
+    return errorResponse(
+      "INVALID_BODY",
+      "wouldSeeAgain must be a boolean",
+      400,
+    );
   }
   if (
     rating === undefined &&
@@ -115,8 +120,8 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 
   // Merge a copy into the longitudinal follow-up JSON.
-  const existing = (match.day30FollowUp ?? {}) as Record<string, unknown>;
-  const debriefs = (existing.debriefs ?? {}) as Record<string, unknown>;
+  const existing = (match.day30FollowUp ?? {}) as Prisma.JsonObject;
+  const debriefs = (existing.debriefs as Prisma.JsonObject | undefined) ?? {};
   debriefs[side] = {
     rating: rating ?? null,
     feedback: feedback ?? null,
