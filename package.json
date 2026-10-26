@@ -25,7 +25,8 @@
     },
     "browserslist": "4.29.4",
     "fast-uri": "3.1.9",
-    "source-map-js": "1.2.2"
+    "source-map-js": "1.2.2",
+    "@fastify/busboy": "3.2.2"
   },
   "scripts": {
     "dev": "next dev",
@@ -58,6 +59,7 @@
     "@ai-sdk/google": "^2.0.0",
     "@clerk/nextjs": "^7.9.20",
     "@floating-ui/dom": "^1.7.6",
+    "@opentelemetry/instrumentation": "^0.211.0",
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.10.1",
     "@sentry/nextjs": "^10.76.2",
