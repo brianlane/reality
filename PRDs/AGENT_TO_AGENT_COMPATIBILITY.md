@@ -17,7 +17,7 @@ single keep-alive cron) · Sentry. Node 24. No AI SDK, no LLM provider, no
 job queue. Voice answers transcribed via Groq/HuggingFace — the only ML
 integration, and it's transcription, not agency.
 
-**Product model (important):** this is *not* a swipe app. It's a curated,
+**Product model (important):** this is _not_ a swipe app. It's a curated,
 event-based matchmaking service: paid application → admin screening
 (background checks via Checkr + Idenfy, FCRA-compliant, GREEN/YELLOW/RED
 flags) → speed-dating events (~20 capacity) → curated matches. High-trust,
@@ -31,7 +31,7 @@ high-touch, human curators in the loop.
   cross-question importance modulation, and **cross-pair scoring** (asymmetric
   status-vs-preference pairs, e.g. "has pets" vs "okay with partner's pets").
   Returns score + per-question breakdown + violated dealbreakers. This is
-  *the* compatibility engine — the agent layer consumes it, not replaces it.
+  _the_ compatibility engine — the agent layer consumes it, not replaces it.
 - **Questionnaire:** 10+ DB-driven pages (consent, demographics, dating
   history/goals, values, conflict resolution, decision making, attraction,
   connection/chemistry, finances/career, household, tech boundaries),
@@ -46,7 +46,7 @@ high-touch, human curators in the loop.
 - **In-person data hooks:** `EventInvitation` has `blindNotes`,
   `faceToFaceNotes`, and `interestedIn` arrays — observed-at-event data
   already has a home.
-- **Research moat in progress:** Prolific integration including *couples*
+- **Research moat in progress:** Prolific integration including _couples_
   PIDs (`prolificPartnerPid`) — actual relationship research running.
 - **Audit pattern:** `ScreeningAuditLog` establishes the pattern for "who
   saw what, when" — directly reusable for pouch-exchange auditing.
@@ -64,15 +64,15 @@ principals deeply negotiate compatibility privately, so humans meet prepared
 instead of performing. Agents handle everything that isn't presence; humans
 bring the presence.
 
-**Non-negotiable design principle:** agents *prepare* humans for each other,
-never *decide* for them. Screening layer, not decision layer.
+**Non-negotiable design principle:** agents _prepare_ humans for each other,
+never _decide_ for them. Screening layer, not decision layer.
 
 ---
 
 ## 2. Problems it solves
 
 1. **Self-report is weak.** Profiles describe who people wish they were. An
-   agent that has lived alongside its principal holds *observed* behavioral
+   agent that has lived alongside its principal holds _observed_ behavioral
    patterns: how they actually handle conflict, what they keep repeating,
    where their words and actions diverge.
 2. **The disclosure paradox.** The most predictive data (attachment wounds,
@@ -90,9 +90,9 @@ never *decide* for them. Screening layer, not decision layer.
 The existing flow is applicant → screening → event → curated match →
 follow-ups. The agent layer slots into it, it doesn't replace it:
 
-1. **Application (exists).** Questionnaire submit. *New:* a server-side agent
+1. **Application (exists).** Questionnaire submit. _New:_ a server-side agent
    job generates a versioned `AgentProfile` summary per applicant.
-2. **Screening (exists, human).** *New:* curators see an AI briefing in the
+2. **Screening (exists, human).** _New:_ curators see an AI briefing in the
    admin dashboard alongside flags and scores — fault lines narrated, not
    just numbers.
 3. **Pre-event.** Agents exchange pouch summaries for candidate pairs;
@@ -126,12 +126,13 @@ not policy: raw narrative never crosses between agents.
 ## 5. Data model, mapped to the Prisma schema
 
 **Tier 1 — agent-to-agent (consented), derived from existing data:**
+
 - Conflict style, repair capacity → Questionnaire Page 4 answers
 - Values, life satisfaction → Page 3
 - Life architecture → Pages 1 (family/children), 8 (finances/career),
   9 (household), demographics (location, age)
 - Readiness → `relationshipReadinessFlag` + Page 2
-- Attachment style → *gap:* not directly measured; derive heuristically
+- Attachment style → _gap:_ not directly measured; derive heuristically
   from conflict/repair/boundary answers in Phase 1, add dedicated items
   in Phase 2
 
@@ -140,6 +141,7 @@ voice transcripts, `blindNotes`/`faceToFaceNotes`, debrief transcripts.
 Agent's own briefing use only.
 
 **New models required (all fit existing conventions):**
+
 - `AgentProfile` — versioned derived summary per applicant (recomputed on
   questionnaire change / debrief).
 - `PouchExchange` — audit log of what was shared with whom, when
@@ -195,7 +197,7 @@ surfaces:
    Per-dimension consent toggles live here. Smart defaults; progressive
    detail (consent fatigue is the enemy).
 2. **The briefing (signature surface).** The pre-date brief must feel like a
-   friend's advice, not a report card: 2–3 conversation threads with *why*
+   friend's advice, not a report card: 2–3 conversation threads with _why_
    they matter, fault lines framed as "things to explore" rather than
    warnings. Never show raw scores or red/yellow/green labels on a person
    to applicants — the engine's 0–100 stays internal/curator-side.
@@ -266,14 +268,14 @@ the brand you're building on.
 
 ## 10. Failure modes & mitigations
 
-| Failure mode | Mitigation |
-|---|---|
-| False negatives (agents kill a pairing that had chemistry) | Veto only on hard dealbreakers (already the engine's semantics); agents never reject on "vibe" |
-| Gaming (users coach agents to present well) | Weight observed behavior (event notes, debriefs, follow-ups) over claimed traits; cross-check drift over time |
-| Judgment atrophy (humans stop choosing) | Curators stay in the loop (this product already has them); applicant briefings end with open questions, not verdicts |
-| Cold start (thin agents give thin results) | Questionnaire bootstraps; depth labeled honestly; value grows with tenure and debriefs |
-| Privacy breach | Tiered model + audit log + shallow pouches; FCRA-grade separation from screening data |
-| Retention paradox (success = churn) | Price for the outcome, not the seat; debrief/post-mortem features retain users *between* relationships |
+| Failure mode                                               | Mitigation                                                                                                           |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| False negatives (agents kill a pairing that had chemistry) | Veto only on hard dealbreakers (already the engine's semantics); agents never reject on "vibe"                       |
+| Gaming (users coach agents to present well)                | Weight observed behavior (event notes, debriefs, follow-ups) over claimed traits; cross-check drift over time        |
+| Judgment atrophy (humans stop choosing)                    | Curators stay in the loop (this product already has them); applicant briefings end with open questions, not verdicts |
+| Cold start (thin agents give thin results)                 | Questionnaire bootstraps; depth labeled honestly; value grows with tenure and debriefs                               |
+| Privacy breach                                             | Tiered model + audit log + shallow pouches; FCRA-grade separation from screening data                                |
+| Retention paradox (success = churn)                        | Price for the outcome, not the seat; debrief/post-mortem features retain users _between_ relationships               |
 
 ---
 
