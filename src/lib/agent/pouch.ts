@@ -16,19 +16,14 @@ export type Pouch = {
 
 export class PouchError extends Error {
   code: "PAUSED" | "REVIEW_REQUIRED" | "NO_PROFILE" | "NO_DIMENSIONS";
-  constructor(
-    code: PouchError["code"],
-    message: string,
-  ) {
+  constructor(code: PouchError["code"], message: string) {
     super(message);
     this.code = code;
   }
 }
 
 function hashPayload(payload: unknown): string {
-  return createHash("sha256")
-    .update(JSON.stringify(payload))
-    .digest("hex");
+  return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 
 /**
@@ -37,9 +32,7 @@ function hashPayload(payload: unknown): string {
  * paused (shares nothing). Never includes raw narrative — dimensions are
  * already structured summaries.
  */
-export async function buildPouch(
-  applicantId: string,
-): Promise<Pouch | null> {
+export async function buildPouch(applicantId: string): Promise<Pouch | null> {
   const [profile, consent] = await Promise.all([
     db.agentProfile.findUnique({ where: { applicantId } }),
     db.agentConsent.findUnique({ where: { applicantId } }),
@@ -99,10 +92,7 @@ export async function runPouchExchange(
   ]);
 
   if (consentA?.agentPaused || consentB?.agentPaused) {
-    throw new PouchError(
-      "PAUSED",
-      "Exchange refused: one agent is paused",
-    );
+    throw new PouchError("PAUSED", "Exchange refused: one agent is paused");
   }
   if (consentA?.pouchReviewMode || consentB?.pouchReviewMode) {
     throw new PouchError(
